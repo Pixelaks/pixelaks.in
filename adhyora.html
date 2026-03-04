@@ -324,6 +324,15 @@
 
         /* --- Mobile Media Queries --- */
         @media (max-width: 850px) {
+            /* Add this inside your @media (max-width: 850px) block */
+            .faq-grid { 
+                grid-template-columns: 1fr !important; 
+                gap: 20px; 
+            }
+
+            .faq-card { 
+                padding: 20px; 
+            }
             nav { height: 60px; padding: 0 3%; }
             nav img { height: 35px; }
             nav ul { gap: 15px; }
