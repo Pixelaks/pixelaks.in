@@ -358,6 +358,19 @@
         white-space: nowrap !important;
         border: 0 !important;
     }
+
+         /* --- HERO DOWNLOAD BUTTON --- */
+        .hero-download-btn {
+            display: inline-block; background: var(--primary-green); color: #000; 
+            padding: 16px 35px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; 
+            text-decoration: none; transition: 0.4s ease; box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+            letter-spacing: 1px; margin-top: 35px; position: relative; z-index: 10;
+        }
+        .hero-download-btn:hover { 
+            transform: translateY(-5px); box-shadow: 0 10px 30px rgba(46, 204, 113, 0.6); 
+            background: #27ae60; color: #fff; 
+        }
+         
     </style>
 </head>
 <body>
@@ -401,6 +414,13 @@
             </div>
             
             <h2 style="color: #fff; font-weight: 300; letter-spacing: 6px; margin-top: 5px; opacity: 0.9; text-transform: uppercase; font-size: clamp(0.9rem, 4vw, 1.2rem);">Academic Management System</h2>
+
+             <div data-aos="fade-up" data-aos-delay="200">
+                <a href="/download" class="hero-download-btn">
+                    <i class="fas fa-download" style="margin-right: 8px; font-size: 1.2rem;"></i> Download App Now
+                </a>
+            </div>
+             
         </header>
 
         <div class="about-section" style="max-width: 1100px; margin: 0 auto 80px; display: flex; flex-wrap: wrap; gap: 40px; justify-content: center;">
@@ -749,6 +769,14 @@
         
             </div>
         </div>
+
+         <div style="text-align: center; margin: 80px 0 100px;" data-aos="zoom-in">
+            <h3 style="color: #fff; margin-bottom: 20px; font-family: 'Rajdhani', sans-serif; font-size: 2rem;">Ready to Transform Your Campus?</h3>
+            <a href="/download" class="hero-download-btn" style="margin-top: 0;">
+                <i class="fas fa-download" style="margin-right: 8px; font-size: 1.2rem;"></i> Download App Now
+            </a>
+        </div>
+         
     </div>
 
     <footer>
