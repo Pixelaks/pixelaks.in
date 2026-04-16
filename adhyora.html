@@ -333,10 +333,18 @@
             .faq-card { 
                 padding: 20px; 
             }
-            nav { height: 60px; padding: 0 3%; }
-            nav img { height: 35px; }
-            nav ul { gap: 15px; }
-            nav a { font-size: 0.8rem; }
+            nav { height: 65px; padding: 0 15px; }
+            nav img { height: 28px; margin-right: 10px; flex-shrink: 0; }
+            nav ul { 
+                gap: 15px; 
+                flex-wrap: nowrap; 
+                overflow-x: auto; /* Enables horizontal swiping */
+                -webkit-overflow-scrolling: touch; 
+                scrollbar-width: none; /* Hides scrollbar in Firefox */
+                padding: 10px 0; /* Prevents the glowing button shadow from clipping */
+            }
+            nav ul::-webkit-scrollbar { display: none; } /* Hides scrollbar in Chrome/Safari/Edge */
+            nav a { font-size: 0.85rem; white-space: nowrap; }
             .container { padding-top: 100px; }
             .feature-row { flex-direction: column; gap: 20px; }
             .feature-content, .feature-spacer { width: 100%; }
@@ -370,6 +378,24 @@
             transform: translateY(-5px); box-shadow: 0 10px 30px rgba(46, 204, 113, 0.6); 
             background: #27ae60; color: #fff; 
         }
+
+        /* --- Nav Download Button --- */
+        .nav-download-btn {
+            background: var(--primary-green); 
+            color: #000 !important; /* Forces black text instead of white */
+            padding: 8px 22px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+            transition: all 0.3s ease !important;
+        }
+        
+        .nav-download-btn:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 20px rgba(46, 204, 113, 0.7); 
+            background: #2fe27a; /* A slightly brighter green on hover */
+            color: #000 !important;
+        }
          
     </style>
 </head>
@@ -379,6 +405,7 @@
     <nav>
         <div class="nav-brand"><img src="PixelaksLogoTransparent.png" alt="Pixelaks"></div>
         <ul>
+            <li><a href="/download" class="nav-download-btn">Download</a></li>
             <li><a href="/">Home</a></li>
             <li><a href="javascript:void(0)" onclick="stealthNav('about')">About</a></li>
             <li><a href="javascript:void(0)" onclick="stealthNav('divisions')">Products</a></li>
