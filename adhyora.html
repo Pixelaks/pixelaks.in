@@ -400,7 +400,6 @@
     </style>
 </head>
 <body>
-    <h1 class="visually-hidden">Adhyora - Academic Management System by Pixelaks Technologies</h1>
 
     <nav>
         <div class="nav-brand"><img src="PixelaksLogoTransparent.png" alt="Pixelaks"></div>
@@ -433,11 +432,16 @@
             <div class="scanlines"></div>
             
             <div data-aos="zoom-in">
-                <div class="glitch-wrapper">
-                    <div class="main-text" id="text-main"></div>
-                    <div class="glitch-layer layer-red" id="text-red"></div>
-                    <div class="glitch-layer layer-blue" id="text-blue"></div>
-                </div>
+                <h1 class="glitch-wrapper" aria-label="Adhyora">
+                    <span class="main-text" id="text-main">ADHYORA</span>
+                    
+                    <span class="glitch-layer layer-red" id="text-red" aria-hidden="true"></span>
+                    <span class="glitch-layer layer-blue" id="text-blue" aria-hidden="true"></span>
+                </h1>
+                
+                <script>
+                    document.getElementById('text-main').innerText = "अध्योरा";
+                </script>
             </div>
             
             <h2 style="color: #fff; font-weight: 300; letter-spacing: 6px; margin-top: 5px; opacity: 0.9; text-transform: uppercase; font-size: clamp(0.9rem, 4vw, 1.2rem);">Academic Management System</h2>
@@ -902,7 +906,7 @@
         /* --- GLITCH LOGIC (ADDED) --- */
         const TARGET_TEXT = "ADHYORA";
         const DECODE_SPEED = 6; 
-        const CHAOS_CHARS = "अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह";
+        const CHAOS_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01010101#@%&*";
         
         const elMain = document.getElementById('text-main');
         const elRed = document.getElementById('text-red');
