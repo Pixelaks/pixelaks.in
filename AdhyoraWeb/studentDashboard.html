@@ -93,9 +93,32 @@
                 <button class="icon-btn">🔔</button>
                 <button class="icon-btn active">📊</button>
                 <button class="icon-btn">💬</button>
-                <button class="icon-btn">📅</button>
+                <button class="icon-btn" id="btnCalendar">📅</button>
                 <button class="icon-btn">📝</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="calendarModal">
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button class="cal-nav-btn" id="calPrevMonth">&lt;</button>
+                <h3 id="calMonthYearText">Loading...</h3>
+                <button class="cal-nav-btn" id="calNextMonth">&gt;</button>
+            </div>
+            
+            <div class="calendar-weekdays">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            
+            <div class="calendar-grid" id="calendarGrid">
+                </div>
+
+            <div class="upcoming-card">
+                <p id="upcomingEventText">Loading...</p>
+            </div>
+
+            <button class="close-modal-btn" id="closeCalendarBtn">Close</button>
         </div>
     </div>
 
