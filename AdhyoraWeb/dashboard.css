@@ -4,27 +4,24 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
 body {
-    background-color: #e9ecef; /* Slight gray background to frame the white app on PC */
-    display: flex; 
-    justify-content: center; 
+    background-color: #ffffff; /* 🚨 Removed the grey background */
     width: 100vw;
     height: 100vh;
-    overflow: hidden; /* Positively prevents whole-page scrolling and mobile bleed */
+    overflow: hidden; /* Prevents whole-page scrolling and mobile bleed */
+    margin: 0;
 }
 
 /* =========================================
-   MAIN APP CONTAINER
+   MAIN APP CONTAINER (TRUE FULLSCREEN FIT)
    ========================================= */
 .dashboard-container {
     background-color: #ffffff; 
     width: 100%; 
-    max-width: 900px; /* 🚨 THE PC FIX: Locks the whole app to a clean, readable width */
+    max-width: 100%; /* 🚨 THE FIX: Stretches infinitely to fit any monitor edge-to-edge */
     height: 100%; 
     display: flex; 
     flex-direction: column; 
     position: relative;
-    box-shadow: 0 0 30px rgba(0,0,0,0.05);
-    overflow: hidden; /* Contains everything safely inside */
 }
 
 /* 1. Header */
@@ -66,28 +63,20 @@ body {
     overflow-y: auto; 
     overflow-x: hidden;
     padding: 20px; 
-    padding-bottom: 110px; /* Space for the bottom nav */
+    padding-bottom: 120px; /* Space for the bottom nav */
 }
 
 /* Custom Scrollbar for PC */
-.scrollable-content::-webkit-scrollbar { width: 6px; }
+.scrollable-content::-webkit-scrollbar { width: 8px; }
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-/* Attendance Overview (Stack on Mobile, Side-by-Side on PC) */
+/* Attendance Overview */
 .attendance-overview { 
     display: flex; 
-    flex-direction: column; /* Stack vertically on small phones */
+    flex-direction: column; /* Stack vertically on phones */
     align-items: center; 
     gap: 25px;
     margin-bottom: 30px; 
-}
-
-@media (min-width: 600px) {
-    .attendance-overview { 
-        flex-direction: row; /* Put circle and table side-by-side on larger screens */
-        justify-content: center; 
-        gap: 50px; 
-    }
 }
 
 .circular-progress {
@@ -106,7 +95,6 @@ body {
 
 .stats-list { 
     width: 100%; 
-    max-width: 350px; 
     border: 1px solid #ddd; border-radius: 8px; overflow: hidden; 
 }
 .stat-item { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #ddd; text-align: center; }
@@ -131,17 +119,31 @@ body {
 }
 .no-data-text { text-align: center; font-size: 12px; color: #888; padding-top: 20px;}
 
-/* 🚨 GRID LAYOUT FOR PC 🚨 */
+/* =========================================
+   🚨 PC LAYOUT OVERRIDES 🚨
+   ========================================= */
 @media (min-width: 768px) {
+    /* Push top bars slightly away from monitor edges */
+    .profile-card { margin: 0 40px 20px 40px; }
+    .semester-nav { margin: 0 40px; border-radius: 10px; }
+    
     .scrollable-content { 
         display: grid; 
-        grid-template-columns: 1fr 1fr; /* 2 perfect columns */
-        gap: 30px; 
-        align-items: start; /* Prevents boxes from stretching vertically */
+        grid-template-columns: 1fr 1fr; /* Split screen in half perfectly */
+        gap: 40px; 
+        padding: 30px 40px 120px 40px; 
+        align-items: start;
     }
+    
     .attendance-overview { 
         grid-column: span 2; 
+        flex-direction: row; /* Put circle and table side-by-side */
+        justify-content: center; 
+        gap: 80px; 
     }
+    
+    /* Keep the table from stretching 2000px wide on big monitors */
+    .stats-list { max-width: 500px; } 
 }
 
 /* =========================================
@@ -150,21 +152,20 @@ body {
 .bottom-nav-mask {
     position: absolute; bottom: 0; left: 0; right: 0;
     height: 100px;
-    /* Invisible at the top, solid white at the bottom */
     background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%);
     display: flex; justify-content: center; align-items: center; 
     padding-top: 20px;
     z-index: 10;
-    pointer-events: none; /* Lets you scroll behind the invisible part */
+    pointer-events: none; 
 }
 
 .bottom-nav {
     background: #e0f2fe; border-radius: 30px; padding: 12px 20px;
-    display: flex; justify-content: space-around; /* 🚨 THE MOBILE FIX: Auto-spaces buttons safely */
-    width: 90%; /* Will never exceed phone screen width */
-    max-width: 450px; /* Stays compact on PC */
+    display: flex; justify-content: space-around; 
+    width: 90%; 
+    max-width: 450px; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    pointer-events: auto; /* Re-enables clicking on the buttons */
+    pointer-events: auto; 
 }
 .icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; opacity: 0.5; transition: 0.2s;}
 .icon-btn:hover { opacity: 0.8; }
