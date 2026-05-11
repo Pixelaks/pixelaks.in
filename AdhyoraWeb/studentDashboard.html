@@ -47,54 +47,59 @@
             <button id="nextSemBtn" class="nav-btn">&gt;</button>
         </div>
 
-        <div class="scrollable-content">
-            
+        <div class="scrollable-content" id="mainDashboardView">
             <div class="attendance-overview">
                 <div class="circular-progress" id="attendanceCircle">
                     <div class="inner-circle">
-                        <span class="projected-text">Projected</span>
-                        <br>
+                        <span class="projected-text">Projected</span><br>
                         <span id="overallPercentageText" class="percentage-value">--%</span>
                     </div>
                 </div>
-
                 <div class="stats-list">
                     <div class="stat-item">Overall Attendance</div>
                     <div class="stat-item" id="attendedClassesText">Attended: -</div>
                     <div class="stat-item" id="absentClassesText">Absent: -</div>
                     <div class="stat-item" id="totalClassesTakenText">Total: -</div>
                     <div class="stat-item" id="currentPercentageText">Current: --%</div>
-                    
                     <div class="stat-item" id="totalPeriodsPresentText" style="background:#f8f9fa;">Periods Present: -</div>
                     <div class="stat-item" id="totalPeriodsAbsentText" style="background:#f8f9fa;">Periods Absent: -</div>
                     <div class="stat-item" id="totalPeriodsTakenText" style="background:#f8f9fa;">Total Periods: -</div>
                 </div>
             </div>
-
             <div class="list-container" id="subjectListContainer"></div>
-
             <div class="marks-section">
                 <div class="marks-header-container">
-                    <select id="examDropdown" class="dropdown-select">
-                        <option value="">Loading Exams...</option>
-                    </select>
+                    <select id="examDropdown" class="dropdown-select"><option value="">Loading Exams...</option></select>
                 </div>
-                
                 <div class="list-container" id="marksListContainer">
                     <div id="noMarksData" class="no-data-text">No Marks Data</div>
                 </div>
             </div>
-            
+        </div>
+
+        <div class="daily-attendance-panel" id="dailyAttendanceView" style="display: none;">
+            <div class="daily-card">
+                <div class="daily-header-blue">
+                    <button class="cal-nav-btn" id="btnPrevDay" style="color:white;">&lt;</button>
+                    <div style="text-align: center;">
+                        <h3 id="dailyDateText">Loading...</h3>
+                        <p id="dailyStatusText" style="font-size: 11px; margin-top:2px;">Checking...</p>
+                    </div>
+                    <button class="cal-nav-btn" id="btnNextDay" style="color:white;">&gt;</button>
+                </div>
+                
+                <div class="periods-grid" id="periodsGrid">
+                    </div>
+            </div>
         </div>
 
         <div class="bottom-nav-mask">
             <div class="bottom-nav">
+                <button class="icon-btn active" id="btnNavMain">📊</button>
                 <button class="icon-btn" id="openSettingsBtn">⚙️</button>
-                <button class="icon-btn">🔔</button>
-                <button class="icon-btn active">📊</button>
+                <button class="icon-btn" id="btnNavDaily">📝</button>
                 <button class="icon-btn">💬</button>
                 <button class="icon-btn" id="btnCalendar">📅</button>
-                <button class="icon-btn">📝</button>
             </div>
         </div>
     </div>
@@ -106,19 +111,21 @@
                 <h3 id="calMonthYearText">Loading...</h3>
                 <button class="cal-nav-btn" id="calNextMonth">&gt;</button>
             </div>
-            
             <div class="calendar-weekdays">
                 <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
             </div>
-            
-            <div class="calendar-grid" id="calendarGrid">
-                </div>
-
-            <div class="upcoming-card">
-                <p id="upcomingEventText">Loading...</p>
-            </div>
-
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="upcoming-card"><p id="upcomingEventText">Loading...</p></div>
             <button class="close-modal-btn" id="closeCalendarBtn">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="periodDetailModal">
+        <div class="calendar-container" style="text-align: center;">
+            <h3 id="detailSubjectText" style="margin-bottom: 5px; color:#3b82f6;">Subject Name</h3>
+            <p id="detailTeacherText" style="font-size: 12px; color:#666;">Teacher • Time</p>
+            <h2 id="detailStatusText" style="margin-top: 15px;">Status</h2>
+            <button class="close-modal-btn" id="closeDetailBtn" style="margin-top: 20px;">Close</button>
         </div>
     </div>
 
