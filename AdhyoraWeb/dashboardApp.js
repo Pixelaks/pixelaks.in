@@ -42,7 +42,7 @@ const el = {
     totClasses: document.getElementById("totalClassesTakenText"),
     curPctText: document.getElementById("currentPercentageText"),
     
-    // New Period Stats
+    // Period Stats
     perPres: document.getElementById("totalPeriodsPresentText"),
     perAbs: document.getElementById("totalPeriodsAbsentText"),
     perTot: document.getElementById("totalPeriodsTakenText"),
@@ -80,7 +80,7 @@ if (!collegeID || !studentUID) {
 // --- Logic ---
 
 async function syncCollegeAndListen() {
-    // 1. Fetch SemesterManager data first
+    // Fetch SemesterManager data first
     try {
         const colSnap = await getDoc(doc(db, "colleges", collegeID));
         if (colSnap.exists() && colSnap.data().currentSemesterType) {
@@ -88,7 +88,7 @@ async function syncCollegeAndListen() {
         }
     } catch(e) { console.error("Could not sync college semester type"); }
 
-    // 2. Now load the student
+    // Use secure live token for the database search
     const secureUID = auth.currentUser.uid; 
     const studentsRef = collection(db, "colleges", collegeID, "students");
     const q = query(studentsRef, where("userID", "==", secureUID));
@@ -109,12 +109,12 @@ function processStudentData(data) {
     el.name.innerText = sName;
     el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
 
-    // Update Sidebar Profile
+    // Update Sidebar Profile (Using innerHTML to render the span tag correctly)
     const dept = data.Department || data.department || "General";
     const rollDisplay = data.RollNumber || currentRollNo;
-    el.sbName.innerText = `${sName} <span style="font-size:12px; color:#888;">(${rollDisplay})</span>`;
+    el.sbName.innerHTML = `${sName} <br><span style="font-size:12px; color:#888;">(${rollDisplay})</span>`;
     
-    // Parse Year for SemesterManager Logic
+    // Parse Year
     let rawYear = (data.Year || data.year || "1").toString();
     let studentYear = parseInt(rawYear.replace(/\D/g, ''));
     if (isNaN(studentYear) || studentYear <= 0) studentYear = 1;
@@ -127,7 +127,7 @@ function processStudentData(data) {
         loadedSemesters[key] = {
             id: key, name: `Semester ${i}`, hasData: false, 
             strictPresent: 0, strictTotal: 0, 
-            simplePresent: 0, simpleTotal: 0, // NEW: For periods
+            simplePresent: 0, simpleTotal: 0, 
             subjects: []
         };
         sortedSemesterKeys.push(key);
@@ -164,7 +164,7 @@ function processStudentData(data) {
         }
     }
 
-    // 🚨 SemesterManager Logic: Calculate Default Semester!
+    // Calculate Default Semester
     let baseSem = (studentYear - 1) * 2;
     let targetSemNumber = (collegeSemesterType === "Odd") ? baseSem + 1 : baseSem + 2;
     
@@ -190,11 +190,10 @@ function updateUIForCurrentSemester(optionalDept) {
 
     el.semTitle.innerText = semData.name;
     
-    // Update Sidebar subtitle if passed
+    // Update Sidebar subtitle
     if (optionalDept) {
         el.sbSub.innerHTML = `${optionalDept} &nbsp; <span class="sem-text">${semData.name}</span>`;
     } else {
-        // If just switching semesters, just update the sem text in sidebar
         let currentSub = el.sbSub.innerHTML;
         if(currentSub.includes("&nbsp;")) {
             let parts = currentSub.split("&nbsp;");
@@ -211,7 +210,7 @@ function updateUIForCurrentSemester(optionalDept) {
     el.totClasses.innerText = `Total: ${semData.strictTotal}`;
     el.absClasses.innerText = `Absent: ${semData.strictTotal - semData.strictPresent}`;
 
-    // 🚨 NEW: Populate Period Stats
+    // Period Stats
     el.perPres.innerText = `Periods Present: ${semData.simplePresent}`;
     el.perTot.innerText = `Total Periods: ${semData.simpleTotal}`;
     el.perAbs.innerText = `Periods Absent: ${semData.simpleTotal - semData.simplePresent}`;
@@ -313,7 +312,7 @@ function drawMarksUI(marksArray) {
     });
 }
 
-// --- 🚨 SIDEBAR & SETTINGS LOGIC 🚨 ---
+// --- SIDEBAR LOGIC ---
 const openSettingsBtn = document.getElementById("openSettingsBtn");
 
 openSettingsBtn.addEventListener("click", () => {
@@ -321,22 +320,15 @@ openSettingsBtn.addEventListener("click", () => {
     el.overlay.classList.add("active");
 });
 
-// Close sidebar if clicking outside
 el.overlay.addEventListener("click", () => {
     el.sidebar.classList.remove("open");
     el.overlay.classList.remove("active");
 });
 
-// Sign Out
 document.getElementById("btnSignOut").addEventListener("click", () => {
-    signOut(auth).then(() => {
-        window.location.href = "index.html";
-    }).catch((error) => {
-        alert("Error signing out: " + error.message);
-    });
+    signOut(auth).then(() => window.location.href = "index.html");
 });
 
-// Mock links for other buttons (You can replace URLs later)
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 document.getElementById("btnCompany").addEventListener("click", () => window.open(`https://pixelaks.in/`, '_blank'));
 document.getElementById("btnPrivacy").addEventListener("click", () => window.open(`https://pixelaks.in/privacy`, '_blank'));
