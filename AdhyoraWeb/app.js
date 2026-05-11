@@ -10,7 +10,7 @@ const firebaseConfig = {
   projectId: "adhyora-5d4c1",
   storageBucket: "adhyora-5d4c1.firebasestorage.app",
   messagingSenderId: "206050348148",
-  appId: "1:206050348148:web:da4e421e00ec2f77429521"
+  appId: "1:206050348148:web:da4e421e00ec2f77429521",
 };
 
 // Initialize Firebase
@@ -111,7 +111,9 @@ signInBtn.addEventListener("click", async () => {
 
         // Logic matched to your C#: Successful login -> Redirect to actual web dashboard
         showToast("Login Successful!");
-        // window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
+        // Change your successful login redirect to this:
+        const rollNo = document.getElementById("loginEmail").value.split('@')[0]; // Assuming email is rollno@... If not, you must fetch their doc first to get roll number.
+        window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
         
     } catch (error) {
         showToast(getErrorMessage(error.code));
