@@ -16,36 +16,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ==========================================
-// 🚨 GLOBAL STATE VARIABLES (THE FIX) 🚨
-// ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
 let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex = 0;
-
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-let myDepartmentID = "";
-let enrolledSubjectsList = [];
+let myDepartmentID = ""; let myYearStr = ""; let enrolledSubjectsList = [];
+let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
+let calendarMode = "global"; let currentDisplayDate = new Date(); 
+let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
-// Daily View State
-let currentDailyDate = new Date();
-let cachedMedicalLeaves = [];
-let dailyData = []; 
-
-// Calendar View State
-let calendarMode = "global"; 
-let currentDisplayDate = new Date(); // 🚨 THIS WAS THE MISSING LINE!
-let cachedCalYear = ""; 
-let calWorkingDays = new Set(); 
-let calNonWorkingDays = new Map(); 
-let semStarts = new Map(); 
-let semEnds = new Map();
-
-// ==========================================
-// DOM ELEMENTS
-// ==========================================
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
     badge: document.getElementById("statusBadge"), semTitle: document.getElementById("semesterTitle"),
@@ -61,25 +42,26 @@ const el = {
     calModal: document.getElementById("calendarModal"), calTitle: document.getElementById("calMonthYearText"),
     calGrid: document.getElementById("calendarGrid"), upcomingTxt: document.getElementById("upcomingEventText"),
     
+    // 🚨 VIEWS 🚨
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
+    notifView: document.getElementById("notificationsView"),
+    msgView: document.getElementById("messagesView"),
     
-    dailyDateBtn: document.getElementById("dailyDateBtn"),
-    dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
+    dailyDateBtn: document.getElementById("dailyDateBtn"), dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
     periodsGrid: document.getElementById("periodsGrid"), detailModal: document.getElementById("periodDetailModal"),
     dSub: document.getElementById("detailSubjectText"), dTeach: document.getElementById("detailTeacherText"), dStat: document.getElementById("detailStatusText"),
 
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
-    ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes")
+    ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes"),
+    
+    notifList: document.getElementById("notificationsListContainer"),
+    msgList: document.getElementById("messagesListContainer")
 };
 
-// ==========================================
-// INITIALIZATION
-// ==========================================
 const urlParams = new URLSearchParams(window.location.search);
-collegeID = urlParams.get('college');
-studentUID = urlParams.get('uid');
+collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
 if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
 else {
@@ -94,13 +76,10 @@ async function syncCollegeAndListen() {
         if (colSnap.exists() && colSnap.data().currentSemesterType) { collegeSemesterType = colSnap.data().currentSemesterType; }
     } catch(e) {}
 
-    const secureUID = auth.currentUser.uid; 
-    const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", secureUID));
-
+    const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", auth.currentUser.uid));
     onSnapshot(q, async (snapshot) => {
         if (snapshot.empty) { el.name.innerText = "Profile Not Found"; return; }
-        const docSnap = snapshot.docs[0];
-        currentRollNo = docSnap.id; 
+        const docSnap = snapshot.docs[0]; currentRollNo = docSnap.id; 
         
         try {
             const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
@@ -133,6 +112,7 @@ function processStudentData(data) {
 
     let studentYear = parseInt((data.Year || "1").toString().replace(/\D/g, ''));
     if (isNaN(studentYear) || studentYear <= 0) studentYear = 1;
+    myYearStr = `Year ${studentYear}`;
 
     loadedSemesters = {}; sortedSemesterKeys = [];
     for(let i=1; i<=8; i++) {
@@ -197,10 +177,6 @@ function updateUIForCurrentSemester(optionalDept) {
     }).join('');
 
     fetchMarksForSemester(semData.name);
-    if (el.ttView.style.display !== "none") {
-        let activeDayBtn = document.querySelector('.day-btn.active');
-        if (activeDayBtn) loadTimetableForDay(activeDayBtn.dataset.day);
-    }
 }
 
 function fetchMarksForSemester(semName) {
@@ -234,17 +210,19 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// VIEW TOGGLING
+// 🚨 VIEW TOGGLING (INCLUDING NOTIFICATIONS & MESSAGES) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavDaily = document.getElementById("btnNavDaily");
 const btnNavTimetable = document.getElementById("btnNavTimetable");
+const btnNavNotif = document.getElementById("btnNavNotif");
+const btnNavMsg = document.getElementById("btnNavMsg");
 
 function switchView(activeBtn, viewToShow) {
-    [btnNavMain, btnNavDaily, btnNavTimetable].forEach(btn => btn.classList.remove("active"));
-    [el.mainView, el.dailyView, el.ttView].forEach(view => view.style.display = "none");
+    [btnNavMain, btnNavDaily, btnNavTimetable, btnNavNotif, btnNavMsg].forEach(btn => btn.classList.remove("active"));
+    [el.mainView, el.dailyView, el.ttView, el.notifView, el.msgView].forEach(view => view.style.display = "none");
     activeBtn.classList.add("active");
-    viewToShow.style.display = (viewToShow === el.dailyView || viewToShow === el.ttView) ? "flex" : "";
+    viewToShow.style.display = (viewToShow === el.mainView) ? "" : "flex";
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
@@ -254,30 +232,137 @@ btnNavTimetable.addEventListener("click", () => {
     let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
     let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     if (!validDays.includes(todayName)) todayName = "Monday";
-    
-    document.querySelectorAll('.day-btn').forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.day === todayName);
-    });
+    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
 
+// 🚨 Hook up the new buttons!
+btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.notifView); loadNotifications(); });
+btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
+
 // ==========================================
-// DAILY ATTENDANCE
+// 🚨 1. NOTIFICATIONS DATA LOADER (ASSIGNMENTS) 🚨
+// ==========================================
+async function loadNotifications() {
+    el.notifList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
+    try {
+        let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+        const q = query(collection(db, "colleges", collegeID, "assignments"), where("timestamp", ">=", cutoff));
+        const snapshot = await getDocs(q);
+        
+        let notifs = [];
+        snapshot.forEach(doc => {
+            let d = doc.data();
+            let sub = d.subject || "Unknown";
+            
+            // Check if student is enrolled in this subject (Mirrors C# NepStudentNotificationManager)
+            if (enrolledSubjectsList.length === 0 || enrolledSubjectsList.some(s => s.startsWith(sub))) {
+                notifs.push({
+                    title: `Assignment: ${sub}`,
+                    body: d.topic || "No Topic",
+                    teach: d.teacherName || "Teacher",
+                    due: d.dueDate || "N/A",
+                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                });
+            }
+        });
+
+        notifs.sort((a,b) => b.time - a.time); // Newest first
+        
+        if (notifs.length === 0) { el.notifList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
+        
+        el.notifList.innerHTML = notifs.map(n => `
+            <div class="data-card notif">
+                <div class="card-title">${n.title}</div>
+                <div class="card-body">${n.body}</div>
+                <div class="card-meta">
+                    <span>${n.teach}</span>
+                    <span class="card-due">Due: ${n.due}</span>
+                </div>
+            </div>
+        `).join('');
+
+    } catch(e) { el.notifList.innerHTML = `<div class="no-data-text">Network Error</div>`; console.error(e); }
+}
+
+// ==========================================
+// 🚨 2. MESSAGES DATA LOADER (INBOX & CHATS) 🚨
+// ==========================================
+async function loadMessages() {
+    el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
+    let msgs = [];
+    
+    try {
+        // 1. Fetch Broadcasts (sent_messages)
+        const broadcastSnap = await getDocs(collection(db, "colleges", collegeID, "sent_messages"));
+        broadcastSnap.forEach(doc => {
+            let d = doc.data();
+            let target = d.targetSummary || "";
+            // Route verification mimicking C# "IsMessageForMe"
+            let forMe = target.includes("All Students") || target.includes("Everyone") || 
+                        target.includes("All Depts") || target.includes(myDepartmentID) || 
+                        d.senderID === auth.currentUser.uid;
+            
+            if (forMe) {
+                msgs.push({
+                    title: d.title || "Notice",
+                    body: d.body || "",
+                    sender: d.senderName || d.senderRole || "System",
+                    type: "broadcast",
+                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                });
+            }
+        });
+
+        // 2. Fetch Private Chats (chats -> messages)
+        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", currentRollNo)));
+        for (let chatDoc of chatSnap.docs) {
+            const msgSnap = await getDocs(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"));
+            msgSnap.forEach(mDoc => {
+                let d = mDoc.data();
+                msgs.push({
+                    title: d.title || "Message",
+                    body: d.body || "",
+                    sender: d.senderName || "User",
+                    type: "chat",
+                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                });
+            });
+        }
+
+        msgs.sort((a,b) => b.time - a.time); // Newest first
+        
+        if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
+        
+        el.msgList.innerHTML = msgs.map(m => {
+            let css = m.type === "broadcast" ? "broadcast" : "";
+            let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            return `
+            <div class="data-card ${css}">
+                <div class="card-title">${m.title}</div>
+                <div class="card-body">${m.body}</div>
+                <div class="card-meta">
+                    <span>${m.sender}</span>
+                    <span>${timeStr}</span>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text">Network Error</div>`; console.error(e); }
+}
+
+
+// ==========================================
+// DAILY ATTENDANCE MANAGER
 // ==========================================
 document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
 
-el.dailyDateBtn.addEventListener("click", () => {
-    calendarMode = "daily";
-    el.calModal.classList.add("active"); 
-    currentDisplayDate = new Date(currentDailyDate); 
-    loadCalendarData();
-});
+el.dailyDateBtn.addEventListener("click", () => { calendarMode = "daily"; el.calModal.classList.add("active"); currentDisplayDate = new Date(currentDailyDate); loadCalendarData(); });
 
 async function loadDailyAttendance() {
     el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-    el.dailyStatus.innerText = "Checking...";
-    el.periodsGrid.innerHTML = ""; dailyData = [];
+    el.dailyStatus.innerText = "Checking..."; el.periodsGrid.innerHTML = ""; dailyData = [];
     for(let i=0; i<6; i++) { dailyData.push({hasData: false}); el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; }
 
     let mStr = String(currentDailyDate.getMonth() + 1).padStart(2, '0'); let dStr = String(currentDailyDate.getDate()).padStart(2, '0');
@@ -333,8 +418,7 @@ document.getElementById("closeDetailBtn").addEventListener("click", () => el.det
 document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener("click", (e) => {
         document.querySelectorAll('.day-btn').forEach(b => b.classList.remove("active"));
-        e.target.classList.add("active");
-        loadTimetableForDay(e.target.dataset.day);
+        e.target.classList.add("active"); loadTimetableForDay(e.target.dataset.day);
     });
 });
 
@@ -343,10 +427,7 @@ function getMyBatchIndexForSubject(targetSubjectName) {
         if (enrolledSub.startsWith(targetSubjectName)) {
             if (enrolledSub.includes("-")) {
                 let parts = enrolledSub.split('-');
-                if (parts.length > 1) {
-                    let batchNum = parseInt(parts[1].trim());
-                    if (!isNaN(batchNum)) return batchNum - 1;
-                }
+                if (parts.length > 1) { let batchNum = parseInt(parts[1].trim()); if (!isNaN(batchNum)) return batchNum - 1; }
             }
             return 0; 
         }
@@ -355,35 +436,23 @@ function getMyBatchIndexForSubject(targetSubjectName) {
 }
 
 function loadTimetableForDay(selectedDay) {
-    el.ttCards.innerHTML = "";
-    if (activeTimetableUnsubscribe) activeTimetableUnsubscribe();
-
+    el.ttCards.innerHTML = ""; if (activeTimetableUnsubscribe) activeTimetableUnsubscribe();
     let semStr = (currentSemesterIndex + 1).toString();
-    const q = query(collection(db, "colleges", collegeID, "timetable_allocations"), 
-                    where("semester", "==", semStr), 
-                    where("day", "==", selectedDay));
+    const q = query(collection(db, "colleges", collegeID, "timetable_allocations"), where("semester", "==", semStr), where("day", "==", selectedDay));
 
     activeTimetableUnsubscribe = onSnapshot(q, (snapshot) => {
-        el.ttCards.innerHTML = "";
-        let docs = [];
-        snapshot.forEach(d => docs.push(d.data()));
-
+        el.ttCards.innerHTML = ""; let docs = []; snapshot.forEach(d => docs.push(d.data()));
         let htmlBuffer = "";
 
         for (let i = 0; i < 6; i++) {
-            let pStr = (i + 1).toString();
-            let periodDocs = docs.filter(d => d.period === pStr);
-            let finalMatch = null;
-
+            let pStr = (i + 1).toString(); let periodDocs = docs.filter(d => d.period === pStr); let finalMatch = null;
             finalMatch = periodDocs.find(d => d.category === "Break" || d.category === "Lunch");
 
             if (!finalMatch) {
                 for (let d of periodDocs) {
-                    let sName = d.subjectName ? d.subjectName.trim() : "";
-                    let myBatchIdx = getMyBatchIndexForSubject(sName);
+                    let sName = d.subjectName ? d.subjectName.trim() : ""; let myBatchIdx = getMyBatchIndexForSubject(sName);
                     if (myBatchIdx !== -1) {
-                        let isComm = d.isCommon === true;
-                        let dBatchIdx = d.splitIndex ? parseInt(d.splitIndex) : 0;
+                        let isComm = d.isCommon === true; let dBatchIdx = d.splitIndex ? parseInt(d.splitIndex) : 0;
                         if (isComm || dBatchIdx === myBatchIdx) { finalMatch = d; break; }
                     }
                 }
@@ -391,75 +460,37 @@ function loadTimetableForDay(selectedDay) {
 
             if (!finalMatch && myDepartmentID) {
                 for (let d of periodDocs) {
-                    let dDept = d.departmentID || "";
-                    let dCat = (d.category || "").toUpperCase();
-                    if (dDept === myDepartmentID && (dCat.includes("MJD") || dCat.includes("CORE"))) {
-                        finalMatch = d; break;
-                    }
+                    let dDept = d.departmentID || ""; let dCat = (d.category || "").toUpperCase();
+                    if (dDept === myDepartmentID && (dCat.includes("MJD") || dCat.includes("CORE"))) { finalMatch = d; break; }
                 }
             }
 
             if (finalMatch) {
-                let cat = finalMatch.category || "-";
-                let subj = finalMatch.subjectName || "Unknown";
-                let room = finalMatch.room || "TBD";
-                
+                let cat = finalMatch.category || "-"; let subj = finalMatch.subjectName || "Unknown"; let room = finalMatch.room || "TBD";
                 let isComm = finalMatch.isCommon === true;
-                if (!isComm && finalMatch.splitIndex) {
-                    let bIdx = parseInt(finalMatch.splitIndex);
-                    subj += ` <span style="font-size:10px; color:#eab308;">(Batch ${bIdx + 1})</span>`;
-                }
-
-                let cardClass = "tt-card"; 
-                if (cat === "Break" || cat === "Lunch") { cardClass += " break"; subj = cat; cat = "-"; }
+                if (!isComm && finalMatch.splitIndex) { let bIdx = parseInt(finalMatch.splitIndex); subj += ` <span style="font-size:10px; color:#eab308;">(Batch ${bIdx + 1})</span>`; }
+                let cardClass = "tt-card"; if (cat === "Break" || cat === "Lunch") { cardClass += " break"; subj = cat; cat = "-"; }
                 
-                htmlBuffer += `
-                    <div class="${cardClass}">
-                        <div class="tt-pill-row">
-                            <div class="tt-pill cat-pill">${cat}</div>
-                            <div class="tt-pill sub-pill">${subj}</div>
-                        </div>
-                        <div class="tt-pill-row">
-                            <div class="tt-pill sem-pill">Semester ${semStr}</div>
-                            <div class="tt-pill room-pill">${room}</div>
-                        </div>
-                    </div>`;
+                htmlBuffer += `<div class="${cardClass}"><div class="tt-pill-row"><div class="tt-pill cat-pill">${cat}</div><div class="tt-pill sub-pill">${subj}</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill">Semester ${semStr}</div><div class="tt-pill room-pill">${room}</div></div></div>`;
             } else {
-                htmlBuffer += `
-                    <div class="tt-card free">
-                        <div class="tt-pill-row">
-                            <div class="tt-pill cat-pill" style="color:#94a3b8">-</div>
-                            <div class="tt-pill sub-pill" style="color:#64748b">Free Period</div>
-                        </div>
-                        <div class="tt-pill-row">
-                            <div class="tt-pill sem-pill" style="color:#94a3b8">-</div>
-                            <div class="tt-pill room-pill" style="color:#94a3b8">-</div>
-                        </div>
-                    </div>`;
+                htmlBuffer += `<div class="tt-card free"><div class="tt-pill-row"><div class="tt-pill cat-pill" style="color:#94a3b8">-</div><div class="tt-pill sub-pill" style="color:#64748b">Free Period</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill" style="color:#94a3b8">-</div><div class="tt-pill room-pill" style="color:#94a3b8">-</div></div></div>`;
             }
         }
-        el.ttCards.innerHTML = htmlBuffer;
-        updateTimelineVisuals();
+        el.ttCards.innerHTML = htmlBuffer; updateTimelineVisuals();
     });
 }
 
 function updateTimelineVisuals() {
     if (el.ttView.style.display === "none") return;
     let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60);
-    
-    let pStart = 9.5; let pEnd = 16.5;
-    let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
+    let pStart = 9.5; let pEnd = 16.5; let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
     el.ttProgress.style.height = `${progress * 100}%`;
 
-    let endTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
-    let nodesHTML = "";
+    let endTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5]; let nodesHTML = "";
     for (let i = 0; i < 6; i++) {
-        let nodeStart = (i === 0) ? 9.5 : endTimes[i - 1];
-        if (i === 3) nodeStart = 13.5; 
-        
+        let nodeStart = (i === 0) ? 9.5 : endTimes[i - 1]; if (i === 3) nodeStart = 13.5; 
         let nClass = "tt-node";
-        if (currentHour >= nodeStart && currentHour < endTimes[i]) nClass += " active";
-        else if (currentHour >= endTimes[i]) nClass += " completed";
+        if (currentHour >= nodeStart && currentHour < endTimes[i]) nClass += " active"; else if (currentHour >= endTimes[i]) nClass += " completed";
         nodesHTML += `<div class="${nClass}">${i+1}</div>`;
     }
     el.ttNodes.innerHTML = nodesHTML;
@@ -467,7 +498,7 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// CALENDAR & DATE PICKER LOGIC
+// CALENDAR & SETTINGS
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
@@ -475,8 +506,7 @@ document.getElementById("btnSignOut").addEventListener("click", () => { signOut(
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
 document.getElementById("btnCalendar").addEventListener("click", () => { 
-    calendarMode = "global";
-    el.calModal.classList.add("active"); 
+    calendarMode = "global"; el.calModal.classList.add("active"); 
     let d = new Date(); currentDisplayDate = new Date(d.getFullYear(), d.getMonth(), 1); 
     loadCalendarData(); 
 });
@@ -517,11 +547,8 @@ function renderCalendarGrid() {
         if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) { cellClass += " today"; }
         
         let clickEvent = "";
-        if (calendarMode === "daily") {
-            clickEvent = `onclick="selectDateAndLoadDaily('${dateStr}')"`;
-        } else {
-            clickEvent = popupText ? `onclick="alert('${popupText}')"` : "";
-        }
+        if (calendarMode === "daily") clickEvent = `onclick="selectDateAndLoadDaily('${dateStr}')"`;
+        else clickEvent = popupText ? `onclick="alert('${popupText}')"` : "";
         
         el.calGrid.innerHTML += `<div class="${cellClass}" ${clickEvent}>${day}${subText}</div>`;
     }
@@ -529,8 +556,7 @@ function renderCalendarGrid() {
 
 window.selectDateAndLoadDaily = function(dateStr) {
     el.calModal.classList.remove("active");
-    let parts = dateStr.split('-');
-    currentDailyDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    let parts = dateStr.split('-'); currentDailyDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     loadDailyAttendance();
 };
 
