@@ -1,98 +1,114 @@
+/* =========================================
+   GLOBAL RESET
+   ========================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
 body {
-    background-color: #f5f5f5;
-    display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; overflow: hidden;
+    background-color: #e9ecef; /* Slight gray background to frame the white app on PC */
+    display: flex; 
+    justify-content: center; 
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* Positively prevents whole-page scrolling and mobile bleed */
 }
 
+/* =========================================
+   MAIN APP CONTAINER
+   ========================================= */
 .dashboard-container {
-    background-color: #ffffff; width: 100%; height: 100vh; 
-    display: flex; flex-direction: column; position: relative;
+    background-color: #ffffff; 
+    width: 100%; 
+    max-width: 900px; /* 🚨 THE PC FIX: Locks the whole app to a clean, readable width */
+    height: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    position: relative;
+    box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    overflow: hidden; /* Contains everything safely inside */
 }
 
-/* 🚨 RESPONSIVE PC LAYOUT FIX 🚨 */
-@media (min-width: 768px) {
-    .dashboard-container { 
-        max-width: 1200px; /* Constrains the entire app cleanly */
-        margin: 0 auto;    /* Centers the app on ultra-wide monitors */
-        height: 100vh; 
-        border-radius: 0; 
-        box-shadow: 0 0 30px rgba(0,0,0,0.05); /* Soft outer shadow */
-        border-left: 1px solid #e0e0e0;
-        border-right: 1px solid #e0e0e0;
-    }
-    
-    /* Align the top elements with the grid padding below */
-    .profile-card {
-        margin: 0 40px 20px 40px; 
-    }
-    
-    .semester-nav {
-        margin: 0 40px;
-        border-radius: 10px; /* Makes it look like a neat toolbar */
-    }
-
-    .scrollable-content { 
-        display: grid; grid-template-columns: 1fr 1fr; gap: 30px; 
-        padding: 30px 40px 100px 40px; 
-        max-width: 100%; /* Fills the 1200px container perfectly */
-        margin: 0; 
-    }
-    
-    .attendance-overview { 
-        grid-column: span 2; justify-content: center; gap: 80px; 
-    }
-    
-    /* Stops the stats table from stretching too wide on PC */
-    .stats-list {
-        flex: 0 1 400px;
-    }
-}
-
-/* Header & Profile */
-.header { text-align: center; padding: 15px 0; }
+/* 1. Header */
+.header { text-align: center; padding: 15px 0; flex-shrink: 0; }
 .logo-text { color: #3b82f6; font-size: 28px; letter-spacing: 2px; font-weight: 700; }
 
+/* 2. Profile Card */
 .profile-card {
-    background: #e0f2fe; margin: 0 15px 15px 15px; border-radius: 15px;
-    padding: 15px; display: flex; justify-content: space-between; border: 1px solid #bae6fd;
+    background: #e0f2fe; 
+    margin: 0 15px 15px 15px; 
+    border-radius: 15px;
+    padding: 15px; 
+    display: flex; justify-content: space-between; 
+    border: 1px solid #bae6fd;
+    flex-shrink: 0;
 }
 .profile-info h2 { font-size: 16px; color: #000; }
-.profile-info p { font-size: 12px; color: #666; margin-bottom: 5px; }
+.profile-info p { font-size: 12px; color: #666; margin-bottom: 5px; line-height: 1.4; }
 .status-badge {
     display: inline-block; padding: 4px 12px; border-radius: 12px;
     font-size: 11px; font-weight: bold; color: #fff; background-color: #888;
 }
 
-/* Semester Nav */
+/* 3. Semester Nav */
 .semester-nav {
-    background-color: #3b82f6; color: white; padding: 10px 15px;
+    background-color: #3b82f6; color: white; 
+    padding: 12px 20px;
     display: flex; justify-content: space-between; align-items: center;
     font-weight: 600; font-size: 14px;
+    flex-shrink: 0;
 }
 .nav-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 10px;}
 
-/* Scrollable Content */
-.scrollable-content { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 100px; }
+/* =========================================
+   SCROLLABLE CONTENT AREA
+   ========================================= */
+.scrollable-content { 
+    flex: 1; 
+    overflow-y: auto; 
+    overflow-x: hidden;
+    padding: 20px; 
+    padding-bottom: 110px; /* Space for the bottom nav */
+}
 
-/* Attendance Overview */
-.attendance-overview { display: flex; align-items: center; margin-bottom: 25px; }
+/* Custom Scrollbar for PC */
+.scrollable-content::-webkit-scrollbar { width: 6px; }
+.scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* Attendance Overview (Stack on Mobile, Side-by-Side on PC) */
+.attendance-overview { 
+    display: flex; 
+    flex-direction: column; /* Stack vertically on small phones */
+    align-items: center; 
+    gap: 25px;
+    margin-bottom: 30px; 
+}
+
+@media (min-width: 600px) {
+    .attendance-overview { 
+        flex-direction: row; /* Put circle and table side-by-side on larger screens */
+        justify-content: center; 
+        gap: 50px; 
+    }
+}
+
 .circular-progress {
-    width: 120px; height: 120px; border-radius: 50%;
+    width: 130px; height: 130px; border-radius: 50%;
     background: conic-gradient(#e0e0e0 360deg);
     display: flex; justify-content: center; align-items: center;
-    margin-right: 20px; flex-shrink: 0;
+    flex-shrink: 0;
 }
 .inner-circle {
-    width: 100px; height: 100px; border-radius: 50%;
+    width: 106px; height: 106px; border-radius: 50%;
     background-color: #fff; display: flex; flex-direction: column;
     justify-content: center; align-items: center; text-align: center;
 }
-.projected-text { font-size: 10px; color: #666; }
-.percentage-value { font-size: 20px; font-weight: bold; color: #000; }
+.projected-text { font-size: 11px; color: #666; }
+.percentage-value { font-size: 22px; font-weight: bold; color: #000; }
 
-.stats-list { flex: 1; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+.stats-list { 
+    width: 100%; 
+    max-width: 350px; 
+    border: 1px solid #ddd; border-radius: 8px; overflow: hidden; 
+}
 .stat-item { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #ddd; text-align: center; }
 .stat-item:first-child { font-weight: 600; }
 .stat-item:last-child { border-bottom: none; }
@@ -100,10 +116,10 @@ body {
 /* Lists & Bars */
 .list-container {
     border: 1px solid #ddd; border-radius: 10px; min-height: 150px;
-    margin-bottom: 20px; overflow: hidden; padding: 10px;
+    margin-bottom: 20px; overflow: hidden; padding: 15px;
 }
 .subject-row { margin-bottom: 15px; }
-.row-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+.row-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; font-weight: 600; }
 .progress-track { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.3s; }
 
@@ -115,23 +131,48 @@ body {
 }
 .no-data-text { text-align: center; font-size: 12px; color: #888; padding-top: 20px;}
 
-/* BOTTOM NAV MASKING & CENTERING */
+/* 🚨 GRID LAYOUT FOR PC 🚨 */
+@media (min-width: 768px) {
+    .scrollable-content { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; /* 2 perfect columns */
+        gap: 30px; 
+        align-items: start; /* Prevents boxes from stretching vertically */
+    }
+    .attendance-overview { 
+        grid-column: span 2; 
+    }
+}
+
+/* =========================================
+   BOTTOM NAV MASKING & CENTERING
+   ========================================= */
 .bottom-nav-mask {
     position: absolute; bottom: 0; left: 0; right: 0;
-    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 20%, #ffffff 100%);
-    padding: 20px 15px 15px 15px; display: flex; justify-content: center; z-index: 10;
+    height: 100px;
+    /* Invisible at the top, solid white at the bottom */
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%);
+    display: flex; justify-content: center; align-items: center; 
+    padding-top: 20px;
+    z-index: 10;
+    pointer-events: none; /* Lets you scroll behind the invisible part */
 }
 
 .bottom-nav {
-    background: #e0f2fe; border-radius: 30px; padding: 10px 20px;
-    display: flex; justify-content: center; gap: 35px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: max-content; max-width: 100%;
+    background: #e0f2fe; border-radius: 30px; padding: 12px 20px;
+    display: flex; justify-content: space-around; /* 🚨 THE MOBILE FIX: Auto-spaces buttons safely */
+    width: 90%; /* Will never exceed phone screen width */
+    max-width: 450px; /* Stays compact on PC */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    pointer-events: auto; /* Re-enables clicking on the buttons */
 }
 .icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; opacity: 0.5; transition: 0.2s;}
 .icon-btn:hover { opacity: 0.8; }
 .icon-btn.active { opacity: 1; transform: scale(1.15);}
 
-/* SIDEBAR SETTINGS DRAWER */
+/* =========================================
+   SIDEBAR SETTINGS DRAWER
+   ========================================= */
 .sidebar-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.5); z-index: 99; display: none; opacity: 0; transition: opacity 0.3s;
