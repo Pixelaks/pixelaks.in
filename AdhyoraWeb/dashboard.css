@@ -8,6 +8,14 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .header { text-align: center; padding: 15px 0; flex-shrink: 0; }
 .logo-text { color: #3b82f6; font-size: 28px; letter-spacing: 2px; font-weight: 700; }
 
+/* Floating Settings Button */
+.floating-settings-btn {
+    position: absolute; top: 15px; left: 15px; background: #e0f2fe; border: none;
+    border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 50; transition: 0.2s;
+}
+.floating-settings-btn:hover { transform: scale(1.1); background: #bae6fd; }
+
 .profile-card { background: #e0f2fe; margin: 0 15px 15px 15px; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; border: 1px solid #bae6fd; flex-shrink: 0; }
 .profile-info h2 { font-size: 16px; color: #000; }
 .profile-info p { font-size: 12px; color: #666; margin-bottom: 5px; line-height: 1.4; }
@@ -17,13 +25,13 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .nav-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 10px;}
 
 /* =========================================
-   MAIN VIEW (ATTENDANCE & MARKS)
+   SCROLLABLE CONTENT AREA (MAIN VIEW)
    ========================================= */
-.scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 120px; }
+.scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 120px; display: flex; flex-direction: column; align-items: center; }
 .scrollable-content::-webkit-scrollbar { width: 8px; }
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-.attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
+.attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; width: 100%; max-width: 500px;}
 .circular-progress { width: 130px; height: 130px; border-radius: 50%; background: conic-gradient(#e0e0e0 360deg); display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
 .inner-circle { width: 106px; height: 106px; border-radius: 50%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .projected-text { font-size: 11px; color: #666; }
@@ -34,7 +42,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .stat-item:first-child { font-weight: 600; }
 .stat-item:last-child { border-bottom: none; }
 
-.list-container { border: 1px solid #ddd; border-radius: 10px; min-height: 150px; max-height: 280px; margin-bottom: 20px; overflow-y: auto; overflow-x: hidden; padding: 15px; }
+.list-container { width: 100%; max-width: 500px; border: 1px solid #ddd; border-radius: 10px; min-height: 150px; max-height: 280px; margin-bottom: 20px; overflow-y: auto; overflow-x: hidden; padding: 15px; }
 .list-container::-webkit-scrollbar { width: 6px; }
 .list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
 .subject-row { margin-bottom: 15px; }
@@ -42,9 +50,27 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .progress-track { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.3s; }
 
+.marks-section { width: 100%; max-width: 500px; }
 .marks-header-container { background-color: #3b82f6; border-radius: 5px; padding: 5px; margin-bottom: 5px; }
 .dropdown-select { width: 100%; padding: 8px; border-radius: 5px; border: none; font-size: 14px; background-color: #3b82f6; color: white; outline: none; font-weight: bold; cursor: pointer; }
 .no-data-text { text-align: center; font-size: 12px; color: #888; padding-top: 20px;}
+
+/* =========================================
+   🚨 NEW: MESSAGES & NOTIFICATIONS CARDS 🚨
+   ========================================= */
+#notificationsListContainer, #messagesListContainer { width: 100%; max-width: 500px; }
+.data-card { 
+    background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06); border-left: 5px solid #3b82f6;
+    display: flex; flex-direction: column; gap: 5px;
+}
+.data-card.notif { border-left-color: #10b981; } /* Green for assignments */
+.data-card.broadcast { border-left-color: #f59e0b; } /* Yellow for notices */
+
+.card-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+.card-body { font-size: 12px; color: #475569; line-height: 1.4; }
+.card-meta { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 5px; font-weight: 600;}
+.card-due { color: #ef4444; }
 
 /* =========================================
    DAILY ATTENDANCE VIEW
@@ -64,15 +90,14 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .btn-medical { background: #3b82f6; color: white; }
 
 /* =========================================
-   🚨 TIMETABLE VIEW (4-PILL DESIGN) 🚨
+   TIMETABLE VIEW
    ========================================= */
 .timetable-panel { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding-bottom: 120px; }
-.day-btn-group { display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 15px;}
-.day-btn { background: transparent; border: none; padding: 8px 15px; border-radius: 10px; font-weight: 600; font-size: 13px; color: #64748b; cursor: pointer; transition: 0.2s;}
+.day-btn-group { display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 15px; max-width: 500px; width: 100%;}
+.day-btn { background: transparent; border: none; padding: 8px 15px; border-radius: 10px; font-weight: 600; font-size: 13px; color: #64748b; cursor: pointer; transition: 0.2s; flex:1;}
 .day-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.3);}
 
 .timetable-content { display: flex; width: 100%; max-width: 500px; position: relative; gap: 15px;}
-
 .timeline-container { position: relative; width: 30px; display: flex; flex-direction: column; justify-content: space-between; padding: 35px 0;}
 .timeline-track { position: absolute; left: 14px; top: 35px; bottom: 35px; width: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;}
 .timeline-progress { width: 100%; background: #3b82f6; transition: height 0.5s;}
@@ -82,25 +107,13 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .tt-node.completed { border-color: #3b82f6; color: #fff; background: #3b82f6;}
 
 .timetable-cards { flex: 1; display: flex; flex-direction: column; gap: 15px; }
-
-/* 🚨 The New Card Design 🚨 */
-.tt-card { 
-    background: #e0f2fe; background-image: radial-gradient(#bae6fd 1.5px, transparent 1.5px); background-size: 15px 15px;
-    border: 2px solid #3b82f6; border-radius: 15px; padding: 15px; 
-    display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-}
+.tt-card { background: #e0f2fe; background-image: radial-gradient(#bae6fd 1.5px, transparent 1.5px); background-size: 15px 15px; border: 2px solid #3b82f6; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .tt-card.free { background: #f8fafc; border-color: #cbd5e1; }
 .tt-card.break { background: #fef9c3; border-color: #eab308; }
-
 .tt-pill-row { display: flex; justify-content: space-between; gap: 10px; }
-.tt-pill {
-    background: #ffffff; border-radius: 20px; padding: 8px 12px;
-    font-size: 12px; font-weight: 600; text-align: center;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
+.tt-pill { background: #ffffff; border-radius: 20px; padding: 8px 12px; font-size: 12px; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .cat-pill { color: #3b82f6; flex: 1; }
-.sub-pill { color: #0f172a; flex: 2; } /* Subject gets more room */
+.sub-pill { color: #0f172a; flex: 2; } 
 .sem-pill { color: #64748b; flex: 1; }
 .room-pill { color: #64748b; flex: 1.5; }
 
@@ -108,11 +121,11 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 @media (min-width: 768px) {
     .profile-card { margin: 0 40px 20px 40px; }
     .semester-nav { margin: 0 40px; border-radius: 10px; }
-    .scrollable-content { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 30px 40px 120px 40px; align-items: start; }
+    .scrollable-content { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 30px 40px 120px 40px; align-items: start; justify-items: center;}
     .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; gap: 80px; }
     .stats-list { max-width: 500px; } 
-    .daily-attendance-panel { padding-top: 60px; }
-    .timetable-panel { padding-top: 40px; }
+    .daily-attendance-panel, .timetable-panel { display: flex; grid-column: span 2; justify-content: center;}
+    #notificationsView, #messagesView { display: flex; grid-column: span 2; flex-direction: column; align-items: center; width: 100%;}
 }
 
 /* BOTTOM NAV */
