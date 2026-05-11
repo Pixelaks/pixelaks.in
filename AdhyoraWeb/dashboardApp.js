@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, query, where, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -68,16 +68,32 @@ if (!collegeID || !studentUID) {
 // --- Listeners & Queries ---
 
 function initStudentListener() {
-    const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+    // 🚨 FIX: Match C# logic. Query the students collection by userID instead of guessing the Document ID.
+    const studentsRef = collection(db, "colleges", collegeID, "students");
+    const q = query(studentsRef, where("userID", "==", studentUID));
 
-    onSnapshot(studentRef, (docSnap) => {
-        if (!docSnap.exists()) {
+    onSnapshot(q, (snapshot) => {
+        if (snapshot.empty) {
             el.name.innerText = "Profile Not Found";
+            el.roll.innerText = "Check Database";
+            el.badge.innerText = "Error";
+            el.badge.style.backgroundColor = "#f44336";
             return;
         }
+
+        // Just like C#: snapshot.Documents.ElementAt(0)
+        const docSnap = snapshot.docs[0];
+        
+        // Grab the exact, perfectly-cased Roll Number (Document ID) from the database
+        currentRollNo = docSnap.id; 
+        
+        // Send the data to the UI builder
         processStudentData(docSnap.data());
+
     }, (error) => {
         console.error("Error fetching student:", error);
+        el.name.innerText = "Access Denied / Network Error";
+        el.roll.innerText = "Check Console (F12)";
     });
 }
 
