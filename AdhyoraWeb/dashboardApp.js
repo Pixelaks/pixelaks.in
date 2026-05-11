@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, query, where, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -21,6 +21,8 @@ let collegeID = "";
 let studentUID = "";
 let currentRollNo = "";
 
+let collegeSemesterType = "Odd"; // Synced from SemesterManager
+
 let loadedSemesters = {};
 let sortedSemesterKeys = [];
 let currentSemesterIndex = 0;
@@ -39,82 +41,99 @@ const el = {
     absClasses: document.getElementById("absentClassesText"),
     totClasses: document.getElementById("totalClassesTakenText"),
     curPctText: document.getElementById("currentPercentageText"),
+    
+    // New Period Stats
+    perPres: document.getElementById("totalPeriodsPresentText"),
+    perAbs: document.getElementById("totalPeriodsAbsentText"),
+    perTot: document.getElementById("totalPeriodsTakenText"),
+
     subList: document.getElementById("subjectListContainer"),
     markList: document.getElementById("marksListContainer"),
     examDrop: document.getElementById("examDropdown"),
-    noMarks: document.getElementById("noMarksData")
+    noMarks: document.getElementById("noMarksData"),
+
+    // Sidebar Elements
+    overlay: document.getElementById("sidebarOverlay"),
+    sidebar: document.getElementById("settingsSidebar"),
+    sbName: document.getElementById("sidebarName"),
+    sbSub: document.getElementById("sidebarSubtitle")
 };
 
-// --- Initialization (WITH AUTH FIX) ---
+// --- Initialization ---
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college');
 studentUID = urlParams.get('uid');
-currentRollNo = urlParams.get('roll') || studentUID;
 
 if (!collegeID || !studentUID) {
     alert("Session error. Please login again.");
     window.location.href = "index.html"; 
 } else {
-    // Wait for Firebase to securely fetch the login token
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            initStudentListener();
+            syncCollegeAndListen();
         } else {
             window.location.href = "index.html";
         }
     });
 }
 
-// --- Listeners & Queries ---
+// --- Logic ---
 
-function initStudentListener() {
-    // 🚨 THE FIX: Ignore the URL and pull the secure UID directly from Firebase Auth!
+async function syncCollegeAndListen() {
+    // 1. Fetch SemesterManager data first
+    try {
+        const colSnap = await getDoc(doc(db, "colleges", collegeID));
+        if (colSnap.exists() && colSnap.data().currentSemesterType) {
+            collegeSemesterType = colSnap.data().currentSemesterType;
+        }
+    } catch(e) { console.error("Could not sync college semester type"); }
+
+    // 2. Now load the student
     const secureUID = auth.currentUser.uid; 
-    
     const studentsRef = collection(db, "colleges", collegeID, "students");
-    
-    // Now Firebase knows for a fact that you are searching for your own data
     const q = query(studentsRef, where("userID", "==", secureUID));
 
     onSnapshot(q, (snapshot) => {
         if (snapshot.empty) {
             el.name.innerText = "Profile Not Found";
-            el.roll.innerText = "Check Database";
-            el.badge.innerText = "Error";
-            el.badge.style.backgroundColor = "#f44336";
             return;
         }
-
         const docSnap = snapshot.docs[0];
-        
-        // Grab the exact Roll Number (Document ID) directly from the database
         currentRollNo = docSnap.id; 
-        
-        // Send the data to the UI builder
         processStudentData(docSnap.data());
-
-    }, (error) => {
-        console.error("Error fetching student:", error);
-        el.name.innerText = "Access Denied / Network Error";
-        el.roll.innerText = "Check Console (F12)";
     });
 }
 
 function processStudentData(data) {
-    el.name.innerText = data.Name || data.name || "Unknown Student";
+    const sName = data.Name || data.name || "Unknown Student";
+    el.name.innerText = sName;
     el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
 
+    // Update Sidebar Profile
+    const dept = data.Department || data.department || "General";
+    const rollDisplay = data.RollNumber || currentRollNo;
+    el.sbName.innerText = `${sName} <span style="font-size:12px; color:#888;">(${rollDisplay})</span>`;
+    
+    // Parse Year for SemesterManager Logic
+    let rawYear = (data.Year || data.year || "1").toString();
+    let studentYear = parseInt(rawYear.replace(/\D/g, ''));
+    if (isNaN(studentYear) || studentYear <= 0) studentYear = 1;
+
+    // Build Empty Semesters
     loadedSemesters = {};
     sortedSemesterKeys = [];
     for(let i=1; i<=8; i++) {
         const key = `Semester_${i}`;
         loadedSemesters[key] = {
             id: key, name: `Semester ${i}`, hasData: false, 
-            strictPresent: 0, strictTotal: 0, subjects: []
+            strictPresent: 0, strictTotal: 0, 
+            simplePresent: 0, simpleTotal: 0, // NEW: For periods
+            subjects: []
         };
         sortedSemesterKeys.push(key);
     }
 
+    // Populate Data
     if (data.attendance_stats) {
         for (const [key, semData] of Object.entries(data.attendance_stats)) {
             const cleanKey = key.replace("semester_", "Semester_");
@@ -125,55 +144,77 @@ function processStudentData(data) {
                 if (semData.present !== undefined) semInfo.strictPresent = semData.present;
                 if (semData.total !== undefined) semInfo.strictTotal = semData.total;
 
+                let sumPres = 0; let sumTot = 0;
+
                 for (const [subKey, subStats] of Object.entries(semData)) {
                     if (subKey === "present" || subKey === "total") continue;
                     if (subKey === "Strict_Global") {
                         semInfo.strictPresent = subStats.present;
                         semInfo.strictTotal = subStats.total;
                     } else if (typeof subStats === 'object') {
-                        semInfo.subjects.push({
-                            name: subKey.replace("-", "/"),
-                            present: subStats.present || 0,
-                            total: subStats.total || 0
-                        });
+                        let p = subStats.present || 0;
+                        let t = subStats.total || 0;
+                        semInfo.subjects.push({ name: subKey.replace("-", "/"), present: p, total: t });
+                        sumPres += p; sumTot += t;
                     }
                 }
+                semInfo.simplePresent = sumPres;
+                semInfo.simpleTotal = sumTot;
             }
         }
     }
 
-    let currentSemStr = data.CurrentSemester || data.currentSemester || "1";
-    currentSemesterIndex = parseInt(currentSemStr.replace(/\D/g, '')) - 1;
-    if (currentSemesterIndex < 0 || currentSemesterIndex > 7) currentSemesterIndex = 0;
+    // 🚨 SemesterManager Logic: Calculate Default Semester!
+    let baseSem = (studentYear - 1) * 2;
+    let targetSemNumber = (collegeSemesterType === "Odd") ? baseSem + 1 : baseSem + 2;
+    
+    currentSemesterIndex = targetSemNumber - 1;
+    if (currentSemesterIndex < 0) currentSemesterIndex = 0;
+    if (currentSemesterIndex > 7) currentSemesterIndex = 7;
 
-    updateUIForCurrentSemester();
+    updateUIForCurrentSemester(dept);
 }
 
 // --- Navigation ---
 document.getElementById("prevSemBtn").addEventListener("click", () => {
-    if (currentSemesterIndex > 0) { currentSemesterIndex--; updateUIForCurrentSemester(); }
+    if (currentSemesterIndex > 0) { currentSemesterIndex--; updateUIForCurrentSemester(null); }
 });
 document.getElementById("nextSemBtn").addEventListener("click", () => {
-    if (currentSemesterIndex < 7) { currentSemesterIndex++; updateUIForCurrentSemester(); }
+    if (currentSemesterIndex < 7) { currentSemesterIndex++; updateUIForCurrentSemester(null); }
 });
 
 // --- UI Updaters ---
-function updateUIForCurrentSemester() {
+function updateUIForCurrentSemester(optionalDept) {
     const semKey = sortedSemesterKeys[currentSemesterIndex];
     const semData = loadedSemesters[semKey];
 
     el.semTitle.innerText = semData.name;
+    
+    // Update Sidebar subtitle if passed
+    if (optionalDept) {
+        el.sbSub.innerHTML = `${optionalDept} &nbsp; <span class="sem-text">${semData.name}</span>`;
+    } else {
+        // If just switching semesters, just update the sem text in sidebar
+        let currentSub = el.sbSub.innerHTML;
+        if(currentSub.includes("&nbsp;")) {
+            let parts = currentSub.split("&nbsp;");
+            el.sbSub.innerHTML = `${parts[0]}&nbsp; <span class="sem-text">${semData.name}</span>`;
+        }
+    }
 
     let percent = 0;
-    if (semData.strictTotal > 0) {
-        percent = (semData.strictPresent / semData.strictTotal) * 100;
-    }
+    if (semData.strictTotal > 0) percent = (semData.strictPresent / semData.strictTotal) * 100;
 
     el.pctText.innerText = `${percent.toFixed(2)}%`;
     el.curPctText.innerText = `Current: ${percent.toFixed(2)}%`;
     el.attClasses.innerText = `Attended: ${semData.strictPresent}`;
     el.totClasses.innerText = `Total: ${semData.strictTotal}`;
     el.absClasses.innerText = `Absent: ${semData.strictTotal - semData.strictPresent}`;
+
+    // 🚨 NEW: Populate Period Stats
+    el.perPres.innerText = `Periods Present: ${semData.simplePresent}`;
+    el.perTot.innerText = `Total Periods: ${semData.simpleTotal}`;
+    el.perAbs.innerText = `Periods Absent: ${semData.simpleTotal - semData.simplePresent}`;
 
     let ringColor = "#f44336"; let statusTxt = "Critical";
     if (percent >= 85) { ringColor = "#4caf50"; statusTxt = "Excellent"; }
@@ -218,51 +259,32 @@ function updateUIForCurrentSemester() {
 // --- Marks System ---
 function fetchMarksForSemester(semName) {
     if (activeMarksUnsubscribe) activeMarksUnsubscribe();
-    
-    el.markList.innerHTML = "";
-    el.examDrop.innerHTML = '<option value="">Loading...</option>';
-    el.noMarks.style.display = "block";
+    el.markList.innerHTML = ""; el.examDrop.innerHTML = '<option value="">Loading...</option>'; el.noMarks.style.display = "block";
 
     const marksRef = doc(db, "colleges", collegeID, "students", currentRollNo, "nep_marks", semName);
-
     activeMarksUnsubscribe = onSnapshot(marksRef, (docSnap) => {
         if (!docSnap.exists()) {
-            el.examDrop.innerHTML = '<option value="">No Exams Data</option>';
-            el.noMarks.style.display = "block";
-            return;
+            el.examDrop.innerHTML = '<option value="">No Exams Data</option>'; el.noMarks.style.display = "block"; return;
         }
 
-        const data = docSnap.data();
-        let examMap = {};
-
+        const data = docSnap.data(); let examMap = {};
         for (const [subjectName, exams] of Object.entries(data)) {
             if (typeof exams !== 'object') continue;
-            
             for (const [examName, stats] of Object.entries(exams)) {
                 if (!examMap[examName]) examMap[examName] = [];
-                
-                let t = stats.test || 0;
-                let a = stats.assign || 0;
-                let att = stats.att || 0;
-                let max = stats.max || 50;
-                let obt = stats.total || (t + a + att);
-
+                let t = stats.test || 0; let a = stats.assign || 0; let att = stats.att || 0;
+                let max = stats.max || 50; let obt = stats.total || (t + a + att);
                 examMap[examName].push({ name: subjectName, obtained: obt, max: max });
             }
         }
 
         const examKeys = Object.keys(examMap).sort();
         if (examKeys.length === 0) {
-            el.examDrop.innerHTML = '<option value="">No Exams Data</option>';
-            el.noMarks.style.display = "block";
-            return;
+            el.examDrop.innerHTML = '<option value="">No Exams Data</option>'; el.noMarks.style.display = "block"; return;
         }
 
         el.examDrop.innerHTML = "";
-        examKeys.forEach(ex => {
-            el.examDrop.innerHTML += `<option value="${ex}">${ex}</option>`;
-        });
-
+        examKeys.forEach(ex => { el.examDrop.innerHTML += `<option value="${ex}">${ex}</option>`; });
         el.examDrop.onchange = () => drawMarksUI(examMap[el.examDrop.value]);
         drawMarksUI(examMap[examKeys[0]]);
     });
@@ -270,10 +292,7 @@ function fetchMarksForSemester(semName) {
 
 function drawMarksUI(marksArray) {
     el.markList.innerHTML = "";
-    if (!marksArray || marksArray.length === 0) {
-        el.noMarks.style.display = "block";
-        return;
-    }
+    if (!marksArray || marksArray.length === 0) { el.noMarks.style.display = "block"; return; }
     el.noMarks.style.display = "none";
 
     marksArray.forEach(m => {
@@ -293,3 +312,32 @@ function drawMarksUI(marksArray) {
         el.markList.innerHTML += rowHTML;
     });
 }
+
+// --- 🚨 SIDEBAR & SETTINGS LOGIC 🚨 ---
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+
+openSettingsBtn.addEventListener("click", () => {
+    el.sidebar.classList.add("open");
+    el.overlay.classList.add("active");
+});
+
+// Close sidebar if clicking outside
+el.overlay.addEventListener("click", () => {
+    el.sidebar.classList.remove("open");
+    el.overlay.classList.remove("active");
+});
+
+// Sign Out
+document.getElementById("btnSignOut").addEventListener("click", () => {
+    signOut(auth).then(() => {
+        window.location.href = "index.html";
+    }).catch((error) => {
+        alert("Error signing out: " + error.message);
+    });
+});
+
+// Mock links for other buttons (You can replace URLs later)
+document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
+document.getElementById("btnCompany").addEventListener("click", () => window.open(`https://pixelaks.in/`, '_blank'));
+document.getElementById("btnPrivacy").addEventListener("click", () => window.open(`https://pixelaks.in/privacy`, '_blank'));
+document.getElementById("btnTerms").addEventListener("click", () => window.open(`https://pixelaks.in/terms`, '_blank'));
