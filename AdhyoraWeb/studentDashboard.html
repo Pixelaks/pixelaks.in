@@ -23,7 +23,7 @@
             <button class="sidebar-btn" id="btnCompany">Pixelaks Technologies</button>
             <button class="sidebar-btn" id="btnThemes">Themes</button>
             <button class="sidebar-btn" id="btnDevices">Devices</button>
-            <button class="sidebar-btn" id="btnSignOut">SignOut</button>
+            <button class="sidebar-btn" id="btnSignOut" style="background-color: #f44336;">SignOut</button>
         </div>
         <div class="sidebar-footer">Version 1.0.0 (Web)</div>
     </div>
@@ -64,6 +64,7 @@
                     <div class="stat-item" id="absentClassesText">Absent: -</div>
                     <div class="stat-item" id="totalClassesTakenText">Total: -</div>
                     <div class="stat-item" id="currentPercentageText">Current: --%</div>
+                    
                     <div class="stat-item" id="totalPeriodsPresentText" style="background:#f8f9fa;">Periods Present: -</div>
                     <div class="stat-item" id="totalPeriodsAbsentText" style="background:#f8f9fa;">Periods Absent: -</div>
                     <div class="stat-item" id="totalPeriodsTakenText" style="background:#f8f9fa;">Total Periods: -</div>
@@ -72,25 +73,29 @@
 
             <div class="list-container" id="subjectListContainer"></div>
 
-            <div class="marks-header-container">
-                <select id="examDropdown" class="dropdown-select">
-                    <option value="">Loading Exams...</option>
-                </select>
-            </div>
-            
-            <div class="list-container" id="marksListContainer">
-                <div id="noMarksData" class="no-data-text">No Marks Data</div>
+            <div class="marks-section">
+                <div class="marks-header-container">
+                    <select id="examDropdown" class="dropdown-select">
+                        <option value="">Loading Exams...</option>
+                    </select>
+                </div>
+                
+                <div class="list-container" id="marksListContainer">
+                    <div id="noMarksData" class="no-data-text">No Marks Data</div>
+                </div>
             </div>
             
         </div>
 
-        <div class="bottom-nav">
-            <button class="icon-btn" id="openSettingsBtn">⚙️</button>
-            <button class="icon-btn">🔔</button>
-            <button class="icon-btn active">📊</button>
-            <button class="icon-btn">💬</button>
-            <button class="icon-btn">📅</button>
-            <button class="icon-btn">📝</button>
+        <div class="bottom-nav-mask">
+            <div class="bottom-nav">
+                <button class="icon-btn" id="openSettingsBtn">⚙️</button>
+                <button class="icon-btn">🔔</button>
+                <button class="icon-btn active">📊</button>
+                <button class="icon-btn">💬</button>
+                <button class="icon-btn">📅</button>
+                <button class="icon-btn">📝</button>
+            </div>
         </div>
     </div>
 
