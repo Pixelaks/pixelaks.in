@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -25,6 +25,11 @@ let sortedSemesterKeys = [];
 let currentSemesterIndex = 0;
 let activeMarksUnsubscribe = null;
 
+// Daily Attendance State
+let currentDailyDate = new Date();
+let cachedMedicalLeaves = [];
+let dailyData = []; // Array of 6 periods
+
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
     badge: document.getElementById("statusBadge"), semTitle: document.getElementById("semesterTitle"),
@@ -38,11 +43,21 @@ const el = {
     overlay: document.getElementById("sidebarOverlay"), sidebar: document.getElementById("settingsSidebar"),
     sbName: document.getElementById("sidebarName"), sbSub: document.getElementById("sidebarSubtitle"),
     
-    // Calendar Elements
-    calModal: document.getElementById("calendarModal"),
-    calTitle: document.getElementById("calMonthYearText"),
-    calGrid: document.getElementById("calendarGrid"),
-    upcomingTxt: document.getElementById("upcomingEventText")
+    calModal: document.getElementById("calendarModal"), calTitle: document.getElementById("calMonthYearText"),
+    calGrid: document.getElementById("calendarGrid"), upcomingTxt: document.getElementById("upcomingEventText"),
+    
+    // View Toggles
+    mainView: document.getElementById("mainDashboardView"),
+    dailyView: document.getElementById("dailyAttendanceView"),
+    
+    // Daily UI
+    dailyDate: document.getElementById("dailyDateText"),
+    dailyStatus: document.getElementById("dailyStatusText"),
+    periodsGrid: document.getElementById("periodsGrid"),
+    detailModal: document.getElementById("periodDetailModal"),
+    dSub: document.getElementById("detailSubjectText"),
+    dTeach: document.getElementById("detailTeacherText"),
+    dStat: document.getElementById("detailStatusText")
 };
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -70,11 +85,26 @@ async function syncCollegeAndListen() {
     const studentsRef = collection(db, "colleges", collegeID, "students");
     const q = query(studentsRef, where("userID", "==", secureUID));
 
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(q, async (snapshot) => {
         if (snapshot.empty) { el.name.innerText = "Profile Not Found"; return; }
         const docSnap = snapshot.docs[0];
         currentRollNo = docSnap.id; 
+        
+        // 🚨 Fetch Medical Leaves for Daily Tracker
+        try {
+            const medQ = query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo));
+            const medSnap = await getDocs(medQ);
+            cachedMedicalLeaves = [];
+            medSnap.forEach(doc => {
+                let d = doc.data();
+                if(d.startDate && d.endDate) {
+                    cachedMedicalLeaves.push({ start: new Date(d.startDate), end: new Date(d.endDate) });
+                }
+            });
+        } catch(e) { console.error(e); }
+
         processStudentData(docSnap.data());
+        loadDailyAttendance(); // Load today's data immediately
     });
 }
 
@@ -186,153 +216,169 @@ function drawMarksUI(marksArray) {
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
-// Sidebar Logic
+// ==========================================
+// 🚨 BOTTOM NAV VIEW TOGGLING 🚨
+// ==========================================
+const btnNavMain = document.getElementById("btnNavMain");
+const btnNavDaily = document.getElementById("btnNavDaily");
+
+btnNavMain.addEventListener("click", () => {
+    btnNavMain.classList.add("active");
+    btnNavDaily.classList.remove("active");
+    el.mainView.style.display = ""; // Shows normally
+    el.dailyView.style.display = "none";
+});
+
+btnNavDaily.addEventListener("click", () => {
+    btnNavDaily.classList.add("active");
+    btnNavMain.classList.remove("active");
+    el.mainView.style.display = "none";
+    el.dailyView.style.display = "flex";
+    loadDailyAttendance(); // Refresh when opened
+});
+
+// ==========================================
+// 🚨 DAILY ATTENDANCE MANAGER 🚨
+// ==========================================
+document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
+document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
+
+async function loadDailyAttendance() {
+    el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    el.dailyStatus.innerText = "Checking...";
+    renderEmptyPeriods(); // Grey out
+
+    let mStr = String(currentDailyDate.getMonth() + 1).padStart(2, '0');
+    let dStr = String(currentDailyDate.getDate()).padStart(2, '0');
+    let dateStr = `${currentDailyDate.getFullYear()}-${mStr}-${dStr}`;
+    let activeSemName = sortedSemesterKeys[currentSemesterIndex].replace("_", " ");
+
+    try {
+        const attRef = collection(db, "colleges", collegeID, "attendance");
+        const q = query(attRef, where("date", "==", dateStr), where("semester", "==", activeSemName));
+        const snapshot = await getDocs(q);
+
+        if(snapshot.empty) { el.dailyStatus.innerText = "No Classes Recorded"; return; }
+        
+        let isMedicalToday = false;
+        let cDateObj = new Date(currentDailyDate).setHours(0,0,0,0);
+        for(let l of cachedMedicalLeaves) {
+            if(cDateObj >= l.start.setHours(0,0,0,0) && cDateObj <= l.end.setHours(0,0,0,0)) { isMedicalToday = true; break; }
+        }
+
+        let presCount = 0; let totHeld = 0;
+        
+        snapshot.forEach(doc => {
+            if(doc.id.includes("GLOBAL")) return;
+            let d = doc.data();
+            for(let i=1; i<=6; i++) {
+                let pKey = `period_${i}`;
+                if(d[pKey] && d[pKey].attendance && d[pKey].attendance[currentRollNo] !== undefined) {
+                    let isPres = (d[pKey].attendance[currentRollNo] == true || d[pKey].attendance[currentRollNo] == 1);
+                    totHeld++; if(isPres) presCount++;
+                    
+                    let sub = d[pKey].subject || "Unknown";
+                    if(d[pKey].event_details && d[pKey].event_details[currentRollNo]) sub = d[pKey].event_details[currentRollNo];
+                    
+                    dailyData[i-1] = {
+                        hasData: true, isPresent: isPres, isMedical: isMedicalToday,
+                        subject: sub, teacher: d[pKey].markedByTeacherName || "System",
+                        time: d[pKey].timestamp ? new Date(d[pKey].timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "N/A"
+                    };
+                }
+            }
+        });
+
+        if(totHeld > 0) el.dailyStatus.innerText = `Present: ${presCount} / ${totHeld}`;
+        else el.dailyStatus.innerText = "No Classes Recorded";
+
+        renderFilledPeriods();
+    } catch(e) { el.dailyStatus.innerText = "Network Error"; console.error(e); }
+}
+
+function renderEmptyPeriods() {
+    el.periodsGrid.innerHTML = ""; dailyData = [];
+    for(let i=0; i<6; i++) {
+        dailyData.push({hasData: false});
+        el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`;
+    }
+}
+
+function renderFilledPeriods() {
+    el.periodsGrid.innerHTML = "";
+    for(let i=0; i<6; i++) {
+        let d = dailyData[i];
+        if(!d.hasData) { el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; continue; }
+        
+        let cssClass = d.isMedical ? "btn-medical" : (d.isPresent ? "btn-present" : "btn-absent");
+        let txt = d.isMedical ? "M" : (d.isPresent ? "P" : "A");
+        
+        el.periodsGrid.innerHTML += `<button class="period-btn ${cssClass}" onclick="openPeriodDetail(${i})">${txt}</button>`;
+    }
+}
+
+window.openPeriodDetail = function(index) {
+    let d = dailyData[index];
+    if(!d.hasData) return;
+    el.dSub.innerText = d.subject;
+    el.dTeach.innerText = `${d.teacher} • ${d.time}`;
+    el.dStat.innerHTML = d.isMedical ? "<color style='color:#3b82f6'>Medical Leave</color>" : (d.isPresent ? "<color style='color:#4caf50'>Present</color>" : "<color style='color:#f44336'>Absent</color>");
+    el.detailModal.classList.add("active");
+};
+document.getElementById("closeDetailBtn").addEventListener("click", () => el.detailModal.classList.remove("active"));
+
+// ==========================================
+// Sidebar & Calendar Code (Unchanged)
+// ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
-// ==========================================
-// 🚨 CALENDAR MANAGER LOGIC 🚨
-// ==========================================
-let currentDisplayDate = new Date();
-let cachedCalYear = "";
-let calWorkingDays = new Set();
-let calNonWorkingDays = new Map();
-let semStarts = new Map();
-let semEnds = new Map();
-
-document.getElementById("btnCalendar").addEventListener("click", () => {
-    el.calModal.classList.add("active");
-    currentDisplayDate = new Date(); // Reset to today when opened
-    loadCalendarData();
-});
-
+let currentDisplayDate = new Date(); let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
+document.getElementById("btnCalendar").addEventListener("click", () => { el.calModal.classList.add("active"); currentDisplayDate = new Date(); loadCalendarData(); });
 document.getElementById("closeCalendarBtn").addEventListener("click", () => el.calModal.classList.remove("active"));
 document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
 document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
 
 async function loadCalendarData() {
     el.calTitle.innerText = currentDisplayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    el.calGrid.innerHTML = ""; 
-    el.upcomingTxt.innerHTML = "Loading...";
-
-    // Math to determine Academic Year (June to May)
-    let displayYear = currentDisplayDate.getFullYear();
-    let displayMonth = currentDisplayDate.getMonth() + 1; // JS months are 0-11
+    el.calGrid.innerHTML = ""; el.upcomingTxt.innerHTML = "Loading...";
+    let displayYear = currentDisplayDate.getFullYear(); let displayMonth = currentDisplayDate.getMonth() + 1; 
     let targetYearStr = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
-
     if (cachedCalYear !== targetYearStr) {
-        cachedCalYear = targetYearStr;
-        calWorkingDays.clear(); calNonWorkingDays.clear(); semStarts.clear(); semEnds.clear();
-        
+        cachedCalYear = targetYearStr; calWorkingDays.clear(); calNonWorkingDays.clear(); semStarts.clear(); semEnds.clear();
         try {
-            const [semDoc, workDoc, holDoc] = await Promise.all([
-                getDoc(doc(db, "colleges", collegeID, "semesters", targetYearStr)),
-                getDoc(doc(db, "colleges", collegeID, "workingDays", targetYearStr)),
-                getDoc(doc(db, "colleges", collegeID, "nonWorkingDays", targetYearStr))
-            ]);
-
-            if (semDoc.exists()) {
-                let d = semDoc.data();
-                if(d.oddSemester?.startDate) semStarts.set(d.oddSemester.startDate, "Odd");
-                if(d.oddSemester?.endDate) semEnds.set(d.oddSemester.endDate, "Odd");
-                if(d.evenSemester?.startDate) semStarts.set(d.evenSemester.startDate, "Even");
-                if(d.evenSemester?.endDate) semEnds.set(d.evenSemester.endDate, "Even");
-            }
+            const [semDoc, workDoc, holDoc] = await Promise.all([ getDoc(doc(db, "colleges", collegeID, "semesters", targetYearStr)), getDoc(doc(db, "colleges", collegeID, "workingDays", targetYearStr)), getDoc(doc(db, "colleges", collegeID, "nonWorkingDays", targetYearStr)) ]);
+            if (semDoc.exists()) { let d = semDoc.data(); if(d.oddSemester?.startDate) semStarts.set(d.oddSemester.startDate, "Odd"); if(d.oddSemester?.endDate) semEnds.set(d.oddSemester.endDate, "Odd"); if(d.evenSemester?.startDate) semStarts.set(d.evenSemester.startDate, "Even"); if(d.evenSemester?.endDate) semEnds.set(d.evenSemester.endDate, "Even"); }
             if (workDoc.exists()) { Object.keys(workDoc.data()).forEach(k => calWorkingDays.add(k)); }
             if (holDoc.exists()) { Object.entries(holDoc.data()).forEach(([k, v]) => calNonWorkingDays.set(k, v)); }
-        } catch(e) { console.error("Calendar Fetch Error", e); }
+        } catch(e) {}
     }
-
-    renderCalendarGrid();
-    updateUpcomingEvent();
+    renderCalendarGrid(); updateUpcomingEvent();
 }
-
 function renderCalendarGrid() {
-    el.calGrid.innerHTML = "";
-    const year = currentDisplayDate.getFullYear();
-    const month = currentDisplayDate.getMonth();
-    const today = new Date();
-    
-    // Find first day of month (0 = Sun, 6 = Sat)
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Padding empty cells
-    for (let i = 0; i < firstDay; i++) {
-        el.calGrid.innerHTML += `<div class="cal-cell empty"></div>`;
-    }
-
+    el.calGrid.innerHTML = ""; const year = currentDisplayDate.getFullYear(); const month = currentDisplayDate.getMonth(); const today = new Date();
+    const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) { el.calGrid.innerHTML += `<div class="cal-cell empty"></div>`; }
     for (let day = 1; day <= daysInMonth; day++) {
-        // Format YYYY-MM-DD
-        let mStr = String(month + 1).padStart(2, '0');
-        let dStr = String(day).padStart(2, '0');
-        let dateStr = `${year}-${mStr}-${dStr}`;
-        
-        let cellClass = "cal-cell normal";
-        let subText = "";
-        let popupText = "";
-
-        // Check Semester Starts/Ends
-        if (semStarts.has(dateStr)) {
-            cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>Start</span>";
-            popupText = `${semStarts.get(dateStr)} Semester Starts`;
-        } 
-        else if (semEnds.has(dateStr)) {
-            cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>End</span>";
-            popupText = `${semEnds.get(dateStr)} Semester Ends`;
-        }
-        else {
-            // Check Holidays & Weekends
-            if (!calWorkingDays.has(dateStr)) {
-                if (calNonWorkingDays.has(dateStr)) {
-                    cellClass = "cal-cell holiday";
-                    popupText = calNonWorkingDays.get(dateStr);
-                } else {
-                    let dWeek = new Date(year, month, day).getDay();
-                    if (dWeek === 0 || dWeek === 6) { cellClass = "cal-cell holiday"; }
-                }
-            }
-        }
-
-        // Highlight Today
-        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
-            cellClass += " today";
-        }
-
-        // Generate HTML
+        let dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        let cellClass = "cal-cell normal"; let subText = ""; let popupText = "";
+        if (semStarts.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>Start</span>"; popupText = `${semStarts.get(dateStr)} Semester Starts`; } 
+        else if (semEnds.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>End</span>"; popupText = `${semEnds.get(dateStr)} Semester Ends`; }
+        else { if (!calWorkingDays.has(dateStr)) { if (calNonWorkingDays.has(dateStr)) { cellClass = "cal-cell holiday"; popupText = calNonWorkingDays.get(dateStr); } else { let dWeek = new Date(year, month, day).getDay(); if (dWeek === 0 || dWeek === 6) { cellClass = "cal-cell holiday"; } } } }
+        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) { cellClass += " today"; }
         let clickEvent = popupText ? `onclick="alert('${popupText}')"` : "";
         el.calGrid.innerHTML += `<div class="${cellClass}" ${clickEvent}>${day}${subText}</div>`;
     }
 }
-
 function updateUpcomingEvent() {
-    let checkDate = new Date();
-    let found = false;
-
-    // Scan the next 60 days exactly like your C# script
+    let checkDate = new Date(); let found = false;
     for (let i = 0; i < 60; i++) {
-        let fDate = new Date(checkDate);
-        fDate.setDate(checkDate.getDate() + i);
-        
-        let mStr = String(fDate.getMonth() + 1).padStart(2, '0');
-        let dStr = String(fDate.getDate()).padStart(2, '0');
-        let dateStr = `${fDate.getFullYear()}-${mStr}-${dStr}`;
-
-        if (calNonWorkingDays.has(dateStr)) {
-            let reason = calNonWorkingDays.get(dateStr);
-            if (reason === "Holiday/Weekend") reason = "Holiday";
-            el.upcomingTxt.innerHTML = `<span style="font-size:10px; color:#666;">upcoming</span><br><b>${fDate.getDate()} | ${fDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</b><br><span style="font-size:12px;">${reason}</span>`;
-            found = true; break;
-        }
-
-        let dWeek = fDate.getDay();
-        if ((dWeek === 0 || dWeek === 6) && !calWorkingDays.has(dateStr)) {
-            el.upcomingTxt.innerHTML = `<span style="font-size:10px; color:#666;">upcoming</span><br><b>${fDate.getDate()} | ${fDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</b><br><span style="font-size:12px;">Weekend</span>`;
-            found = true; break;
-        }
+        let fDate = new Date(checkDate); fDate.setDate(checkDate.getDate() + i);
+        let dateStr = `${fDate.getFullYear()}-${String(fDate.getMonth() + 1).padStart(2, '0')}-${String(fDate.getDate()).padStart(2, '0')}`;
+        if (calNonWorkingDays.has(dateStr)) { let reason = calNonWorkingDays.get(dateStr); if (reason === "Holiday/Weekend") reason = "Holiday"; el.upcomingTxt.innerHTML = `<span style="font-size:10px; color:#666;">upcoming</span><br><b>${fDate.getDate()} | ${fDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</b><br><span style="font-size:12px;">${reason}</span>`; found = true; break; }
+        let dWeek = fDate.getDay(); if ((dWeek === 0 || dWeek === 6) && !calWorkingDays.has(dateStr)) { el.upcomingTxt.innerHTML = `<span style="font-size:10px; color:#666;">upcoming</span><br><b>${fDate.getDate()} | ${fDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</b><br><span style="font-size:12px;">Weekend</span>`; found = true; break; }
     }
-
     if (!found) el.upcomingTxt.innerHTML = "No upcoming holidays";
 }
