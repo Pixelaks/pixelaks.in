@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 🚨 USE YOUR CONFIG HERE 🚨
+// 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
   authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -45,31 +45,29 @@ const el = {
     noMarks: document.getElementById("noMarksData")
 };
 
-// --- Initialization ---
-// Grab URL parameters passed from login page (e.g. ?college=COL123&uid=UID456)
+// --- Initialization (WITH AUTH FIX) ---
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college');
 studentUID = urlParams.get('uid');
+currentRollNo = urlParams.get('roll') || studentUID;
 
 if (!collegeID || !studentUID) {
     alert("Session error. Please login again.");
-    window.location.href = "index.html"; // Go back to login
+    window.location.href = "index.html"; 
 } else {
-    initStudentListener();
+    // Wait for Firebase to securely fetch the login token
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            initStudentListener();
+        } else {
+            window.location.href = "index.html";
+        }
+    });
 }
 
 // --- Listeners & Queries ---
 
-// 1. Listen to Student Root Document (Profile & Attendance)
 function initStudentListener() {
-    // Note: We need the Roll Number first to read the doc path properly if your 
-    // structure uses Roll Number as Document ID. We use a collection group query or 
-    // basic query to find the doc where userID == studentUID.
-    
-    // For this example, assuming the studentUID was used to query and find the roll number, 
-    // or passed directly in URL as 'roll'. Assuming roll passed in URL for speed:
-    currentRollNo = urlParams.get('roll') || studentUID; // Adjust based on your Auth setup
-
     const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
 
     onSnapshot(studentRef, (docSnap) => {
@@ -84,11 +82,9 @@ function initStudentListener() {
 }
 
 function processStudentData(data) {
-    // 1. Header Info
     el.name.innerText = data.Name || data.name || "Unknown Student";
     el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
 
-    // Setup Semester Array
     loadedSemesters = {};
     sortedSemesterKeys = [];
     for(let i=1; i<=8; i++) {
@@ -100,7 +96,6 @@ function processStudentData(data) {
         sortedSemesterKeys.push(key);
     }
 
-    // 2. Parse Attendance Stats
     if (data.attendance_stats) {
         for (const [key, semData] of Object.entries(data.attendance_stats)) {
             const cleanKey = key.replace("semester_", "Semester_");
@@ -111,7 +106,6 @@ function processStudentData(data) {
                 if (semData.present !== undefined) semInfo.strictPresent = semData.present;
                 if (semData.total !== undefined) semInfo.strictTotal = semData.total;
 
-                // Parse subjects
                 for (const [subKey, subStats] of Object.entries(semData)) {
                     if (subKey === "present" || subKey === "total") continue;
                     if (subKey === "Strict_Global") {
@@ -129,7 +123,6 @@ function processStudentData(data) {
         }
     }
 
-    // Default to Sem 1 or read CurrentSemester from DB
     let currentSemStr = data.CurrentSemester || data.currentSemester || "1";
     currentSemesterIndex = parseInt(currentSemStr.replace(/\D/g, '')) - 1;
     if (currentSemesterIndex < 0 || currentSemesterIndex > 7) currentSemesterIndex = 0;
@@ -152,7 +145,6 @@ function updateUIForCurrentSemester() {
 
     el.semTitle.innerText = semData.name;
 
-    // 1. Calculate Overall Percentage
     let percent = 0;
     if (semData.strictTotal > 0) {
         percent = (semData.strictPresent / semData.strictTotal) * 100;
@@ -164,7 +156,6 @@ function updateUIForCurrentSemester() {
     el.totClasses.innerText = `Total: ${semData.strictTotal}`;
     el.absClasses.innerText = `Absent: ${semData.strictTotal - semData.strictPresent}`;
 
-    // Color Logic
     let ringColor = "#f44336"; let statusTxt = "Critical";
     if (percent >= 85) { ringColor = "#4caf50"; statusTxt = "Excellent"; }
     else if (percent >= 70) { ringColor = "#ffc107"; statusTxt = "Good"; }
@@ -173,12 +164,10 @@ function updateUIForCurrentSemester() {
     el.badge.innerText = statusTxt;
     el.badge.style.backgroundColor = ringColor;
     
-    // Draw Conic Gradient
     const degrees = (percent / 100) * 360;
     el.circle.style.background = `conic-gradient(${ringColor} ${degrees}deg, #e0e0e0 ${degrees}deg)`;
 
-    // 2. Build Subject List
-    el.subList.innerHTML = ""; // Clear existing
+    el.subList.innerHTML = ""; 
     if (!semData.hasData || semData.subjects.length === 0) {
         el.subList.innerHTML = `<div class="no-data-text">No Attendance Data</div>`;
     } else {
@@ -204,7 +193,6 @@ function updateUIForCurrentSemester() {
         });
     }
 
-    // 3. Trigger Marks Fetch
     fetchMarksForSemester(semData.name);
 }
 
@@ -226,9 +214,8 @@ function fetchMarksForSemester(semName) {
         }
 
         const data = docSnap.data();
-        let examMap = {}; // Will hold { "Internal 1": [ {subject, obtained, total}... ] }
+        let examMap = {};
 
-        // Parse exactly like C#
         for (const [subjectName, exams] of Object.entries(data)) {
             if (typeof exams !== 'object') continue;
             
@@ -252,16 +239,12 @@ function fetchMarksForSemester(semName) {
             return;
         }
 
-        // Populate Dropdown
         el.examDrop.innerHTML = "";
         examKeys.forEach(ex => {
             el.examDrop.innerHTML += `<option value="${ex}">${ex}</option>`;
         });
 
-        // Event Listener for Dropdown Change
         el.examDrop.onchange = () => drawMarksUI(examMap[el.examDrop.value]);
-        
-        // Draw first exam
         drawMarksUI(examMap[examKeys[0]]);
     });
 }
