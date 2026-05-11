@@ -22,12 +22,14 @@ let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex 
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-// RAM Caches
 let myDepartmentID = "";
 let enrolledSubjectsList = [];
 let currentDailyDate = new Date();
 let cachedMedicalLeaves = [];
 let dailyData = []; 
+
+// 🚨 NEW: Calendar Mode Tracker 🚨
+let calendarMode = "global"; // Can be 'global' or 'daily'
 
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
@@ -44,17 +46,15 @@ const el = {
     calModal: document.getElementById("calendarModal"), calTitle: document.getElementById("calMonthYearText"),
     calGrid: document.getElementById("calendarGrid"), upcomingTxt: document.getElementById("upcomingEventText"),
     
-    // Views
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
     
-    // Daily UI
+    dailyDateBtn: document.getElementById("dailyDateBtn"),
     dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
     periodsGrid: document.getElementById("periodsGrid"), detailModal: document.getElementById("periodDetailModal"),
     dSub: document.getElementById("detailSubjectText"), dTeach: document.getElementById("detailTeacherText"), dStat: document.getElementById("detailStatusText"),
 
-    // Timetable UI
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes")
 };
@@ -100,11 +100,10 @@ function processStudentData(data) {
     const sName = data.Name || data.name || "Unknown";
     el.name.innerText = sName; el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
     const dept = data.Department || data.department || "General";
-    myDepartmentID = "DEPT_" + dept.replace(/\s/g, ''); // For Timetable matching
+    myDepartmentID = "DEPT_" + dept.replace(/\s/g, ''); 
     
     el.sbName.innerHTML = `${sName} <br><span style="font-size:12px; color:#888;">(${data.RollNumber || currentRollNo})</span>`;
     
-    // Extract enrolled subjects for batch logic
     enrolledSubjectsList = [];
     if (data.enrolledSubjects) {
         for (const semObj of Object.values(data.enrolledSubjects)) {
@@ -180,7 +179,6 @@ function updateUIForCurrentSemester(optionalDept) {
     }).join('');
 
     fetchMarksForSemester(semData.name);
-    // Auto-refresh timetable if it's open
     if (el.ttView.style.display !== "none") {
         let activeDayBtn = document.querySelector('.day-btn.active');
         if (activeDayBtn) loadTimetableForDay(activeDayBtn.dataset.day);
@@ -218,7 +216,7 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// 🚨 BOTTOM NAV VIEW TOGGLING 🚨
+// VIEW TOGGLING
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavDaily = document.getElementById("btnNavDaily");
@@ -235,7 +233,6 @@ btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
 btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); });
 btnNavTimetable.addEventListener("click", () => { 
     switchView(btnNavTimetable, el.ttView); 
-    // Auto select today if weekday
     let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
     let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     if (!validDays.includes(todayName)) todayName = "Monday";
@@ -247,10 +244,18 @@ btnNavTimetable.addEventListener("click", () => {
 });
 
 // ==========================================
-// DAILY ATTENDANCE MANAGER
+// DAILY ATTENDANCE
 // ==========================================
 document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
+
+// 🚨 THE FIX: Clicking the Date opens the Calendar in 'daily' mode!
+el.dailyDateBtn.addEventListener("click", () => {
+    calendarMode = "daily";
+    el.calModal.classList.add("active"); 
+    currentDisplayDate = new Date(currentDailyDate); 
+    loadCalendarData();
+});
 
 async function loadDailyAttendance() {
     el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
@@ -306,7 +311,7 @@ window.openPeriodDetail = function(index) {
 document.getElementById("closeDetailBtn").addEventListener("click", () => el.detailModal.classList.remove("active"));
 
 // ==========================================
-// 🚨 TIMETABLE MANAGER 🚨
+// 🚨 TIMETABLE 🚨 (FIXED JS ERROR)
 // ==========================================
 document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -326,10 +331,10 @@ function getMyBatchIndexForSubject(targetSubjectName) {
                     if (!isNaN(batchNum)) return batchNum - 1;
                 }
             }
-            return 0; // Default to batch 1
+            return 0; 
         }
     }
-    return -1; // Not enrolled
+    return -1; 
 }
 
 function loadTimetableForDay(selectedDay) {
@@ -342,20 +347,21 @@ function loadTimetableForDay(selectedDay) {
                     where("day", "==", selectedDay));
 
     activeTimetableUnsubscribe = onSnapshot(q, (snapshot) => {
-        if (this == null) return;
+        // 🚨 REMOVED THE C# "this == null" BUG THAT BROKE THE TIMETABLE! 🚨
+        
         el.ttCards.innerHTML = "";
         let docs = [];
         snapshot.forEach(d => docs.push(d.data()));
+
+        let htmlBuffer = "";
 
         for (let i = 0; i < 6; i++) {
             let pStr = (i + 1).toString();
             let periodDocs = docs.filter(d => d.period === pStr);
             let finalMatch = null;
 
-            // P1: Breaks/Lunch
             finalMatch = periodDocs.find(d => d.category === "Break" || d.category === "Lunch");
 
-            // P2: Batch Exact Match
             if (!finalMatch) {
                 for (let d of periodDocs) {
                     let sName = d.subjectName ? d.subjectName.trim() : "";
@@ -368,7 +374,6 @@ function loadTimetableForDay(selectedDay) {
                 }
             }
 
-            // P3: MJD/CORE Match
             if (!finalMatch && myDepartmentID) {
                 for (let d of periodDocs) {
                     let dDept = d.departmentID || "";
@@ -379,11 +384,10 @@ function loadTimetableForDay(selectedDay) {
                 }
             }
 
-            // Draw Card
+            // 🚨 THE FIX: GENERATES THE 4-PILL CARD HTML
             if (finalMatch) {
                 let cat = finalMatch.category || "-";
                 let subj = finalMatch.subjectName || "Unknown";
-                let teach = finalMatch.teacherName || "Unassigned";
                 let room = finalMatch.room || "TBD";
                 
                 let isComm = finalMatch.isCommon === true;
@@ -392,66 +396,64 @@ function loadTimetableForDay(selectedDay) {
                     subj += ` <span style="font-size:10px; color:#eab308;">(Batch ${bIdx + 1})</span>`;
                 }
 
-                let cardClass = "tt-card"; let barClass = "tt-status-bar";
-                if (cat === "Break" || cat === "Lunch") { cardClass += " break"; barClass += " break"; subj = cat; cat = "-"; }
+                let cardClass = "tt-card"; 
+                if (cat === "Break" || cat === "Lunch") { cardClass += " break"; subj = cat; cat = "-"; }
                 
-                el.ttCards.innerHTML += `
+                htmlBuffer += `
                     <div class="${cardClass}">
-                        <div class="${barClass}"></div>
-                        <div class="tt-card-row">
-                            <span class="tt-category">${cat}</span>
-                            <span class="tt-room">${room}</span>
+                        <div class="tt-pill-row">
+                            <div class="tt-pill cat-pill">${cat}</div>
+                            <div class="tt-pill sub-pill">${subj}</div>
                         </div>
-                        <h4 class="tt-subject">${subj}</h4>
-                        <p class="tt-teacher">${teach}</p>
+                        <div class="tt-pill-row">
+                            <div class="tt-pill sem-pill">Semester ${semStr}</div>
+                            <div class="tt-pill room-pill">${room}</div>
+                        </div>
                     </div>`;
             } else {
-                el.ttCards.innerHTML += `
+                htmlBuffer += `
                     <div class="tt-card free">
-                        <div class="tt-status-bar free"></div>
-                        <div class="tt-card-row">
-                            <span class="tt-category" style="color:#94a3b8">-</span>
-                            <span class="tt-room" style="color:#94a3b8">-</span>
+                        <div class="tt-pill-row">
+                            <div class="tt-pill cat-pill" style="color:#94a3b8">-</div>
+                            <div class="tt-pill sub-pill" style="color:#64748b">Free Period</div>
                         </div>
-                        <h4 class="tt-subject" style="color:#64748b">Free Period</h4>
-                        <p class="tt-teacher" style="color:#94a3b8">-</p>
+                        <div class="tt-pill-row">
+                            <div class="tt-pill sem-pill" style="color:#94a3b8">-</div>
+                            <div class="tt-pill room-pill" style="color:#94a3b8">-</div>
+                        </div>
                     </div>`;
             }
         }
+        el.ttCards.innerHTML = htmlBuffer;
         updateTimelineVisuals();
     });
 }
 
 function updateTimelineVisuals() {
     if (el.ttView.style.display === "none") return;
+    let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60);
     
-    let now = new Date();
-    let currentHour = now.getHours() + (now.getMinutes() / 60);
-    
-    // Progress Bar (9:30 AM to 4:30 PM)
     let pStart = 9.5; let pEnd = 16.5;
     let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
     el.ttProgress.style.height = `${progress * 100}%`;
 
-    // Nodes
     let endTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
     let nodesHTML = "";
     for (let i = 0; i < 6; i++) {
         let nodeStart = (i === 0) ? 9.5 : endTimes[i - 1];
-        if (i === 3) nodeStart = 13.5; // After lunch
+        if (i === 3) nodeStart = 13.5; 
         
         let nClass = "tt-node";
         if (currentHour >= nodeStart && currentHour < endTimes[i]) nClass += " active";
         else if (currentHour >= endTimes[i]) nClass += " completed";
-        
         nodesHTML += `<div class="${nClass}">${i+1}</div>`;
     }
     el.ttNodes.innerHTML = nodesHTML;
 }
-setInterval(updateTimelineVisuals, 60000); // Check every minute
+setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// Sidebar & Calendar Code
+// 🚨 CALENDAR & DATE PICKER LOGIC 🚨
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
@@ -460,11 +462,14 @@ document.getElementById("btnContact").addEventListener("click", () => window.ope
 
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
+// 🚨 Main Global Calendar Button 🚨
 document.getElementById("btnCalendar").addEventListener("click", () => { 
+    calendarMode = "global";
     el.calModal.classList.add("active"); 
     let d = new Date(); currentDisplayDate = new Date(d.getFullYear(), d.getMonth(), 1); 
     loadCalendarData(); 
 });
+
 document.getElementById("closeCalendarBtn").addEventListener("click", () => el.calModal.classList.remove("active"));
 document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
 document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
@@ -498,24 +503,25 @@ function renderCalendarGrid() {
         if (semStarts.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>Start</span>"; popupText = `${semStarts.get(dateStr)} Semester Starts`; } 
         else if (semEnds.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>End</span>"; popupText = `${semEnds.get(dateStr)} Semester Ends`; }
         else { if (!calWorkingDays.has(dateStr)) { if (calNonWorkingDays.has(dateStr)) { cellClass = "cal-cell holiday"; popupText = calNonWorkingDays.get(dateStr); } else { let dWeek = new Date(year, month, day).getDay(); if (dWeek === 0 || dWeek === 6) { cellClass = "cal-cell holiday"; } } } }
-        
         if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) { cellClass += " today"; }
         
-        // 🚨 NEW CALENDAR CLICK LOGIC 🚨
-        el.calGrid.innerHTML += `<div class="${cellClass}" onclick="jumpToDate('${dateStr}', '${popupText}')">${day}${subText}</div>`;
+        // 🚨 THE FIX: Click behavior changes depending on how the calendar was opened!
+        let clickEvent = "";
+        if (calendarMode === "daily") {
+            clickEvent = `onclick="selectDateAndLoadDaily('${dateStr}')"`;
+        } else {
+            clickEvent = popupText ? `onclick="alert('${popupText}')"` : "";
+        }
+        
+        el.calGrid.innerHTML += `<div class="${cellClass}" ${clickEvent}>${day}${subText}</div>`;
     }
 }
 
-// 🚨 Jump from Calendar to Daily Attendance
-window.jumpToDate = function(dateStr, popupText) {
-    if (popupText) alert(popupText); // Show holiday reason if any
-    el.calModal.classList.remove("active"); // Close calendar
-    
-    // Set daily date and switch views
+// 🚨 Handles jumping from the calendar to a specific date in daily view
+window.selectDateAndLoadDaily = function(dateStr) {
+    el.calModal.classList.remove("active");
     let parts = dateStr.split('-');
     currentDailyDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-    
-    switchView(btnNavDaily, el.dailyView);
     loadDailyAttendance();
 };
 
