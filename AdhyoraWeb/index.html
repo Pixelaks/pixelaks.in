@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Student Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <h1 class="logo-text">ADHYORA</h1>
+            <p class="subtitle">Academic Management System</p>
+        </div>
+
+        <div id="roleSelectionPanel" class="panel active">
+            <select id="collegeDropdown" class="input-field">
+                <option value="" disabled selected>Loading Colleges...</option>
+            </select>
+            
+            <select id="roleDropdown" class="input-field">
+                <option value="" disabled selected>Select Role</option>
+                <option value="Student">Student</option>
+                <option value="Teacher" disabled>Teacher (App Only)</option>
+                <option value="Principal" disabled>Principal (App Only)</option>
+            </select>
+
+            <button id="continueBtn" class="primary-btn" disabled>Continue</button>
+        </div>
+
+        <div id="signInPanel" class="panel">
+            <h2 class="panel-title">Student SignIn</h2>
+            
+            <input type="email" id="loginEmail" class="input-field" placeholder="Email...">
+            
+            <div class="password-container">
+                <input type="password" id="loginPassword" class="input-field" placeholder="Password...">
+                <span class="toggle-password" onclick="toggleVisibility('loginPassword')">👁️</span>
+            </div>
+
+            <a href="#" class="text-link forgot-pass">Forgot Password?</a>
+
+            <button id="signInBtn" class="primary-btn">SignIn</button>
+
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe">
+                <label for="rememberMe">always remember me</label>
+            </div>
+
+            <p class="switch-panel-text">
+                Don't have an account?<br>
+                <a href="#" onclick="switchPanel('registerPanel')" class="text-link">create One</a>
+            </p>
+        </div>
+
+        <div id="registerPanel" class="panel">
+            <h2 class="panel-title">Register</h2>
+            
+            <input type="text" id="regName" class="input-field" placeholder="Name...">
+            <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber...">
+            <input type="email" id="regEmail" class="input-field" placeholder="Email...">
+            
+            <div class="password-container">
+                <input type="password" id="regPassword" class="input-field" placeholder="Password...">
+                <span class="toggle-password" onclick="toggleVisibility('regPassword')">👁️</span>
+            </div>
+
+            <div class="password-container">
+                <input type="password" id="regConfirmPassword" class="input-field" placeholder="Confirm Password...">
+                <span class="toggle-password" onclick="toggleVisibility('regConfirmPassword')">👁️</span>
+            </div>
+            
+            <p id="passwordFeedback" class="feedback-text"></p>
+
+            <button id="registerBtn" class="primary-btn">Register</button>
+
+            <p class="switch-panel-text">
+                Already have an account?<br>
+                <a href="#" onclick="switchPanel('signInPanel')" class="text-link">SignIn</a>
+            </p>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

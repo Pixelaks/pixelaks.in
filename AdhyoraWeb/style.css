@@ -1,0 +1,190 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.app-container {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    height: 100vh;
+    max-height: 850px;
+    padding: 40px 30px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow-y: auto;
+}
+
+/* Mobile Screen Mimic for Desktop */
+@media (min-width: 450px) {
+    .app-container {
+        height: 90vh;
+        border-radius: 30px;
+        border: 8px solid #333;
+    }
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 50px;
+    margin-top: 20px;
+}
+
+.logo-text {
+    color: #61c961; /* Adhyora Green */
+    font-size: 32px;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    color: #61c961;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.panel {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+}
+
+.panel.active {
+    display: flex;
+}
+
+.panel-title {
+    font-size: 20px;
+    margin-bottom: 25px;
+    color: #000;
+}
+
+.input-field {
+    width: 100%;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+    background: transparent;
+    -webkit-appearance: none; /* Removes default dropdown styling on iOS */
+}
+
+.input-field:focus {
+    border-color: #61c961;
+}
+
+.password-container {
+    position: relative;
+    width: 100%;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    cursor: pointer;
+    color: #666;
+}
+
+.primary-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #a3e4a3; /* Light Green Button */
+    color: #000;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.3s;
+}
+
+.primary-btn:disabled {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+    color: #888;
+}
+
+.text-link {
+    color: #0056b3;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.forgot-pass {
+    align-self: flex-start;
+    margin-bottom: 20px;
+    margin-left: 10px;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+    font-size: 12px;
+    color: #000;
+}
+
+.remember-me input {
+    margin-right: 10px;
+}
+
+.switch-panel-text {
+    text-align: center;
+    font-size: 12px;
+    margin-top: 40px;
+    color: #000;
+}
+
+.toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 15px;
+    padding: 12px;
+    position: absolute;
+    z-index: 1;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+}
+
+.toast.show {
+    visibility: visible;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+.feedback-text {
+    font-size: 11px;
+    color: red;
+    margin-bottom: 10px;
+    text-align: center;
+}
