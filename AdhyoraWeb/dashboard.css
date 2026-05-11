@@ -11,18 +11,42 @@ body {
     display: flex; flex-direction: column; position: relative;
 }
 
-/* RESPONSIVE PC LAYOUT */
+/* 🚨 RESPONSIVE PC LAYOUT FIX 🚨 */
 @media (min-width: 768px) {
     .dashboard-container { 
-        max-width: 100%; height: 100vh; border-radius: 0; 
-        box-shadow: none; border: none;
+        max-width: 1200px; /* Constrains the entire app cleanly */
+        margin: 0 auto;    /* Centers the app on ultra-wide monitors */
+        height: 100vh; 
+        border-radius: 0; 
+        box-shadow: 0 0 30px rgba(0,0,0,0.05); /* Soft outer shadow */
+        border-left: 1px solid #e0e0e0;
+        border-right: 1px solid #e0e0e0;
     }
+    
+    /* Align the top elements with the grid padding below */
+    .profile-card {
+        margin: 0 40px 20px 40px; 
+    }
+    
+    .semester-nav {
+        margin: 0 40px;
+        border-radius: 10px; /* Makes it look like a neat toolbar */
+    }
+
     .scrollable-content { 
         display: grid; grid-template-columns: 1fr 1fr; gap: 30px; 
-        padding: 40px; max-width: 1400px; margin: 0 auto; 
+        padding: 30px 40px 100px 40px; 
+        max-width: 100%; /* Fills the 1200px container perfectly */
+        margin: 0; 
     }
+    
     .attendance-overview { 
-        grid-column: span 2; justify-content: center; gap: 60px; 
+        grid-column: span 2; justify-content: center; gap: 80px; 
+    }
+    
+    /* Stops the stats table from stretching too wide on PC */
+    .stats-list {
+        flex: 0 1 400px;
     }
 }
 
