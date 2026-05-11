@@ -68,9 +68,13 @@ if (!collegeID || !studentUID) {
 // --- Listeners & Queries ---
 
 function initStudentListener() {
-    // 🚨 FIX: Match C# logic. Query the students collection by userID instead of guessing the Document ID.
+    // 🚨 THE FIX: Ignore the URL and pull the secure UID directly from Firebase Auth!
+    const secureUID = auth.currentUser.uid; 
+    
     const studentsRef = collection(db, "colleges", collegeID, "students");
-    const q = query(studentsRef, where("userID", "==", studentUID));
+    
+    // Now Firebase knows for a fact that you are searching for your own data
+    const q = query(studentsRef, where("userID", "==", secureUID));
 
     onSnapshot(q, (snapshot) => {
         if (snapshot.empty) {
@@ -81,10 +85,9 @@ function initStudentListener() {
             return;
         }
 
-        // Just like C#: snapshot.Documents.ElementAt(0)
         const docSnap = snapshot.docs[0];
         
-        // Grab the exact, perfectly-cased Roll Number (Document ID) from the database
+        // Grab the exact Roll Number (Document ID) directly from the database
         currentRollNo = docSnap.id; 
         
         // Send the data to the UI builder
