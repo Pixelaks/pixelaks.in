@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Student Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <div class="header">
+            <h1 class="logo-text">ADHYORA</h1>
+        </div>
+
+        <div class="profile-card">
+            <div class="profile-info">
+                <h2 id="studentName">Loading Name...</h2>
+                <p id="studentRoll">Roll No: ...</p>
+                <div class="status-badge" id="statusBadge">Loading...</div>
+            </div>
+            </div>
+
+        <div class="semester-nav">
+            <button id="prevSemBtn" class="nav-btn">&lt;</button>
+            <span id="semesterTitle">Semester ...</span>
+            <button id="nextSemBtn" class="nav-btn">&gt;</button>
+        </div>
+
+        <div class="scrollable-content">
+            
+            <div class="attendance-overview">
+                <div class="circular-progress" id="attendanceCircle">
+                    <div class="inner-circle">
+                        <span class="projected-text">Projected</span>
+                        <br>
+                        <span id="overallPercentageText" class="percentage-value">--%</span>
+                    </div>
+                </div>
+
+                <div class="stats-list">
+                    <div class="stat-item">Overall Attendance</div>
+                    <div class="stat-item" id="attendedClassesText">Attended: -</div>
+                    <div class="stat-item" id="absentClassesText">Absent: -</div>
+                    <div class="stat-item" id="totalClassesTakenText">Total: -</div>
+                    <div class="stat-item" id="currentPercentageText">Current: --%</div>
+                </div>
+            </div>
+
+            <div class="list-container" id="subjectListContainer">
+                </div>
+
+            <div class="marks-header-container">
+                <select id="examDropdown" class="dropdown-select">
+                    <option value="">Loading Exams...</option>
+                </select>
+            </div>
+            
+            <div class="list-container" id="marksListContainer">
+                <div id="noMarksData" class="no-data-text">No Marks Data</div>
+                </div>
+            
+        </div>
+
+        <div class="bottom-nav">
+            <button class="icon-btn">⚙️</button>
+            <button class="icon-btn">🔔</button>
+            <button class="icon-btn active">📊</button>
+            <button class="icon-btn">💬</button>
+            <button class="icon-btn">📅</button>
+            <button class="icon-btn">📝</button>
+        </div>
+        
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="dashboardApp.js"></script>
+</body>
+</html>
