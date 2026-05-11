@@ -16,21 +16,36 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ==========================================
+// 🚨 GLOBAL STATE VARIABLES (THE FIX) 🚨
+// ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
 let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex = 0;
+
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
 let myDepartmentID = "";
 let enrolledSubjectsList = [];
+
+// Daily View State
 let currentDailyDate = new Date();
 let cachedMedicalLeaves = [];
 let dailyData = []; 
 
-// 🚨 NEW: Calendar Mode Tracker 🚨
-let calendarMode = "global"; // Can be 'global' or 'daily'
+// Calendar View State
+let calendarMode = "global"; 
+let currentDisplayDate = new Date(); // 🚨 THIS WAS THE MISSING LINE!
+let cachedCalYear = ""; 
+let calWorkingDays = new Set(); 
+let calNonWorkingDays = new Map(); 
+let semStarts = new Map(); 
+let semEnds = new Map();
 
+// ==========================================
+// DOM ELEMENTS
+// ==========================================
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
     badge: document.getElementById("statusBadge"), semTitle: document.getElementById("semesterTitle"),
@@ -59,6 +74,9 @@ const el = {
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes")
 };
 
+// ==========================================
+// INITIALIZATION
+// ==========================================
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college');
 studentUID = urlParams.get('uid');
@@ -249,7 +267,6 @@ btnNavTimetable.addEventListener("click", () => {
 document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
 
-// 🚨 THE FIX: Clicking the Date opens the Calendar in 'daily' mode!
 el.dailyDateBtn.addEventListener("click", () => {
     calendarMode = "daily";
     el.calModal.classList.add("active"); 
@@ -311,7 +328,7 @@ window.openPeriodDetail = function(index) {
 document.getElementById("closeDetailBtn").addEventListener("click", () => el.detailModal.classList.remove("active"));
 
 // ==========================================
-// 🚨 TIMETABLE 🚨 (FIXED JS ERROR)
+// TIMETABLE
 // ==========================================
 document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -347,8 +364,6 @@ function loadTimetableForDay(selectedDay) {
                     where("day", "==", selectedDay));
 
     activeTimetableUnsubscribe = onSnapshot(q, (snapshot) => {
-        // 🚨 REMOVED THE C# "this == null" BUG THAT BROKE THE TIMETABLE! 🚨
-        
         el.ttCards.innerHTML = "";
         let docs = [];
         snapshot.forEach(d => docs.push(d.data()));
@@ -384,7 +399,6 @@ function loadTimetableForDay(selectedDay) {
                 }
             }
 
-            // 🚨 THE FIX: GENERATES THE 4-PILL CARD HTML
             if (finalMatch) {
                 let cat = finalMatch.category || "-";
                 let subj = finalMatch.subjectName || "Unknown";
@@ -453,16 +467,13 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// 🚨 CALENDAR & DATE PICKER LOGIC 🚨
+// CALENDAR & DATE PICKER LOGIC
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
-let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
-
-// 🚨 Main Global Calendar Button 🚨
 document.getElementById("btnCalendar").addEventListener("click", () => { 
     calendarMode = "global";
     el.calModal.classList.add("active"); 
@@ -505,7 +516,6 @@ function renderCalendarGrid() {
         else { if (!calWorkingDays.has(dateStr)) { if (calNonWorkingDays.has(dateStr)) { cellClass = "cal-cell holiday"; popupText = calNonWorkingDays.get(dateStr); } else { let dWeek = new Date(year, month, day).getDay(); if (dWeek === 0 || dWeek === 6) { cellClass = "cal-cell holiday"; } } } }
         if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) { cellClass += " today"; }
         
-        // 🚨 THE FIX: Click behavior changes depending on how the calendar was opened!
         let clickEvent = "";
         if (calendarMode === "daily") {
             clickEvent = `onclick="selectDateAndLoadDaily('${dateStr}')"`;
@@ -517,7 +527,6 @@ function renderCalendarGrid() {
     }
 }
 
-// 🚨 Handles jumping from the calendar to a specific date in daily view
 window.selectDateAndLoadDaily = function(dateStr) {
     el.calModal.classList.remove("active");
     let parts = dateStr.split('-');
