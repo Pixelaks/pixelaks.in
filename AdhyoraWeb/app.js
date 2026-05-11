@@ -10,7 +10,7 @@ const firebaseConfig = {
   projectId: "adhyora-5d4c1",
   storageBucket: "adhyora-5d4c1.firebasestorage.app",
   messagingSenderId: "206050348148",
-  appId: "1:206050348148:web:da4e421e00ec2f77429521",
+  appId: "1:206050348148:web:da4e421e00ec2f77429521"
 };
 
 // Initialize Firebase
