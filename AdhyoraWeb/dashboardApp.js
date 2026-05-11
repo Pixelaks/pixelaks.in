@@ -42,7 +42,7 @@ const el = {
     calModal: document.getElementById("calendarModal"), calTitle: document.getElementById("calMonthYearText"),
     calGrid: document.getElementById("calendarGrid"), upcomingTxt: document.getElementById("upcomingEventText"),
     
-    // 🚨 VIEWS 🚨
+    // VIEWS
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
@@ -76,7 +76,9 @@ async function syncCollegeAndListen() {
         if (colSnap.exists() && colSnap.data().currentSemesterType) { collegeSemesterType = colSnap.data().currentSemesterType; }
     } catch(e) {}
 
-    const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", auth.currentUser.uid));
+    const secureUID = auth.currentUser.uid; 
+    const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", secureUID));
+
     onSnapshot(q, async (snapshot) => {
         if (snapshot.empty) { el.name.innerText = "Profile Not Found"; return; }
         const docSnap = snapshot.docs[0]; currentRollNo = docSnap.id; 
@@ -209,8 +211,9 @@ function drawMarksUI(marksArray) {
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
+
 // ==========================================
-// 🚨 VIEW TOGGLING (INCLUDING NOTIFICATIONS & MESSAGES) 🚨
+// 🚨 VIEW TOGGLING 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavDaily = document.getElementById("btnNavDaily");
@@ -235,13 +238,12 @@ btnNavTimetable.addEventListener("click", () => {
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
-
-// 🚨 Hook up the new buttons!
 btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.notifView); loadNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
 
+
 // ==========================================
-// 🚨 1. NOTIFICATIONS DATA LOADER (ASSIGNMENTS) 🚨
+// NOTIFICATIONS & MESSAGES LOADERS
 // ==========================================
 async function loadNotifications() {
     el.notifList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
@@ -254,103 +256,67 @@ async function loadNotifications() {
         snapshot.forEach(doc => {
             let d = doc.data();
             let sub = d.subject || "Unknown";
-            
-            // Check if student is enrolled in this subject (Mirrors C# NepStudentNotificationManager)
             if (enrolledSubjectsList.length === 0 || enrolledSubjectsList.some(s => s.startsWith(sub))) {
                 notifs.push({
-                    title: `Assignment: ${sub}`,
-                    body: d.topic || "No Topic",
-                    teach: d.teacherName || "Teacher",
-                    due: d.dueDate || "N/A",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher",
+                    due: d.dueDate || "N/A", time: d.timestamp ? d.timestamp.toDate() : new Date()
                 });
             }
         });
 
-        notifs.sort((a,b) => b.time - a.time); // Newest first
-        
+        notifs.sort((a,b) => b.time - a.time); 
         if (notifs.length === 0) { el.notifList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
         
         el.notifList.innerHTML = notifs.map(n => `
             <div class="data-card notif">
                 <div class="card-title">${n.title}</div>
                 <div class="card-body">${n.body}</div>
-                <div class="card-meta">
-                    <span>${n.teach}</span>
-                    <span class="card-due">Due: ${n.due}</span>
-                </div>
+                <div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div>
             </div>
         `).join('');
 
-    } catch(e) { el.notifList.innerHTML = `<div class="no-data-text">Network Error</div>`; console.error(e); }
+    } catch(e) { el.notifList.innerHTML = `<div class="no-data-text">Network Error</div>`; }
 }
 
-// ==========================================
-// 🚨 2. MESSAGES DATA LOADER (INBOX & CHATS) 🚨
-// ==========================================
 async function loadMessages() {
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
     let msgs = [];
-    
     try {
-        // 1. Fetch Broadcasts (sent_messages)
         const broadcastSnap = await getDocs(collection(db, "colleges", collegeID, "sent_messages"));
         broadcastSnap.forEach(doc => {
-            let d = doc.data();
-            let target = d.targetSummary || "";
-            // Route verification mimicking C# "IsMessageForMe"
-            let forMe = target.includes("All Students") || target.includes("Everyone") || 
-                        target.includes("All Depts") || target.includes(myDepartmentID) || 
-                        d.senderID === auth.currentUser.uid;
+            let d = doc.data(); let target = d.targetSummary || "";
+            let forMe = target.includes("All Students") || target.includes("Everyone") || target.includes("All Depts") || target.includes(myDepartmentID) || d.senderID === auth.currentUser.uid;
             
             if (forMe) {
                 msgs.push({
-                    title: d.title || "Notice",
-                    body: d.body || "",
-                    sender: d.senderName || d.senderRole || "System",
-                    type: "broadcast",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System",
+                    type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date()
                 });
             }
         });
 
-        // 2. Fetch Private Chats (chats -> messages)
         const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", currentRollNo)));
         for (let chatDoc of chatSnap.docs) {
             const msgSnap = await getDocs(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"));
             msgSnap.forEach(mDoc => {
                 let d = mDoc.data();
                 msgs.push({
-                    title: d.title || "Message",
-                    body: d.body || "",
-                    sender: d.senderName || "User",
-                    type: "chat",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: d.title || "Message", body: d.body || "", sender: d.senderName || "User",
+                    type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date()
                 });
             });
         }
 
-        msgs.sort((a,b) => b.time - a.time); // Newest first
-        
+        msgs.sort((a,b) => b.time - a.time); 
         if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
         
         el.msgList.innerHTML = msgs.map(m => {
             let css = m.type === "broadcast" ? "broadcast" : "";
             let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `
-            <div class="data-card ${css}">
-                <div class="card-title">${m.title}</div>
-                <div class="card-body">${m.body}</div>
-                <div class="card-meta">
-                    <span>${m.sender}</span>
-                    <span>${timeStr}</span>
-                </div>
-            </div>`;
+            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
         }).join('');
-
-    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text">Network Error</div>`; console.error(e); }
+    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text">Network Error</div>`; }
 }
-
 
 // ==========================================
 // DAILY ATTENDANCE MANAGER
@@ -358,7 +324,10 @@ async function loadMessages() {
 document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
 
-el.dailyDateBtn.addEventListener("click", () => { calendarMode = "daily"; el.calModal.classList.add("active"); currentDisplayDate = new Date(currentDailyDate); loadCalendarData(); });
+el.dailyDateBtn.addEventListener("click", () => {
+    calendarMode = "daily"; el.calModal.classList.add("active"); 
+    currentDisplayDate = new Date(currentDailyDate); loadCalendarData();
+});
 
 async function loadDailyAttendance() {
     el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
