@@ -4,31 +4,31 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
 body {
-    background-color: #ffffff; /* 🚨 Removed the grey background */
+    background-color: #ffffff; 
     width: 100vw;
     height: 100vh;
-    overflow: hidden; /* Prevents whole-page scrolling and mobile bleed */
+    overflow: hidden; 
     margin: 0;
 }
 
 /* =========================================
-   MAIN APP CONTAINER (TRUE FULLSCREEN FIT)
+   MAIN APP CONTAINER
    ========================================= */
 .dashboard-container {
     background-color: #ffffff; 
     width: 100%; 
-    max-width: 100%; /* 🚨 THE FIX: Stretches infinitely to fit any monitor edge-to-edge */
+    max-width: 100%; 
     height: 100%; 
     display: flex; 
     flex-direction: column; 
     position: relative;
 }
 
-/* 1. Header */
+/* Header */
 .header { text-align: center; padding: 15px 0; flex-shrink: 0; }
 .logo-text { color: #3b82f6; font-size: 28px; letter-spacing: 2px; font-weight: 700; }
 
-/* 2. Profile Card */
+/* Profile Card */
 .profile-card {
     background: #e0f2fe; 
     margin: 0 15px 15px 15px; 
@@ -45,7 +45,7 @@ body {
     font-size: 11px; font-weight: bold; color: #fff; background-color: #888;
 }
 
-/* 3. Semester Nav */
+/* Semester Nav */
 .semester-nav {
     background-color: #3b82f6; color: white; 
     padding: 12px 20px;
@@ -63,17 +63,17 @@ body {
     overflow-y: auto; 
     overflow-x: hidden;
     padding: 20px; 
-    padding-bottom: 120px; /* Space for the bottom nav */
+    padding-bottom: 120px; 
 }
 
-/* Custom Scrollbar for PC */
+/* Custom Scrollbar for the main page */
 .scrollable-content::-webkit-scrollbar { width: 8px; }
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 /* Attendance Overview */
 .attendance-overview { 
     display: flex; 
-    flex-direction: column; /* Stack vertically on phones */
+    flex-direction: column; 
     align-items: center; 
     gap: 25px;
     margin-bottom: 30px; 
@@ -101,11 +101,24 @@ body {
 .stat-item:first-child { font-weight: 600; }
 .stat-item:last-child { border-bottom: none; }
 
-/* Lists & Bars */
+/* =========================================
+   🚨 LISTS & BARS (NOW SCROLLABLE) 🚨
+   ========================================= */
 .list-container {
-    border: 1px solid #ddd; border-radius: 10px; min-height: 150px;
-    margin-bottom: 20px; overflow: hidden; padding: 15px;
+    border: 1px solid #ddd; 
+    border-radius: 10px; 
+    min-height: 150px;
+    max-height: 280px; /* 🚨 THE FIX: Limits the height */
+    margin-bottom: 20px; 
+    overflow-y: auto;  /* 🚨 THE FIX: Enables internal scrolling */
+    overflow-x: hidden;
+    padding: 15px;
 }
+
+/* Custom Scrollbar specifically for the lists */
+.list-container::-webkit-scrollbar { width: 6px; }
+.list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+
 .subject-row { margin-bottom: 15px; }
 .row-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; font-weight: 600; }
 .progress-track { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
@@ -120,16 +133,15 @@ body {
 .no-data-text { text-align: center; font-size: 12px; color: #888; padding-top: 20px;}
 
 /* =========================================
-   🚨 PC LAYOUT OVERRIDES 🚨
+   PC LAYOUT OVERRIDES 
    ========================================= */
 @media (min-width: 768px) {
-    /* Push top bars slightly away from monitor edges */
     .profile-card { margin: 0 40px 20px 40px; }
     .semester-nav { margin: 0 40px; border-radius: 10px; }
     
     .scrollable-content { 
         display: grid; 
-        grid-template-columns: 1fr 1fr; /* Split screen in half perfectly */
+        grid-template-columns: 1fr 1fr; 
         gap: 40px; 
         padding: 30px 40px 120px 40px; 
         align-items: start;
@@ -137,21 +149,20 @@ body {
     
     .attendance-overview { 
         grid-column: span 2; 
-        flex-direction: row; /* Put circle and table side-by-side */
+        flex-direction: row; 
         justify-content: center; 
         gap: 80px; 
     }
     
-    /* Keep the table from stretching 2000px wide on big monitors */
     .stats-list { max-width: 500px; } 
 }
 
 /* =========================================
-   BOTTOM NAV MASKING & CENTERING
+   🚨 BOTTOM NAV (TEXTURE & WHITE BUTTONS) 🚨
    ========================================= */
 .bottom-nav-mask {
     position: absolute; bottom: 0; left: 0; right: 0;
-    height: 100px;
+    height: 110px;
     background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%);
     display: flex; justify-content: center; align-items: center; 
     padding-top: 20px;
@@ -160,16 +171,45 @@ body {
 }
 
 .bottom-nav {
-    background: #e0f2fe; border-radius: 30px; padding: 12px 20px;
+    background-color: #bfdbfe; /* Slightly darker blue */
+    background-image: radial-gradient(#93c5fd 1.5px, transparent 1.5px); /* Modern Dot Texture */
+    background-size: 12px 12px; /* Spaces the dots out perfectly */
+    border-radius: 35px; /* Rounded pill shape */
+    padding: 10px 20px;
     display: flex; justify-content: space-around; 
     width: 90%; 
     max-width: 450px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     pointer-events: auto; 
 }
-.icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; opacity: 0.5; transition: 0.2s;}
-.icon-btn:hover { opacity: 0.8; }
-.icon-btn.active { opacity: 1; transform: scale(1.15);}
+
+.icon-btn { 
+    background: #ffffff; /* Solid white background */
+    border: none; 
+    font-size: 20px; 
+    cursor: pointer; 
+    opacity: 0.8; /* Slight fade until hovered */
+    transition: 0.2s;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%; /* Perfect circle */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08); /* Tiny shadow for depth */
+}
+
+.icon-btn:hover { 
+    opacity: 1; 
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+.icon-btn.active { 
+    opacity: 1; 
+    transform: scale(1.1); 
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); 
+    border: 2px solid #3b82f6; /* Blue ring for the active tab */
+}
 
 /* =========================================
    SIDEBAR SETTINGS DRAWER
