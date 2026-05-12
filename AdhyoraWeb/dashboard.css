@@ -31,40 +31,41 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
 
 /* =========================================
-   TRUE HORIZONTAL SLIDING WAVE (FOR TABLE ROWS)
+   TRUE HORIZONTAL SLIDING WAVE (FIXED CLIPPING)
    ========================================= */
 .row-water-container {
     position: absolute;
     left: 0;
     bottom: 0;
     width: 100%;
-    /* Height and color are controlled by JS */
+    /* Height is controlled by JS calc() */
     transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
     z-index: 0;
+    opacity: 0.9; /* Slight opacity makes the wave look more fluid against the text */
 }
 
 .row-water-wave {
     position: absolute;
-    top: -8px; /* Aligns the wave exactly on top of the water level */
+    bottom: 100%; /* Sits exactly on top of the water container */
     left: 0;
-    width: 200%; /* Double width so it can slide smoothly */
-    height: 8px; /* Height of the wave curve */
-    background-color: inherit; /* Magically matches whatever color the JS sets! */
+    width: 200%; 
+    height: 12px; /* Fixed height for the wave */
+    background-color: inherit; /* Matches dynamic color */
     
-    /* Pure CSS inline SVG mask - creates the wave shape */
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cpath d='M0 10 Q 25 0 50 10 T 100 10 L 100 20 L 0 20 Z' fill='black'/%3E%3C/svg%3E");
-    -webkit-mask-size: 50px 10px;
+    /* Perfect horizontal sliding mask */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q25,0 50,10 T100,10 L100,20 L0,20 Z' fill='black'/%3E%3C/svg%3E");
+    -webkit-mask-size: 50px 100%;
     -webkit-mask-repeat: repeat-x;
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cpath d='M0 10 Q 25 0 50 10 T 100 10 L 100 20 L 0 20 Z' fill='black'/%3E%3C/svg%3E");
-    mask-size: 50px 10px;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q25,0 50,10 T100,10 L100,20 L0,20 Z' fill='black'/%3E%3C/svg%3E");
+    mask-size: 50px 100%;
     mask-repeat: repeat-x;
     
-    animation: wave-slide 2s linear infinite;
+    animation: wave-slide-row 2s linear infinite;
 }
 
-@keyframes wave-slide {
+@keyframes wave-slide-row {
     0% { transform: translateX(0); }
-    100% { transform: translateX(-50px); } /* Slides exactly one wave width to loop perfectly */
+    100% { transform: translateX(-50px); }
 }
 
 /* =========================================
