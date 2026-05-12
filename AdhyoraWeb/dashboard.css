@@ -403,9 +403,7 @@ body.dark-mode {
    THEME FIX PATCH (ULTIMATE MASTER VERSION)
    ========================================= */
 
-/* --- PART 1: NEW V4 & V5 POLISH (HOVERS & MODALS) --- */
-
-/* Tell the OS to use Dark Mode for native elements (Fixes bright scrollbars/dropdowns) */
+/* Tell the OS to use Dark Mode for native elements */
 body.dark-mode { color-scheme: dark; }
 
 /* Fix Profile Modal & All General Text in Dark Mode */
@@ -430,9 +428,6 @@ body.dark-mode { color-scheme: dark; }
 
 /* Dark Mode Hover Enhancements */
 body.dark-mode .profile-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important; border-color: var(--text-main) !important; }
-
-
-/* --- PART 2: V3 BASE (EXISTING FIXES) --- */
 
 /* Fix white table rows */
 .stat-item { background-color: transparent !important; border-bottom-color: var(--border-color) !important; }
@@ -480,7 +475,7 @@ body.dark-mode #animatedRowText { color: #ffffff !important; }
 /* Seamless Bottom Fade */
 .bottom-nav-mask { background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important; }
 
-/* --- PART 3: PROJECTED TEXT VISIBILITY FIX --- */
+/* PROJECTED TEXT VISIBILITY FIX */
 body.dark-mode .projected-text {
     color: rgba(255, 255, 255, 0.85) !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
@@ -491,7 +486,7 @@ body.dark-mode .percentage-value {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* --- PART 4: FREE PERIOD TIMETABLE CARDS --- */
+/* FREE PERIOD TIMETABLE CARDS */
 .tt-card.free {
     background-color: transparent !important;
     border: 1.5px dashed var(--theme-main) !important;
@@ -499,10 +494,24 @@ body.dark-mode .percentage-value {
     box-shadow: none !important;
 }
 
-/* Make the pills inside the free card blend in seamlessly */
 .tt-card.free .tt-pill {
     background-color: transparent !important;
     box-shadow: none !important;
     border: 1px solid var(--border-color) !important;
     color: var(--text-muted) !important;
+}
+
+/* 🚨 NEW: SUSPENSION CARD ANIMATION 🚨 */
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
+    50% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.6); }
+    100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
+}
+
+.suspend-card {
+    animation: pulse-red 2s infinite;
+}
+.suspend-card button:hover {
+    background: #dc2626 !important;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
 }
