@@ -12,32 +12,42 @@ const firebaseConfig = {
   appId: "1:206050348148:web:da4e421e00ec2f77429521"
 };
 
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ==========================================
-// GLOBAL STATE VARIABLES
+// 🚨 ZERO-COST RAM CACHES 🚨
 // ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
 let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex = 0;
 
+let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; 
+let enrolledSubjectsList = [];
+let currentStudentEnrolledMap = {}; 
+let optimizedSubjectCache = null; 
+
+let currentDailyDate = new Date(); 
+let cachedMedicalLeaves = []; 
+
+// 🚨 NEW CACHES FOR OPTIMIZATION
+let dailyAttendanceCache = {}; 
+let timetableCache = [];       
+let sessionsCache = new Map(); 
+let cachedAssignments = [];
+let cachedNotifs = [];
+let cachedMessages = [];
+let isDataListening = false;
+
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; 
-let enrolledSubjectsList = [];
-let currentStudentEnrolledMap = {}; // 🚨 NEW: Caches the map for UI display
-let optimizedSubjectCache = null; // 🚨 NEW: Fast RAM lookup for subjects
-
-let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
 let calendarMode = "global"; let currentDisplayDate = new Date(); 
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
 let myWebDeviceID = localStorage.getItem("myWebDeviceID");
-let currentStudentProfileData = null; // 🚨 NEW: Cache profile for the popup
+let currentStudentProfileData = null; 
 
 // ==========================================
 // DOM ELEMENTS
@@ -57,7 +67,6 @@ const el = {
     calModal: document.getElementById("calendarModal"), calTitle: document.getElementById("calMonthYearText"),
     calGrid: document.getElementById("calendarGrid"), upcomingTxt: document.getElementById("upcomingEventText"),
     
-    // VIEWS
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
@@ -65,22 +74,18 @@ const el = {
     actualNotifView: document.getElementById("actualNotifView"),
     msgView: document.getElementById("messagesView"),
     
-    // DAILY UI
     dailyDateBtn: document.getElementById("dailyDateBtn"),
     dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
     periodsGrid: document.getElementById("periodsGrid"), detailModal: document.getElementById("periodDetailModal"),
     dSub: document.getElementById("detailSubjectText"), dTeach: document.getElementById("detailTeacherText"), dStat: document.getElementById("detailStatusText"),
 
-    // TIMETABLE UI
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes"),
     
-    // LIST CONTAINERS
     assignList: document.getElementById("assignmentsListContainer"),
     actualNotifList: document.getElementById("actualNotifListContainer"),
     msgList: document.getElementById("messagesListContainer"),
 
-    // SESSIONS & PROFILE
     sessionsModal: document.getElementById("sessionsModal"),
     sessionsList: document.getElementById("sessionsListContainer"),
     profileModal: document.getElementById("profileDetailsModal"),
@@ -93,8 +98,9 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
-if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
-else {
+if (!collegeID || !studentUID) { 
+    window.location.href = "index.html"; 
+} else {
     onAuthStateChanged(auth, (user) => {
         if (user) syncCollegeAndListen(); else window.location.href = "index.html";
     });
@@ -148,15 +154,99 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        if (!el.ttView.classList.contains("hidden-view")) loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
+        // 🚨 BOOT UP THE ZERO-COST LISTENERS ONCE
+        if (!isDataListening) {
+            isDataListening = true;
+            startBackgroundListeners();
+        }
+
+        if (!el.ttView.classList.contains("hidden-view")) {
+            let todayName = document.querySelector('.day-btn.active').dataset.day;
+            loadTimetableForDay(todayName);
+        }
         if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
         if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
         if (!el.msgView.classList.contains("hidden-view")) loadMessages();
     });
 }
 
+// 🚨 THE FIX: Background caching engine
+function startBackgroundListeners() {
+    // 1. Assignments cache
+    let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    onSnapshot(query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc")), (snap) => {
+        cachedAssignments = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
+        snap.forEach(doc => {
+            let d = doc.data(); let sub = d.subject || "Unknown";
+            let isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
+            let isDepartmentMatch = (d.teacherDeptID || "").trim().toLowerCase() === myDepartmentID.toLowerCase() && (d.semester || "").trim().toLowerCase() === mySemStr.toLowerCase();
+            if (isExplicitMatch || isDepartmentMatch || enrolledSubjectsList.length === 0) {
+                cachedAssignments.push({ title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher", due: d.dueDate || "N/A", time: d.createdAt ? d.createdAt.toDate() : new Date() });
+            }
+        });
+        if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
+    });
+
+    // 2. Notifications cache
+    function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
+    let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
+    let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
+    let inboxCache = []; let globalCache = [];
+    const updateNotifUI = () => {
+        cachedNotifs = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time);
+        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        inboxCache = []; snap.forEach(doc => { let d = doc.data(); inboxCache.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
+    onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
+        globalCache = []; snap.forEach(doc => { let d = doc.data(); globalCache.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
+
+    // 3. Messages cache
+    let broadcastCache = []; let privateChatCache = [];
+    const updateMsgUI = () => {
+        cachedMessages = [...broadcastCache, ...privateChatCache].sort((a,b) => b.time - a.time);
+        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        broadcastCache = [];
+        snap.forEach(doc => {
+            let d = doc.data(); let target = d.targetSummary || ""; let forMe = false;
+            if (d.senderID === auth.currentUser.uid) forMe = true;
+            else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
+            else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
+            if (forMe) { broadcastCache.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
+        });
+        updateMsgUI();
+    });
+    onSnapshot(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)), (snap) => {
+        privateChatCache = []; 
+        snap.forEach(chatDoc => {
+            onSnapshot(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)), (msgSnap) => {
+                privateChatCache = privateChatCache.filter(m => m.roomID !== chatDoc.id); 
+                msgSnap.forEach(mDoc => { let d = mDoc.data(); privateChatCache.push({ roomID: chatDoc.id, title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+                updateMsgUI();
+            });
+        });
+    });
+
+    // 4. Sessions cache
+    const updateSessionCache = (snap, parentID) => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "removed") sessionsCache.delete(change.doc.id);
+            else sessionsCache.set(change.doc.id, { id: change.doc.id, parent: parentID, ...change.doc.data() });
+        });
+        if (el.sessionsModal.classList.contains("active")) loadSessions();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions")), snap => updateSessionCache(snap, currentRollNo));
+    onSnapshot(query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions")), snap => updateSessionCache(snap, auth.currentUser.uid));
+}
+
 function processStudentData(data) {
-    currentStudentProfileData = data; // Cache for profile popup
+    currentStudentProfileData = data; 
     
     const sName = data.Name || data.name || "Unknown";
     el.name.innerText = sName; el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
@@ -242,7 +332,11 @@ function updateUIForCurrentSemester(optionalDept) {
     }).join('');
 
     fetchMarksForSemester(semData.name);
-    buildEnrolledSubjectsUI(semData.name); // 🚨 Builds the new Curriculum List
+    buildEnrolledSubjectsUI(semData.name); 
+
+    // 🚨 RESET CACHES FOR NEW SEMESTER
+    dailyAttendanceCache = {}; 
+    startTimetableListener(); // This flushes and restarts the timetable RAM cache
 }
 
 function fetchMarksForSemester(semName) {
@@ -276,7 +370,7 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// 🚨 NEW: ENROLLED SUBJECTS BUILDER 🚨
+// ENROLLED SUBJECTS BUILDER
 // ==========================================
 async function buildEnrolledSubjectsUI(semesterName) {
     let listEl = document.getElementById("enrolledSubjectsListText");
@@ -285,14 +379,12 @@ async function buildEnrolledSubjectsUI(semesterName) {
     let cleanSemNum = semesterName.replace("Semester", "").replace("_", "").trim();
     let finalSubjects = [];
 
-    // 1. Explicitly enrolled (VAC, SEC, Minor)
     let semKey = semesterName.replace(" ", "_"); 
     let enrollMap = currentStudentEnrolledMap[semKey] || currentStudentEnrolledMap[semesterName] || {};
     for (let [cat, sub] of Object.entries(enrollMap)) {
         finalSubjects.push(`<span style="color:#f59e0b; font-weight:bold;">[${cat}]</span> ${sub}`);
     }
 
-    // 2. Fetch Master Subjects if not cached
     if (!optimizedSubjectCache) {
         optimizedSubjectCache = [];
         try {
@@ -310,7 +402,6 @@ async function buildEnrolledSubjectsUI(semesterName) {
         } catch(e) { console.error("Error fetching subjects", e); }
     }
 
-    // 3. Match Core/MJD Subjects
     let cleanStuDept = rawDept.replace(/\s/g, "").toLowerCase().replace("dept_", "");
     optimizedSubjectCache.forEach(sub => {
         if (sub.semesterArray.includes(cleanSemNum)) {
@@ -318,7 +409,7 @@ async function buildEnrolledSubjectsUI(semesterName) {
             if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
                 let newEntry = `<span style="color:#10b981; font-weight:bold;">[${sub.rawType}]</span> ${sub.displayName}`;
                 if (!finalSubjects.some(existing => existing.includes(sub.displayName))) {
-                    finalSubjects.unshift(newEntry); // Add to top
+                    finalSubjects.unshift(newEntry);
                 }
             }
         }
@@ -329,7 +420,7 @@ async function buildEnrolledSubjectsUI(semesterName) {
 }
 
 // ==========================================
-// 🚨 NEW: STUDENT PROFILE POPUP 🚨
+// PROFILE MODAL
 // ==========================================
 document.getElementById("btnProfileDetails").addEventListener("click", () => {
     let d = currentStudentProfileData;
@@ -352,7 +443,7 @@ document.getElementById("btnProfileDetails").addEventListener("click", () => {
 document.getElementById("closeProfileBtn").addEventListener("click", () => el.profileModal.classList.remove("active"));
 
 // ==========================================
-// 🚨 VIEW TOGGLING (USING HIDDEN-VIEW) 🚨
+// 🚨 VIEW TOGGLING 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -369,112 +460,49 @@ function switchView(activeBtn, viewToShow) {
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
-btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); });
+btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
+btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
+btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
+btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); }); 
+
 btnNavTimetable.addEventListener("click", () => { 
     switchView(btnNavTimetable, el.ttView); 
     let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
     let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     if (!validDays.includes(todayName)) todayName = "Monday";
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
+    
+    // Check cache
     loadTimetableForDay(todayName);
 });
 
-btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
-btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
-btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
-
 // ==========================================
-// 1. ASSIGNMENTS
+// 🚨 ZERO-COST RENDER FUNCTIONS 🚨
 // ==========================================
-async function loadAssignments() {
-    el.assignList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
-    try {
-        let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-        const q = query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        
-        let notifs = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
-        snapshot.forEach(doc => {
-            let d = doc.data(); let sub = d.subject || "Unknown";
-            let isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
-            let isDepartmentMatch = (d.teacherDeptID || "").trim().toLowerCase() === myDepartmentID.toLowerCase() && (d.semester || "").trim().toLowerCase() === mySemStr.toLowerCase();
+function loadAssignments() {
+    if (cachedAssignments.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
+    el.assignList.innerHTML = cachedAssignments.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
+}
 
-            if (isExplicitMatch || isDepartmentMatch || enrolledSubjectsList.length === 0) {
-                notifs.push({ title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher", due: d.dueDate || "N/A", time: d.createdAt ? d.createdAt.toDate() : new Date() });
-            }
-        });
-        
-        if (notifs.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
-        el.assignList.innerHTML = notifs.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
-    } catch(e) { el.assignList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+function loadActualNotifications() {
+    if (cachedNotifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
+    el.actualNotifList.innerHTML = cachedNotifs.map(n => {
+        let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+        return `<div class="data-card ${n.type}"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora</span><span>${timeStr}</span></div></div>`;
+    }).join('');
+}
+
+function loadMessages() {
+    if (cachedMessages.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
+    el.msgList.innerHTML = cachedMessages.map(m => {
+        let css = m.type === "broadcast" ? "broadcast" : "";
+        let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+        return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
+    }).join('');
 }
 
 // ==========================================
-// 2. ACTUAL NOTIFICATIONS
-// ==========================================
-function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
-
-async function loadActualNotifications() {
-    el.actualNotifList.innerHTML = `<div class="no-data-text">Loading notifications...</div>`;
-    try {
-        let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
-        let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
-
-        const [inboxSnap, globalSnap] = await Promise.all([
-            getDocs(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30))),
-            getDocs(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)))
-        ]);
-
-        let notifs = [];
-        inboxSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        globalSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-
-        notifs.sort((a,b) => b.time - a.time);
-        if (notifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
-        
-        el.actualNotifList.innerHTML = notifs.map(n => {
-            let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `<div class="data-card ${n.type}"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora</span><span>${timeStr}</span></div></div>`;
-        }).join('');
-    } catch(e) { el.actualNotifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
-}
-
-// ==========================================
-// 3. MESSAGES
-// ==========================================
-async function loadMessages() {
-    el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
-    let msgs = [];
-    try {
-        const broadcastSnap = await getDocs(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)));
-        broadcastSnap.forEach(doc => {
-            let d = doc.data(); let target = d.targetSummary || "";
-            let forMe = false;
-            if (d.senderID === auth.currentUser.uid) forMe = true;
-            else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
-            else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
-            if (forMe) { msgs.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
-        });
-
-        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)));
-        for (let chatDoc of chatSnap.docs) {
-            const msgSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)));
-            msgSnap.forEach(mDoc => { let d = mDoc.data(); msgs.push({ title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        }
-
-        msgs.sort((a,b) => b.time - a.time);
-        if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
-        el.msgList.innerHTML = msgs.map(m => {
-            let css = m.type === "broadcast" ? "broadcast" : "";
-            let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
-        }).join('');
-    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
-}
-
-
-// ==========================================
-// DAILY ATTENDANCE MANAGER
+// 🚨 PULL-THROUGH CACHE: DAILY ATTENDANCE
 // ==========================================
 document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
@@ -486,46 +514,71 @@ el.dailyDateBtn.addEventListener("click", () => {
 
 async function loadDailyAttendance() {
     el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-    el.dailyStatus.innerText = "Checking..."; el.periodsGrid.innerHTML = ""; dailyData = [];
-    for(let i=0; i<6; i++) { dailyData.push({hasData: false}); el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; }
-
+    
     let mStr = String(currentDailyDate.getMonth() + 1).padStart(2, '0'); let dStr = String(currentDailyDate.getDate()).padStart(2, '0');
     let dateStr = `${currentDailyDate.getFullYear()}-${mStr}-${dStr}`;
     let activeSemName = sortedSemesterKeys[currentSemesterIndex] ? sortedSemesterKeys[currentSemesterIndex].replace("_", " ") : "Semester 1";
 
+    // 🚨 0 COST: Check RAM first
+    if (dailyAttendanceCache[dateStr]) {
+        renderDailyData(dailyAttendanceCache[dateStr]);
+        return; 
+    }
+
+    el.dailyStatus.innerText = "Checking..."; el.periodsGrid.innerHTML = ""; dailyData = [];
+    for(let i=0; i<6; i++) { dailyData.push({hasData: false}); el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; }
+
     try {
         const q = query(collection(db, "colleges", collegeID, "attendance"), where("date", "==", dateStr), where("semester", "==", activeSemName));
         const snapshot = await getDocs(q);
-        if(snapshot.empty) { el.dailyStatus.innerText = "No Classes Recorded"; return; }
         
-        let isMedToday = false; let cDateObj = new Date(currentDailyDate).setHours(0,0,0,0);
-        for(let l of cachedMedicalLeaves) { if(cDateObj >= l.start.setHours(0,0,0,0) && cDateObj <= l.end.setHours(0,0,0,0)) { isMedToday = true; break; } }
-
-        let pCount = 0; let tHeld = 0;
-        snapshot.forEach(doc => {
-            if(doc.id.includes("GLOBAL")) return; let d = doc.data();
-            for(let i=1; i<=6; i++) {
-                let pK = `period_${i}`;
-                if(d[pK] && d[pK].attendance && d[pK].attendance[currentRollNo] !== undefined) {
-                    let isP = (d[pK].attendance[currentRollNo] == true || d[pK].attendance[currentRollNo] == 1);
-                    tHeld++; if(isP) pCount++;
-                    let sub = d[pK].subject || "Unknown";
-                    if(d[pK].event_details && d[pK].event_details[currentRollNo]) sub = d[pK].event_details[currentRollNo];
-                    dailyData[i-1] = { hasData: true, isPresent: isP, isMedical: isMedToday, subject: sub, teacher: d[pK].markedByTeacherName || "System", time: d[pK].timestamp ? new Date(d[pK].timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "N/A" };
-                }
-            }
-        });
-        if(tHeld > 0) el.dailyStatus.innerText = `Present: ${pCount} / ${tHeld}`; else el.dailyStatus.innerText = "No Classes Recorded";
+        let docs = [];
+        if(!snapshot.empty) { snapshot.forEach(doc => { if (!doc.id.includes("GLOBAL")) docs.push(doc.data()); }); }
         
-        el.periodsGrid.innerHTML = "";
-        for(let i=0; i<6; i++) {
-            let d = dailyData[i];
-            if(!d.hasData) { el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; continue; }
-            let css = d.isMedical ? "btn-medical" : (d.isPresent ? "btn-present" : "btn-absent");
-            let txt = d.isMedical ? "M" : (d.isPresent ? "P" : "A");
-            el.periodsGrid.innerHTML += `<button class="period-btn ${css}" onclick="openPeriodDetail(${i})">${txt}</button>`;
-        }
+        // Save to RAM for next time
+        dailyAttendanceCache[dateStr] = docs; 
+        renderDailyData(docs);
     } catch(e) { el.dailyStatus.innerText = "Network Error"; }
+}
+
+function renderDailyData(docs) {
+    dailyData = [];
+    for(let i=0; i<6; i++) { dailyData.push({hasData: false}); }
+
+    if (docs.length === 0) {
+        el.dailyStatus.innerText = "No Classes Recorded";
+        el.periodsGrid.innerHTML = "";
+        for(let i=0; i<6; i++) { el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; }
+        return;
+    }
+
+    let isMedToday = false; let cDateObj = new Date(currentDailyDate).setHours(0,0,0,0);
+    for(let l of cachedMedicalLeaves) { if(cDateObj >= l.start.setHours(0,0,0,0) && cDateObj <= l.end.setHours(0,0,0,0)) { isMedToday = true; break; } }
+
+    let pCount = 0; let tHeld = 0;
+    docs.forEach(d => {
+        for(let i=1; i<=6; i++) {
+            let pK = `period_${i}`;
+            if(d[pK] && d[pK].attendance && d[pK].attendance[currentRollNo] !== undefined) {
+                let isP = (d[pK].attendance[currentRollNo] == true || d[pK].attendance[currentRollNo] == 1);
+                tHeld++; if(isP) pCount++;
+                let sub = d[pK].subject || "Unknown";
+                if(d[pK].event_details && d[pK].event_details[currentRollNo]) sub = d[pK].event_details[currentRollNo];
+                dailyData[i-1] = { hasData: true, isPresent: isP, isMedical: isMedToday, subject: sub, teacher: d[pK].markedByTeacherName || "System", time: d[pK].timestamp ? new Date(d[pK].timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "N/A" };
+            }
+        }
+    });
+
+    if(tHeld > 0) el.dailyStatus.innerText = `Present: ${pCount} / ${tHeld}`; else el.dailyStatus.innerText = "No Classes Recorded";
+    
+    el.periodsGrid.innerHTML = "";
+    for(let i=0; i<6; i++) {
+        let d = dailyData[i];
+        if(!d.hasData) { el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; continue; }
+        let css = d.isMedical ? "btn-medical" : (d.isPresent ? "btn-present" : "btn-absent");
+        let txt = d.isMedical ? "M" : (d.isPresent ? "P" : "A");
+        el.periodsGrid.innerHTML += `<button class="period-btn ${css}" onclick="openPeriodDetail(${i})">${txt}</button>`;
+    }
 }
 
 window.openPeriodDetail = function(index) {
@@ -537,7 +590,7 @@ window.openPeriodDetail = function(index) {
 document.getElementById("closeDetailBtn").addEventListener("click", () => el.detailModal.classList.remove("active"));
 
 // ==========================================
-// TIMETABLE
+// 🚨 TIMETABLE RAM RENDERING 🚨
 // ==========================================
 document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -559,49 +612,63 @@ function getMyBatchIndexForSubject(targetSubjectName) {
     return -1; 
 }
 
-function loadTimetableForDay(selectedDay) {
-    el.ttCards.innerHTML = ""; if (activeTimetableUnsubscribe) activeTimetableUnsubscribe();
+function startTimetableListener() {
+    if (activeTimetableUnsubscribe) activeTimetableUnsubscribe();
     let semStr = (currentSemesterIndex + 1).toString();
-    const q = query(collection(db, "colleges", collegeID, "timetable_allocations"), where("semester", "==", semStr), where("day", "==", selectedDay));
+    const q = query(collection(db, "colleges", collegeID, "timetable_allocations"), where("semester", "==", semStr));
 
     activeTimetableUnsubscribe = onSnapshot(q, (snapshot) => {
-        el.ttCards.innerHTML = ""; let docs = []; snapshot.forEach(d => docs.push(d.data()));
-        let htmlBuffer = "";
+        timetableCache = [];
+        snapshot.forEach(d => timetableCache.push(d.data()));
+        
+        if (!el.ttView.classList.contains("hidden-view")) {
+            let activeDay = document.querySelector('.day-btn.active').dataset.day;
+            loadTimetableForDay(activeDay);
+        }
+    });
+}
 
-        for (let i = 0; i < 6; i++) {
-            let pStr = (i + 1).toString(); let periodDocs = docs.filter(d => d.period === pStr); let finalMatch = null;
-            finalMatch = periodDocs.find(d => d.category === "Break" || d.category === "Lunch");
+function loadTimetableForDay(selectedDay) {
+    el.ttCards.innerHTML = ""; 
+    let htmlBuffer = "";
+    let semStr = (currentSemesterIndex + 1).toString();
 
-            if (!finalMatch) {
-                for (let d of periodDocs) {
-                    let sName = d.subjectName ? d.subjectName.trim() : ""; let myBatchIdx = getMyBatchIndexForSubject(sName);
-                    if (myBatchIdx !== -1) {
-                        let isComm = d.isCommon === true; let dBatchIdx = d.splitIndex ? parseInt(d.splitIndex) : 0;
-                        if (isComm || dBatchIdx === myBatchIdx) { finalMatch = d; break; }
-                    }
+    // 🚨 Extracting directly from RAM 🚨
+    let docs = timetableCache.filter(d => d.day === selectedDay);
+
+    for (let i = 0; i < 6; i++) {
+        let pStr = (i + 1).toString(); let periodDocs = docs.filter(d => d.period === pStr); let finalMatch = null;
+        finalMatch = periodDocs.find(d => d.category === "Break" || d.category === "Lunch");
+
+        if (!finalMatch) {
+            for (let d of periodDocs) {
+                let sName = d.subjectName ? d.subjectName.trim() : ""; let myBatchIdx = getMyBatchIndexForSubject(sName);
+                if (myBatchIdx !== -1) {
+                    let isComm = d.isCommon === true; let dBatchIdx = d.splitIndex ? parseInt(d.splitIndex) : 0;
+                    if (isComm || dBatchIdx === myBatchIdx) { finalMatch = d; break; }
                 }
-            }
-
-            if (!finalMatch && myDepartmentID) {
-                for (let d of periodDocs) {
-                    let dDept = d.departmentID || ""; let dCat = (d.category || "").toUpperCase();
-                    if (dDept === myDepartmentID && (dCat.includes("MJD") || dCat.includes("CORE"))) { finalMatch = d; break; }
-                }
-            }
-
-            if (finalMatch) {
-                let cat = finalMatch.category || "-"; let subj = finalMatch.subjectName || "Unknown"; let room = finalMatch.room || "TBD";
-                let isComm = finalMatch.isCommon === true;
-                if (!isComm && finalMatch.splitIndex) { let bIdx = parseInt(finalMatch.splitIndex); subj += ` <span style="font-size:10px; color:#eab308;">(Batch ${bIdx + 1})</span>`; }
-                let cardClass = "tt-card"; if (cat === "Break" || cat === "Lunch") { cardClass += " break"; subj = cat; cat = "-"; }
-                
-                htmlBuffer += `<div class="${cardClass}"><div class="tt-pill-row"><div class="tt-pill cat-pill">${cat}</div><div class="tt-pill sub-pill">${subj}</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill">Semester ${semStr}</div><div class="tt-pill room-pill">${room}</div></div></div>`;
-            } else {
-                htmlBuffer += `<div class="tt-card free"><div class="tt-pill-row"><div class="tt-pill cat-pill" style="color:#94a3b8">-</div><div class="tt-pill sub-pill" style="color:#64748b">Free Period</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill" style="color:#94a3b8">-</div><div class="tt-pill room-pill" style="color:#94a3b8">-</div></div></div>`;
             }
         }
-        el.ttCards.innerHTML = htmlBuffer; updateTimelineVisuals();
-    });
+
+        if (!finalMatch && myDepartmentID) {
+            for (let d of periodDocs) {
+                let dDept = d.departmentID || ""; let dCat = (d.category || "").toUpperCase();
+                if (dDept === myDepartmentID && (dCat.includes("MJD") || dCat.includes("CORE"))) { finalMatch = d; break; }
+            }
+        }
+
+        if (finalMatch) {
+            let cat = finalMatch.category || "-"; let subj = finalMatch.subjectName || "Unknown"; let room = finalMatch.room || "TBD";
+            let isComm = finalMatch.isCommon === true;
+            if (!isComm && finalMatch.splitIndex) { let bIdx = parseInt(finalMatch.splitIndex); subj += ` <span style="font-size:10px; color:#eab308;">(Batch ${bIdx + 1})</span>`; }
+            let cardClass = "tt-card"; if (cat === "Break" || cat === "Lunch") { cardClass += " break"; subj = cat; cat = "-"; }
+            
+            htmlBuffer += `<div class="${cardClass}"><div class="tt-pill-row"><div class="tt-pill cat-pill">${cat}</div><div class="tt-pill sub-pill">${subj}</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill">Semester ${semStr}</div><div class="tt-pill room-pill">${room}</div></div></div>`;
+        } else {
+            htmlBuffer += `<div class="tt-card free"><div class="tt-pill-row"><div class="tt-pill cat-pill" style="color:#94a3b8">-</div><div class="tt-pill sub-pill" style="color:#64748b">Free Period</div></div><div class="tt-pill-row"><div class="tt-pill sem-pill" style="color:#94a3b8">-</div><div class="tt-pill room-pill" style="color:#94a3b8">-</div></div></div>`;
+        }
+    }
+    el.ttCards.innerHTML = htmlBuffer; updateTimelineVisuals();
 }
 
 function updateTimelineVisuals() {
@@ -622,7 +689,7 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// DEVICE SESSIONS & SETTINGS
+// 🚨 DEVICE SESSIONS & SETTINGS CACHE
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
@@ -635,40 +702,27 @@ document.getElementById("btnDevices").addEventListener("click", () => {
 });
 document.getElementById("closeSessionsBtn").addEventListener("click", () => el.sessionsModal.classList.remove("active"));
 
-async function loadSessions() {
-    el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
-    try {
-        const q1 = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
-        const q2 = query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions"));
+function loadSessions() {
+    if (sessionsCache.size === 0) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
+    
+    let htmlBuffer = "";
+    sessionsCache.forEach((d) => {
+        let devName = d.deviceName || "Unknown Device";
+        let isMe = (d.id === myWebDeviceID);
+        if (isMe) devName += " (This Browser)";
         
-        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-        let htmlBuffer = ""; let addedDocs = new Set();
-        
-        const processDoc = (doc) => {
-            if (addedDocs.has(doc.id)) return;
-            addedDocs.add(doc.id);
-            
-            let d = doc.data(); let devName = d.deviceName || "Unknown Device";
-            let isMe = (doc.id === myWebDeviceID);
-            if (isMe) devName += " (This Browser)";
-            
-            let timeStr = "Recently";
-            if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        let timeStr = "Recently";
+        if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-            let btnHtml = isMe ? `<span style="font-size:10px; color:#10b981; font-weight:bold;">Active</span>` : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
-            
-            htmlBuffer += `
-                <div class="session-card">
-                    <div class="session-info"><h4>${devName}</h4><p>Logged in: ${timeStr}</p></div>
-                    ${btnHtml}
-                </div>`;
-        };
+        let btnHtml = isMe ? `<span style="font-size:10px; color:#10b981; font-weight:bold;">Active</span>` : `<button class="revoke-btn" onclick="revokeSession('${d.id}', '${d.parent}')">Kick</button>`;
         
-        snap1.forEach(processDoc); snap2.forEach(processDoc);
-        
-        if (addedDocs.size === 0) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
-        el.sessionsList.innerHTML = htmlBuffer;
-    } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
+        htmlBuffer += `
+            <div class="session-card">
+                <div class="session-info"><h4>${devName}</h4><p>Logged in: ${timeStr}</p></div>
+                ${btnHtml}
+            </div>`;
+    });
+    el.sessionsList.innerHTML = htmlBuffer;
 }
 
 window.revokeSession = async function(sessionID, parentDocID) {
@@ -676,7 +730,6 @@ window.revokeSession = async function(sessionID, parentDocID) {
     try {
         await deleteDoc(doc(db, "colleges", collegeID, "students", parentDocID, "sessions", sessionID));
         alert("Session revoked. The device will be logged out shortly.");
-        loadSessions();
     } catch(e) { alert("Error revoking session."); }
 };
 
