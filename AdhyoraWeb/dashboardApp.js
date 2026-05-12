@@ -53,7 +53,7 @@ let actualProjectedPercent = 0;
 let savedStrictPresent = 0;
 let savedStrictTotal = 0;
 let savedRemainingDays = 0;
-let isStrictCollege = true; // Match your Unity default
+let isStrictCollege = true;
 
 // ==========================================
 // DOM ELEMENTS
@@ -97,7 +97,7 @@ const el = {
     profileModal: document.getElementById("profileDetailsModal"),
     profileContent: document.getElementById("profileDetailsContent"),
     
-    // 🚨 PREDICTOR UI ELEMENTS
+    // PREDICTOR UI ELEMENTS
     predictorModal: document.getElementById("leavePredictorModal"),
     predictStatusText: document.getElementById("predictStatusText"),
     leaveDaysInput: document.getElementById("leaveDaysInput"),
@@ -344,7 +344,9 @@ function updateUIForCurrentSemester(optionalDept) {
     if (optionalDept) el.sbSub.innerHTML = `${optionalDept} &nbsp; <span class="sem-text">${semData.name}</span>`;
     else el.sbSub.innerHTML = el.sbSub.innerHTML.split("&nbsp;")[0] + `&nbsp; <span class="sem-text">${semData.name}</span>`;
 
-    float simplePercent = (semData.simpleTotalHeld > 0) ? ((float)semData.simpleTotalAttended / semData.simpleTotalHeld) * 100f : 0f;
+    // 🚨 FIX: Replaced C# float casting with clean JavaScript 🚨
+    let simplePercent = (semData.simpleTotalHeld > 0) ? (semData.simpleTotalAttended / semData.simpleTotalHeld) * 100 : 0;
+    
     let projectedStrictPercent = 0;
     let currentStrictPercent = 0;
 
@@ -363,12 +365,11 @@ function updateUIForCurrentSemester(optionalDept) {
         if (isGlobalDataLoaded && isCurrentlyActiveSem) {
             let semIsOdd = (semNum % 2 != 0);
             let range = semIsOdd ? {start: semStarts.keys().next().value, end: semEnds.keys().next().value} : {start: semStarts.keys().next().value, end: semEnds.keys().next().value}; 
-            // Note: The global dates extraction logic is simplified for JS due to Map structure, assuming current year is active.
 
             if (calWorkingDays.size > 0) {
                 let remainingDays = 0;
                 let iterator = new Date(); iterator.setDate(iterator.getDate() + 1);
-                // Rough estimate based on cached working days ahead of today
+                
                 calWorkingDays.forEach(dateKey => {
                     let dateObj = new Date(dateKey);
                     if (dateObj >= iterator) remainingDays++;
@@ -612,7 +613,6 @@ document.getElementById("predictSubmitBtn").addEventListener("click", () => {
     
     if (projDenom > 0) predictedPercent = (projNum / projDenom) * 100.0;
 
-    // Animate the drop!
     AnimatePrediction(actualProjectedPercent, predictedPercent);
 });
 
@@ -625,7 +625,6 @@ function AnimatePrediction(startValue, targetValue) {
         let progress = (timestamp - startTime) / duration;
         if (progress > 1) progress = 1;
         
-        // Smooth step easing
         let easeProgress = progress * progress * (3 - 2 * progress);
         let currentVal = startValue + (targetValue - startValue) * easeProgress;
         
@@ -736,7 +735,6 @@ async function loadDailyAttendance() {
         let docs = [];
         if(!snapshot.empty) { snapshot.forEach(doc => { if (!doc.id.includes("GLOBAL")) docs.push(doc.data()); }); }
         
-        // Save to RAM for next time
         dailyAttendanceCache[dateStr] = docs; 
         renderDailyData(docs);
     } catch(e) { el.dailyStatus.innerText = "Network Error"; }
@@ -897,12 +895,10 @@ el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open")
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
-// --- ADDED: SIGN OUT LISTENER FOR SUSPENSION PANEL ---
 document.getElementById("btnBlockSignOut").addEventListener("click", () => {
     signOut(auth).then(() => window.location.href = "index.html");
 });
 
-// --- NATIVE BACK BUTTON TRAP (SIGN OUT WARNING) ---
 window.history.pushState({ page: "dashboard" }, "", "");
 window.addEventListener("popstate", (e) => {
     if (confirm("Do you want to sign out?")) {
@@ -911,7 +907,6 @@ window.addEventListener("popstate", (e) => {
         window.history.pushState({ page: "dashboard" }, "", "");
     }
 });
-// --------------------------------------------------
 
 // ==========================================
 // SIDEBAR EXTERNAL LINKS
