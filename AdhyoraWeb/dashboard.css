@@ -479,3 +479,14 @@ body.dark-mode #animatedRowText { color: #ffffff !important; }
 
 /* Seamless Bottom Fade */
 .bottom-nav-mask { background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important; }
+
+/* --- PART 3: PROJECTED TEXT VISIBILITY FIX --- */
+body.dark-mode .projected-text {
+    color: rgba(255, 255, 255, 0.85) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+}
+
+body.dark-mode .percentage-value {
+    color: #ffffff !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
