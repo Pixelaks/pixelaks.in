@@ -1,12 +1,11 @@
 /* Add this to the VERY TOP of your CSS file */
 @import url('https://fonts.googleapis.com/css2?family=Yatra+One&display=swap');
 
-/* Find and replace your existing .logo-text class with this: */
 .logo-text { 
     color: #3b82f6; 
-    font-size: 32px; /* Slightly larger as Yatra One scales differently */
+    font-size: 32px; 
     letter-spacing: 3px; 
-    font-family: 'Yatra One', system-ui, sans-serif; /* Applied the new font! */
+    font-family: 'Yatra One', system-ui, sans-serif; 
     margin: 0;
 }
 
@@ -20,7 +19,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 .dashboard-container { background-color: #ffffff; width: 100%; max-width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
 .header { text-align: center; padding: 15px 0; flex-shrink: 0; }
-.logo-text { color: #3b82f6; font-size: 28px; letter-spacing: 2px; font-weight: 700; }
 
 .profile-card { background: #e0f2fe; margin: 0 15px 15px 15px; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; border: 1px solid #bae6fd; flex-shrink: 0; cursor: pointer; transition: 0.2s;}
 .profile-card:hover { background: #bae6fd; }
@@ -39,7 +37,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 .centered-view { display: flex; flex-direction: column; align-items: center; }
-
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
 
 /* =========================================
@@ -50,21 +47,19 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     left: 0;
     bottom: 0;
     width: 100%;
-    /* Height is controlled by JS calc() */
     transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
     z-index: 0;
-    opacity: 0.9; /* Slight opacity makes the wave look more fluid against the text */
+    opacity: 0.9; 
 }
 
 .row-water-wave {
     position: absolute;
-    bottom: 100%; /* Sits exactly on top of the water container */
+    bottom: 100%; 
     left: 0;
     width: 200%; 
-    height: 12px; /* Fixed height for the wave */
-    background-color: inherit; /* Matches dynamic color */
+    height: 12px; 
+    background-color: inherit; 
     
-    /* Perfect horizontal sliding mask */
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q25,0 50,10 T100,10 L100,20 L0,20 Z' fill='black'/%3E%3C/svg%3E");
     -webkit-mask-size: 50px 100%;
     -webkit-mask-repeat: repeat-x;
@@ -85,12 +80,12 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
    ========================================= */
 .water-progress { 
     position: relative; 
-    flex: 1; /* Tells the container to grow and fill the empty void */
+    flex: 1; 
     width: 100%; 
-    max-width: 450px; /* Balances perfectly against the stats list */
-    min-height: 280px; /* Gives it the same visual weight as the 7-row table */
-    background-color: #f8fafc; /* Soft slate background */
-    border-radius: 40px; /* Massive curves to eliminate the rigid rectangle look */
+    max-width: 450px; 
+    min-height: 280px; 
+    background-color: #f8fafc; 
+    border-radius: 40px; 
     overflow: hidden; 
     display: flex; 
     justify-content: center; 
@@ -98,18 +93,20 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     box-shadow: inset 0px 4px 15px rgba(0,0,0,0.05); 
 }
 
+/* Hover effect so students know the big circle is clickable! */
+#attendanceWater:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.1); transition: 0.2s; }
+
 .water-fill { 
     position: absolute; 
     left: 0; 
     width: 100%; 
-    height: 250%; /* Massive height buffer so the bottom never shows */
+    height: 250%; 
     top: 100%; 
     background-color: #4caf50; 
     transition: top 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s; 
     z-index: 1; 
 }
 
-/* Super-sized waves to support the new, wider responsive container */
 .water-fill::before, .water-fill::after { 
     content: ""; 
     position: absolute; 
@@ -120,7 +117,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     margin-left: -600px; 
     margin-top: -1150px; 
     border-radius: 40%; 
-    background-color: #f8fafc; /* Must match the container background perfectly */
+    background-color: #f8fafc; 
     animation: wave-spin 7s linear infinite; 
 }
 
@@ -134,7 +131,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     100% { transform: rotate(360deg); } 
 }
 
-/* Scaled up the inner content box to match the new massive area */
 .water-content { 
     position: relative; 
     z-index: 2; 
@@ -146,7 +142,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,0,0,0.08); 
 }
 
-/* Optional: Add a slight text shadow so the numbers stay readable if the wave color is light */
 .percentage-value { 
     font-size: 42px; 
     font-weight: 900; 
@@ -156,9 +151,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 }
 
 .projected-text { font-size: 13px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
-.percentage-value { font-size: 42px; font-weight: 900; color: #0f172a; line-height: 1.2; }
-.projected-text { font-size: 11px; color: #666; }
-.percentage-value { font-size: 22px; font-weight: bold; color: #000; }
 
 .stats-list { width: 100%; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
 .stat-item { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #ddd; text-align: center; }
@@ -177,28 +169,16 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .dropdown-select { width: 100%; padding: 8px; border-radius: 5px; border: none; font-size: 14px; background-color: #3b82f6; color: white; outline: none; font-weight: bold; cursor: pointer; }
 .no-data-text { text-align: center; font-size: 12px; color: #888; padding-top: 20px;}
 
-#currentPercentageText {
-    transition: background-color 0.5s ease, color 0.5s ease;
-}
+#currentPercentageText { transition: background-color 0.5s ease, color 0.5s ease; }
 
-/* =========================================
-   🚨 RESTORED: PERFECT PC LAYOUT OVERRIDES 🚨
-   ========================================= */
 @media (min-width: 768px) {
     .profile-card { margin: 0 40px 20px 40px; }
     .semester-nav { margin: 0 40px; border-radius: 10px; }
-    
-    #mainDashboardView { 
-        display: grid; grid-template-columns: 1fr 1fr; gap: 40px; 
-        padding: 30px 40px 120px 40px; align-items: start; 
-    }
-    
+    #mainDashboardView { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 30px 40px 120px 40px; align-items: start; }
     .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; align-items: stretch; gap: 80px; }
     .stats-list { max-width: 500px; } 
-    
     .daily-attendance-panel { padding-top: 60px; display: flex; justify-content: center; grid-column: span 2;}
     .timetable-panel { padding-top: 40px; display: flex; align-items: center; flex-direction: column; grid-column: span 2;}
-    
     #assignmentsView, #actualNotifView, #messagesView { grid-column: span 2; display: flex; flex-direction: column; align-items: center;}
 }
 
@@ -259,7 +239,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .room-pill { color: #64748b; flex: 1.5; }
 
 /* =========================================
-   🚨 ADJUSTED: BOTTOM NAV FOR ALL 8 BUTTONS 🚨
+   BOTTOM NAV
    ========================================= */
 .bottom-nav-mask { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%); display: flex; justify-content: center; align-items: center; padding-top: 20px; z-index: 10; pointer-events: none; }
 
@@ -269,8 +249,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     display: flex; justify-content: space-between; gap: 2px; 
     width: 98%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); pointer-events: auto; 
 }
-
-/* Scaled perfectly to 32px so all 8 buttons fit securely on any phone screen! */
 .icon-btn { 
     background: #ffffff; border: none; font-size: 15px; cursor: pointer; opacity: 0.8; transition: 0.2s; 
     width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; 
@@ -280,11 +258,27 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .icon-btn.active { opacity: 1; transform: scale(1.1); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); border: 2px solid #3b82f6; }
 
 
-/* SIDEBAR & MODALS */
+/* =========================================
+   🚨 ANIMATED MODALS & PANELS 🚨
+   ========================================= */
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .sidebar-overlay, .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; opacity: 0; transition: opacity 0.3s; justify-content: center; align-items: center; padding: 20px;}
 .sidebar-overlay.active, .modal-overlay.active { display: flex; opacity: 1; }
-.sidebar-drawer { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background: #fff; z-index: 100; transition: left 0.3s ease; display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.2); }
+
+.calendar-container { 
+    background: #fff; border-radius: 20px; width: 100%; max-width: 400px; padding: 20px; 
+    display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    /* NEW: Slide up animation when the modal overlay becomes active */
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.sidebar-drawer { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background: #fff; z-index: 100; transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.2); }
 .sidebar-drawer.open { left: 0; }
+
 .sidebar-header { text-align: center; margin-bottom: 25px; margin-top: 20px; }
 .sidebar-avatar { width: 70px; height: 70px; border-radius: 50%; border: 1.5px dashed #3b82f6; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 35px; color: #3b82f6; }
 .sidebar-header h3 { font-size: 16px; color: #000; text-transform: uppercase; line-height: 1.2;}
@@ -295,7 +289,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .sidebar-btn:hover { background: #2563eb; }
 .sidebar-footer { margin-top: auto; text-align: center; font-size: 10px; color: #888; padding-top: 15px;}
 
-.calendar-container { background: #fff; border-radius: 20px; width: 100%; max-width: 400px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; }
 .calendar-header h3 { font-size: 18px; font-weight: 700; color: #000; }
 .cal-nav-btn { background: none; border: none; font-size: 20px; color: #3b82f6; cursor: pointer; padding: 5px 15px; font-weight: bold; }
@@ -312,10 +305,9 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .cal-subtitle { font-size: 8px; line-height: 1; margin-top: -2px; }
 .upcoming-card { background: #e0f2fe; border-radius: 15px; padding: 15px; margin-top: 10px; text-align: left; }
 .upcoming-card p { font-size: 13px; color: #000; line-height: 1.5; }
-.close-modal-btn { background: #f1f5f9; color: #333; border: none; border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; margin-top: 5px; }
+.close-modal-btn { background: #f1f5f9; color: #333; border: none; border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; margin-top: 5px; transition: 0.2s; }
 .close-modal-btn:hover { background: #e2e8f0; }
 
-/* Device Session Item */
 .session-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
 .session-info { flex: 1; margin-right: 10px; overflow: hidden; }
 .session-info h4 { font-size: 13px; color: #0f172a; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
@@ -345,12 +337,10 @@ body.dark-mode {
     --text-muted: #94a3b8;
     --border-color: #334155;
     
-    /* Adapt theme-light and nav for dark mode visibility */
     --theme-light: #1e293b;
     --theme-nav: #0f172a;
 }
 
-/* OVERRIDES: Apply variables to existing classes */
 body, .dashboard-container, .scrollable-content { background-color: var(--bg-main) !important; color: var(--text-main) !important; transition: background-color 0.3s, color 0.3s; }
 .data-card, .daily-card, .calendar-container, .sidebar-drawer, .profile-card, .list-container, .session-card, .upcoming-card, .tt-card { background-color: var(--bg-card) !important; border-color: var(--border-color) !important; color: var(--text-main); transition: background-color 0.3s; }
 
@@ -363,11 +353,9 @@ body, .dashboard-container, .scrollable-content { background-color: var(--bg-mai
 .profile-card { border: 2px solid var(--theme-main) !important; }
 .periods-grid { background: transparent !important; }
 
-/* Text fixes for dark mode */
 .profile-info h2, .card-title, .stat-item, .row-header span, h3, h4, .day-btn { color: var(--text-main) !important; }
 .profile-info p, .card-body, .projected-text, .session-info p { color: var(--text-muted) !important; }
 
-/* THEME MODAL SPECIFIC STYLES */
 .color-swatch { width: 45px; height: 45px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 .color-swatch:hover { transform: scale(1.1); }
 .color-swatch.active { border-color: var(--text-main); transform: scale(1.1); }
@@ -375,80 +363,36 @@ body, .dashboard-container, .scrollable-content { background-color: var(--bg-mai
 .mode-btn { background: var(--bg-main); border: 2px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
 .mode-btn.active { border-color: var(--theme-main); background: var(--theme-light); color: var(--theme-main); }
 
-/* =========================================
-   THEME FIX PATCH v4 (FINAL UI POLISH)
-   ========================================= */
-
-/* 1. Tell the OS to use Dark Mode for native elements (Fixes bright scrollbars/dropdowns) */
-body.dark-mode {
-    color-scheme: dark;
-}
-
-/* 2. Fix Profile Modal & All General Text in Dark Mode */
-#profileDetailsContent, 
-#profileDetailsContent b, 
-#profileDetailsContent span,
-.modal-overlay b {
-    color: var(--text-main) !important;
-}
-
-/* 3. Fix Timeline / Visual Indicator Colors */
-.timeline-progress { background-color: var(--theme-main) !important; }
-.tt-node.completed { background-color: var(--theme-main) !important; border-color: var(--theme-main) !important; color: #ffffff !important; }
-.tt-node.active { border-color: var(--theme-main) !important; color: var(--theme-main) !important; background-color: var(--theme-light) !important; }
-.timeline-track { background-color: var(--border-color) !important; }
-.tt-node { border-color: var(--border-color) !important; background-color: var(--bg-card) !important; color: var(--text-muted) !important; }
-
-/* =========================================
-   THEME FIX PATCH (ULTIMATE MASTER VERSION)
-   ========================================= */
-
 /* Tell the OS to use Dark Mode for native elements */
 body.dark-mode { color-scheme: dark; }
 
-/* Fix Profile Modal & All General Text in Dark Mode */
 #profileDetailsContent, 
 #profileDetailsContent b, 
 #profileDetailsContent span,
 .modal-overlay b { color: var(--text-main) !important; }
 
-/* Fix Timeline / Visual Indicator Colors */
 .timeline-progress { background-color: var(--theme-main) !important; }
 .tt-node.completed { background-color: var(--theme-main) !important; border-color: var(--theme-main) !important; color: #ffffff !important; }
 .tt-node.active { border-color: var(--theme-main) !important; color: var(--theme-main) !important; background-color: var(--theme-light) !important; }
 .timeline-track { background-color: var(--border-color) !important; }
 .tt-node { border-color: var(--border-color) !important; background-color: var(--bg-card) !important; color: var(--text-muted) !important; }
 
-/* Restore the soft, light theme tint to the Profile and Timetable cards */
 .profile-card, .tt-card { background-color: var(--theme-light) !important; border: 1.5px solid var(--theme-main) !important; }
-
-/* Profile Card Interactive Hover Effect */
 .profile-card { transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important; cursor: pointer; }
 .profile-card:hover { background-color: var(--theme-nav) !important; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
-
-/* Dark Mode Hover Enhancements */
 body.dark-mode .profile-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important; border-color: var(--text-main) !important; }
 
-/* Fix white table rows */
 .stat-item { background-color: transparent !important; border-bottom-color: var(--border-color) !important; }
-
-/* Match Dot Patterns */
 .bottom-nav, .periods-grid { background-image: radial-gradient(var(--theme-main) 1.5px, transparent 1.5px) !important; opacity: 0.9; }
 .tt-card { background-image: radial-gradient(var(--border-color) 1.5px, transparent 1.5px) !important; }
-
-/* Curriculum Subject Text */
 #enrolledSubjectsListText { color: var(--text-main) !important; }
 #enrolledSubjectsListText i { color: var(--text-muted) !important; }
 
-/* Big Wave Container */
 body.dark-mode .water-progress { background-color: var(--bg-main) !important; }
 body.dark-mode .water-fill::before { background-color: var(--bg-main) !important; }
 body.dark-mode .water-fill::after { background-color: var(--bg-main) !important; opacity: 0.7 !important; }
-
-/* Mini Wave Percentage Text */
 body.dark-mode #animatedRowText { color: #ffffff !important; }
 
-/* Timetable Boxes & Day Buttons */
 .tt-pill { background-color: var(--bg-main) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important; }
 .sub-pill { color: var(--text-main) !important; }
 .sem-pill, .room-pill { color: var(--text-muted) !important; }
@@ -457,7 +401,6 @@ body.dark-mode #animatedRowText { color: #ffffff !important; }
 .day-btn { color: var(--text-muted) !important; }
 .day-btn.active { color: #ffffff !important; background-color: var(--theme-main) !important; }
 
-/* Calendar Modals */
 .calendar-weekdays { color: var(--text-main) !important; }
 .cal-cell.normal { color: var(--text-main) !important; }
 .calendar-header .cal-nav-btn { color: var(--theme-main) !important; } 
@@ -466,52 +409,23 @@ body.dark-mode #animatedRowText { color: #ffffff !important; }
 .close-modal-btn { background-color: var(--bg-main) !important; color: var(--text-main) !important; border: 1px solid var(--border-color) !important; }
 .close-modal-btn:hover { background-color: var(--theme-light) !important; }
 
-/* Dropdowns & Progress Bars */
 .dropdown-select { background-color: var(--theme-main) !important; color: #ffffff !important; border: 1px solid var(--theme-main) !important; }
 .dropdown-select option { background-color: var(--bg-card) !important; color: var(--text-main) !important; }
 .marks-header-container { background-color: transparent !important; }
 #marksListContainer .progress-fill { background-color: var(--theme-main) !important; }
-
-/* Seamless Bottom Fade */
 .bottom-nav-mask { background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important; }
 
-/* PROJECTED TEXT VISIBILITY FIX */
-body.dark-mode .projected-text {
-    color: rgba(255, 255, 255, 0.85) !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
-}
+body.dark-mode .projected-text { color: rgba(255, 255, 255, 0.85) !important; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important; }
+body.dark-mode .percentage-value { color: #ffffff !important; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important; }
 
-body.dark-mode .percentage-value {
-    color: #ffffff !important;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
-}
+.tt-card.free { background-color: transparent !important; border: 1.5px dashed var(--theme-main) !important; opacity: 0.65 !important; box-shadow: none !important; }
+.tt-card.free .tt-pill { background-color: transparent !important; box-shadow: none !important; border: 1px solid var(--border-color) !important; color: var(--text-muted) !important; }
 
-/* FREE PERIOD TIMETABLE CARDS */
-.tt-card.free {
-    background-color: transparent !important;
-    border: 1.5px dashed var(--theme-main) !important;
-    opacity: 0.65 !important;
-    box-shadow: none !important;
-}
-
-.tt-card.free .tt-pill {
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-muted) !important;
-}
-
-/* 🚨 NEW: SUSPENSION CARD ANIMATION 🚨 */
+/* SUSPENSION CARD ANIMATION */
 @keyframes pulse-red {
     0% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
     50% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.6); }
     100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
 }
-
-.suspend-card {
-    animation: pulse-red 2s infinite;
-}
-.suspend-card button:hover {
-    background: #dc2626 !important;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
-}
+.suspend-card { animation: pulse-red 2s infinite; }
+.suspend-card button:hover { background: #dc2626 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
