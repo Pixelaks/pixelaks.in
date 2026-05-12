@@ -490,3 +490,19 @@ body.dark-mode .percentage-value {
     color: #ffffff !important;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
+
+/* --- PART 4: FREE PERIOD TIMETABLE CARDS --- */
+.tt-card.free {
+    background-color: transparent !important;
+    border: 1.5px dashed var(--theme-main) !important;
+    opacity: 0.65 !important;
+    box-shadow: none !important;
+}
+
+/* Make the pills inside the free card blend in seamlessly */
+.tt-card.free .tt-pill {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-muted) !important;
+}
