@@ -55,7 +55,7 @@ let currentStudentProfileData = null;
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
     badge: document.getElementById("statusBadge"), semTitle: document.getElementById("semesterTitle"),
-    circle: document.getElementById("attendanceCircle"), pctText: document.getElementById("overallPercentageText"),
+    waterFill: document.getElementById("waterFill"), pctText: document.getElementById("overallPercentageText"),
     attClasses: document.getElementById("attendedClassesText"), absClasses: document.getElementById("absentClassesText"),
     totClasses: document.getElementById("totalClassesTakenText"), curPctText: document.getElementById("currentPercentageText"),
     perPres: document.getElementById("totalPeriodsPresentText"), perAbs: document.getElementById("totalPeriodsAbsentText"),
@@ -323,8 +323,8 @@ function updateUIForCurrentSemester(optionalDept) {
     let ringColor = percent >= 85 ? "#4caf50" : percent >= 70 ? "#ffc107" : percent >= 50 ? "#ff9800" : "#f44336";
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
-    el.circle.style.background = `conic-gradient(${ringColor} ${(percent/100)*360}deg, #e0e0e0 ${(percent/100)*360}deg)`;
-
+    el.waterFill.style.backgroundColor = ringColor;
+    el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
         const ratio = sub.total > 0 ? (sub.present / sub.total) : 0; const subPct = ratio * 100;
         let barColor = ratio < 0.6 ? "#f44336" : ratio < 0.75 ? "#ff9800" : "#4caf50";
