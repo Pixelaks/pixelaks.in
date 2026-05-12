@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adhyora - Student Dashboard</title>
     <link rel="stylesheet" href="dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
+    
+    <!-- Added FontAwesome for the warning icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
@@ -219,7 +225,6 @@
                 <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Accent Color</h4>
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <button class="color-swatch" data-theme="blue" style="background: #3b82f6;"></button>
-                    <!-- Now it's a rich Yellow/Amber! -->
                     <button class="color-swatch" data-theme="yellow" style="background: #eab308;"></button>
                     <button class="color-swatch" data-theme="pink" style="background: #ec4899;"></button>
                     <button class="color-swatch" data-theme="purple" style="background: #8b5cf6;"></button>
@@ -231,6 +236,26 @@
         </div>
     </div>
     
+    <!-- 🚨 NEW: SUBSCRIPTION SUSPENSION PANEL 🚨 -->
+    <div class="modal-overlay" id="subscriptionBlockPanel" style="z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.85); flex-direction: column; text-align: center;">
+        <div class="suspend-card" style="background: #0f172a; border: 1px solid #ef4444; border-radius: 25px; padding: 40px 30px; width: 90%; max-width: 400px; display: flex; flex-direction: column; align-items: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: #ef4444; margin-bottom: 20px;"></i>
+            
+            <h2 style="font-family: 'Yatra One', cursive; color: #ef4444; font-size: 32px; letter-spacing: 2px; margin-bottom: 15px; text-transform: uppercase; filter: drop-shadow(0 0 10px rgba(239,68,68,0.5));">
+                SYSTEM LOCKED
+            </h2>
+            
+            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 30px; font-family: 'Poppins', sans-serif;">
+                Your institution's Adhyora subscription has expired.<br><br>
+                <span style="color: #cbd5e1;">Please contact your Principal or Administrator to restore access.</span>
+            </p>
+            
+            <button id="btnBlockSignOut" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; font-family: 'Poppins', sans-serif;">
+                Sign Out
+            </button>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
     <script type="module" src="dashboardApp.js"></script>
 </body>
