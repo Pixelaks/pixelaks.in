@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adhyora - Student Portal</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Yatra+One&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 </head>
 <body>
 
+    <div id="tsparticles"></div>
+
     <div class="app-container">
         <div class="header">
-            <h1 class="logo-text">ADHYORA</h1>
+            <div class="scanlines"></div>
+            <h1 class="glitch-wrapper" aria-label="Adhyora">
+                <span class="main-text" id="text-main">ADHYORA</span>
+                <span class="glitch-layer layer-red" id="text-red" aria-hidden="true">ADHYORA</span>
+                <span class="glitch-layer layer-blue" id="text-blue" aria-hidden="true">ADHYORA</span>
+            </h1>
             <p class="subtitle">Academic Management System</p>
         </div>
 
@@ -46,12 +54,12 @@
 
             <div class="remember-me">
                 <input type="checkbox" id="rememberMe">
-                <label for="rememberMe">always remember me</label>
+                <label for="rememberMe">Always remember me</label>
             </div>
 
             <p class="switch-panel-text">
                 Don't have an account?<br>
-                <a href="#" onclick="switchPanel('registerPanel')" class="text-link">create One</a>
+                <a href="#" onclick="switchPanel('registerPanel')" class="text-link">Create One</a>
             </p>
         </div>
 
