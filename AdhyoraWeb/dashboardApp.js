@@ -678,11 +678,17 @@ const btnNavMsg = document.getElementById("btnNavMsg");
 const btnNavTimetable = document.getElementById("btnNavTimetable");
 const btnNavDaily = document.getElementById("btnNavDaily");
 
-function switchView(activeBtn, viewToShow) {
+// 🚨 ADDED: pushToHistory parameter
+function switchView(activeBtn, viewToShow, pushToHistory = true) {
     [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
     [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
     activeBtn.classList.add("active");
     viewToShow.classList.remove("hidden-view");
+
+    // Tell the browser we moved to a new tab
+    if (pushToHistory) {
+        window.history.pushState({ panelId: viewToShow.id }, "", "");
+    }
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
@@ -698,7 +704,6 @@ btnNavTimetable.addEventListener("click", () => {
     if (!validDays.includes(todayName)) todayName = "Monday";
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     
-    // Check cache
     loadTimetableForDay(todayName);
 });
 
@@ -932,14 +937,42 @@ document.getElementById("btnBlockSignOut").addEventListener("click", () => {
     signOut(auth).then(() => window.location.href = "index.html");
 });
 
-window.history.pushState({ page: "dashboard" }, "", "");
+// --- NATIVE BACK BUTTON TRAP (TAB HISTORY & SIGN OUT WARNING) ---
+// 1. Set an invisible "trap" at the very bottom of the history
+window.history.replaceState({ panelId: "base_trap" }, "", "");
+// 2. Put the main dashboard on top of it as our starting point
+window.history.pushState({ panelId: "mainDashboardView" }, "", "");
+
 window.addEventListener("popstate", (e) => {
-    if (confirm("Do you want to sign out?")) {
-        signOut(auth).then(() => window.location.href = "index.html");
-    } else {
-        window.history.pushState({ page: "dashboard" }, "", "");
+    if (e.state && e.state.panelId) {
+        let pid = e.state.panelId;
+
+        // If they back out of the Main Dashboard, ask to sign out!
+        if (pid === "base_trap") {
+            if (confirm("Do you want to sign out?")) {
+                signOut(auth).then(() => window.location.href = "index.html");
+            } else {
+                // They canceled. Put the Main Dashboard back onto the history stack so the trap works again!
+                window.history.pushState({ panelId: "mainDashboardView" }, "", "");
+            }
+        } 
+        // Otherwise, figure out which tab they went back to, and load it WITHOUT pushing a new state
+        else if (pid === "mainDashboardView") { switchView(btnNavMain, el.mainView, false); }
+        else if (pid === "assignmentsView") { switchView(btnNavAssign, el.assignView, false); loadAssignments(); }
+        else if (pid === "actualNotifView") { switchView(btnNavNotif, el.actualNotifView, false); loadActualNotifications(); }
+        else if (pid === "messagesView") { switchView(btnNavMsg, el.msgView, false); loadMessages(); }
+        else if (pid === "dailyAttendanceView") { switchView(btnNavDaily, el.dailyView, false); loadDailyAttendance(); }
+        else if (pid === "timetableView") { 
+            switchView(btnNavTimetable, el.ttView, false); 
+            let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
+            let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+            if (!validDays.includes(todayName)) todayName = "Monday";
+            document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
+            loadTimetableForDay(todayName);
+        }
     }
 });
+// --------------------------------------------------
 
 // ==========================================
 // SIDEBAR EXTERNAL LINKS
