@@ -376,65 +376,75 @@ body, .dashboard-container, .scrollable-content { background-color: var(--bg-mai
 .mode-btn.active { border-color: var(--theme-main); background: var(--theme-light); color: var(--theme-main); }
 
 /* =========================================
-   THEME FIX PATCH v3 (ULTIMATE OVERRIDES)
+   THEME FIX PATCH v4 (FINAL UI POLISH)
    ========================================= */
 
-/* 1. Fix white table rows in dark mode */
-.stat-item {
-    background-color: transparent !important;
-    border-bottom-color: var(--border-color) !important;
+/* 1. Tell the OS to use Dark Mode for native elements (Fixes bright scrollbars/dropdowns) */
+body.dark-mode {
+    color-scheme: dark;
 }
 
-/* 2. Match Dot Patterns to the Theme Color */
-.bottom-nav, .periods-grid {
-    background-image: radial-gradient(var(--theme-main) 1.5px, transparent 1.5px) !important;
-    opacity: 0.9;
-}
-.tt-card {
-    background-image: radial-gradient(var(--border-color) 1.5px, transparent 1.5px) !important;
+/* 2. Fix Profile Modal & All General Text in Dark Mode */
+#profileDetailsContent, 
+#profileDetailsContent b, 
+#profileDetailsContent span,
+.modal-overlay b {
+    color: var(--text-main) !important;
 }
 
-/* 3. Fix "My Curriculum" Subject Text in Dark Mode */
+/* 3. Fix Timeline / Visual Indicator Colors */
+.timeline-progress { background-color: var(--theme-main) !important; }
+.tt-node.completed { background-color: var(--theme-main) !important; border-color: var(--theme-main) !important; color: #ffffff !important; }
+.tt-node.active { border-color: var(--theme-main) !important; color: var(--theme-main) !important; background-color: var(--theme-light) !important; }
+.timeline-track { background-color: var(--border-color) !important; }
+.tt-node { border-color: var(--border-color) !important; background-color: var(--bg-card) !important; color: var(--text-muted) !important; }
+
+/* =========================================
+   PREVIOUS V3 FIXES BELOW (DO NOT REMOVE)
+   ========================================= */
+
+/* Fix white table rows */
+.stat-item { background-color: transparent !important; border-bottom-color: var(--border-color) !important; }
+
+/* Match Dot Patterns */
+.bottom-nav, .periods-grid { background-image: radial-gradient(var(--theme-main) 1.5px, transparent 1.5px) !important; opacity: 0.9; }
+.tt-card { background-image: radial-gradient(var(--border-color) 1.5px, transparent 1.5px) !important; }
+
+/* Curriculum Subject Text */
 #enrolledSubjectsListText { color: var(--text-main) !important; }
 #enrolledSubjectsListText i { color: var(--text-muted) !important; }
 
-/* 4. Fix Big Wave Container */
+/* Big Wave Container */
 body.dark-mode .water-progress { background-color: var(--bg-main) !important; }
 body.dark-mode .water-fill::before { background-color: var(--bg-main) !important; }
 body.dark-mode .water-fill::after { background-color: var(--bg-main) !important; opacity: 0.7 !important; }
 
-/* 5. Force the Mini Wave Percentage Text to be White in Dark Mode */
+/* Mini Wave Percentage Text */
 body.dark-mode #animatedRowText { color: #ffffff !important; }
 
-/* 6. Fix Timetable Boxes & Day Buttons (Invisible Text Fix) */
+/* Timetable Boxes & Day Buttons */
 .tt-pill { background-color: var(--bg-main) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important; }
 .sub-pill { color: var(--text-main) !important; }
 .sem-pill, .room-pill { color: var(--text-muted) !important; }
 .cat-pill { color: var(--theme-main) !important; }
-
 .day-btn-group { background-color: var(--bg-main) !important; border: 1px solid var(--border-color); }
 .day-btn { color: var(--text-muted) !important; }
 .day-btn.active { color: #ffffff !important; background-color: var(--theme-main) !important; }
 
-/* 7. Fix Calendar Modals, Arrows, and Blue 'End' Dates */
+/* Calendar Modals */
 .calendar-weekdays { color: var(--text-main) !important; }
 .cal-cell.normal { color: var(--text-main) !important; }
 .calendar-header .cal-nav-btn { color: var(--theme-main) !important; } 
 .cal-cell.semester { color: var(--theme-main) !important; } 
-
-/* Override hardcoded inline styles for Upcoming text */
-.upcoming-card, .upcoming-card p, .upcoming-card span, .upcoming-card b {
-    color: var(--text-main) !important;
-}
-
+.upcoming-card, .upcoming-card p, .upcoming-card span, .upcoming-card b { color: var(--text-main) !important; }
 .close-modal-btn { background-color: var(--bg-main) !important; color: var(--text-main) !important; border: 1px solid var(--border-color) !important; }
 .close-modal-btn:hover { background-color: var(--theme-light) !important; }
 
-/* 8. Fix Dropdowns & Progress Bars */
+/* Dropdowns & Progress Bars */
 .dropdown-select { background-color: var(--theme-main) !important; color: #ffffff !important; border: 1px solid var(--theme-main) !important; }
 .dropdown-select option { background-color: var(--bg-card) !important; color: var(--text-main) !important; }
 .marks-header-container { background-color: transparent !important; }
 #marksListContainer .progress-fill { background-color: var(--theme-main) !important; }
 
-/* 9. Seamless Bottom Fade */
+/* Seamless Bottom Fade */
 .bottom-nav-mask { background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important; }
