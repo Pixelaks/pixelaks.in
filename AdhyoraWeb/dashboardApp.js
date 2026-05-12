@@ -141,10 +141,11 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        if (el.ttView.style.display !== "none") loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
-        if (el.assignView.style.display !== "none") loadAssignments();
-        if (el.actualNotifView.style.display !== "none") loadActualNotifications();
-        if (el.msgView.style.display !== "none") loadMessages();
+        // Use classList for checking visibility now!
+        if (!el.ttView.classList.contains("hidden-view")) loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
+        if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
+        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
     });
 }
 
@@ -258,13 +259,13 @@ function fetchMarksForSemester(semName) {
 function drawMarksUI(marksArray) {
     el.markList.innerHTML = (!marksArray || marksArray.length === 0) ? "" : marksArray.map(m => {
         const pct = m.max > 0 ? (m.obtained / m.max) * 100 : 0;
-        return `<div class="subject-row"><div class="row-header"><span>${m.name}</span><span>${m.obtained}/${m.max} <span style="font-size:9px; color:#888;">(${pct.toFixed(0)}%)</span></span></div><div class="progress-track"><div class="progress-fill" style="width: ${pct}%; background-color: ${barColor};"></div></div></div>`;
+        return `<div class="subject-row"><div class="row-header"><span>${m.name}</span><span>${m.obtained}/${m.max} <span style="font-size:9px; color:#888;">(${pct.toFixed(0)}%)</span></span></div><div class="progress-track"><div class="progress-fill" style="width: ${pct}%; background-color: #3b82f6;"></div></div></div>`;
     }).join('');
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
 // ==========================================
-// 🚨 VIEW TOGGLING 🚨
+// 🚨 VIEW TOGGLING (USING .hidden-view) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -275,11 +276,12 @@ const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
     [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
-    [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.style.display = "none");
+    
+    // 🚨 THE FIX: Simply append the class. CSS takes care of hiding without ruining grid!
+    [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
     
     activeBtn.classList.add("active");
-    // 🚨 THE FIX: Reverted to empty string so the CSS Layout takes over naturally!
-    viewToShow.style.display = "";
+    viewToShow.classList.remove("hidden-view");
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
@@ -292,6 +294,7 @@ btnNavTimetable.addEventListener("click", () => {
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
+
 btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
 btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
@@ -384,6 +387,7 @@ async function loadMessages() {
         }).join('');
     } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
+
 
 // ==========================================
 // DAILY ATTENDANCE MANAGER
@@ -517,7 +521,7 @@ function loadTimetableForDay(selectedDay) {
 }
 
 function updateTimelineVisuals() {
-    if (el.ttView.style.display === "none") return;
+    if (el.ttView.classList.contains("hidden-view")) return;
     let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60);
     let pStart = 9.5; let pEnd = 16.5; let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
     el.ttProgress.style.height = `${progress * 100}%`;
@@ -551,7 +555,6 @@ document.getElementById("closeSessionsBtn").addEventListener("click", () => el.s
 async function loadSessions() {
     el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
     try {
-        // 🚨 Double Query: Finds Unity (Auth UID) AND Web (Roll Number) log-ins!
         const q1 = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
         const q2 = query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions"));
         
@@ -569,7 +572,6 @@ async function loadSessions() {
             let timeStr = "Recently";
             if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-            // 🚨 Re-added the Kick button logic!
             let btnHtml = isMe ? `<span style="font-size:10px; color:#10b981; font-weight:bold;">Active</span>` : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
             
             htmlBuffer += `
@@ -586,7 +588,6 @@ async function loadSessions() {
     } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
 }
 
-// 🚨 Delete Session from proper path
 window.revokeSession = async function(sessionID, parentDocID) {
     if (!confirm("Are you sure you want to log this device out?")) return;
     try {
