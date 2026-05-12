@@ -332,7 +332,7 @@ function updateUIForCurrentSemester(optionalDept) {
     el.curPctText.style.backgroundColor = "transparent"; 
     
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
 
     // INJECT AT HEIGHT 0 FIRST (and removed bold font-weight)
     el.curPctText.innerHTML = `
