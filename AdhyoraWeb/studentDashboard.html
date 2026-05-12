@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
     
-    <!-- Added FontAwesome for the warning icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -55,7 +54,7 @@
 
         <div class="scrollable-content" id="mainDashboardView">
             <div class="attendance-overview">
-                <div class="water-progress" id="attendanceWater">
+                <div class="water-progress" id="attendanceWater" style="cursor: pointer;" title="Open Leave Predictor">
                     <div class="water-fill" id="waterFill"></div>
                     <div class="water-content">
                         <span class="projected-text">Projected</span><br>
@@ -236,7 +235,29 @@
         </div>
     </div>
     
-    <!-- 🚨 NEW: SUBSCRIPTION SUSPENSION PANEL 🚨 -->
+    <div class="modal-overlay" id="leavePredictorModal">
+        <div class="calendar-container" style="align-items: center; max-width: 350px;">
+            <h3 style="color: var(--theme-main); text-align: center; margin-bottom: 5px;">LEAVE PREDICTOR</h3>
+            <p id="predictStatusText" style="font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 15px; min-height: 16px;">
+                Enter the days to know the percentage drop.
+            </p>
+            
+            <div class="water-progress" id="predictWater" style="width: 150px; min-height: 150px; border-radius: 50%; max-width: 150px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div class="water-fill" id="predictWaterFill" style="background-color: #4caf50;"></div>
+                <div class="water-content" style="padding: 10px; border-radius: 50%;">
+                    <span id="predictPercentageText" class="percentage-value" style="font-size: 24px;">--%</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="number" id="leaveDaysInput" placeholder="Days..." min="0" style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); font-size: 14px; outline: none; text-align: center;">
+                <button id="predictSubmitBtn" style="background: var(--theme-main); color: white; border: none; border-radius: 10px; padding: 0 20px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">Calculate</button>
+            </div>
+            
+            <button class="close-modal-btn" id="closePredictorBtn" style="width: 100%; margin-top: 15px;">Close</button>
+        </div>
+    </div>
+    
     <div class="modal-overlay" id="subscriptionBlockPanel" style="z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.85); flex-direction: column; text-align: center;">
         <div class="suspend-card" style="background: #0f172a; border: 1px solid #ef4444; border-radius: 25px; padding: 40px 30px; width: 90%; max-width: 400px; display: flex; flex-direction: column; align-items: center;">
             <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: #ef4444; margin-bottom: 20px;"></i>
