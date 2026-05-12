@@ -324,10 +324,22 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
     // Apply the dynamic color to the "Current" cell background
-    el.curPctText.style.backgroundColor = ringColor;
-    // Make text white for dark backgrounds (Green, Red, Orange) and black for light ones (Yellow)
-    el.curPctText.style.color = (percent >= 70 && percent < 85) ? "#000" : "#fff";
-    el.curPctText.style.fontWeight = "bold";
+    // Configure the row to hold the water effect securely
+    el.curPctText.style.position = "relative";
+    el.curPctText.style.overflow = "hidden";
+    el.curPctText.style.padding = "0"; // Remove default padding so water hits the edges
+    el.curPctText.style.borderBottom = "none";
+    
+    // Choose text color based on background (Black for yellow, White for dark colors)
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+
+    // Inject the moving water background AND the text layered on top
+    el.curPctText.innerHTML = `
+        <div class="mini-water-fill" style="background-color: ${ringColor}; top: ${100 - Math.min(100, percent)}%;"></div>
+        <div style="position: relative; z-index: 2; padding: 8px 12px; font-weight: bold; color: ${textColor};">
+            Current: ${percent.toFixed(2)}%
+        </div>
+    `;
     el.waterFill.style.backgroundColor = ringColor;
     el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
