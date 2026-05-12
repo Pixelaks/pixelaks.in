@@ -1239,16 +1239,19 @@ async function requestPushPermissions() {
         if (permission === 'granted') {
             console.log('Notification permission granted.');
             
-            // Generate a unique token for this specific web browser
+            // 🚨 THE FIX: Tell the browser EXACTLY which folder the Service Worker is inside!
+            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            
+            // Generate a unique token for this specific web browser, passing the custom registration
             const currentToken = await getToken(messaging, { 
-                vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU" // <-- PASTE YOUR KEY HERE
+                vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
+                serviceWorkerRegistration: swRegistration // <-- Forces Firebase to use the AdhyoraWeb folder
             });
 
             if (currentToken) {
                 console.log("Web Push Token Generated!");
                 
-                // 🚨 AUTOMATICALLY SAVE TO DATABASE 🚨
-                // Uses setDoc with merge: true (already imported at the top of your file!)
+                // AUTOMATICALLY SAVE TO DATABASE
                 const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
                 await setDoc(studentRef, { 
                     webFcmToken: currentToken,
@@ -1261,7 +1264,7 @@ async function requestPushPermissions() {
             console.log('Unable to get permission to notify.');
         }
     } catch (error) {
-        console.error('Error getting push token', error);
+        console.error('Error getting push token:', error);
     }
 }
 function loadSavedTheme() {
