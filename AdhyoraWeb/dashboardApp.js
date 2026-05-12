@@ -907,9 +907,10 @@ const btnThemes = document.getElementById("btnThemes");
 const closeThemesBtn = document.getElementById("closeThemesBtn");
 
 // Predefined Theme Maps (Main, Light bg, Nav bg)
+// Predefined Theme Maps (Main, Light bg, Nav bg)
 const colorPalettes = {
     blue:   { main: '#3b82f6', light: '#e0f2fe', nav: '#bfdbfe' },
-    green:  { main: '#10b981', light: '#d1fae5', nav: '#a7f3d0' },
+    yellow: { main: '#eab308', light: '#fef9c3', nav: '#fde047' }, // NEW YELLOW THEME
     pink:   { main: '#ec4899', light: '#fce7f3', nav: '#fbcfe8' },
     purple: { main: '#8b5cf6', light: '#ede9fe', nav: '#ddd6fe' },
     orange: { main: '#f97316', light: '#ffedd5', nav: '#fed7aa' }
