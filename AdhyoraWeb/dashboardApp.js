@@ -45,10 +45,13 @@ let activeTimetableUnsubscribe = null;
 let calendarMode = "global"; let currentDisplayDate = new Date(); 
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
+// 🚨 ADDED MISSING GLOBAL DATA FLAG 🚨
+let isGlobalDataLoaded = false; 
+
 let myWebDeviceID = localStorage.getItem("myWebDeviceID");
 let currentStudentProfileData = null; 
 
-// 🚨 NEW LEAVE PREDICTOR STATES 🚨
+// 🚨 LEAVE PREDICTOR STATES 🚨
 let actualProjectedPercent = 0;
 let savedStrictPresent = 0;
 let savedStrictTotal = 0;
@@ -97,7 +100,6 @@ const el = {
     profileModal: document.getElementById("profileDetailsModal"),
     profileContent: document.getElementById("profileDetailsContent"),
     
-    // PREDICTOR UI ELEMENTS
     predictorModal: document.getElementById("leavePredictorModal"),
     predictStatusText: document.getElementById("predictStatusText"),
     leaveDaysInput: document.getElementById("leaveDaysInput"),
@@ -181,6 +183,9 @@ async function syncCollegeAndListen() {
         currentRollNo = docSnap.id; 
         
         registerWebSession();
+
+        // 🚨 ADDED MISSING FUNCTION CALL: Fetch working days instantly!
+        fetchGlobalCalendarData(); 
         
         try {
             const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
@@ -204,6 +209,29 @@ async function syncCollegeAndListen() {
         if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
         if (!el.msgView.classList.contains("hidden-view")) loadMessages();
     });
+}
+
+// 🚨 ADDED MISSING GLOBAL CACHE FUNCTION 🚨
+async function fetchGlobalCalendarData() {
+    let now = new Date();
+    let startYear = (now.getMonth() >= 5) ? now.getFullYear() : now.getFullYear() - 1;
+    let targetYearStr = `${startYear}-${startYear + 1}`;
+    
+    try {
+        const [semDoc, workDoc, holDoc] = await Promise.all([ 
+            getDoc(doc(db, "colleges", collegeID, "semesters", targetYearStr)), 
+            getDoc(doc(db, "colleges", collegeID, "workingDays", targetYearStr)), 
+            getDoc(doc(db, "colleges", collegeID, "nonWorkingDays", targetYearStr)) 
+        ]);
+        if (semDoc.exists()) { let d = semDoc.data(); if(d.oddSemester?.startDate) semStarts.set(d.oddSemester.startDate, "Odd"); if(d.oddSemester?.endDate) semEnds.set(d.oddSemester.endDate, "Odd"); if(d.evenSemester?.startDate) semStarts.set(d.evenSemester.startDate, "Even"); if(d.evenSemester?.endDate) semEnds.set(d.evenSemester.endDate, "Even"); }
+        if (workDoc.exists()) { Object.keys(workDoc.data()).forEach(k => calWorkingDays.add(k)); }
+        if (holDoc.exists()) { Object.entries(holDoc.data()).forEach(([k, v]) => calNonWorkingDays.set(k, v)); }
+        
+        isGlobalDataLoaded = true;
+        
+        // Triggers UI reload now that the calendar data is ready!
+        if (sortedSemesterKeys.length > 0) updateUIForCurrentSemester();
+    } catch(e) { console.error("Error fetching global data", e); }
 }
 
 function startBackgroundListeners() {
@@ -344,7 +372,6 @@ function updateUIForCurrentSemester(optionalDept) {
     if (optionalDept) el.sbSub.innerHTML = `${optionalDept} &nbsp; <span class="sem-text">${semData.name}</span>`;
     else el.sbSub.innerHTML = el.sbSub.innerHTML.split("&nbsp;")[0] + `&nbsp; <span class="sem-text">${semData.name}</span>`;
 
-    // 🚨 FIX: Replaced C# float casting with clean JavaScript 🚨
     let simplePercent = (semData.simpleTotalHeld > 0) ? (semData.simpleTotalAttended / semData.simpleTotalHeld) * 100 : 0;
     
     let projectedStrictPercent = 0;
@@ -363,9 +390,7 @@ function updateUIForCurrentSemester(optionalDept) {
         let isCurrentlyActiveSem = (globalMode == "Odd" && semNum % 2 != 0) || (globalMode == "Even" && semNum % 2 == 0);
 
         if (isGlobalDataLoaded && isCurrentlyActiveSem) {
-            let semIsOdd = (semNum % 2 != 0);
-            let range = semIsOdd ? {start: semStarts.keys().next().value, end: semEnds.keys().next().value} : {start: semStarts.keys().next().value, end: semEnds.keys().next().value}; 
-
+            
             if (calWorkingDays.size > 0) {
                 let remainingDays = 0;
                 let iterator = new Date(); iterator.setDate(iterator.getDate() + 1);
