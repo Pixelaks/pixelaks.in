@@ -1,6 +1,6 @@
 // Import Firebase functions directly from CDN (No Node.js needed!)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 REPLACE THIS WITH YOUR FIREBASE WEB CONFIG 🚨
@@ -44,7 +44,7 @@ function showToast(message) {
     const toast = document.getElementById("toast");
     toast.innerText = message;
     toast.className = "toast show";
-    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 4000); // 🚨 Increased to 4 seconds so they have time to read the email message
 }
 
 // --- 1. LOAD COLLEGES ON START ---
@@ -102,17 +102,16 @@ signInBtn.addEventListener("click", async () => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // 🚨 PRODUCTION LOCK: Re-enabled!
         if (!user.emailVerified) {
-            showToast("Please verify your email first.");
+            showToast("Please verify your email first. Check your inbox!");
             await signOut(auth);
             resetSignInBtn();
             return;
         }
 
-        // Logic matched to your C#: Successful login -> Redirect to actual web dashboard
         showToast("Login Successful!");
-        // Change your successful login redirect to this:
-        const rollNo = document.getElementById("loginEmail").value.split('@')[0]; // Assuming email is rollno@... If not, you must fetch their doc first to get roll number.
+        const rollNo = email.split('@')[0]; 
         window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
         
     } catch (error) {
@@ -172,6 +171,10 @@ registerBtn.addEventListener("click", async () => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // 🚨 PRODUCTION SECURITY: Send the verification email instantly!
+        registerBtn.innerText = "Sending Verification...";
+        await sendEmailVerification(user);
+
         // Step 3: Update Firestore document
         const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
         await updateDoc(studentRef, {
@@ -182,7 +185,9 @@ registerBtn.addEventListener("click", async () => {
 
         // Step 4: Cleanup
         await signOut(auth);
-        showToast("Account created! Please sign in.");
+        
+        // 🚨 Tell the user to check their email!
+        showToast("Success! A verification link has been sent to your email.");
         window.switchPanel('signInPanel');
 
     } catch (error) {
