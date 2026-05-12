@@ -193,6 +193,12 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .data-card.notif { border-left-color: #10b981; } 
 .data-card.broadcast { border-left-color: #f59e0b; } 
 
+/* Custom Sender Role Colors for Inbox */
+.data-card.msg-principal { border-left-color: #ACEEB3 !important; }
+.data-card.msg-teacher { border-left-color: #FF998E !important; }
+.data-card.msg-student { border-left-color: var(--theme-main) !important; }
+
+
 .card-title { font-size: 14px; font-weight: 700; color: #0f172a; }
 .card-body { font-size: 12px; color: #475569; line-height: 1.4; }
 .card-meta { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 5px; font-weight: 600;}
