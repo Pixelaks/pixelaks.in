@@ -322,3 +322,55 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .session-info p { font-size: 10px; color: #64748b;}
 .revoke-btn { flex-shrink: 0; background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;}
 .revoke-btn:hover { background: #ef4444; color: white;}
+
+/* =========================================
+   THEME ENGINE & CSS VARIABLES
+   ========================================= */
+:root {
+    --theme-main: #3b82f6;
+    --theme-light: #e0f2fe;
+    --theme-nav: #bfdbfe;
+    
+    --bg-main: #ffffff;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+}
+
+body.dark-mode {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    
+    /* Adapt theme-light and nav for dark mode visibility */
+    --theme-light: #1e293b;
+    --theme-nav: #0f172a;
+}
+
+/* OVERRIDES: Apply variables to existing classes */
+body, .dashboard-container, .scrollable-content { background-color: var(--bg-main) !important; color: var(--text-main) !important; transition: background-color 0.3s, color 0.3s; }
+.data-card, .daily-card, .calendar-container, .sidebar-drawer, .profile-card, .list-container, .session-card, .upcoming-card, .tt-card { background-color: var(--bg-card) !important; border-color: var(--border-color) !important; color: var(--text-main); transition: background-color 0.3s; }
+
+.logo-text, .cat-pill { color: var(--theme-main) !important; }
+.semester-nav, .daily-header-blue, .sidebar-btn, .day-btn.active, .marks-header-container, .status-badge { background-color: var(--theme-main) !important; }
+
+.bottom-nav { background-color: var(--theme-nav) !important; border: 1px solid var(--border-color); }
+.icon-btn.active { border-color: var(--theme-main) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
+.tt-card { border-color: var(--theme-main) !important; background-image: none !important; }
+.profile-card { border: 2px solid var(--theme-main) !important; }
+.periods-grid { background: transparent !important; }
+
+/* Text fixes for dark mode */
+.profile-info h2, .card-title, .stat-item, .row-header span, h3, h4, .day-btn { color: var(--text-main) !important; }
+.profile-info p, .card-body, .projected-text, .session-info p { color: var(--text-muted) !important; }
+
+/* THEME MODAL SPECIFIC STYLES */
+.color-swatch { width: 45px; height: 45px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.active { border-color: var(--text-main); transform: scale(1.1); }
+
+.mode-btn { background: var(--bg-main); border: 2px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.mode-btn.active { border-color: var(--theme-main); background: var(--theme-light); color: var(--theme-main); }
