@@ -2,6 +2,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+// Add these to your import list at the top of dashboardApp.js
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+
+// Initialize messaging below db and auth
+const messaging = getMessaging(app);
+
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -183,6 +189,9 @@ async function syncCollegeAndListen() {
         currentRollNo = docSnap.id; 
         
         registerWebSession();
+
+      // 🚨 ADD THIS LINE RIGHT HERE! 🚨
+        requestPushPermissions();
 
         // 🚨 ADDED MISSING FUNCTION CALL: Fetch working days instantly!
         fetchGlobalCalendarData(); 
@@ -1225,6 +1234,39 @@ document.getElementById("btnLightMode").addEventListener("click", () => {
     applyTheme(currentColor, false);
 });
 
+async function requestPushPermissions() {
+    try {
+        console.log('Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            console.log('Notification permission granted.');
+            
+            // Generate a unique token for this specific web browser
+            const currentToken = await getToken(messaging, { 
+                vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU" // <-- PASTE YOUR KEY HERE
+            });
+
+            if (currentToken) {
+                console.log("Web Push Token Generated!");
+                
+                // 🚨 AUTOMATICALLY SAVE TO DATABASE 🚨
+                // Uses setDoc with merge: true (already imported at the top of your file!)
+                const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+                await setDoc(studentRef, { 
+                    webFcmToken: currentToken,
+                    lastWebLogin: serverTimestamp()
+                }, { merge: true });
+                
+                console.log("Token successfully saved to Student Profile!");
+            }
+        } else {
+            console.log('Unable to get permission to notify.');
+        }
+    } catch (error) {
+        console.error('Error getting push token', error);
+    }
+}
 function loadSavedTheme() {
     let savedColor = localStorage.getItem("adhyora_theme_color") || "blue";
     let savedMode = localStorage.getItem("adhyora_theme_mode") || "light";
