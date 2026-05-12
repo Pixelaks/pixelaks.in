@@ -33,7 +33,7 @@
             <h1 class="logo-text">ADHYORA</h1>
         </div>
 
-        <div class="profile-card" id="btnProfileDetails" title="View Student Profile">
+        <div class="profile-card">
             <div class="profile-info">
                 <h2 id="studentName">Loading Name...</h2>
                 <p id="studentRoll">Roll No: ...</p>
@@ -49,13 +49,15 @@
 
         <div class="scrollable-content" id="mainDashboardView">
             <div class="attendance-overview">
-                <div class="circular-progress" id="attendanceCircle">
-                    <div class="inner-circle">
-                        <span class="projected-text">Projected</span><br>
-                        <span id="overallPercentageText" class="percentage-value">--%</span>
-                    </div>
+            <div class="liquid-progress" id="attendanceCircle">
+                <div class="liquid-wave" id="liquidWave"></div>
+                <div class="liquid-text">
+                    <span class="projected-text">Projected</span><br>
+                    <span id="overallPercentageText" class="percentage-value">--%</span>
                 </div>
-                <div class="stats-list">
+            </div>
+            
+            <div class="stats-list">
                     <div class="stat-item">Overall Attendance</div>
                     <div class="stat-item" id="attendedClassesText">Attended: -</div>
                     <div class="stat-item" id="absentClassesText">Absent: -</div>
@@ -77,18 +79,9 @@
                     <div id="noMarksData" class="no-data-text">No Marks Data</div>
                 </div>
             </div>
-
-            <div class="list-container" id="enrolledSubjectsContainer">
-                <div class="row-header" style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px;">
-                    <span style="color: #3b82f6; font-size: 14px;">MY CURRICULUM</span>
-                </div>
-                <div id="enrolledSubjectsListText" style="font-size: 12px; color: #475569; line-height: 1.8;">
-                    <i>Loading subjects...</i>
-                </div>
-            </div>
         </div>
 
-        <div class="daily-attendance-panel scrollable-content hidden-view" id="dailyAttendanceView">
+        <div class="scrollable-content centered-view" id="dailyAttendanceView" style="display: none;">
             <div class="daily-card">
                 <div class="daily-header-blue">
                     <button class="cal-nav-btn" id="btnPrevDay" style="color:white;">&lt;</button>
@@ -102,7 +95,7 @@
             </div>
         </div>
 
-        <div class="timetable-panel scrollable-content hidden-view" id="timetableView">
+        <div class="scrollable-content centered-view" id="timetableView" style="display: none;">
             <div class="day-btn-group" id="timetableDays">
                 <button class="day-btn active" data-day="Monday">Mon</button>
                 <button class="day-btn" data-day="Tuesday">Tue</button>
@@ -119,21 +112,21 @@
             </div>
         </div>
 
-        <div class="scrollable-content centered-view hidden-view" id="assignmentsView">
+        <div class="scrollable-content centered-view" id="assignmentsView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Recent Assignments</h3>
             <div id="assignmentsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Assignments...</div>
             </div>
         </div>
 
-        <div class="scrollable-content centered-view hidden-view" id="actualNotifView">
+        <div class="scrollable-content centered-view" id="actualNotifView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Notifications</h3>
             <div id="actualNotifListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Notifications...</div>
             </div>
         </div>
 
-        <div class="scrollable-content centered-view hidden-view" id="messagesView">
+        <div class="scrollable-content centered-view" id="messagesView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Inbox</h3>
             <div id="messagesListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Messages...</div>
@@ -181,23 +174,12 @@
         <div class="calendar-container">
             <h3 style="margin-bottom:10px; color:#0f172a; text-align: center;">Active Sessions</h3>
             <p style="font-size: 10px; color:#666; text-align: center; margin-bottom: 15px;">Manage devices where your account is logged in.</p>
+            
             <div id="sessionsListContainer" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
                 <div class="no-data-text">Loading Devices...</div>
             </div>
+            
             <button class="close-modal-btn" id="closeSessionsBtn" style="margin-top: 15px;">Close</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="profileDetailsModal">
-        <div class="calendar-container">
-            <h3 style="margin-bottom:5px; color:#0f172a; text-align: center;">STUDENT PROFILE</h3>
-            <div style="width: 100%; height: 1px; background:#e2e8f0; margin-bottom: 15px;"></div>
-            
-            <div id="profileDetailsContent" style="font-size: 13px; color: #475569; line-height: 1.8; text-align: left;">
-                <i>Loading profile...</i>
-            </div>
-            
-            <button class="close-modal-btn" id="closeProfileBtn" style="margin-top: 15px;">Close</button>
         </div>
     </div>
 
