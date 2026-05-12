@@ -44,7 +44,7 @@ function showToast(message) {
     const toast = document.getElementById("toast");
     toast.innerText = message;
     toast.className = "toast show";
-    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 4000); // 🚨 Increased to 4 seconds so they have time to read the email message
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 4000); 
 }
 
 // --- 1. LOAD COLLEGES ON START ---
@@ -79,14 +79,19 @@ function checkSelection() {
 collegeDropdown.addEventListener("change", checkSelection);
 roleDropdown.addEventListener("change", checkSelection);
 
-continueBtn.addEventListener("click", () => {
+// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
+continueBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     selectedCollegeID = collegeDropdown.value;
     selectedCollegeName = collegeDropdown.options[collegeDropdown.selectedIndex].text;
     window.switchPanel('signInPanel');
 });
 
 // --- 3. STUDENT LOGIN LOGIC ---
-signInBtn.addEventListener("click", async () => {
+// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
+signInBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+
     const email = document.getElementById("loginEmail").value.trim().toLowerCase();
     const password = document.getElementById("loginPassword").value;
 
@@ -102,7 +107,6 @@ signInBtn.addEventListener("click", async () => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 🚨 PRODUCTION LOCK: Re-enabled!
         if (!user.emailVerified) {
             showToast("Please verify your email first. Check your inbox!");
             await signOut(auth);
@@ -126,7 +130,10 @@ function resetSignInBtn() {
 }
 
 // --- 4. STUDENT REGISTRATION LOGIC ---
-registerBtn.addEventListener("click", async () => {
+// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
+registerBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+
     const name = document.getElementById("regName").value.trim();
     const rollNo = document.getElementById("regRollNo").value.trim().toUpperCase();
     const email = document.getElementById("regEmail").value.trim().toLowerCase();
@@ -146,7 +153,6 @@ registerBtn.addEventListener("click", async () => {
     registerBtn.innerText = "Verifying...";
 
     try {
-        // Step 1: Check public_lookup EXACTLY like your C# code
         const lookupRef = doc(db, "colleges", selectedCollegeID, "public_lookup", rollNo);
         const lookupSnap = await getDoc(lookupRef);
 
@@ -166,16 +172,13 @@ registerBtn.addEventListener("click", async () => {
             return;
         }
 
-        // Step 2: Create Auth Account
         registerBtn.innerText = "Creating Account...";
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 🚨 PRODUCTION SECURITY: Send the verification email instantly!
         registerBtn.innerText = "Sending Verification...";
         await sendEmailVerification(user);
 
-        // Step 3: Update Firestore document
         const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
         await updateDoc(studentRef, {
             userID: user.uid,
@@ -183,10 +186,8 @@ registerBtn.addEventListener("click", async () => {
             authStatus: "Verified"
         });
 
-        // Step 4: Cleanup
         await signOut(auth);
         
-        // 🚨 Tell the user to check their email!
         showToast("Success! A verification link has been sent to your email.");
         window.switchPanel('signInPanel');
 
@@ -202,7 +203,6 @@ function resetRegBtn() {
     registerBtn.innerText = "Register";
 }
 
-// Map Firebase Error codes to friendly text
 function getErrorMessage(code) {
     switch (code) {
         case 'auth/email-already-in-use': return "Email already registered.";
