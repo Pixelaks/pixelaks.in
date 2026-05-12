@@ -29,8 +29,73 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .centered-view { display: flex; flex-direction: column; align-items: center; }
 
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
-.circular-progress { width: 130px; height: 130px; border-radius: 50%; background: conic-gradient(#e0e0e0 360deg); display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
-.inner-circle { width: 106px; height: 106px; border-radius: 50%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+/* =========================================
+   WAVY WATER PERCENTAGE EFFECT
+   ========================================= */
+.water-progress { 
+    position: relative; 
+    width: 220px; 
+    height: 140px; 
+    background-color: #f1f5f9; 
+    border-radius: 16px; 
+    overflow: hidden; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    box-shadow: inset 0px 4px 10px rgba(0,0,0,0.08); 
+    flex-shrink: 0;
+}
+
+.water-fill { 
+    position: absolute; 
+    left: 0; 
+    width: 100%; 
+    height: 200%; /* Extra height to ensure bottom is always covered */
+    top: 100%; /* Controlled by JS */
+    background-color: #4caf50; 
+    transition: top 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s; 
+    z-index: 1; 
+}
+
+/* The spinning rectangles that create the wave cutout */
+.water-fill::before, .water-fill::after { 
+    content: ""; 
+    position: absolute; 
+    width: 400px; 
+    height: 400px; 
+    top: 0; 
+    left: 50%; 
+    margin-left: -200px; 
+    margin-top: -385px; 
+    border-radius: 40%; 
+    background-color: #f1f5f9; /* Matches container background to act as 'air' */
+    animation: wave-spin 6s linear infinite; 
+}
+
+.water-fill::after { 
+    border-radius: 45%; 
+    background-color: rgba(241, 245, 249, 0.7); 
+    animation: wave-spin 9s linear infinite; 
+}
+
+@keyframes wave-spin { 
+    100% { transform: rotate(360deg); } 
+}
+
+.water-content { 
+    position: relative; 
+    z-index: 2; 
+    text-align: center; 
+    background: rgba(255, 255, 255, 0.75); 
+    padding: 10px 24px; 
+    border-radius: 12px; 
+    backdrop-filter: blur(4px); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+}
+
+/* Ensure text contrast is maintained over the effect */
+.projected-text { font-size: 11px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.percentage-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 .projected-text { font-size: 11px; color: #666; }
 .percentage-value { font-size: 22px; font-weight: bold; color: #000; }
 
