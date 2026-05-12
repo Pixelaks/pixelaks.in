@@ -17,7 +17,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ==========================================
-// 🚨 GLOBAL STATE VARIABLES 🚨
+// GLOBAL STATE VARIABLES
 // ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
@@ -26,22 +26,11 @@ let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex 
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-let rawDept = "";
-let myDepartmentID = "";
-let myYearStr = "";
-let enrolledSubjectsList = [];
+let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; let enrolledSubjectsList = [];
 
-let currentDailyDate = new Date();
-let cachedMedicalLeaves = [];
-let dailyData = []; 
-
-let calendarMode = "global"; 
-let currentDisplayDate = new Date(); 
-let cachedCalYear = ""; 
-let calWorkingDays = new Set(); 
-let calNonWorkingDays = new Map(); 
-let semStarts = new Map(); 
-let semEnds = new Map();
+let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
+let calendarMode = "global"; let currentDisplayDate = new Date(); 
+let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
 let myWebDeviceID = localStorage.getItem("myWebDeviceID");
 
@@ -67,7 +56,8 @@ const el = {
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
-    notifView: document.getElementById("notificationsView"),
+    assignView: document.getElementById("assignmentsView"),
+    actualNotifView: document.getElementById("actualNotifView"),
     msgView: document.getElementById("messagesView"),
     
     // DAILY UI
@@ -80,8 +70,9 @@ const el = {
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes"),
     
-    // NOTIFICATIONS & MESSAGES UI
-    notifList: document.getElementById("notificationsListContainer"),
+    // LIST CONTAINERS
+    assignList: document.getElementById("assignmentsListContainer"),
+    actualNotifList: document.getElementById("actualNotifListContainer"),
     msgList: document.getElementById("messagesListContainer"),
 
     // SESSIONS
@@ -93,8 +84,7 @@ const el = {
 // INITIALIZATION
 // ==========================================
 const urlParams = new URLSearchParams(window.location.search);
-collegeID = urlParams.get('college');
-studentUID = urlParams.get('uid');
+collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
 if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
 else {
@@ -151,9 +141,10 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        if (el.ttView.style.display !== "none") loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
-        if (el.notifView.style.display !== "none") loadNotifications();
-        if (el.msgView.style.display !== "none") loadMessages();
+        if (!el.ttView.classList.contains("hidden-view")) loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
+        if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
+        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
     });
 }
 
@@ -275,19 +266,23 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// 🚨 VIEW TOGGLING (YOUR EXACT CODE) 🚨
+// 🚨 VIEW TOGGLING (USING HIDDEN-VIEW) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
-const btnNavDaily = document.getElementById("btnNavDaily");
-const btnNavTimetable = document.getElementById("btnNavTimetable");
+const btnNavAssign = document.getElementById("btnNavAssign");
 const btnNavNotif = document.getElementById("btnNavNotif");
 const btnNavMsg = document.getElementById("btnNavMsg");
+const btnNavTimetable = document.getElementById("btnNavTimetable");
+const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
-    [btnNavMain, btnNavDaily, btnNavTimetable, btnNavNotif, btnNavMsg].forEach(btn => btn.classList.remove("active"));
-    [el.mainView, el.dailyView, el.ttView, el.notifView, el.msgView].forEach(view => view.style.display = "none");
+    [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
+    
+    // CSS .hidden-view safely hides them without interfering with the PC grid layout!
+    [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
+    
     activeBtn.classList.add("active");
-    viewToShow.style.display = (viewToShow === el.mainView) ? "" : "flex";
+    viewToShow.classList.remove("hidden-view");
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
@@ -300,149 +295,98 @@ btnNavTimetable.addEventListener("click", () => {
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
-btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.notifView); loadNotifications(); });
+
+btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
+btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
 
 // ==========================================
-// 🚨 1. NOTIFICATIONS DATA LOADER (ASSIGNMENTS) 🚨
+// 1. ASSIGNMENTS
 // ==========================================
-async function loadNotifications() {
-    el.notifList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
+async function loadAssignments() {
+    el.assignList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
     try {
         let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-        const q = query(collection(db, "colleges", collegeID, "assignments"), 
-                        where("createdAt", ">=", cutoff), 
-                        orderBy("createdAt", "desc"));
-                        
+        const q = query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
-        let notifs = [];
-        let mySemStr = `Semester ${currentSemesterIndex + 1}`;
         
+        let notifs = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
         snapshot.forEach(doc => {
-            let d = doc.data();
-            let sub = d.subject || "Unknown";
-            let assignDept = d.teacherDeptID || "";
-            let assignSem = d.semester || "";
+            let d = doc.data(); let sub = d.subject || "Unknown";
+            let isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
+            let isDepartmentMatch = (d.teacherDeptID || "").trim().toLowerCase() === myDepartmentID.toLowerCase() && (d.semester || "").trim().toLowerCase() === mySemStr.toLowerCase();
 
-            let isExplicitMatch = false;
-            if (enrolledSubjectsList.length > 0) {
-                isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
-            }
-
-            let isDepartmentMatch = false;
-            if (myDepartmentID && mySemStr) {
-                isDepartmentMatch = (assignDept.trim().toLowerCase() === myDepartmentID.toLowerCase()) && 
-                                    (assignSem.trim().toLowerCase() === mySemStr.toLowerCase());
-            }
-
-            if (isExplicitMatch || isDepartmentMatch) {
-                notifs.push({
-                    title: `Assignment: ${sub}`,
-                    body: d.topic || "No Topic",
-                    teach: d.teacherName || "Teacher",
-                    due: d.dueDate || "N/A",
-                    time: d.createdAt ? d.createdAt.toDate() : new Date()
-                });
+            if (isExplicitMatch || isDepartmentMatch || enrolledSubjectsList.length === 0) {
+                notifs.push({ title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher", due: d.dueDate || "N/A", time: d.createdAt ? d.createdAt.toDate() : new Date() });
             }
         });
         
-        if (notifs.length === 0) { el.notifList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
-        
-        el.notifList.innerHTML = notifs.map(n => `
-            <div class="data-card notif">
-                <div class="card-title">${n.title}</div>
-                <div class="card-body">${n.body}</div>
-                <div class="card-meta">
-                    <span>${n.teach}</span>
-                    <span class="card-due">Due: ${n.due}</span>
-                </div>
-            </div>
-        `).join('');
-
-    } catch(e) { 
-        el.notifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
-        console.error(e); 
-    }
+        if (notifs.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
+        el.assignList.innerHTML = notifs.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
+    } catch(e) { el.assignList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
 
 // ==========================================
-// 🚨 2. MESSAGES DATA LOADER (INBOX & CHATS) 🚨
+// 2. ACTUAL NOTIFICATIONS
+// ==========================================
+function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
+
+async function loadActualNotifications() {
+    el.actualNotifList.innerHTML = `<div class="no-data-text">Loading notifications...</div>`;
+    try {
+        let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
+        let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
+
+        const [inboxSnap, globalSnap] = await Promise.all([
+            getDocs(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30))),
+            getDocs(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)))
+        ]);
+
+        let notifs = [];
+        inboxSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        globalSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+
+        notifs.sort((a,b) => b.time - a.time);
+        if (notifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
+        
+        el.actualNotifList.innerHTML = notifs.map(n => {
+            let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            return `<div class="data-card ${n.type}"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora</span><span>${timeStr}</span></div></div>`;
+        }).join('');
+    } catch(e) { el.actualNotifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+}
+
+// ==========================================
+// 3. MESSAGES
 // ==========================================
 async function loadMessages() {
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
     let msgs = [];
-    
     try {
-        const bQuery = query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30));
-        const broadcastSnap = await getDocs(bQuery);
-        
+        const broadcastSnap = await getDocs(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)));
         broadcastSnap.forEach(doc => {
-            let d = doc.data(); 
-            let target = d.targetSummary || "";
-            
+            let d = doc.data(); let target = d.targetSummary || "";
             let forMe = false;
-            if (d.senderID === auth.currentUser.uid) {
-                forMe = true;
-            } else if (target.includes("Everyone") || target.includes("All Students")) {
-                forMe = true;
-            } else {
-                let deptMatch = target.includes("All Depts") || target.includes(rawDept);
-                let yearMatch = target.includes("All Years") || target.includes(myYearStr);
-                if (deptMatch && yearMatch) forMe = true;
-            }
-            
-            if (forMe) {
-                msgs.push({
-                    title: d.title || "Notice",
-                    body: d.body || "",
-                    sender: d.senderName || d.senderRole || "System",
-                    type: "broadcast",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
-                });
-            }
+            if (d.senderID === auth.currentUser.uid) forMe = true;
+            else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
+            else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
+            if (forMe) { msgs.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
         });
 
-        const cQuery = query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid));
-        const chatSnap = await getDocs(cQuery);
-        
+        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)));
         for (let chatDoc of chatSnap.docs) {
-            const msgQuery = query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20));
-            const msgSnap = await getDocs(msgQuery);
-            
-            msgSnap.forEach(mDoc => {
-                let d = mDoc.data();
-                msgs.push({
-                    title: d.title || "Message",
-                    body: d.body || "",
-                    sender: d.senderName || "User",
-                    type: "chat",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
-                });
-            });
+            const msgSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)));
+            msgSnap.forEach(mDoc => { let d = mDoc.data(); msgs.push({ title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
         }
 
-        msgs.sort((a,b) => b.time - a.time); 
-        
+        msgs.sort((a,b) => b.time - a.time);
         if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
-        
         el.msgList.innerHTML = msgs.map(m => {
             let css = m.type === "broadcast" ? "broadcast" : "";
             let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `
-            <div class="data-card ${css}">
-                <div class="card-title">${m.title}</div>
-                <div class="card-body">${m.body}</div>
-                <div class="card-meta">
-                    <span>${m.sender}</span>
-                    <span>${timeStr}</span>
-                </div>
-            </div>`;
+            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
         }).join('');
-
-    } catch(e) { 
-        el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
-        console.error(e); 
-    }
+    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
 
 
@@ -578,7 +522,7 @@ function loadTimetableForDay(selectedDay) {
 }
 
 function updateTimelineVisuals() {
-    if (el.ttView.style.display === "none") return;
+    if (el.ttView.classList.contains("hidden-view")) return;
     let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60);
     let pStart = 9.5; let pEnd = 16.5; let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
     el.ttProgress.style.height = `${progress * 100}%`;
@@ -595,14 +539,13 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// 🚨 DEVICE SESSIONS & SETTINGS 🚨
+// DEVICE SESSIONS & SETTINGS
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
-// Open Devices Modal
 document.getElementById("btnDevices").addEventListener("click", () => {
     el.sidebar.classList.remove("open"); el.overlay.classList.remove("active");
     el.sessionsModal.classList.add("active"); loadSessions();
@@ -612,7 +555,6 @@ document.getElementById("closeSessionsBtn").addEventListener("click", () => el.s
 async function loadSessions() {
     el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
     try {
-        // 🚨 Double Query: Finds Unity (Auth UID) AND Web (Roll Number) log-ins!
         const q1 = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
         const q2 = query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions"));
         
@@ -630,7 +572,6 @@ async function loadSessions() {
             let timeStr = "Recently";
             if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-            // 🚨 Re-added the Kick button logic!
             let btnHtml = isMe ? `<span style="font-size:10px; color:#10b981; font-weight:bold;">Active</span>` : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
             
             htmlBuffer += `
@@ -647,7 +588,6 @@ async function loadSessions() {
     } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
 }
 
-// 🚨 Delete Session from proper path
 window.revokeSession = async function(sessionID, parentDocID) {
     if (!confirm("Are you sure you want to log this device out?")) return;
     try {
