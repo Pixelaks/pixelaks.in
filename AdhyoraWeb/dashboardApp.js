@@ -99,7 +99,6 @@ async function registerWebSession() {
         localStorage.setItem("myWebDeviceID", myWebDeviceID);
     }
     
-    // Detect OS for a friendly device name
     let osName = "Web Browser";
     if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
     if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
@@ -109,19 +108,12 @@ async function registerWebSession() {
 
     try {
         const sessionRef = doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID);
-        await setDoc(sessionRef, {
-            deviceName: osName,
-            loginTime: serverTimestamp()
-        }, {merge: true});
+        await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
         
-        // Listen to make sure we aren't kicked by the Mobile App
         onSnapshot(sessionRef, (docSnap) => {
-            if (!docSnap.exists()) {
-                // We were kicked out!
-                signOut(auth).then(() => window.location.href = "index.html");
-            }
+            if (!docSnap.exists()) signOut(auth).then(() => window.location.href = "index.html");
         });
-    } catch(e) { console.error("Session registration failed", e); }
+    } catch(e) {}
 }
 
 async function syncCollegeAndListen() {
@@ -138,7 +130,6 @@ async function syncCollegeAndListen() {
         const docSnap = snapshot.docs[0];
         currentRollNo = docSnap.id; 
         
-        // Register this browser login to Firebase instantly
         registerWebSession();
         
         try {
@@ -273,7 +264,7 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// 🚨 VIEW TOGGLING (7 BUTTONS) 🚨
+// 🚨 VIEW TOGGLING (ALL 8 VIEWS/BUTTONS) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -306,7 +297,7 @@ btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualN
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
 
 // ==========================================
-// 1. ASSIGNMENTS (Formerly Notifications)
+// 1. ASSIGNMENTS
 // ==========================================
 async function loadAssignments() {
     el.assignList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
@@ -332,7 +323,7 @@ async function loadAssignments() {
 }
 
 // ==========================================
-// 2. ACTUAL NOTIFICATIONS (Inbox Messages)
+// 2. ACTUAL NOTIFICATIONS
 // ==========================================
 function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
 
@@ -362,7 +353,7 @@ async function loadActualNotifications() {
 }
 
 // ==========================================
-// 3. MESSAGES (Chats & Sent Messages)
+// 3. MESSAGES
 // ==========================================
 async function loadMessages() {
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
@@ -553,53 +544,56 @@ document.getElementById("btnContact").addEventListener("click", () => window.ope
 
 // Open Devices Modal
 document.getElementById("btnDevices").addEventListener("click", () => {
-    el.sidebar.classList.remove("open");
-    el.overlay.classList.remove("active");
-    el.sessionsModal.classList.add("active");
-    loadSessions();
+    el.sidebar.classList.remove("open"); el.overlay.classList.remove("active");
+    el.sessionsModal.classList.add("active"); loadSessions();
 });
 document.getElementById("closeSessionsBtn").addEventListener("click", () => el.sessionsModal.classList.remove("active"));
 
 async function loadSessions() {
     el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
     try {
-        const q = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
-        const snapshot = await getDocs(q);
+        // 🚨 THE FIX: Pull from BOTH UID and RollNumber to catch Unity Editor Logins!
+        const q1 = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
+        const q2 = query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions"));
         
-        if (snapshot.empty) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        let htmlBuffer = ""; let addedDocs = new Set();
         
-        let htmlBuffer = "";
-        snapshot.forEach(doc => {
-            let d = doc.data();
-            let devName = d.deviceName || "Unknown Device";
+        const processDoc = (doc) => {
+            if (addedDocs.has(doc.id)) return;
+            addedDocs.add(doc.id);
+            
+            let d = doc.data(); let devName = d.deviceName || "Unknown Device";
             let isMe = (doc.id === myWebDeviceID);
             if (isMe) devName += " (This Browser)";
             
             let timeStr = "Recently";
             if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-            let btnHtml = isMe ? "" : `<button class="revoke-btn" onclick="revokeSession('${doc.id}')">Revoke</button>`;
+            // 🚨 Re-added the Kick button logic!
+            let btnHtml = isMe ? "" : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
             
             htmlBuffer += `
                 <div class="session-card">
-                    <div class="session-info">
-                        <h4>${devName}</h4>
-                        <p>Logged in: ${timeStr}</p>
-                    </div>
+                    <div class="session-info"><h4>${devName}</h4><p>Logged in: ${timeStr}</p></div>
                     ${btnHtml}
                 </div>`;
-        });
+        };
+        
+        snap1.forEach(processDoc); snap2.forEach(processDoc);
+        
+        if (addedDocs.size === 0) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
         el.sessionsList.innerHTML = htmlBuffer;
     } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
 }
 
-// 🚨 Delete Session
-window.revokeSession = async function(sessionID) {
+// 🚨 Revoke Session from proper path
+window.revokeSession = async function(sessionID, parentDocID) {
     if (!confirm("Are you sure you want to log this device out?")) return;
     try {
-        await deleteDoc(doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", sessionID));
+        await deleteDoc(doc(db, "colleges", collegeID, "students", parentDocID, "sessions", sessionID));
         alert("Session revoked. The device will be logged out shortly.");
-        loadSessions(); // Refresh list
+        loadSessions();
     } catch(e) { alert("Error revoking session."); }
 };
 
