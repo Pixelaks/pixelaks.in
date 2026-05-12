@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <div class="daily-attendance-panel scrollable-content hidden-view" id="dailyAttendanceView">
+        <div class="daily-attendance-panel scrollable-content" id="dailyAttendanceView" style="display: none;">
             <div class="daily-card">
                 <div class="daily-header-blue">
                     <button class="cal-nav-btn" id="btnPrevDay" style="color:white;">&lt;</button>
@@ -87,11 +87,12 @@
                     </div>
                     <button class="cal-nav-btn" id="btnNextDay" style="color:white;">&gt;</button>
                 </div>
+                
                 <div class="periods-grid" id="periodsGrid"></div>
             </div>
         </div>
 
-        <div class="timetable-panel scrollable-content hidden-view" id="timetableView">
+        <div class="timetable-panel scrollable-content" id="timetableView" style="display: none;">
             <div class="day-btn-group" id="timetableDays">
                 <button class="day-btn active" data-day="Monday">Mon</button>
                 <button class="day-btn" data-day="Tuesday">Tue</button>
@@ -99,6 +100,7 @@
                 <button class="day-btn" data-day="Thursday">Thu</button>
                 <button class="day-btn" data-day="Friday">Fri</button>
             </div>
+            
             <div class="timetable-content">
                 <div class="timeline-container">
                     <div class="timeline-track"><div class="timeline-progress" id="ttProgressBar"></div></div>
@@ -108,21 +110,14 @@
             </div>
         </div>
 
-        <div class="scrollable-content centered-view hidden-view" id="assignmentsView">
+        <div class="scrollable-content" id="notificationsView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Recent Assignments</h3>
-            <div id="assignmentsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
-                <div class="no-data-text">Loading Assignments...</div>
-            </div>
-        </div>
-
-        <div class="scrollable-content centered-view hidden-view" id="actualNotifView">
-            <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Notifications</h3>
-            <div id="actualNotifListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
+            <div id="notificationsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Notifications...</div>
             </div>
         </div>
 
-        <div class="scrollable-content centered-view hidden-view" id="messagesView">
+        <div class="scrollable-content" id="messagesView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Inbox</h3>
             <div id="messagesListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Messages...</div>
@@ -132,13 +127,12 @@
         <div class="bottom-nav-mask">
             <div class="bottom-nav">
                 <button class="icon-btn" id="openSettingsBtn" title="Settings">⚙️</button>
-                <button class="icon-btn active" id="btnNavMain" title="Overview">📊</button>
-                <button class="icon-btn" id="btnNavAssign" title="Assignments">📋</button>
                 <button class="icon-btn" id="btnNavNotif" title="Notifications">🔔</button>
+                <button class="icon-btn active" id="btnNavMain" title="Overview">📊</button>
                 <button class="icon-btn" id="btnNavMsg" title="Messages">💬</button>
+                <button class="icon-btn" id="btnCalendar" title="Calendar">📅</button>
                 <button class="icon-btn" id="btnNavTimetable" title="Timetable">📚</button>
                 <button class="icon-btn" id="btnNavDaily" title="Daily Attendance">📝</button>
-                <button class="icon-btn" id="btnCalendar" title="Calendar">📅</button>
             </div>
         </div>
     </div>
