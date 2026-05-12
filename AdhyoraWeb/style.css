@@ -276,3 +276,15 @@ body {
 
 @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
 @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+
+/* --- FIX: BROWSER AUTOFILL WHITE BACKGROUND --- */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #141414 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
