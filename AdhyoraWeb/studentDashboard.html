@@ -87,7 +87,6 @@
                     </div>
                     <button class="cal-nav-btn" id="btnNextDay" style="color:white;">&gt;</button>
                 </div>
-                
                 <div class="periods-grid" id="periodsGrid"></div>
             </div>
         </div>
@@ -100,7 +99,6 @@
                 <button class="day-btn" data-day="Thursday">Thu</button>
                 <button class="day-btn" data-day="Friday">Fri</button>
             </div>
-            
             <div class="timetable-content">
                 <div class="timeline-container">
                     <div class="timeline-track"><div class="timeline-progress" id="ttProgressBar"></div></div>
@@ -110,9 +108,16 @@
             </div>
         </div>
 
-        <div class="scrollable-content" id="notificationsView" style="display: none;">
+        <div class="scrollable-content" id="assignmentsView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Recent Assignments</h3>
-            <div id="notificationsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
+            <div id="assignmentsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
+                <div class="no-data-text">Loading Assignments...</div>
+            </div>
+        </div>
+
+        <div class="scrollable-content" id="actualNotifView" style="display: none;">
+            <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Notifications</h3>
+            <div id="actualNotifListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Notifications...</div>
             </div>
         </div>
@@ -126,13 +131,13 @@
 
         <div class="bottom-nav-mask">
             <div class="bottom-nav">
-                <button class="icon-btn" id="openSettingsBtn" title="Settings">⚙️</button>
-                <button class="icon-btn" id="btnNavNotif" title="Notifications">🔔</button>
                 <button class="icon-btn active" id="btnNavMain" title="Overview">📊</button>
+                <button class="icon-btn" id="btnNavAssign" title="Assignments">📋</button>
+                <button class="icon-btn" id="btnNavNotif" title="Notifications">🔔</button>
                 <button class="icon-btn" id="btnNavMsg" title="Messages">💬</button>
-                <button class="icon-btn" id="btnCalendar" title="Calendar">📅</button>
                 <button class="icon-btn" id="btnNavTimetable" title="Timetable">📚</button>
                 <button class="icon-btn" id="btnNavDaily" title="Daily Attendance">📝</button>
+                <button class="icon-btn" id="btnCalendar" title="Calendar">📅</button>
             </div>
         </div>
     </div>
@@ -159,6 +164,21 @@
             <button class="close-modal-btn" id="closeDetailBtn" style="margin-top: 20px;">Close</button>
         </div>
     </div>
+
+    <div class="modal-overlay" id="sessionsModal">
+        <div class="calendar-container">
+            <h3 style="margin-bottom:10px; color:#0f172a; text-align: center;">Active Sessions</h3>
+            <p style="font-size: 10px; color:#666; text-align: center; margin-bottom: 15px;">Manage devices where your account is logged in.</p>
+            
+            <div id="sessionsListContainer" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                <div class="no-data-text">Loading Devices...</div>
+            </div>
+            
+            <button class="close-modal-btn" id="closeSessionsBtn" style="margin-top: 15px;">Close</button>
+        </div>
+    </div>
+
+    <button id="openSettingsBtn" class="floating-settings-btn">⚙️</button>
 
     <div id="toast" class="toast"></div>
     <script type="module" src="dashboardApp.js"></script>
