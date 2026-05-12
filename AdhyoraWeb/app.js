@@ -29,11 +29,32 @@ const continueBtn = document.getElementById("continueBtn");
 const signInBtn = document.getElementById("signInBtn");
 const registerBtn = document.getElementById("registerBtn");
 
-// --- UI HELPERS ---
-window.switchPanel = function(panelId) {
+// --- UI HELPERS & NATIVE BACK BUTTON FIX ---
+window.switchPanel = function(panelId, pushToHistory = true) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById(panelId).classList.add('active');
+    
+    // Tell the browser history that we moved to a new "page"
+    if (pushToHistory) {
+        history.pushState({ panel: panelId }, "", `#${panelId}`);
+    }
 }
+
+// Set the initial history state when the app loads
+window.addEventListener('load', () => {
+    history.replaceState({ panel: 'roleSelectionPanel' }, "", "#roleSelectionPanel");
+});
+
+// Listen for the Android/Browser Native Back Button
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.panel) {
+        // Go back to the previous panel without adding a new history state
+        window.switchPanel(e.state.panel, false);
+    } else {
+        // Fallback safety
+        window.switchPanel('roleSelectionPanel', false);
+    }
+});
 
 // 🚨 UPDATED: Now smoothly toggles FontAwesome classes!
 window.toggleVisibility = function(inputId, iconWrapper) {
