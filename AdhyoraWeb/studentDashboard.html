@@ -66,7 +66,9 @@
                     <div class="stat-item" id="totalPeriodsTakenText" style="background:#f8f9fa;">Total Periods: -</div>
                 </div>
             </div>
+            
             <div class="list-container" id="subjectListContainer"></div>
+            
             <div class="marks-section">
                 <div class="marks-header-container">
                     <select id="examDropdown" class="dropdown-select"><option value="">Loading Exams...</option></select>
@@ -77,7 +79,7 @@
             </div>
         </div>
 
-        <div class="daily-attendance-panel scrollable-content" id="dailyAttendanceView" style="display: none;">
+        <div class="scrollable-content centered-view" id="dailyAttendanceView" style="display: none;">
             <div class="daily-card">
                 <div class="daily-header-blue">
                     <button class="cal-nav-btn" id="btnPrevDay" style="color:white;">&lt;</button>
@@ -91,7 +93,7 @@
             </div>
         </div>
 
-        <div class="timetable-panel scrollable-content" id="timetableView" style="display: none;">
+        <div class="scrollable-content centered-view" id="timetableView" style="display: none;">
             <div class="day-btn-group" id="timetableDays">
                 <button class="day-btn active" data-day="Monday">Mon</button>
                 <button class="day-btn" data-day="Tuesday">Tue</button>
@@ -108,21 +110,21 @@
             </div>
         </div>
 
-        <div class="scrollable-content flex-column-center" id="assignmentsView" style="display: none;">
+        <div class="scrollable-content centered-view" id="assignmentsView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Recent Assignments</h3>
             <div id="assignmentsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Assignments...</div>
             </div>
         </div>
 
-        <div class="scrollable-content flex-column-center" id="actualNotifView" style="display: none;">
+        <div class="scrollable-content centered-view" id="actualNotifView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Notifications</h3>
             <div id="actualNotifListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Notifications...</div>
             </div>
         </div>
 
-        <div class="scrollable-content flex-column-center" id="messagesView" style="display: none;">
+        <div class="scrollable-content centered-view" id="messagesView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Inbox</h3>
             <div id="messagesListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Messages...</div>
