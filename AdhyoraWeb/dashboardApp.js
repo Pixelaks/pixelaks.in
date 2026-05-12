@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -16,17 +16,39 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ==========================================
+// 🚨 GLOBAL STATE VARIABLES 🚨
+// ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
 let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex = 0;
+
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-let myDepartmentID = ""; let myYearStr = ""; let enrolledSubjectsList = [];
-let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
-let calendarMode = "global"; let currentDisplayDate = new Date(); 
-let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
+// Routing Variables (Matches C# memory caching)
+let rawDept = "";
+let myDepartmentID = "";
+let myYearStr = "";
+let enrolledSubjectsList = [];
 
+// Daily View State
+let currentDailyDate = new Date();
+let cachedMedicalLeaves = [];
+let dailyData = []; 
+
+// Calendar View State
+let calendarMode = "global"; 
+let currentDisplayDate = new Date(); 
+let cachedCalYear = ""; 
+let calWorkingDays = new Set(); 
+let calNonWorkingDays = new Map(); 
+let semStarts = new Map(); 
+let semEnds = new Map();
+
+// ==========================================
+// DOM ELEMENTS
+// ==========================================
 const el = {
     name: document.getElementById("studentName"), roll: document.getElementById("studentRoll"),
     badge: document.getElementById("statusBadge"), semTitle: document.getElementById("semesterTitle"),
@@ -49,19 +71,27 @@ const el = {
     notifView: document.getElementById("notificationsView"),
     msgView: document.getElementById("messagesView"),
     
-    dailyDateBtn: document.getElementById("dailyDateBtn"), dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
+    // DAILY UI
+    dailyDateBtn: document.getElementById("dailyDateBtn"),
+    dailyDate: document.getElementById("dailyDateText"), dailyStatus: document.getElementById("dailyStatusText"),
     periodsGrid: document.getElementById("periodsGrid"), detailModal: document.getElementById("periodDetailModal"),
     dSub: document.getElementById("detailSubjectText"), dTeach: document.getElementById("detailTeacherText"), dStat: document.getElementById("detailStatusText"),
 
+    // TIMETABLE UI
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes"),
     
+    // NOTIFICATIONS & MESSAGES UI
     notifList: document.getElementById("notificationsListContainer"),
     msgList: document.getElementById("messagesListContainer")
 };
 
+// ==========================================
+// INITIALIZATION
+// ==========================================
 const urlParams = new URLSearchParams(window.location.search);
-collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
+collegeID = urlParams.get('college');
+studentUID = urlParams.get('uid');
 
 if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
 else {
@@ -81,7 +111,8 @@ async function syncCollegeAndListen() {
 
     onSnapshot(q, async (snapshot) => {
         if (snapshot.empty) { el.name.innerText = "Profile Not Found"; return; }
-        const docSnap = snapshot.docs[0]; currentRollNo = docSnap.id; 
+        const docSnap = snapshot.docs[0];
+        currentRollNo = docSnap.id; 
         
         try {
             const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
@@ -91,15 +122,21 @@ async function syncCollegeAndListen() {
 
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
+        
+        // Auto-refresh active views
         if (el.ttView.style.display !== "none") loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
+        if (el.notifView.style.display !== "none") loadNotifications();
+        if (el.msgView.style.display !== "none") loadMessages();
     });
 }
 
 function processStudentData(data) {
     const sName = data.Name || data.name || "Unknown";
     el.name.innerText = sName; el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
-    const dept = data.Department || data.department || "General";
-    myDepartmentID = "DEPT_" + dept.replace(/\s/g, ''); 
+    
+    // 🚨 Routing Setup (Mirrors C# exactly)
+    rawDept = data.Department || data.department || "General";
+    myDepartmentID = "DEPT_" + rawDept.replace(/\s/g, ''); 
     
     el.sbName.innerHTML = `${sName} <br><span style="font-size:12px; color:#888;">(${data.RollNumber || currentRollNo})</span>`;
     
@@ -148,7 +185,7 @@ function processStudentData(data) {
 
     let baseSem = (studentYear - 1) * 2;
     currentSemesterIndex = Math.max(0, Math.min(7, ((collegeSemesterType === "Odd") ? baseSem + 1 : baseSem + 2) - 1));
-    updateUIForCurrentSemester(dept);
+    updateUIForCurrentSemester(rawDept);
 }
 
 document.getElementById("prevSemBtn").addEventListener("click", () => { if (currentSemesterIndex > 0) { currentSemesterIndex--; updateUIForCurrentSemester(null); }});
@@ -211,7 +248,6 @@ function drawMarksUI(marksArray) {
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
-
 // ==========================================
 // 🚨 VIEW TOGGLING 🚨
 // ==========================================
@@ -241,82 +277,156 @@ btnNavTimetable.addEventListener("click", () => {
 btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.notifView); loadNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
 
-
 // ==========================================
-// NOTIFICATIONS & MESSAGES LOADERS
+// 🚨 1. NOTIFICATIONS DATA LOADER (ASSIGNMENTS) 🚨
 // ==========================================
 async function loadNotifications() {
     el.notifList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
     try {
         let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-        const q = query(collection(db, "colleges", collegeID, "assignments"), where("timestamp", ">=", cutoff));
-        const snapshot = await getDocs(q);
         
+        // 🚨 Exact C# Replica: Uses createdAt and orderBy Descending
+        const q = query(collection(db, "colleges", collegeID, "assignments"), 
+                        where("createdAt", ">=", cutoff), 
+                        orderBy("createdAt", "desc"));
+                        
+        const snapshot = await getDocs(q);
         let notifs = [];
+        let mySemStr = `Semester ${currentSemesterIndex + 1}`;
+        
         snapshot.forEach(doc => {
             let d = doc.data();
             let sub = d.subject || "Unknown";
-            if (enrolledSubjectsList.length === 0 || enrolledSubjectsList.some(s => s.startsWith(sub))) {
+            let assignDept = d.teacherDeptID || "";
+            let assignSem = d.semester || "";
+
+            // 1. Explicit Match Check
+            let isExplicitMatch = false;
+            if (enrolledSubjectsList.length > 0) {
+                isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
+            }
+
+            // 2. Department + Semester Check
+            let isDepartmentMatch = false;
+            if (myDepartmentID && mySemStr) {
+                isDepartmentMatch = (assignDept.trim().toLowerCase() === myDepartmentID.toLowerCase()) && 
+                                    (assignSem.trim().toLowerCase() === mySemStr.toLowerCase());
+            }
+
+            // 3. Routing Logic
+            if (isExplicitMatch || isDepartmentMatch) {
                 notifs.push({
-                    title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher",
-                    due: d.dueDate || "N/A", time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: `Assignment: ${sub}`,
+                    body: d.topic || "No Topic",
+                    teach: d.teacherName || "Teacher",
+                    due: d.dueDate || "N/A",
+                    time: d.createdAt ? d.createdAt.toDate() : new Date()
                 });
             }
         });
-
-        notifs.sort((a,b) => b.time - a.time); 
+        
         if (notifs.length === 0) { el.notifList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
         
         el.notifList.innerHTML = notifs.map(n => `
             <div class="data-card notif">
                 <div class="card-title">${n.title}</div>
                 <div class="card-body">${n.body}</div>
-                <div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div>
+                <div class="card-meta">
+                    <span>${n.teach}</span>
+                    <span class="card-due">Due: ${n.due}</span>
+                </div>
             </div>
         `).join('');
 
-    } catch(e) { el.notifList.innerHTML = `<div class="no-data-text">Network Error</div>`; }
+    } catch(e) { 
+        el.notifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
+        console.error(e); 
+    }
 }
 
+// ==========================================
+// 🚨 2. MESSAGES DATA LOADER (INBOX & CHATS) 🚨
+// ==========================================
 async function loadMessages() {
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
     let msgs = [];
+    
     try {
-        const broadcastSnap = await getDocs(collection(db, "colleges", collegeID, "sent_messages"));
+        // 1. Fetch Broadcasts (sent_messages)
+        const bQuery = query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30));
+        const broadcastSnap = await getDocs(bQuery);
+        
         broadcastSnap.forEach(doc => {
-            let d = doc.data(); let target = d.targetSummary || "";
-            let forMe = target.includes("All Students") || target.includes("Everyone") || target.includes("All Depts") || target.includes(myDepartmentID) || d.senderID === auth.currentUser.uid;
+            let d = doc.data(); 
+            let target = d.targetSummary || "";
+            
+            // 🚨 Exact C# Replica: IsMessageForMe Logic
+            let forMe = false;
+            if (d.senderID === auth.currentUser.uid) {
+                forMe = true;
+            } else if (target.includes("Everyone") || target.includes("All Students")) {
+                forMe = true;
+            } else {
+                let deptMatch = target.includes("All Depts") || target.includes(rawDept);
+                let yearMatch = target.includes("All Years") || target.includes(myYearStr);
+                if (deptMatch && yearMatch) forMe = true;
+            }
             
             if (forMe) {
                 msgs.push({
-                    title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System",
-                    type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: d.title || "Notice",
+                    body: d.body || "",
+                    sender: d.senderName || d.senderRole || "System",
+                    type: "broadcast",
+                    time: d.timestamp ? d.timestamp.toDate() : new Date()
                 });
             }
         });
 
-        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", currentRollNo)));
+        // 2. Fetch Private Chats
+        const cQuery = query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid));
+        const chatSnap = await getDocs(cQuery);
+        
         for (let chatDoc of chatSnap.docs) {
-            const msgSnap = await getDocs(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"));
+            const msgQuery = query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20));
+            const msgSnap = await getDocs(msgQuery);
+            
             msgSnap.forEach(mDoc => {
                 let d = mDoc.data();
                 msgs.push({
-                    title: d.title || "Message", body: d.body || "", sender: d.senderName || "User",
-                    type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date()
+                    title: d.title || "Message",
+                    body: d.body || "",
+                    sender: d.senderName || "User",
+                    type: "chat",
+                    time: d.timestamp ? d.timestamp.toDate() : new Date()
                 });
             });
         }
 
-        msgs.sort((a,b) => b.time - a.time); 
+        msgs.sort((a,b) => b.time - a.time); // Sort newest first
+        
         if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
         
         el.msgList.innerHTML = msgs.map(m => {
             let css = m.type === "broadcast" ? "broadcast" : "";
             let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
+            return `
+            <div class="data-card ${css}">
+                <div class="card-title">${m.title}</div>
+                <div class="card-body">${m.body}</div>
+                <div class="card-meta">
+                    <span>${m.sender}</span>
+                    <span>${timeStr}</span>
+                </div>
+            </div>`;
         }).join('');
-    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text">Network Error</div>`; }
+
+    } catch(e) { 
+        el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
+        console.error(e); 
+    }
 }
+
 
 // ==========================================
 // DAILY ATTENDANCE MANAGER
