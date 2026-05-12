@@ -29,10 +29,77 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .centered-view { display: flex; flex-direction: column; align-items: center; }
 
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
-.circular-progress { width: 130px; height: 130px; border-radius: 50%; background: conic-gradient(#e0e0e0 360deg); display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
-.inner-circle { width: 106px; height: 106px; border-radius: 50%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-.projected-text { font-size: 11px; color: #666; }
-.percentage-value { font-size: 22px; font-weight: bold; color: #000; }
+/* =========================================
+   LIQUID WAVE PROGRESS RING
+   ========================================= */
+.liquid-progress { 
+    width: 130px; 
+    height: 130px; 
+    border-radius: 50%; 
+    background-color: #e2e8f0; /* Empty background color */
+    position: relative; 
+    overflow: hidden; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.1), 0 4px 15px rgba(0,0,0,0.05); 
+    flex-shrink: 0; 
+    border: 5px solid #ffffff;
+}
+
+/* The actual fluid that fills up */
+.liquid-wave {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 0%; /* JS will change this to 100% */
+    background-color: #4caf50; 
+    transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.8s;
+    z-index: 1;
+}
+
+/* The magical spinning shapes that "cut out" the wave */
+.liquid-wave::before, .liquid-wave::after {
+    content: '';
+    position: absolute;
+    width: 260px; /* Double the width of the circle */
+    height: 260px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #e2e8f0; /* Matches the empty background to hide the fluid */
+    z-index: 1;
+}
+
+/* Front Wave */
+.liquid-wave::after {
+    border-radius: 40%;
+    top: -250px; /* Sits right at the water line */
+    animation: spinWave 5s linear infinite;
+}
+
+/* Back Wave (Slightly offset and translucent) */
+.liquid-wave::before {
+    border-radius: 45%;
+    top: -245px;
+    background: rgba(226, 232, 240, 0.6); 
+    animation: spinWave 7s linear infinite;
+}
+
+@keyframes spinWave {
+    0% { transform: translateX(-50%) rotate(0deg); }
+    100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* Text floating above the water */
+.liquid-text { 
+    position: relative; 
+    z-index: 2; 
+    text-align: center; 
+    text-shadow: 0px 1px 3px rgba(255,255,255,0.9); /* Keeps text readable over any color */
+}
+.projected-text { font-size: 11px; color: #475569; font-weight: 600; text-transform: uppercase;}
+.percentage-value { font-size: 26px; font-weight: bold; color: #0f172a; line-height: 1.1;}
 
 .stats-list { width: 100%; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
 .stat-item { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #ddd; text-align: center; }
