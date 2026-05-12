@@ -30,72 +30,73 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; }
 /* =========================================
-   WAVY WATER PERCENTAGE EFFECT
+   WAVY WATER PERCENTAGE EFFECT (FULL FLUID LAYOUT)
    ========================================= */
 .water-progress { 
     position: relative; 
-    width: 220px; 
-    height: 140px; 
-    background-color: #f1f5f9; 
-    border-radius: 16px; 
+    flex: 1; /* Tells the container to grow and fill the empty void */
+    width: 100%; 
+    max-width: 450px; /* Balances perfectly against the stats list */
+    min-height: 280px; /* Gives it the same visual weight as the 7-row table */
+    background-color: #f8fafc; /* Soft slate background */
+    border-radius: 40px; /* Massive curves to eliminate the rigid rectangle look */
     overflow: hidden; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    box-shadow: inset 0px 4px 10px rgba(0,0,0,0.08); 
-    flex-shrink: 0;
+    box-shadow: inset 0px 4px 15px rgba(0,0,0,0.05); 
 }
 
 .water-fill { 
     position: absolute; 
     left: 0; 
     width: 100%; 
-    height: 200%; /* Extra height to ensure bottom is always covered */
-    top: 100%; /* Controlled by JS */
+    height: 250%; /* Massive height buffer so the bottom never shows */
+    top: 100%; 
     background-color: #4caf50; 
     transition: top 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s; 
     z-index: 1; 
 }
 
-/* The spinning rectangles that create the wave cutout */
+/* Super-sized waves to support the new, wider responsive container */
 .water-fill::before, .water-fill::after { 
     content: ""; 
     position: absolute; 
-    width: 400px; 
-    height: 400px; 
+    width: 1200px; 
+    height: 1200px; 
     top: 0; 
     left: 50%; 
-    margin-left: -200px; 
-    margin-top: -385px; 
+    margin-left: -600px; 
+    margin-top: -1150px; 
     border-radius: 40%; 
-    background-color: #f1f5f9; /* Matches container background to act as 'air' */
-    animation: wave-spin 6s linear infinite; 
+    background-color: #f8fafc; /* Must match the container background perfectly */
+    animation: wave-spin 7s linear infinite; 
 }
 
 .water-fill::after { 
     border-radius: 45%; 
-    background-color: rgba(241, 245, 249, 0.7); 
-    animation: wave-spin 9s linear infinite; 
+    background-color: rgba(248, 250, 252, 0.6); 
+    animation: wave-spin 11s linear infinite; 
 }
 
 @keyframes wave-spin { 
     100% { transform: rotate(360deg); } 
 }
 
+/* Scaled up the inner content box to match the new massive area */
 .water-content { 
     position: relative; 
     z-index: 2; 
     text-align: center; 
-    background: rgba(255, 255, 255, 0.75); 
-    padding: 10px 24px; 
-    border-radius: 12px; 
-    backdrop-filter: blur(4px); 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    background: rgba(255, 255, 255, 0.85); 
+    padding: 20px 40px; 
+    border-radius: 20px; 
+    backdrop-filter: blur(8px); 
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08); 
 }
 
-/* Ensure text contrast is maintained over the effect */
-.projected-text { font-size: 11px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-.percentage-value { font-size: 26px; font-weight: 800; color: #0f172a; }
+.projected-text { font-size: 13px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+.percentage-value { font-size: 42px; font-weight: 900; color: #0f172a; line-height: 1.2; }
 .projected-text { font-size: 11px; color: #666; }
 .percentage-value { font-size: 22px; font-weight: bold; color: #000; }
 
@@ -128,7 +129,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
         padding: 30px 40px 120px 40px; align-items: start; 
     }
     
-    .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; gap: 80px; }
+    .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; align-items: stretch; gap: 80px; }
     .stats-list { max-width: 500px; } 
     
     .daily-attendance-panel { padding-top: 60px; display: flex; justify-content: center; grid-column: span 2;}
