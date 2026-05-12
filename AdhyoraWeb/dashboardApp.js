@@ -323,6 +323,11 @@ function updateUIForCurrentSemester(optionalDept) {
     let ringColor = percent >= 85 ? "#4caf50" : percent >= 70 ? "#ffc107" : percent >= 50 ? "#ff9800" : "#f44336";
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
+    // Apply the dynamic color to the "Current" cell background
+    el.curPctText.style.backgroundColor = ringColor;
+    // Make text white for dark backgrounds (Green, Red, Orange) and black for light ones (Yellow)
+    el.curPctText.style.color = (percent >= 70 && percent < 85) ? "#000" : "#fff";
+    el.curPctText.style.fontWeight = "bold";
     el.waterFill.style.backgroundColor = ringColor;
     el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
