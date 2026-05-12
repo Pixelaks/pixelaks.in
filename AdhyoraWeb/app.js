@@ -60,6 +60,10 @@ async function fetchColleges() {
             option.text = data.name || data.Name || "Unknown College";
             collegeDropdown.appendChild(option);
         });
+
+        // Build Custom UI for College Selection after data loads
+        buildCustomDropdown('collegeDropdown');
+
     } catch (error) {
         showToast("Error loading colleges.");
         console.error(error);
@@ -229,7 +233,7 @@ tsParticles.load("tsparticles", {
         events: { onHover: { enable: true, mode: "grab" }, onClick: { enable: true, mode: "push" } },
         modes: { grab: { distance: 150, links: { opacity: 0.6 } }, push: { quantity: 4 } }
     },
-    background: { color: "transparent" } // Handled by CSS body
+    background: { color: "transparent" } 
 });
 
 // Glitch Logic
@@ -308,3 +312,61 @@ function subtleGlitch() {
 
 // Start glitch 500ms after load
 setTimeout(updateText, 500);
+
+// ==========================================
+// CUSTOM DROPDOWN BUILDER 
+// ==========================================
+function buildCustomDropdown(selectId) {
+    let select = document.getElementById(selectId);
+    if (!select || select.style.display === 'none') return;
+
+    let customUI = document.createElement('div');
+    customUI.className = 'custom-select-wrapper';
+
+    let trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    let currentText = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Select...';
+    trigger.innerHTML = `<span>${currentText}</span><span style="font-size:10px; color:#2ecc71;">▼</span>`;
+
+    let optionsList = document.createElement('div');
+    optionsList.className = 'custom-options';
+
+    Array.from(select.options).forEach((opt, index) => {
+        if (index === 0 && opt.disabled) return; 
+
+        let item = document.createElement('div');
+        item.className = 'custom-option';
+        if (opt.disabled) item.classList.add('disabled');
+        item.innerText = opt.text;
+
+        item.addEventListener('click', () => {
+            if (opt.disabled) return;
+            select.value = opt.value;
+            trigger.querySelector('span').innerText = opt.text;
+            customUI.classList.remove('open');
+            select.dispatchEvent(new Event('change'));
+        });
+        optionsList.appendChild(item);
+    });
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.custom-select-wrapper').forEach(el => {
+            if(el !== customUI) el.classList.remove('open');
+        });
+        customUI.classList.toggle('open');
+    });
+
+    customUI.appendChild(trigger);
+    customUI.appendChild(optionsList);
+    
+    select.parentNode.insertBefore(customUI, select);
+    select.style.display = 'none';
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select-wrapper').forEach(el => el.classList.remove('open'));
+});
+
+// Build Role dropdown on load
+buildCustomDropdown('roleDropdown');
