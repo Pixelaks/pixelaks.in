@@ -376,27 +376,84 @@ body, .dashboard-container, .scrollable-content { background-color: var(--bg-mai
 .mode-btn.active { border-color: var(--theme-main); background: var(--theme-light); color: var(--theme-main); }
 
 /* =========================================
-   THEME FIX PATCH (FORCING STUBBORN ELEMENTS)
+   THEME FIX PATCH v2 (DARK MODE REFINEMENTS)
    ========================================= */
 
-/* 1. Fix white table rows in dark mode (Overrides inline HTML styles) */
+/* 1. Fix white table rows in dark mode */
 .stat-item {
     background-color: transparent !important;
     border-bottom-color: var(--border-color) !important;
 }
 
-/* 2. Fix the "Exams Data" Dropdown staying blue */
-.dropdown-select, .marks-header-container {
-    background-color: var(--theme-main) !important;
+/* 2. Match Dot Patterns to the Theme Color */
+.bottom-nav, .periods-grid {
+    background-image: radial-gradient(var(--theme-main) 1.5px, transparent 1.5px) !important;
+    opacity: 0.9;
+}
+.tt-card {
+    background-image: radial-gradient(var(--border-color) 1.5px, transparent 1.5px) !important;
+}
+
+/* 3. Fix "My Curriculum" Subject Text in Dark Mode */
+#enrolledSubjectsListText {
+    color: var(--text-main) !important;
+}
+#enrolledSubjectsListText i {
+    color: var(--text-muted) !important;
+}
+
+/* 4. Fix Big Wave Container (Make the 'Air' dark in Dark Mode) */
+body.dark-mode .water-progress {
+    background-color: var(--bg-main) !important;
+}
+body.dark-mode .water-fill::before {
+    background-color: var(--bg-main) !important;
+}
+body.dark-mode .water-fill::after {
+    background-color: var(--bg-main) !important;
+    opacity: 0.7 !important; /* Preserves the layered wave effect */
+}
+
+/* 5. Force the Mini Wave Percentage Text to be White in Dark Mode */
+body.dark-mode #animatedRowText {
     color: #ffffff !important;
 }
 
-/* 3. Fix the progress bars in the Marks section (Overrides JS hardcoded blue) */
+/* 6. Fix Timetable Boxes (Pills & Text visibility) */
+.tt-pill {
+    background-color: var(--bg-main) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+}
+.sub-pill { color: var(--text-main) !important; }
+.sem-pill, .room-pill { color: var(--text-muted) !important; }
+.cat-pill { color: var(--theme-main) !important; }
+
+/* 7. Fix Calendar Modals & Close Buttons */
+.calendar-weekdays { color: var(--text-main) !important; }
+.cal-cell.normal { color: var(--text-main) !important; }
+.close-modal-btn {
+    background-color: var(--bg-main) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+}
+.close-modal-btn:hover {
+    background-color: var(--theme-light) !important;
+}
+
+/* 8. Fix Dropdowns & Progress Bars */
+.dropdown-select {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--theme-main) !important;
+}
+.marks-header-container {
+    background-color: transparent !important;
+}
 #marksListContainer .progress-fill {
     background-color: var(--theme-main) !important;
 }
 
-/* 4. Fix the bottom navigation fade effect so it matches Dark Mode perfectly */
+/* 9. Seamless Bottom Fade for Navigation */
 .bottom-nav-mask {
     background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important;
 }
