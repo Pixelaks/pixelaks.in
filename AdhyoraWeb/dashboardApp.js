@@ -258,13 +258,13 @@ function fetchMarksForSemester(semName) {
 function drawMarksUI(marksArray) {
     el.markList.innerHTML = (!marksArray || marksArray.length === 0) ? "" : marksArray.map(m => {
         const pct = m.max > 0 ? (m.obtained / m.max) * 100 : 0;
-        return `<div class="subject-row"><div class="row-header"><span>${m.name}</span><span>${m.obtained}/${m.max} <span style="font-size:9px; color:#888;">(${pct.toFixed(0)}%)</span></span></div><div class="progress-track"><div class="progress-fill" style="width: ${pct}%; background-color: #3b82f6;"></div></div></div>`;
+        return `<div class="subject-row"><div class="row-header"><span>${m.name}</span><span>${m.obtained}/${m.max} <span style="font-size:9px; color:#888;">(${pct.toFixed(0)}%)</span></span></div><div class="progress-track"><div class="progress-fill" style="width: ${pct}%; background-color: ${barColor};"></div></div></div>`;
     }).join('');
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
 // ==========================================
-// 🚨 VIEW TOGGLING (ALL 8 VIEWS/BUTTONS) 🚨
+// 🚨 VIEW TOGGLING 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -278,7 +278,8 @@ function switchView(activeBtn, viewToShow) {
     [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.style.display = "none");
     
     activeBtn.classList.add("active");
-    viewToShow.style.display = (viewToShow === el.mainView) ? "" : "flex";
+    // 🚨 THE FIX: Reverted to empty string so the CSS Layout takes over naturally!
+    viewToShow.style.display = "";
 }
 
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
@@ -291,7 +292,6 @@ btnNavTimetable.addEventListener("click", () => {
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
-
 btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
 btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
@@ -384,7 +384,6 @@ async function loadMessages() {
         }).join('');
     } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
-
 
 // ==========================================
 // DAILY ATTENDANCE MANAGER
@@ -552,7 +551,7 @@ document.getElementById("closeSessionsBtn").addEventListener("click", () => el.s
 async function loadSessions() {
     el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
     try {
-        // 🚨 THE FIX: Pull from BOTH UID and RollNumber to catch Unity Editor Logins!
+        // 🚨 Double Query: Finds Unity (Auth UID) AND Web (Roll Number) log-ins!
         const q1 = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
         const q2 = query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions"));
         
@@ -571,7 +570,7 @@ async function loadSessions() {
             if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
             // 🚨 Re-added the Kick button logic!
-            let btnHtml = isMe ? "" : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
+            let btnHtml = isMe ? `<span style="font-size:10px; color:#10b981; font-weight:bold;">Active</span>` : `<button class="revoke-btn" onclick="revokeSession('${doc.id}', '${doc.ref.parent.parent.id}')">Kick</button>`;
             
             htmlBuffer += `
                 <div class="session-card">
@@ -587,7 +586,7 @@ async function loadSessions() {
     } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
 }
 
-// 🚨 Revoke Session from proper path
+// 🚨 Delete Session from proper path
 window.revokeSession = async function(sessionID, parentDocID) {
     if (!confirm("Are you sure you want to log this device out?")) return;
     try {
