@@ -400,8 +400,39 @@ body.dark-mode {
 .tt-node { border-color: var(--border-color) !important; background-color: var(--bg-card) !important; color: var(--text-muted) !important; }
 
 /* =========================================
-   PREVIOUS V3 FIXES BELOW (DO NOT REMOVE)
+   THEME FIX PATCH (ULTIMATE MASTER VERSION)
    ========================================= */
+
+/* --- PART 1: NEW V4 & V5 POLISH (HOVERS & MODALS) --- */
+
+/* Tell the OS to use Dark Mode for native elements (Fixes bright scrollbars/dropdowns) */
+body.dark-mode { color-scheme: dark; }
+
+/* Fix Profile Modal & All General Text in Dark Mode */
+#profileDetailsContent, 
+#profileDetailsContent b, 
+#profileDetailsContent span,
+.modal-overlay b { color: var(--text-main) !important; }
+
+/* Fix Timeline / Visual Indicator Colors */
+.timeline-progress { background-color: var(--theme-main) !important; }
+.tt-node.completed { background-color: var(--theme-main) !important; border-color: var(--theme-main) !important; color: #ffffff !important; }
+.tt-node.active { border-color: var(--theme-main) !important; color: var(--theme-main) !important; background-color: var(--theme-light) !important; }
+.timeline-track { background-color: var(--border-color) !important; }
+.tt-node { border-color: var(--border-color) !important; background-color: var(--bg-card) !important; color: var(--text-muted) !important; }
+
+/* Restore the soft, light theme tint to the Profile and Timetable cards */
+.profile-card, .tt-card { background-color: var(--theme-light) !important; border: 1.5px solid var(--theme-main) !important; }
+
+/* Profile Card Interactive Hover Effect */
+.profile-card { transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important; cursor: pointer; }
+.profile-card:hover { background-color: var(--theme-nav) !important; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
+
+/* Dark Mode Hover Enhancements */
+body.dark-mode .profile-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important; border-color: var(--text-main) !important; }
+
+
+/* --- PART 2: V3 BASE (EXISTING FIXES) --- */
 
 /* Fix white table rows */
 .stat-item { background-color: transparent !important; border-bottom-color: var(--border-color) !important; }
