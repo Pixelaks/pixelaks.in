@@ -324,33 +324,45 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
     // Apply the dynamic color to the "Current" cell background
-    // Configure the row to hold the water effect securely
-    el.curPctText.style.position = "relative";
-    el.curPctText.style.overflow = "hidden";
-    el.curPctText.style.padding = "0"; 
-    el.curPctText.style.borderBottom = "none";
-    el.curPctText.style.backgroundColor = "transparent"; 
-    
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+    let targetHeight = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
 
-    // INJECT AT HEIGHT 0 FIRST (and removed bold font-weight)
-    el.curPctText.innerHTML = `
-        <div class="row-water-container" id="animatedRowWater" style="background-color: ${ringColor}; height: 0px;">
-            <div class="row-water-wave"></div>
-        </div>
-        <div style="position: relative; z-index: 2; padding: 8px 12px; font-weight: normal; color: ${textColor};">
-            Current: ${percent.toFixed(2)}%
-        </div>
-    `;
+    // Check if we already built the water effect inside this row
+    let existingWater = document.getElementById("animatedRowWater");
+    let existingText = document.getElementById("animatedRowText");
 
-    // Wait a tiny fraction of a second, then set the final height to trigger the CSS transition!
-    setTimeout(() => {
-        let waterEl = document.getElementById("animatedRowWater");
-        if(waterEl) {
-            waterEl.style.height = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
-        }
-    }, 50);
+    if (!existingWater) {
+        // FIRST TIME SETUP: Build the row and inject at 0 height
+        el.curPctText.style.position = "relative";
+        el.curPctText.style.overflow = "hidden";
+        el.curPctText.style.padding = "0"; 
+        el.curPctText.style.borderBottom = "none";
+        el.curPctText.style.backgroundColor = "transparent"; 
+
+        el.curPctText.innerHTML = `
+            <div class="row-water-container" id="animatedRowWater" style="background-color: ${ringColor}; height: 0px;">
+                <div class="row-water-wave"></div>
+            </div>
+            <div id="animatedRowText" style="position: relative; z-index: 2; padding: 8px 12px; font-weight: normal; color: ${textColor}; transition: color 0.5s;">
+                Current: ${percent.toFixed(2)}%
+            </div>
+        `;
+
+        // Wait a tiny fraction of a second, then trigger the rising animation
+        setTimeout(() => {
+            let waterEl = document.getElementById("animatedRowWater");
+            if(waterEl) waterEl.style.height = targetHeight;
+        }, 50);
+        
+    } else {
+        // ALREADY EXISTS: Just update the properties! CSS transitions will handle the smooth animation automatically.
+        existingWater.style.backgroundColor = ringColor;
+        existingWater.style.height = targetHeight;
+        
+        existingText.style.color = textColor;
+        existingText.innerText = `Current: ${percent.toFixed(2)}%`;
+    }
     el.waterFill.style.backgroundColor = ringColor;
     el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
