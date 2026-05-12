@@ -1,3 +1,15 @@
+/* Add this to the VERY TOP of your CSS file */
+@import url('https://fonts.googleapis.com/css2?family=Yatra+One&display=swap');
+
+/* Find and replace your existing .logo-text class with this: */
+.logo-text { 
+    color: #3b82f6; 
+    font-size: 32px; /* Slightly larger as Yatra One scales differently */
+    letter-spacing: 3px; 
+    font-family: 'Yatra One', system-ui, sans-serif; /* Applied the new font! */
+    margin: 0;
+}
+
 /* =========================================
    GLOBAL RESET & CONTAINERS
    ========================================= */
