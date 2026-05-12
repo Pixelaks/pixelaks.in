@@ -323,9 +323,9 @@ function updateUIForCurrentSemester(optionalDept) {
     let ringColor = percent >= 85 ? "#4caf50" : percent >= 70 ? "#ffc107" : percent >= 50 ? "#ff9800" : "#f44336";
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
-    // Apply the dynamic color to the "Current" cell background
+    
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
     let targetHeight = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
 
     // Check if we already built the water effect inside this row
@@ -736,6 +736,20 @@ el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open")
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
+
+// --- NATIVE BACK BUTTON TRAP (SIGN OUT WARNING) ---
+window.history.pushState({ page: "dashboard" }, "", "");
+window.addEventListener("popstate", (e) => {
+    if (confirm("Do you want to sign out?")) {
+        signOut(auth).then(() => window.location.href = "index.html");
+    } else {
+        // Push state back so the trap works again if they click cancel
+        window.history.pushState({ page: "dashboard" }, "", "");
+    }
+});
+// --------------------------------------------------
+
+
 // ==========================================
 // SIDEBAR EXTERNAL LINKS
 // ==========================================
@@ -921,7 +935,6 @@ const themesModal = document.getElementById("themesModal");
 const btnThemes = document.getElementById("btnThemes");
 const closeThemesBtn = document.getElementById("closeThemesBtn");
 
-// Predefined Theme Maps (Main, Light bg, Nav bg)
 // Predefined Theme Maps (Main, Light bg, Nav bg)
 const colorPalettes = {
     blue:   { main: '#3b82f6', light: '#e0f2fe', nav: '#bfdbfe' },
