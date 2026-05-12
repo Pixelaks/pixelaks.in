@@ -4,6 +4,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden; margin: 0; }
 
+/* 🚨 THE FIX: Bulletproof view hider 🚨 */
+.hidden-view { display: none !important; }
+
 .dashboard-container { background-color: #ffffff; width: 100%; max-width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
 .header { text-align: center; padding: 15px 0; flex-shrink: 0; }
 .logo-text { color: #3b82f6; font-size: 28px; letter-spacing: 2px; font-weight: 700; }
@@ -23,7 +26,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .scrollable-content::-webkit-scrollbar { width: 8px; }
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-/* 🚨 THE FIX: Specific centering for non-grid views 🚨 */
 .centered-view { display: flex; flex-direction: column; align-items: center; }
 
 .attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; width: 100%; }
@@ -52,13 +54,14 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 /* =========================================
    🚨 RESTORED: PERFECT PC LAYOUT 🚨
+   (No more !important on the grid, so hiding works!)
    ========================================= */
 @media (min-width: 768px) {
     .profile-card { margin: 0 40px 20px 40px; }
     .semester-nav { margin: 0 40px; border-radius: 10px; }
     
     #mainDashboardView { 
-        display: grid !important; 
+        display: grid; /* Grid restores the wide PC split view */
         grid-template-columns: 1fr 1fr; 
         gap: 40px; 
         padding: 30px 40px 120px 40px; 
@@ -68,8 +71,10 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
     .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; gap: 80px; }
     .stats-list { max-width: 500px; } 
     
-    /* Ensure other single views stay centered, without affecting the grid */
-    .centered-view { padding-top: 40px; }
+    .daily-attendance-panel { padding-top: 60px; display: flex; align-items: center; flex-direction: column; grid-column: span 2;}
+    .timetable-panel { padding-top: 40px; display: flex; align-items: center; flex-direction: column; grid-column: span 2;}
+    
+    #assignmentsView, #actualNotifView, #messagesView { grid-column: span 2; display: flex; flex-direction: column; align-items: center; width: 100%;}
 }
 
 /* =========================================
@@ -92,6 +97,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 /* =========================================
    DAILY ATTENDANCE VIEW
    ========================================= */
+.daily-attendance-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 .daily-card { width: 100%; max-width: 400px; background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; margin-top: 20px;}
 .daily-header-blue { background: #3b82f6; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
 .date-picker-btn { text-align: center; cursor: pointer; padding: 5px 15px; border-radius: 10px; transition: 0.2s; }
@@ -108,6 +114,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 /* =========================================
    TIMETABLE VIEW
    ========================================= */
+.timetable-panel { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding-bottom: 120px; }
 .day-btn-group { display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 15px; max-width: 500px; width: 100%;}
 .day-btn { background: transparent; border: none; padding: 8px 15px; border-radius: 10px; font-weight: 600; font-size: 13px; color: #64748b; cursor: pointer; transition: 0.2s; flex:1;}
 .day-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.3);}
@@ -132,20 +139,20 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 
 /* =========================================
-   🚨 ALL 8 BUTTONS PERFECTLY SIZED 🚨
+   🚨 ADJUSTED: BOTTOM NAV FOR 8 BUTTONS 🚨
    ========================================= */
 .bottom-nav-mask { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%); display: flex; justify-content: center; align-items: center; padding-top: 20px; z-index: 10; pointer-events: none; }
 
 .bottom-nav { 
     background-color: #bfdbfe; background-image: radial-gradient(#93c5fd 1.5px, transparent 1.5px); background-size: 12px 12px; 
     border-radius: 35px; padding: 8px 10px; 
-    display: flex; justify-content: space-around; gap: 4px; 
+    display: flex; justify-content: space-between; gap: 4px; 
     width: 98%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); pointer-events: auto; 
 }
 
-/* 34px ensures 8 buttons fit securely on screens down to 320px wide! */
+/* Shrunk slightly to 34px so all 8 fit securely on any screen! */
 .icon-btn { 
-    background: #ffffff; border: none; font-size: 14px; cursor: pointer; opacity: 0.8; transition: 0.2s; 
+    background: #ffffff; border: none; font-size: 15px; cursor: pointer; opacity: 0.8; transition: 0.2s; 
     width: 34px; height: 34px; border-radius: 50%; display: flex; justify-content: center; align-items: center; 
     box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 0; flex-shrink: 0;
 }
@@ -188,7 +195,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .close-modal-btn { background: #f1f5f9; color: #333; border: none; border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; margin-top: 5px; }
 .close-modal-btn:hover { background: #e2e8f0; }
 
-/* 🚨 DEVICE SESSION ITEM (KICK BUTTON FIXED) 🚨 */
+/* Device Session Item */
 .session-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
 .session-info { flex: 1; margin-right: 10px; overflow: hidden; }
 .session-info h4 { font-size: 13px; color: #0f172a; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
