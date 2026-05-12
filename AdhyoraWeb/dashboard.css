@@ -17,15 +17,16 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .nav-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 10px;}
 
 /* =========================================
-   SCROLLABLE CONTENT AREA
+   SCROLLABLE CONTENT AREA (MAIN VIEW)
    ========================================= */
-.scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 120px; }
+.scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 120px; width: 100%; }
 .scrollable-content::-webkit-scrollbar { width: 8px; }
 .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-.flex-column-center { display: flex; flex-direction: column; align-items: center; }
+/* 🚨 THE FIX: Specific centering for non-grid views 🚨 */
+.centered-view { display: flex; flex-direction: column; align-items: center; }
 
-.attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px;}
+.attendance-overview { display: flex; flex-direction: column; align-items: center; gap: 25px; margin-bottom: 30px; width: 100%; }
 .circular-progress { width: 130px; height: 130px; border-radius: 50%; background: conic-gradient(#e0e0e0 360deg); display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
 .inner-circle { width: 106px; height: 106px; border-radius: 50%; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .projected-text { font-size: 11px; color: #666; }
@@ -51,24 +52,24 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 /* =========================================
    🚨 RESTORED: PERFECT PC LAYOUT 🚨
-   (Removed the center alignment that broke scaling)
    ========================================= */
 @media (min-width: 768px) {
     .profile-card { margin: 0 40px 20px 40px; }
     .semester-nav { margin: 0 40px; border-radius: 10px; }
     
-    .scrollable-content { 
-        display: grid; grid-template-columns: 1fr 1fr; gap: 40px; 
-        padding: 30px 40px 120px 40px; align-items: start; 
+    #mainDashboardView { 
+        display: grid !important; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 40px; 
+        padding: 30px 40px 120px 40px; 
+        align-items: start; 
     }
     
     .attendance-overview { grid-column: span 2; flex-direction: row; justify-content: center; gap: 80px; }
     .stats-list { max-width: 500px; } 
     
-    .daily-attendance-panel { padding-top: 60px; display: flex; align-items: center; flex-direction: column; grid-column: span 2;}
-    .timetable-panel { padding-top: 40px; display: flex; align-items: center; flex-direction: column; grid-column: span 2;}
-    
-    #assignmentsView, #actualNotifView, #messagesView { grid-column: span 2; display: flex; flex-direction: column; align-items: center; width: 100%;}
+    /* Ensure other single views stay centered, without affecting the grid */
+    .centered-view { padding-top: 40px; }
 }
 
 /* =========================================
@@ -82,6 +83,7 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .data-card.assign { border-left-color: #10b981; } 
 .data-card.notif { border-left-color: #8b5cf6; } 
 .data-card.broadcast { border-left-color: #f59e0b; } 
+
 .card-title { font-size: 14px; font-weight: 700; color: #0f172a; }
 .card-body { font-size: 12px; color: #475569; line-height: 1.4; }
 .card-meta { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 5px; font-weight: 600;}
@@ -90,7 +92,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 /* =========================================
    DAILY ATTENDANCE VIEW
    ========================================= */
-.daily-attendance-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 .daily-card { width: 100%; max-width: 400px; background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; margin-top: 20px;}
 .daily-header-blue { background: #3b82f6; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
 .date-picker-btn { text-align: center; cursor: pointer; padding: 5px 15px; border-radius: 10px; transition: 0.2s; }
@@ -107,7 +108,6 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 /* =========================================
    TIMETABLE VIEW
    ========================================= */
-.timetable-panel { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding-bottom: 120px; }
 .day-btn-group { display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; background: #f1f5f9; padding: 5px; border-radius: 15px; max-width: 500px; width: 100%;}
 .day-btn { background: transparent; border: none; padding: 8px 15px; border-radius: 10px; font-weight: 600; font-size: 13px; color: #64748b; cursor: pointer; transition: 0.2s; flex:1;}
 .day-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.3);}
@@ -132,20 +132,20 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 
 
 /* =========================================
-   🚨 ADJUSTED: BOTTOM NAV FOR ALL 8 BUTTONS 🚨
+   🚨 ALL 8 BUTTONS PERFECTLY SIZED 🚨
    ========================================= */
 .bottom-nav-mask { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%); display: flex; justify-content: center; align-items: center; padding-top: 20px; z-index: 10; pointer-events: none; }
 
 .bottom-nav { 
     background-color: #bfdbfe; background-image: radial-gradient(#93c5fd 1.5px, transparent 1.5px); background-size: 12px 12px; 
-    border-radius: 35px; padding: 8px 12px; 
-    display: flex; justify-content: space-between; gap: 4px; 
+    border-radius: 35px; padding: 8px 10px; 
+    display: flex; justify-content: space-around; gap: 4px; 
     width: 98%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); pointer-events: auto; 
 }
 
-/* Shrunk to 34px to guarantee all 8 fit without overflowing */
+/* 34px ensures 8 buttons fit securely on screens down to 320px wide! */
 .icon-btn { 
-    background: #ffffff; border: none; font-size: 15px; cursor: pointer; opacity: 0.8; transition: 0.2s; 
+    background: #ffffff; border: none; font-size: 14px; cursor: pointer; opacity: 0.8; transition: 0.2s; 
     width: 34px; height: 34px; border-radius: 50%; display: flex; justify-content: center; align-items: center; 
     box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 0; flex-shrink: 0;
 }
@@ -188,9 +188,10 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 .close-modal-btn { background: #f1f5f9; color: #333; border: none; border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; margin-top: 5px; }
 .close-modal-btn:hover { background: #e2e8f0; }
 
-/* Device Session Item */
+/* 🚨 DEVICE SESSION ITEM (KICK BUTTON FIXED) 🚨 */
 .session-card { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
-.session-info h4 { font-size: 13px; color: #0f172a; margin-bottom: 2px;}
+.session-info { flex: 1; margin-right: 10px; overflow: hidden; }
+.session-info h4 { font-size: 13px; color: #0f172a; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .session-info p { font-size: 10px; color: #64748b;}
-.revoke-btn { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: bold; cursor: pointer;}
-.revoke-btn:hover { background: #fee2e2; }
+.revoke-btn { flex-shrink: 0; background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+.revoke-btn:hover { background: #ef4444; color: white;}
