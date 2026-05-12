@@ -331,7 +331,7 @@ function updateUIForCurrentSemester(optionalDept) {
     el.curPctText.style.borderBottom = "none";
     
     // Choose text color based on background (Black for yellow, White for dark colors)
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
 
     // Inject the moving water background AND the text layered on top
     el.curPctText.innerHTML = `
