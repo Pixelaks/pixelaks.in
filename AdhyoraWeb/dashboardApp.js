@@ -30,6 +30,7 @@ let optimizedSubjectCache = null;
 
 let currentDailyDate = new Date(); 
 let cachedMedicalLeaves = []; 
+let dailyData = []; // 🚨 THE FIX: Restored this missing variable!
 
 // 🚨 NEW CACHES FOR OPTIMIZATION
 let dailyAttendanceCache = {}; 
@@ -154,25 +155,22 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        // 🚨 BOOT UP THE ZERO-COST LISTENERS ONCE
         if (!isDataListening) {
             isDataListening = true;
             startBackgroundListeners();
         }
 
-        if (!el.ttView.classList.contains("hidden-view")) {
-            let todayName = document.querySelector('.day-btn.active').dataset.day;
-            loadTimetableForDay(todayName);
+        if (el.ttView && !el.ttView.classList.contains("hidden-view")) {
+            let activeDayBtn = document.querySelector('.day-btn.active');
+            if (activeDayBtn) loadTimetableForDay(activeDayBtn.dataset.day);
         }
-        if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
-        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
-        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
+        if (el.assignView && !el.assignView.classList.contains("hidden-view")) loadAssignments();
+        if (el.actualNotifView && !el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+        if (el.msgView && !el.msgView.classList.contains("hidden-view")) loadMessages();
     });
 }
 
-// 🚨 THE FIX: Background caching engine
 function startBackgroundListeners() {
-    // 1. Assignments cache
     let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
     onSnapshot(query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc")), (snap) => {
         cachedAssignments = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
@@ -184,17 +182,16 @@ function startBackgroundListeners() {
                 cachedAssignments.push({ title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher", due: d.dueDate || "N/A", time: d.createdAt ? d.createdAt.toDate() : new Date() });
             }
         });
-        if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
+        if (el.assignView && !el.assignView.classList.contains("hidden-view")) loadAssignments();
     });
 
-    // 2. Notifications cache
     function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
     let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
     let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
     let inboxCache = []; let globalCache = [];
     const updateNotifUI = () => {
         cachedNotifs = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time);
-        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+        if (el.actualNotifView && !el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
     };
     onSnapshot(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         inboxCache = []; snap.forEach(doc => { let d = doc.data(); inboxCache.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
@@ -205,11 +202,10 @@ function startBackgroundListeners() {
         updateNotifUI();
     });
 
-    // 3. Messages cache
     let broadcastCache = []; let privateChatCache = [];
     const updateMsgUI = () => {
         cachedMessages = [...broadcastCache, ...privateChatCache].sort((a,b) => b.time - a.time);
-        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
+        if (el.msgView && !el.msgView.classList.contains("hidden-view")) loadMessages();
     };
     onSnapshot(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         broadcastCache = [];
@@ -233,13 +229,12 @@ function startBackgroundListeners() {
         });
     });
 
-    // 4. Sessions cache
     const updateSessionCache = (snap, parentID) => {
         snap.docChanges().forEach(change => {
             if (change.type === "removed") sessionsCache.delete(change.doc.id);
             else sessionsCache.set(change.doc.id, { id: change.doc.id, parent: parentID, ...change.doc.data() });
         });
-        if (el.sessionsModal.classList.contains("active")) loadSessions();
+        if (el.sessionsModal && el.sessionsModal.classList.contains("active")) loadSessions();
     };
     onSnapshot(query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions")), snap => updateSessionCache(snap, currentRollNo));
     onSnapshot(query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions")), snap => updateSessionCache(snap, auth.currentUser.uid));
@@ -324,10 +319,9 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
     
-    // 🚨 THE FIX: Fill the liquid wave instead of drawing a circle!
+    // THE LIQUID WAVE CONTROLLER
     const liquidWave = document.getElementById("liquidWave");
     if (liquidWave) {
-        // We add 5% to the height so the wave doesn't look completely empty at 0%
         let fillHeight = Math.max(5, percent); 
         liquidWave.style.height = `${fillHeight}%`;
         liquidWave.style.backgroundColor = ringColor;
@@ -342,9 +336,8 @@ function updateUIForCurrentSemester(optionalDept) {
     fetchMarksForSemester(semData.name);
     buildEnrolledSubjectsUI(semData.name); 
 
-    // 🚨 RESET CACHES FOR NEW SEMESTER
     dailyAttendanceCache = {}; 
-    startTimetableListener(); // This flushes and restarts the timetable RAM cache
+    startTimetableListener(); 
 }
 
 function fetchMarksForSemester(semName) {
@@ -377,11 +370,9 @@ function drawMarksUI(marksArray) {
     el.noMarks.style.display = (!marksArray || marksArray.length === 0) ? "block" : "none";
 }
 
-// ==========================================
-// ENROLLED SUBJECTS BUILDER
-// ==========================================
 async function buildEnrolledSubjectsUI(semesterName) {
     let listEl = document.getElementById("enrolledSubjectsListText");
+    if (!listEl) return; // 🚨 SAFETY LOCK: Stop if HTML is missing
     listEl.innerHTML = "<i>Loading subjects...</i>";
     
     let cleanSemNum = semesterName.replace("Semester", "").replace("_", "").trim();
@@ -427,31 +418,37 @@ async function buildEnrolledSubjectsUI(semesterName) {
     else listEl.innerHTML = finalSubjects.join("<br>");
 }
 
-// ==========================================
-// PROFILE MODAL
-// ==========================================
-document.getElementById("btnProfileDetails").addEventListener("click", () => {
-    let d = currentStudentProfileData;
-    if(!d) return;
-    
-    let html = `
-        <b>Name:</b> ${d.Name || d.name || "N/A"}<br>
-        <b>Roll Number:</b> ${d.RollNumber || currentRollNo}<br>
-        <b>Course:</b> ${d.courseType || d.CourseType || "N/A"}<br>
-        <b>Department:</b> ${d.Department || d.department || "N/A"}<br>
-        <b>Current Year:</b> ${d.Year || d.year || "N/A"}<br>
-        <b>Status:</b> ${d.authStatus || "N/A"}<br>
-        <b>Email:</b> ${d.email || "N/A"}<br>
-        <b>Legal Consent:</b> ${d.hasAgreedToDisclaimer ? "Agreed" : "Pending"}<br><br>
-        <b>User ID:</b> <span style="font-size:10px; color:#888;">${auth.currentUser.uid}</span>
-    `;
-    el.profileContent.innerHTML = html;
-    el.profileModal.classList.add("active");
-});
-document.getElementById("closeProfileBtn").addEventListener("click", () => el.profileModal.classList.remove("active"));
+const btnProfileDetails = document.getElementById("btnProfileDetails");
+if (btnProfileDetails) { // 🚨 SAFETY LOCK: Stop if HTML is missing
+    btnProfileDetails.addEventListener("click", () => {
+        let d = currentStudentProfileData;
+        if(!d) return;
+        
+        let html = `
+            <b>Name:</b> ${d.Name || d.name || "N/A"}<br>
+            <b>Roll Number:</b> ${d.RollNumber || currentRollNo}<br>
+            <b>Course:</b> ${d.courseType || d.CourseType || "N/A"}<br>
+            <b>Department:</b> ${d.Department || d.department || "N/A"}<br>
+            <b>Current Year:</b> ${d.Year || d.year || "N/A"}<br>
+            <b>Status:</b> ${d.authStatus || "N/A"}<br>
+            <b>Email:</b> ${d.email || "N/A"}<br>
+            <b>Legal Consent:</b> ${d.hasAgreedToDisclaimer ? "Agreed" : "Pending"}<br><br>
+            <b>User ID:</b> <span style="font-size:10px; color:#888;">${auth.currentUser.uid}</span>
+        `;
+        if (el.profileContent) el.profileContent.innerHTML = html;
+        if (el.profileModal) el.profileModal.classList.add("active");
+    });
+}
+
+const closeProfileBtn = document.getElementById("closeProfileBtn");
+if (closeProfileBtn) {
+    closeProfileBtn.addEventListener("click", () => {
+        if (el.profileModal) el.profileModal.classList.remove("active");
+    });
+}
 
 // ==========================================
-// 🚨 VIEW TOGGLING 🚨
+// VIEW TOGGLING 
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -461,38 +458,50 @@ const btnNavTimetable = document.getElementById("btnNavTimetable");
 const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
-    [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
-    [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
-    activeBtn.classList.add("active");
-    viewToShow.classList.remove("hidden-view");
+    if (btnNavMain) btnNavMain.classList.remove("active");
+    if (btnNavAssign) btnNavAssign.classList.remove("active");
+    if (btnNavNotif) btnNavNotif.classList.remove("active");
+    if (btnNavMsg) btnNavMsg.classList.remove("active");
+    if (btnNavTimetable) btnNavTimetable.classList.remove("active");
+    if (btnNavDaily) btnNavDaily.classList.remove("active");
+
+    if (el.mainView) el.mainView.classList.add("hidden-view");
+    if (el.assignView) el.assignView.classList.add("hidden-view");
+    if (el.actualNotifView) el.actualNotifView.classList.add("hidden-view");
+    if (el.msgView) el.msgView.classList.add("hidden-view");
+    if (el.ttView) el.ttView.classList.add("hidden-view");
+    if (el.dailyView) el.dailyView.classList.add("hidden-view");
+
+    if (activeBtn) activeBtn.classList.add("active");
+    if (viewToShow) viewToShow.classList.remove("hidden-view");
 }
 
-btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
-btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
-btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
-btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
-btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); }); 
+if (btnNavMain) btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
+if (btnNavAssign) btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
+if (btnNavNotif) btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
+if (btnNavMsg) btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
+if (btnNavDaily) btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); }); 
 
-btnNavTimetable.addEventListener("click", () => { 
-    switchView(btnNavTimetable, el.ttView); 
-    let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
-    let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    if (!validDays.includes(todayName)) todayName = "Monday";
-    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
-    
-    // Check cache
-    loadTimetableForDay(todayName);
-});
+if (btnNavTimetable) {
+    btnNavTimetable.addEventListener("click", () => { 
+        switchView(btnNavTimetable, el.ttView); 
+        let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
+        let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        if (!validDays.includes(todayName)) todayName = "Monday";
+        document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
+        
+        loadTimetableForDay(todayName);
+    });
+}
 
-// ==========================================
-// 🚨 ZERO-COST RENDER FUNCTIONS 🚨
-// ==========================================
 function loadAssignments() {
+    if (!el.assignList) return;
     if (cachedAssignments.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
     el.assignList.innerHTML = cachedAssignments.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
 }
 
 function loadActualNotifications() {
+    if (!el.actualNotifList) return;
     if (cachedNotifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
     el.actualNotifList.innerHTML = cachedNotifs.map(n => {
         let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -501,6 +510,7 @@ function loadActualNotifications() {
 }
 
 function loadMessages() {
+    if (!el.msgList) return;
     if (cachedMessages.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
     el.msgList.innerHTML = cachedMessages.map(m => {
         let css = m.type === "broadcast" ? "broadcast" : "";
@@ -510,24 +520,32 @@ function loadMessages() {
 }
 
 // ==========================================
-// 🚨 PULL-THROUGH CACHE: DAILY ATTENDANCE
+// PULL-THROUGH CACHE: DAILY ATTENDANCE
 // ==========================================
-document.getElementById("btnPrevDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
-document.getElementById("btnNextDay").addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
+const btnPrevDay = document.getElementById("btnPrevDay");
+if (btnPrevDay) btnPrevDay.addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() - 1); loadDailyAttendance(); });
 
-el.dailyDateBtn.addEventListener("click", () => {
-    calendarMode = "daily"; el.calModal.classList.add("active"); 
-    currentDisplayDate = new Date(currentDailyDate); loadCalendarData();
-});
+const btnNextDay = document.getElementById("btnNextDay");
+if (btnNextDay) btnNextDay.addEventListener("click", () => { currentDailyDate.setDate(currentDailyDate.getDate() + 1); loadDailyAttendance(); });
+
+if (el.dailyDateBtn) {
+    el.dailyDateBtn.addEventListener("click", () => {
+        calendarMode = "daily"; 
+        if (el.calModal) el.calModal.classList.add("active"); 
+        currentDisplayDate = new Date(currentDailyDate); 
+        loadCalendarData();
+    });
+}
 
 async function loadDailyAttendance() {
+    if (!el.dailyDate || !el.dailyStatus || !el.periodsGrid) return;
+    
     el.dailyDate.innerText = currentDailyDate.toLocaleString('default', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
     
     let mStr = String(currentDailyDate.getMonth() + 1).padStart(2, '0'); let dStr = String(currentDailyDate.getDate()).padStart(2, '0');
     let dateStr = `${currentDailyDate.getFullYear()}-${mStr}-${dStr}`;
     let activeSemName = sortedSemesterKeys[currentSemesterIndex] ? sortedSemesterKeys[currentSemesterIndex].replace("_", " ") : "Semester 1";
 
-    // 🚨 0 COST: Check RAM first
     if (dailyAttendanceCache[dateStr]) {
         renderDailyData(dailyAttendanceCache[dateStr]);
         return; 
@@ -543,13 +561,14 @@ async function loadDailyAttendance() {
         let docs = [];
         if(!snapshot.empty) { snapshot.forEach(doc => { if (!doc.id.includes("GLOBAL")) docs.push(doc.data()); }); }
         
-        // Save to RAM for next time
         dailyAttendanceCache[dateStr] = docs; 
         renderDailyData(docs);
     } catch(e) { el.dailyStatus.innerText = "Network Error"; }
 }
 
 function renderDailyData(docs) {
+    if (!el.periodsGrid || !el.dailyStatus) return;
+    
     dailyData = [];
     for(let i=0; i<6; i++) { dailyData.push({hasData: false}); }
 
@@ -590,15 +609,18 @@ function renderDailyData(docs) {
 }
 
 window.openPeriodDetail = function(index) {
+    if (!el.detailModal || !el.dSub || !el.dTeach || !el.dStat) return;
     let d = dailyData[index]; if(!d.hasData) return;
     el.dSub.innerText = d.subject; el.dTeach.innerText = `${d.teacher} • ${d.time}`;
     el.dStat.innerHTML = d.isMedical ? "<color style='color:#3b82f6'>Medical Leave</color>" : (d.isPresent ? "<color style='color:#4caf50'>Present</color>" : "<color style='color:#f44336'>Absent</color>");
     el.detailModal.classList.add("active");
 };
-document.getElementById("closeDetailBtn").addEventListener("click", () => el.detailModal.classList.remove("active"));
+
+const closeDetailBtn = document.getElementById("closeDetailBtn");
+if (closeDetailBtn) closeDetailBtn.addEventListener("click", () => { if(el.detailModal) el.detailModal.classList.remove("active"); });
 
 // ==========================================
-// 🚨 TIMETABLE RAM RENDERING 🚨
+// TIMETABLE RAM RENDERING
 // ==========================================
 document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -629,19 +651,19 @@ function startTimetableListener() {
         timetableCache = [];
         snapshot.forEach(d => timetableCache.push(d.data()));
         
-        if (!el.ttView.classList.contains("hidden-view")) {
-            let activeDay = document.querySelector('.day-btn.active').dataset.day;
-            loadTimetableForDay(activeDay);
+        if (el.ttView && !el.ttView.classList.contains("hidden-view")) {
+            let activeDayBtn = document.querySelector('.day-btn.active');
+            if (activeDayBtn) loadTimetableForDay(activeDayBtn.dataset.day);
         }
     });
 }
 
 function loadTimetableForDay(selectedDay) {
+    if (!el.ttCards) return;
     el.ttCards.innerHTML = ""; 
     let htmlBuffer = "";
     let semStr = (currentSemesterIndex + 1).toString();
 
-    // 🚨 Extracting directly from RAM 🚨
     let docs = timetableCache.filter(d => d.day === selectedDay);
 
     for (let i = 0; i < 6; i++) {
@@ -680,7 +702,7 @@ function loadTimetableForDay(selectedDay) {
 }
 
 function updateTimelineVisuals() {
-    if (el.ttView.classList.contains("hidden-view")) return;
+    if (!el.ttView || el.ttView.classList.contains("hidden-view") || !el.ttProgress || !el.ttNodes) return;
     let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60);
     let pStart = 9.5; let pEnd = 16.5; let progress = Math.max(0, Math.min(1, (currentHour - pStart) / (pEnd - pStart)));
     el.ttProgress.style.height = `${progress * 100}%`;
@@ -697,20 +719,34 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// 🚨 DEVICE SESSIONS & SETTINGS CACHE
+// DEVICE SESSIONS & SETTINGS
 // ==========================================
-document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
-el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
-document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
-document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+if (openSettingsBtn) openSettingsBtn.addEventListener("click", () => { if(el.sidebar) el.sidebar.classList.add("open"); if(el.overlay) el.overlay.classList.add("active"); });
 
-document.getElementById("btnDevices").addEventListener("click", () => {
-    el.sidebar.classList.remove("open"); el.overlay.classList.remove("active");
-    el.sessionsModal.classList.add("active"); loadSessions();
-});
-document.getElementById("closeSessionsBtn").addEventListener("click", () => el.sessionsModal.classList.remove("active"));
+if (el.overlay) el.overlay.addEventListener("click", () => { if(el.sidebar) el.sidebar.classList.remove("open"); if(el.overlay) el.overlay.classList.remove("active"); });
+
+const btnSignOut = document.getElementById("btnSignOut");
+if (btnSignOut) btnSignOut.addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
+
+const btnContact = document.getElementById("btnContact");
+if (btnContact) btnContact.addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
+
+const btnDevices = document.getElementById("btnDevices");
+if (btnDevices) {
+    btnDevices.addEventListener("click", () => {
+        if(el.sidebar) el.sidebar.classList.remove("open"); 
+        if(el.overlay) el.overlay.classList.remove("active");
+        if(el.sessionsModal) el.sessionsModal.classList.add("active"); 
+        loadSessions();
+    });
+}
+
+const closeSessionsBtn = document.getElementById("closeSessionsBtn");
+if (closeSessionsBtn) closeSessionsBtn.addEventListener("click", () => { if(el.sessionsModal) el.sessionsModal.classList.remove("active"); });
 
 function loadSessions() {
+    if (!el.sessionsList) return;
     if (sessionsCache.size === 0) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
     
     let htmlBuffer = "";
@@ -744,16 +780,27 @@ window.revokeSession = async function(sessionID, parentDocID) {
 // ==========================================
 // CALENDAR
 // ==========================================
-document.getElementById("btnCalendar").addEventListener("click", () => { 
-    calendarMode = "global"; el.calModal.classList.add("active"); 
-    let d = new Date(); currentDisplayDate = new Date(d.getFullYear(), d.getMonth(), 1); 
-    loadCalendarData(); 
-});
-document.getElementById("closeCalendarBtn").addEventListener("click", () => el.calModal.classList.remove("active"));
-document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
-document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
+const btnCalendar = document.getElementById("btnCalendar");
+if (btnCalendar) {
+    btnCalendar.addEventListener("click", () => { 
+        calendarMode = "global"; 
+        if(el.calModal) el.calModal.classList.add("active"); 
+        let d = new Date(); currentDisplayDate = new Date(d.getFullYear(), d.getMonth(), 1); 
+        loadCalendarData(); 
+    });
+}
+
+const closeCalendarBtn = document.getElementById("closeCalendarBtn");
+if (closeCalendarBtn) closeCalendarBtn.addEventListener("click", () => { if(el.calModal) el.calModal.classList.remove("active"); });
+
+const calPrevMonth = document.getElementById("calPrevMonth");
+if (calPrevMonth) calPrevMonth.addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
+
+const calNextMonth = document.getElementById("calNextMonth");
+if (calNextMonth) calNextMonth.addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
 
 async function loadCalendarData() {
+    if (!el.calTitle || !el.calGrid || !el.upcomingTxt) return;
     el.calTitle.innerText = currentDisplayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
     el.calGrid.innerHTML = ""; el.upcomingTxt.innerHTML = "Loading...";
     let displayYear = currentDisplayDate.getFullYear(); let displayMonth = currentDisplayDate.getMonth() + 1; 
@@ -772,6 +819,7 @@ async function loadCalendarData() {
 }
 
 function renderCalendarGrid() {
+    if (!el.calGrid) return;
     el.calGrid.innerHTML = ""; const year = currentDisplayDate.getFullYear(); const month = currentDisplayDate.getMonth(); const today = new Date();
     const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let i = 0; i < firstDay; i++) { el.calGrid.innerHTML += `<div class="cal-cell empty"></div>`; }
@@ -793,12 +841,13 @@ function renderCalendarGrid() {
 }
 
 window.selectDateAndLoadDaily = function(dateStr) {
-    el.calModal.classList.remove("active");
+    if (el.calModal) el.calModal.classList.remove("active");
     let parts = dateStr.split('-'); currentDailyDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     loadDailyAttendance();
 };
 
 function updateUpcomingEvent() {
+    if (!el.upcomingTxt) return;
     let checkDate = new Date(); let found = false;
     for (let i = 0; i < 60; i++) {
         let fDate = new Date(checkDate); fDate.setDate(checkDate.getDate() + i);
