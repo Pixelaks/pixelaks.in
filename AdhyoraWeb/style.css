@@ -88,7 +88,7 @@ body {
 .panel-title {
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    font-size: 18px; /* Reduced from 24px */
+    font-size: 6px; /* Reduced from 24px */
     margin-bottom: 25px;
     color: var(--primary-green);
     letter-spacing: 1px;
