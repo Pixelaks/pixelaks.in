@@ -31,30 +31,27 @@ body {
     left: 0;
 }
 
-.header {
-    text-align: center;
-    margin-bottom: 40px;
-    margin-top: 10px;
-    position: relative;
-}
-
-/* --- TRUE GLASSMORPHISM CONTAINER --- */
+/* --- TRUE GLASSMORPHISM CONTAINER (SCALED DOWN FOR MOBILE) --- */
 .app-container {
-    background: rgba(20, 20, 20, 0.25); /* Sheer dark background */
-    backdrop-filter: blur(8px); /* Lowered blur so particles are highly visible! */
+    background: rgba(20, 20, 20, 0.25); 
+    backdrop-filter: blur(8px); 
     -webkit-backdrop-filter: blur(8px);
     
-    /* Frosted glass borders (lighter on top/left to simulate light hitting glass) */
     border: 1px solid rgba(255, 255, 255, 0.08); 
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     border-left: 1px solid rgba(255, 255, 255, 0.15);
     
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(46, 204, 113, 0.05);
-    width: 100%;
-    max-width: 420px;
+    
+    /* FIX: 90% width ensures it never touches the sides of the phone */
+    width: 90%;
+    max-width: 380px; /* Scaled down from 420px */
     height: auto; 
-    min-height: 500px; 
-    padding: 40px 30px;
+    min-height: 480px; 
+    
+    /* FIX: Reduced padding to make content feel more compact */
+    padding: 35px 25px; 
+    
     display: flex;
     flex-direction: column;
     justify-content: center; 
@@ -65,15 +62,21 @@ body {
 }
 .app-container::-webkit-scrollbar { display: none; }
 
-/* --- GLITCH TEXT STYLES (FORCED YATRA ONE) --- */
-/* Target the wrapper AND the inner spans to guarantee the font applies */
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    margin-top: 5px;
+    position: relative;
+}
+
+/* --- GLITCH TEXT STYLES (SCALED DOWN) --- */
 .glitch-wrapper, .main-text, .glitch-layer {
     font-family: 'Yatra One', system-ui, sans-serif !important; 
 }
 
 .glitch-wrapper {
     position: relative;
-    font-size: 46px;
+    font-size: 38px; /* Reduced from 46px */
     font-weight: 400;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -84,16 +87,16 @@ body {
     margin-bottom: 5px;
 }
 
-/* Reduced size for Student SignIn text */
-.panel-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    font-size: 6px; /* Reduced from 24px */
-    margin-bottom: 25px;
-    color: var(--primary-green);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-align: center; /* Centered for better balance */
+.glitch-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0.16em;
+    left: -2%;
+    width: 104%;
+    height: 0.06em;
+    background: var(--primary-green);
+    z-index: 3;
+    box-shadow: 0 0 10px var(--primary-green);
 }
 
 .main-text { position: relative; z-index: 2; color: var(--primary-green); }
@@ -104,9 +107,9 @@ body {
 .subtitle {
     color: #fff;
     font-weight: 300;
-    letter-spacing: 4px;
+    letter-spacing: 3px;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: 10px;
     opacity: 0.8;
 }
 
@@ -119,27 +122,28 @@ body {
 .panel.active { display: flex; animation: fadeIn 0.4s ease forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Normal Poppins font for the title now! */
+/* FIX: Shrunk the "STUDENT SIGNIN" Text */
 .panel-title {
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
-    font-size: 24px;
-    margin-bottom: 25px;
+    font-size: 18px; /* Significantly reduced from 24px */
+    margin-bottom: 20px;
     color: var(--primary-green);
     letter-spacing: 1px;
     text-transform: uppercase;
+    text-align: center;
 }
 
-/* Modern Dark Inputs */
+/* Modern Dark Inputs (SCALED DOWN) */
 .input-field {
     width: 100%;
-    padding: 15px 20px;
+    padding: 12px 18px; /* Reduced from 15px 20px */
     margin-bottom: 15px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     color: white;
-    font-size: 14px;
+    font-size: 13px; /* Reduced slightly */
     outline: none;
     transition: 0.3s;
     -webkit-appearance: none;
@@ -152,9 +156,12 @@ body {
 .custom-select-wrapper { position: relative; width: 100%; margin-bottom: 15px; user-select: none; }
 
 .custom-select-trigger {
-    width: 100%; padding: 15px 20px; background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
-    color: white; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;
+    width: 100%; 
+    padding: 12px 18px; /* Matches input field padding */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: 12px;
+    color: white; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;
 }
 
 .custom-select-trigger:hover, .custom-select-wrapper.open .custom-select-trigger {
@@ -165,7 +172,7 @@ body {
 .custom-options {
     position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 15, 15, 0.95);
     backdrop-filter: blur(15px); border: 1px solid var(--primary-green); border-radius: 12px;
-    margin-top: 5px; z-index: 999; display: none; max-height: 220px; overflow-y: auto;
+    margin-top: 5px; z-index: 999; display: none; max-height: 200px; overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0,0,0,0.6); text-align: center;
 }
 
@@ -180,8 +187,8 @@ body {
 .password-container { position: relative; width: 100%; }
 .toggle-password {
     position: absolute;
-    right: 20px;
-    top: 15px;
+    right: 18px;
+    top: 12px; /* Adjusted for smaller input height */
     cursor: pointer;
     color: #888;
     transition: 0.2s;
@@ -189,18 +196,18 @@ body {
 }
 .toggle-password:hover { color: var(--primary-green); }
 
-/* Glow Button */
+/* Glow Button (SCALED DOWN) */
 .primary-btn {
     width: 100%;
-    padding: 15px;
+    padding: 13px; /* Reduced from 15px */
     background: var(--primary-green);
     color: #000;
     border: none;
     border-radius: 12px;
-    font-size: 16px;
+    font-size: 15px; /* Reduced */
     font-weight: bold;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: 5px;
     transition: 0.3s;
     box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
 }
@@ -241,7 +248,7 @@ body {
 .switch-panel-text {
     text-align: center;
     font-size: 12px;
-    margin-top: 40px;
+    margin-top: 30px;
     color: #888;
     line-height: 1.8;
 }
