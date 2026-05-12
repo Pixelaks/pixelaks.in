@@ -332,7 +332,7 @@ function updateUIForCurrentSemester(optionalDept) {
     el.curPctText.style.backgroundColor = "transparent"; // Ensure row background is clear
     
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
 
     // Inject the moving water with calc() to prevent clipping at 100%
     el.curPctText.innerHTML = `
