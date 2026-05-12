@@ -420,7 +420,8 @@ function updateUIForCurrentSemester(optionalDept) {
     actualProjectedPercent = projectedStrictPercent;
     let currentOverallPercent = isStrictCollege ? currentStrictPercent : simplePercent;
 
-    el.pctText.innerHTML = `<size=40%>Projected<br></size><b>${projectedStrictPercent.toFixed(2)}%</b>`; 
+    // ✅ REPLACE WITH THIS:
+    el.pctText.innerText = `${projectedStrictPercent.toFixed(2)}%`;
     el.curPctText.innerText = `Current: ${currentOverallPercent.toFixed(2)}%`;
     el.attClasses.innerText = `Attended: ${semData.strictPresent}`; el.totClasses.innerText = `Total: ${semData.strictTotal}`;
     el.absClasses.innerText = `Absent: ${semData.strictTotal - semData.strictPresent}`;
@@ -614,7 +615,7 @@ function ResetPredictorVisuals() {
     el.predictWaterFill.style.backgroundColor = hexColor;
     el.predictWaterFill.style.top = `${100 - Math.min(100, actualProjectedPercent)}%`;
     
-    el.predictPercentageText.innerHTML = `<size=40%>Current<br></size><b><span style="color:${hexColor}">${actualProjectedPercent.toFixed(2)}%</span></b>`;
+    el.predictPercentageText.innerHTML = `<span style="font-size: 13px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Current</span><br><span style="color:${hexColor}">${actualProjectedPercent.toFixed(2)}%</span>`;
 }
 
 document.getElementById("predictSubmitBtn").addEventListener("click", () => {
@@ -658,7 +659,7 @@ function AnimatePrediction(startValue, targetValue) {
         
         el.predictWaterFill.style.backgroundColor = hexColor;
         el.predictWaterFill.style.top = `${100 - Math.min(100, currentVal)}%`;
-        el.predictPercentageText.innerHTML = `<size=40%>Predicted<br></size><b><span style="color:${hexColor}">${currentVal.toFixed(2)}%</span></b>`;
+        el.predictPercentageText.innerHTML = `<span style="font-size: 13px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Predicted</span><br><span style="color:${hexColor}">${currentVal.toFixed(2)}%</span>`;
 
         if (progress < 1) {
             window.requestAnimationFrame(step);
@@ -744,14 +745,20 @@ async function loadDailyAttendance() {
     let dateStr = `${currentDailyDate.getFullYear()}-${mStr}-${dStr}`;
     let activeSemName = sortedSemesterKeys[currentSemesterIndex] ? sortedSemesterKeys[currentSemesterIndex].replace("_", " ") : "Semester 1";
 
-    // 🚨 0 COST: Check RAM first
     if (dailyAttendanceCache[dateStr]) {
         renderDailyData(dailyAttendanceCache[dateStr]);
         return; 
     }
 
-    el.dailyStatus.innerText = "Checking..."; el.periodsGrid.innerHTML = ""; dailyData = [];
-    for(let i=0; i<6; i++) { dailyData.push({hasData: false}); el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; }
+    el.dailyStatus.innerText = "Checking..."; 
+    el.periodsGrid.innerHTML = ""; 
+    
+    // 🚨 FIX: Attached to 'window' to prevent strict mode crashes!
+    window.dailyData = []; 
+    for(let i=0; i<6; i++) { 
+        window.dailyData.push({hasData: false}); 
+        el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; 
+    }
 
     try {
         const q = query(collection(db, "colleges", collegeID, "attendance"), where("date", "==", dateStr), where("semester", "==", activeSemName));
@@ -766,8 +773,8 @@ async function loadDailyAttendance() {
 }
 
 function renderDailyData(docs) {
-    dailyData = [];
-    for(let i=0; i<6; i++) { dailyData.push({hasData: false}); }
+    window.dailyData = []; // 🚨 FIX
+    for(let i=0; i<6; i++) { window.dailyData.push({hasData: false}); }
 
     if (docs.length === 0) {
         el.dailyStatus.innerText = "No Classes Recorded";
@@ -788,7 +795,7 @@ function renderDailyData(docs) {
                 tHeld++; if(isP) pCount++;
                 let sub = d[pK].subject || "Unknown";
                 if(d[pK].event_details && d[pK].event_details[currentRollNo]) sub = d[pK].event_details[currentRollNo];
-                dailyData[i-1] = { hasData: true, isPresent: isP, isMedical: isMedToday, subject: sub, teacher: d[pK].markedByTeacherName || "System", time: d[pK].timestamp ? new Date(d[pK].timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "N/A" };
+                window.dailyData[i-1] = { hasData: true, isPresent: isP, isMedical: isMedToday, subject: sub, teacher: d[pK].markedByTeacherName || "System", time: d[pK].timestamp ? new Date(d[pK].timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "N/A" };
             }
         }
     });
@@ -797,7 +804,7 @@ function renderDailyData(docs) {
     
     el.periodsGrid.innerHTML = "";
     for(let i=0; i<6; i++) {
-        let d = dailyData[i];
+        let d = window.dailyData[i]; // 🚨 FIX
         if(!d.hasData) { el.periodsGrid.innerHTML += `<button class="period-btn btn-nodata">${i+1}</button>`; continue; }
         let css = d.isMedical ? "btn-medical" : (d.isPresent ? "btn-present" : "btn-absent");
         let txt = d.isMedical ? "M" : (d.isPresent ? "P" : "A");
@@ -806,7 +813,8 @@ function renderDailyData(docs) {
 }
 
 window.openPeriodDetail = function(index) {
-    let d = dailyData[index]; if(!d.hasData) return;
+    let d = window.dailyData[index]; // 🚨 FIX
+    if(!d.hasData) return;
     el.dSub.innerText = d.subject; el.dTeach.innerText = `${d.teacher} • ${d.time}`;
     el.dStat.innerHTML = d.isMedical ? "<color style='color:#3b82f6'>Medical Leave</color>" : (d.isPresent ? "<color style='color:#4caf50'>Present</color>" : "<color style='color:#f44336'>Absent</color>");
     el.detailModal.classList.add("active");
