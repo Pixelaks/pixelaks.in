@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -17,7 +17,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ==========================================
-// 🚨 GLOBAL STATE VARIABLES 🚨
+// GLOBAL STATE VARIABLES
 // ==========================================
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
@@ -26,25 +26,13 @@ let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex 
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-// Routing Variables (Matches C# memory caching)
-let rawDept = "";
-let myDepartmentID = "";
-let myYearStr = "";
-let enrolledSubjectsList = [];
+let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; let enrolledSubjectsList = [];
 
-// Daily View State
-let currentDailyDate = new Date();
-let cachedMedicalLeaves = [];
-let dailyData = []; 
+let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
+let calendarMode = "global"; let currentDisplayDate = new Date(); 
+let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
-// Calendar View State
-let calendarMode = "global"; 
-let currentDisplayDate = new Date(); 
-let cachedCalYear = ""; 
-let calWorkingDays = new Set(); 
-let calNonWorkingDays = new Map(); 
-let semStarts = new Map(); 
-let semEnds = new Map();
+let myWebDeviceID = localStorage.getItem("myWebDeviceID");
 
 // ==========================================
 // DOM ELEMENTS
@@ -68,7 +56,8 @@ const el = {
     mainView: document.getElementById("mainDashboardView"),
     dailyView: document.getElementById("dailyAttendanceView"),
     ttView: document.getElementById("timetableView"),
-    notifView: document.getElementById("notificationsView"),
+    assignView: document.getElementById("assignmentsView"),
+    actualNotifView: document.getElementById("actualNotifView"),
     msgView: document.getElementById("messagesView"),
     
     // DAILY UI
@@ -81,23 +70,58 @@ const el = {
     ttDays: document.getElementById("timetableDays"), ttCards: document.getElementById("ttCardsContainer"),
     ttProgress: document.getElementById("ttProgressBar"), ttNodes: document.getElementById("ttNodes"),
     
-    // NOTIFICATIONS & MESSAGES UI
-    notifList: document.getElementById("notificationsListContainer"),
-    msgList: document.getElementById("messagesListContainer")
+    // LIST CONTAINERS
+    assignList: document.getElementById("assignmentsListContainer"),
+    actualNotifList: document.getElementById("actualNotifListContainer"),
+    msgList: document.getElementById("messagesListContainer"),
+
+    // SESSIONS
+    sessionsModal: document.getElementById("sessionsModal"),
+    sessionsList: document.getElementById("sessionsListContainer")
 };
 
 // ==========================================
-// INITIALIZATION
+// INITIALIZATION & SESSION SECURITY
 // ==========================================
 const urlParams = new URLSearchParams(window.location.search);
-collegeID = urlParams.get('college');
-studentUID = urlParams.get('uid');
+collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
 if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
 else {
     onAuthStateChanged(auth, (user) => {
         if (user) syncCollegeAndListen(); else window.location.href = "index.html";
     });
+}
+
+async function registerWebSession() {
+    if (!myWebDeviceID) {
+        myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        localStorage.setItem("myWebDeviceID", myWebDeviceID);
+    }
+    
+    // Detect OS for a friendly device name
+    let osName = "Web Browser";
+    if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
+    if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
+    if (navigator.userAgent.indexOf("Linux") != -1) osName = "Linux PC";
+    if (navigator.userAgent.indexOf("Android") != -1) osName = "Android Browser";
+    if (navigator.userAgent.indexOf("like Mac") != -1) osName = "iOS Browser";
+
+    try {
+        const sessionRef = doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID);
+        await setDoc(sessionRef, {
+            deviceName: osName,
+            loginTime: serverTimestamp()
+        }, {merge: true});
+        
+        // Listen to make sure we aren't kicked by the Mobile App
+        onSnapshot(sessionRef, (docSnap) => {
+            if (!docSnap.exists()) {
+                // We were kicked out!
+                signOut(auth).then(() => window.location.href = "index.html");
+            }
+        });
+    } catch(e) { console.error("Session registration failed", e); }
 }
 
 async function syncCollegeAndListen() {
@@ -114,6 +138,9 @@ async function syncCollegeAndListen() {
         const docSnap = snapshot.docs[0];
         currentRollNo = docSnap.id; 
         
+        // Register this browser login to Firebase instantly
+        registerWebSession();
+        
         try {
             const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
             cachedMedicalLeaves = [];
@@ -123,9 +150,9 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        // Auto-refresh active views
         if (el.ttView.style.display !== "none") loadTimetableForDay(document.querySelector('.day-btn.active').dataset.day);
-        if (el.notifView.style.display !== "none") loadNotifications();
+        if (el.assignView.style.display !== "none") loadAssignments();
+        if (el.actualNotifView.style.display !== "none") loadActualNotifications();
         if (el.msgView.style.display !== "none") loadMessages();
     });
 }
@@ -133,11 +160,8 @@ async function syncCollegeAndListen() {
 function processStudentData(data) {
     const sName = data.Name || data.name || "Unknown";
     el.name.innerText = sName; el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
-    
-    // 🚨 Routing Setup (Mirrors C# exactly)
     rawDept = data.Department || data.department || "General";
     myDepartmentID = "DEPT_" + rawDept.replace(/\s/g, ''); 
-    
     el.sbName.innerHTML = `${sName} <br><span style="font-size:12px; color:#888;">(${data.RollNumber || currentRollNo})</span>`;
     
     enrolledSubjectsList = [];
@@ -249,17 +273,19 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
-// 🚨 VIEW TOGGLING 🚨
+// 🚨 VIEW TOGGLING (7 BUTTONS) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
-const btnNavDaily = document.getElementById("btnNavDaily");
-const btnNavTimetable = document.getElementById("btnNavTimetable");
+const btnNavAssign = document.getElementById("btnNavAssign");
 const btnNavNotif = document.getElementById("btnNavNotif");
 const btnNavMsg = document.getElementById("btnNavMsg");
+const btnNavTimetable = document.getElementById("btnNavTimetable");
+const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
-    [btnNavMain, btnNavDaily, btnNavTimetable, btnNavNotif, btnNavMsg].forEach(btn => btn.classList.remove("active"));
-    [el.mainView, el.dailyView, el.ttView, el.notifView, el.msgView].forEach(view => view.style.display = "none");
+    [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
+    [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.style.display = "none");
+    
     activeBtn.classList.add("active");
     viewToShow.style.display = (viewToShow === el.mainView) ? "" : "flex";
 }
@@ -274,157 +300,98 @@ btnNavTimetable.addEventListener("click", () => {
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
     loadTimetableForDay(todayName);
 });
-btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.notifView); loadNotifications(); });
+
+btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
+btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
 btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
 
 // ==========================================
-// 🚨 1. NOTIFICATIONS DATA LOADER (ASSIGNMENTS) 🚨
+// 1. ASSIGNMENTS (Formerly Notifications)
 // ==========================================
-async function loadNotifications() {
-    el.notifList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
+async function loadAssignments() {
+    el.assignList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
     try {
         let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-        
-        // 🚨 Exact C# Replica: Uses createdAt and orderBy Descending
-        const q = query(collection(db, "colleges", collegeID, "assignments"), 
-                        where("createdAt", ">=", cutoff), 
-                        orderBy("createdAt", "desc"));
-                        
+        const q = query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
-        let notifs = [];
-        let mySemStr = `Semester ${currentSemesterIndex + 1}`;
         
+        let notifs = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
         snapshot.forEach(doc => {
-            let d = doc.data();
-            let sub = d.subject || "Unknown";
-            let assignDept = d.teacherDeptID || "";
-            let assignSem = d.semester || "";
+            let d = doc.data(); let sub = d.subject || "Unknown";
+            let isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
+            let isDepartmentMatch = (d.teacherDeptID || "").trim().toLowerCase() === myDepartmentID.toLowerCase() && (d.semester || "").trim().toLowerCase() === mySemStr.toLowerCase();
 
-            // 1. Explicit Match Check
-            let isExplicitMatch = false;
-            if (enrolledSubjectsList.length > 0) {
-                isExplicitMatch = enrolledSubjectsList.some(s => s.trim().toLowerCase() === sub.trim().toLowerCase());
-            }
-
-            // 2. Department + Semester Check
-            let isDepartmentMatch = false;
-            if (myDepartmentID && mySemStr) {
-                isDepartmentMatch = (assignDept.trim().toLowerCase() === myDepartmentID.toLowerCase()) && 
-                                    (assignSem.trim().toLowerCase() === mySemStr.toLowerCase());
-            }
-
-            // 3. Routing Logic
-            if (isExplicitMatch || isDepartmentMatch) {
-                notifs.push({
-                    title: `Assignment: ${sub}`,
-                    body: d.topic || "No Topic",
-                    teach: d.teacherName || "Teacher",
-                    due: d.dueDate || "N/A",
-                    time: d.createdAt ? d.createdAt.toDate() : new Date()
-                });
+            if (isExplicitMatch || isDepartmentMatch || enrolledSubjectsList.length === 0) {
+                notifs.push({ title: `Assignment: ${sub}`, body: d.topic || "No Topic", teach: d.teacherName || "Teacher", due: d.dueDate || "N/A", time: d.createdAt ? d.createdAt.toDate() : new Date() });
             }
         });
         
-        if (notifs.length === 0) { el.notifList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
-        
-        el.notifList.innerHTML = notifs.map(n => `
-            <div class="data-card notif">
-                <div class="card-title">${n.title}</div>
-                <div class="card-body">${n.body}</div>
-                <div class="card-meta">
-                    <span>${n.teach}</span>
-                    <span class="card-due">Due: ${n.due}</span>
-                </div>
-            </div>
-        `).join('');
-
-    } catch(e) { 
-        el.notifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
-        console.error(e); 
-    }
+        if (notifs.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
+        el.assignList.innerHTML = notifs.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
+    } catch(e) { el.assignList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
 
 // ==========================================
-// 🚨 2. MESSAGES DATA LOADER (INBOX & CHATS) 🚨
+// 2. ACTUAL NOTIFICATIONS (Inbox Messages)
+// ==========================================
+function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
+
+async function loadActualNotifications() {
+    el.actualNotifList.innerHTML = `<div class="no-data-text">Loading notifications...</div>`;
+    try {
+        let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
+        let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
+
+        const [inboxSnap, globalSnap] = await Promise.all([
+            getDocs(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30))),
+            getDocs(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)))
+        ]);
+
+        let notifs = [];
+        inboxSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        globalSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+
+        notifs.sort((a,b) => b.time - a.time);
+        if (notifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
+        
+        el.actualNotifList.innerHTML = notifs.map(n => {
+            let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            return `<div class="data-card ${n.type}"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora</span><span>${timeStr}</span></div></div>`;
+        }).join('');
+    } catch(e) { el.actualNotifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+}
+
+// ==========================================
+// 3. MESSAGES (Chats & Sent Messages)
 // ==========================================
 async function loadMessages() {
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
     let msgs = [];
-    
     try {
-        // 1. Fetch Broadcasts (sent_messages)
-        const bQuery = query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30));
-        const broadcastSnap = await getDocs(bQuery);
-        
+        const broadcastSnap = await getDocs(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)));
         broadcastSnap.forEach(doc => {
-            let d = doc.data(); 
-            let target = d.targetSummary || "";
-            
-            // 🚨 Exact C# Replica: IsMessageForMe Logic
+            let d = doc.data(); let target = d.targetSummary || "";
             let forMe = false;
-            if (d.senderID === auth.currentUser.uid) {
-                forMe = true;
-            } else if (target.includes("Everyone") || target.includes("All Students")) {
-                forMe = true;
-            } else {
-                let deptMatch = target.includes("All Depts") || target.includes(rawDept);
-                let yearMatch = target.includes("All Years") || target.includes(myYearStr);
-                if (deptMatch && yearMatch) forMe = true;
-            }
-            
-            if (forMe) {
-                msgs.push({
-                    title: d.title || "Notice",
-                    body: d.body || "",
-                    sender: d.senderName || d.senderRole || "System",
-                    type: "broadcast",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
-                });
-            }
+            if (d.senderID === auth.currentUser.uid) forMe = true;
+            else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
+            else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
+            if (forMe) { msgs.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
         });
 
-        // 2. Fetch Private Chats
-        const cQuery = query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid));
-        const chatSnap = await getDocs(cQuery);
-        
+        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)));
         for (let chatDoc of chatSnap.docs) {
-            const msgQuery = query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20));
-            const msgSnap = await getDocs(msgQuery);
-            
-            msgSnap.forEach(mDoc => {
-                let d = mDoc.data();
-                msgs.push({
-                    title: d.title || "Message",
-                    body: d.body || "",
-                    sender: d.senderName || "User",
-                    type: "chat",
-                    time: d.timestamp ? d.timestamp.toDate() : new Date()
-                });
-            });
+            const msgSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)));
+            msgSnap.forEach(mDoc => { let d = mDoc.data(); msgs.push({ title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
         }
 
-        msgs.sort((a,b) => b.time - a.time); // Sort newest first
-        
+        msgs.sort((a,b) => b.time - a.time);
         if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
-        
         el.msgList.innerHTML = msgs.map(m => {
             let css = m.type === "broadcast" ? "broadcast" : "";
             let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `
-            <div class="data-card ${css}">
-                <div class="card-title">${m.title}</div>
-                <div class="card-body">${m.body}</div>
-                <div class="card-meta">
-                    <span>${m.sender}</span>
-                    <span>${timeStr}</span>
-                </div>
-            </div>`;
+            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
         }).join('');
-
-    } catch(e) { 
-        el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; 
-        console.error(e); 
-    }
+    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
 }
 
 
@@ -577,19 +544,73 @@ function updateTimelineVisuals() {
 setInterval(updateTimelineVisuals, 60000); 
 
 // ==========================================
-// CALENDAR & SETTINGS
+// 🚨 DEVICE SESSIONS & SETTINGS 🚨
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
+// Open Devices Modal
+document.getElementById("btnDevices").addEventListener("click", () => {
+    el.sidebar.classList.remove("open");
+    el.overlay.classList.remove("active");
+    el.sessionsModal.classList.add("active");
+    loadSessions();
+});
+document.getElementById("closeSessionsBtn").addEventListener("click", () => el.sessionsModal.classList.remove("active"));
+
+async function loadSessions() {
+    el.sessionsList.innerHTML = `<div class="no-data-text">Loading active devices...</div>`;
+    try {
+        const q = query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions"));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
+        
+        let htmlBuffer = "";
+        snapshot.forEach(doc => {
+            let d = doc.data();
+            let devName = d.deviceName || "Unknown Device";
+            let isMe = (doc.id === myWebDeviceID);
+            if (isMe) devName += " (This Browser)";
+            
+            let timeStr = "Recently";
+            if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+            let btnHtml = isMe ? "" : `<button class="revoke-btn" onclick="revokeSession('${doc.id}')">Revoke</button>`;
+            
+            htmlBuffer += `
+                <div class="session-card">
+                    <div class="session-info">
+                        <h4>${devName}</h4>
+                        <p>Logged in: ${timeStr}</p>
+                    </div>
+                    ${btnHtml}
+                </div>`;
+        });
+        el.sessionsList.innerHTML = htmlBuffer;
+    } catch(e) { el.sessionsList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error loading sessions</div>`; }
+}
+
+// 🚨 Delete Session
+window.revokeSession = async function(sessionID) {
+    if (!confirm("Are you sure you want to log this device out?")) return;
+    try {
+        await deleteDoc(doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", sessionID));
+        alert("Session revoked. The device will be logged out shortly.");
+        loadSessions(); // Refresh list
+    } catch(e) { alert("Error revoking session."); }
+};
+
+// ==========================================
+// CALENDAR
+// ==========================================
 document.getElementById("btnCalendar").addEventListener("click", () => { 
     calendarMode = "global"; el.calModal.classList.add("active"); 
     let d = new Date(); currentDisplayDate = new Date(d.getFullYear(), d.getMonth(), 1); 
     loadCalendarData(); 
 });
-
 document.getElementById("closeCalendarBtn").addEventListener("click", () => el.calModal.classList.remove("active"));
 document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
 document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
