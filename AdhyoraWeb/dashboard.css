@@ -374,3 +374,29 @@ body, .dashboard-container, .scrollable-content { background-color: var(--bg-mai
 
 .mode-btn { background: var(--bg-main); border: 2px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
 .mode-btn.active { border-color: var(--theme-main); background: var(--theme-light); color: var(--theme-main); }
+
+/* =========================================
+   THEME FIX PATCH (FORCING STUBBORN ELEMENTS)
+   ========================================= */
+
+/* 1. Fix white table rows in dark mode (Overrides inline HTML styles) */
+.stat-item {
+    background-color: transparent !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* 2. Fix the "Exams Data" Dropdown staying blue */
+.dropdown-select, .marks-header-container {
+    background-color: var(--theme-main) !important;
+    color: #ffffff !important;
+}
+
+/* 3. Fix the progress bars in the Marks section (Overrides JS hardcoded blue) */
+#marksListContainer .progress-fill {
+    background-color: var(--theme-main) !important;
+}
+
+/* 4. Fix the bottom navigation fade effect so it matches Dark Mode perfectly */
+.bottom-nav-mask {
+    background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 40%, var(--bg-main) 100%) !important;
+}
