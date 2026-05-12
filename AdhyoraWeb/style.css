@@ -1,69 +1,29 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Poppins', sans-serif;
-}
-
-:root {
-    --primary-green: #2ecc71; 
-    --dark-bg: #0a0a0a;
-    --text-light: #ffffff;
-}
-
-body {
-    background-color: var(--dark-bg);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    color: var(--text-light);
-    overflow: hidden; /* Prevents scrollbars from particles */
-}
-
-/* Background Particles Container */
-#tsparticles {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    top: 0;
-    left: 0;
-}
-
-/* The New Modern Card */
+/* --- 1. PERFECT CENTERING & ENHANCED GLASS --- */
 .app-container {
-    background: rgba(20, 20, 20, 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(10, 10, 10, 0.4); /* More transparent for better glass look */
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     border: 1px solid rgba(46, 204, 113, 0.3);
-    box-shadow: 0 0 40px rgba(46, 204, 113, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(46, 204, 113, 0.05);
     width: 100%;
     max-width: 420px;
-    height: 90vh;
-    max-height: 850px;
+    height: auto; /* Changed from 90vh so it hugs the content */
+    min-height: 500px; /* Ensures it doesn't get too small */
     padding: 40px 30px;
     display: flex;
     flex-direction: column;
+    justify-content: center; /* THIS CENTERS THE CONTENT VERTICALLY */
     position: relative;
-    z-index: 2; /* Sits above particles */
+    z-index: 2;
     border-radius: 25px;
-    overflow-y: auto;
-}
-.app-container::-webkit-scrollbar { display: none; }
-
-.header {
-    text-align: center;
-    margin-bottom: 40px;
-    margin-top: 10px;
-    position: relative;
+    overflow-y: visible;
 }
 
-/* --- GLITCH TEXT STYLES --- */
+/* --- 2. FORCE YATRA ONE FONT --- */
 .glitch-wrapper {
     position: relative;
-    font-family: 'Yatra One', system-ui; 
-    font-size: 42px;
+    font-family: 'Yatra One', cursive !important; /* Forced Yatra One */
+    font-size: 46px;
     font-weight: 400;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -74,56 +34,12 @@ body {
     margin-bottom: 5px;
 }
 
-.glitch-wrapper::before {
-    content: '';
-    position: absolute;
-    top: 0.16em;
-    left: -2%;
-    width: 104%;
-    height: 0.06em;
-    background: var(--primary-green);
-    z-index: 3;
-    box-shadow: 0 0 10px var(--primary-green);
-}
-
-.main-text { position: relative; z-index: 2; color: var(--primary-green); }
-.glitch-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
-.layer-red { color: #ff0055; z-index: 1; mix-blend-mode: screen; }
-.layer-blue { color: #00ccff; z-index: 1; mix-blend-mode: screen; }
-
-.subtitle {
-    color: #fff;
-    font-weight: 300;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    font-size: 11px;
-    opacity: 0.8;
-}
-
-.panel {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-}
-
-.panel.active { display: flex; animation: fadeIn 0.4s ease forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.panel-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 24px;
-    margin-bottom: 25px;
-    color: var(--primary-green);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* Modern Dark Inputs */
+/* Give inputs a nice hover glow */
 .input-field {
     width: 100%;
     padding: 15px 20px;
     margin-bottom: 15px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     color: white;
@@ -132,104 +48,34 @@ body {
     transition: 0.3s;
     -webkit-appearance: none;
 }
-.input-field::placeholder { color: #888; }
-.input-field:focus { border-color: var(--primary-green); background: rgba(46, 204, 113, 0.05); }
+.input-field:hover { border-color: rgba(46, 204, 113, 0.5); }
+.input-field:focus { border-color: var(--primary-green); background: rgba(46, 204, 113, 0.05); box-shadow: 0 0 15px rgba(46,204,113,0.2); }
 
-/* Fix dropdown option colors */
-.input-field option { background: var(--dark-bg); color: white; }
+/* --- 3. CUSTOM THEMED DROPDOWNS (Replaces the Blue OS Menu) --- */
+.custom-select-wrapper { position: relative; width: 100%; margin-bottom: 15px; user-select: none; }
 
-.password-container { position: relative; width: 100%; }
-.toggle-password {
-    position: absolute;
-    right: 20px;
-    top: 15px;
-    cursor: pointer;
-    color: #888;
-    transition: 0.2s;
-}
-.toggle-password:hover { color: var(--primary-green); }
-
-/* Glow Button */
-.primary-btn {
-    width: 100%;
-    padding: 15px;
-    background: var(--primary-green);
-    color: #000;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: 0.3s;
-    box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
-}
-.primary-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(46, 204, 113, 0.6);
-}
-.primary-btn:disabled {
-    background-color: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-    cursor: not-allowed;
-    color: #666;
+.custom-select-trigger {
+    width: 100%; padding: 15px 20px; background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+    color: white; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;
 }
 
-.text-link {
-    color: var(--primary-green);
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 600;
-    transition: 0.2s;
-}
-.text-link:hover { text-shadow: 0 0 10px var(--primary-green); }
-
-.forgot-pass { align-self: flex-start; margin-bottom: 20px; margin-left: 5px; }
-
-.remember-me {
-    display: flex;
-    align-items: center;
-    margin-top: 15px;
-    font-size: 12px;
-    color: #aaa;
-}
-.remember-me input {
-    margin-right: 10px;
-    accent-color: var(--primary-green);
+.custom-select-trigger:hover, .custom-select-wrapper.open .custom-select-trigger {
+    border-color: var(--primary-green); background: rgba(46, 204, 113, 0.05);
+    box-shadow: 0 0 15px rgba(46,204,113,0.2);
 }
 
-.switch-panel-text {
-    text-align: center;
-    font-size: 12px;
-    margin-top: 40px;
-    color: #888;
-    line-height: 1.8;
+.custom-options {
+    position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 15, 15, 0.95);
+    backdrop-filter: blur(15px); border: 1px solid var(--primary-green); border-radius: 12px;
+    margin-top: 5px; z-index: 999; display: none; max-height: 220px; overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6); text-align: center; /* Centers the list text */
 }
 
-.feedback-text { font-size: 11px; color: #ff4757; margin-bottom: 10px; text-align: center; }
+.custom-select-wrapper.open .custom-options { display: block; animation: dropFade 0.2s ease forwards; }
+@keyframes dropFade { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-.toast {
-    visibility: hidden;
-    min-width: 250px;
-    background-color: var(--primary-green);
-    color: #000;
-    font-weight: bold;
-    text-align: center;
-    border-radius: 12px;
-    padding: 12px;
-    position: absolute;
-    z-index: 100;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 13px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.toast.show {
-    visibility: visible;
-    animation: fadein 0.5s, fadeout 0.5s 3.5s;
-}
-
-@keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
-@keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+.custom-option { padding: 12px; color: white; font-size: 13px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.custom-option:last-child { border-bottom: none; }
+.custom-option:hover { background: var(--primary-green); color: black; font-weight: bold; }
+.custom-option.disabled { color: #555; cursor: not-allowed; background: transparent !important; font-weight: normal; }
