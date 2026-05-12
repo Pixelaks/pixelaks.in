@@ -26,13 +26,17 @@ let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex 
 let activeMarksUnsubscribe = null;
 let activeTimetableUnsubscribe = null;
 
-let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; let enrolledSubjectsList = [];
+let rawDept = ""; let myDepartmentID = ""; let myYearStr = ""; 
+let enrolledSubjectsList = [];
+let currentStudentEnrolledMap = {}; // 🚨 NEW: Caches the map for UI display
+let optimizedSubjectCache = null; // 🚨 NEW: Fast RAM lookup for subjects
 
 let currentDailyDate = new Date(); let cachedMedicalLeaves = []; let dailyData = []; 
 let calendarMode = "global"; let currentDisplayDate = new Date(); 
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
 
 let myWebDeviceID = localStorage.getItem("myWebDeviceID");
+let currentStudentProfileData = null; // 🚨 NEW: Cache profile for the popup
 
 // ==========================================
 // DOM ELEMENTS
@@ -75,9 +79,11 @@ const el = {
     actualNotifList: document.getElementById("actualNotifListContainer"),
     msgList: document.getElementById("messagesListContainer"),
 
-    // SESSIONS
+    // SESSIONS & PROFILE
     sessionsModal: document.getElementById("sessionsModal"),
-    sessionsList: document.getElementById("sessionsListContainer")
+    sessionsList: document.getElementById("sessionsListContainer"),
+    profileModal: document.getElementById("profileDetailsModal"),
+    profileContent: document.getElementById("profileDetailsContent")
 };
 
 // ==========================================
@@ -149,15 +155,17 @@ async function syncCollegeAndListen() {
 }
 
 function processStudentData(data) {
+    currentStudentProfileData = data; // Cache for profile popup
+    
     const sName = data.Name || data.name || "Unknown";
     el.name.innerText = sName; el.roll.innerText = `Roll no: ${data.RollNumber || currentRollNo}`;
-    
     rawDept = data.Department || data.department || "General";
     myDepartmentID = "DEPT_" + rawDept.replace(/\s/g, ''); 
-    
     el.sbName.innerHTML = `${sName} <br><span style="font-size:12px; color:#888;">(${data.RollNumber || currentRollNo})</span>`;
     
     enrolledSubjectsList = [];
+    currentStudentEnrolledMap = data.enrolledSubjects || {};
+    
     if (data.enrolledSubjects) {
         for (const semObj of Object.values(data.enrolledSubjects)) {
             if (typeof semObj === 'object') {
@@ -233,6 +241,7 @@ function updateUIForCurrentSemester(optionalDept) {
     }).join('');
 
     fetchMarksForSemester(semData.name);
+    buildEnrolledSubjectsUI(semData.name); // 🚨 Builds the new Curriculum List
 }
 
 function fetchMarksForSemester(semName) {
@@ -266,6 +275,82 @@ function drawMarksUI(marksArray) {
 }
 
 // ==========================================
+// 🚨 NEW: ENROLLED SUBJECTS BUILDER 🚨
+// ==========================================
+async function buildEnrolledSubjectsUI(semesterName) {
+    let listEl = document.getElementById("enrolledSubjectsListText");
+    listEl.innerHTML = "<i>Loading subjects...</i>";
+    
+    let cleanSemNum = semesterName.replace("Semester", "").replace("_", "").trim();
+    let finalSubjects = [];
+
+    // 1. Explicitly enrolled (VAC, SEC, Minor)
+    let semKey = semesterName.replace(" ", "_"); 
+    let enrollMap = currentStudentEnrolledMap[semKey] || currentStudentEnrolledMap[semesterName] || {};
+    for (let [cat, sub] of Object.entries(enrollMap)) {
+        finalSubjects.push(`<span style="color:#f59e0b; font-weight:bold;">[${cat}]</span> ${sub}`);
+    }
+
+    // 2. Fetch Master Subjects if not cached
+    if (!optimizedSubjectCache) {
+        optimizedSubjectCache = [];
+        try {
+            const subSnap = await getDocs(collection(db, "colleges", collegeID, "subjects"));
+            subSnap.forEach(doc => {
+                let d = doc.data();
+                optimizedSubjectCache.push({
+                    cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s/g, ""),
+                    cleanSubDept: (d.Department || d.department || d.departmentID || "").replace(/\s/g, "").toLowerCase().replace("dept_", ""),
+                    semesterArray: (d.Semester || d.semester || "1").toString().split(",").map(s => s.trim()),
+                    displayName: d.Name || d.name || d.subjectName || "Unnamed",
+                    rawType: d.Type || d.type || ""
+                });
+            });
+        } catch(e) { console.error("Error fetching subjects", e); }
+    }
+
+    // 3. Match Core/MJD Subjects
+    let cleanStuDept = rawDept.replace(/\s/g, "").toLowerCase().replace("dept_", "");
+    optimizedSubjectCache.forEach(sub => {
+        if (sub.semesterArray.includes(cleanSemNum)) {
+            let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
+                let newEntry = `<span style="color:#10b981; font-weight:bold;">[${sub.rawType}]</span> ${sub.displayName}`;
+                if (!finalSubjects.some(existing => existing.includes(sub.displayName))) {
+                    finalSubjects.unshift(newEntry); // Add to top
+                }
+            }
+        }
+    });
+
+    if (finalSubjects.length === 0) listEl.innerHTML = "<i>No subjects assigned for this semester.</i>";
+    else listEl.innerHTML = finalSubjects.join("<br>");
+}
+
+// ==========================================
+// 🚨 NEW: STUDENT PROFILE POPUP 🚨
+// ==========================================
+document.getElementById("btnProfileDetails").addEventListener("click", () => {
+    let d = currentStudentProfileData;
+    if(!d) return;
+    
+    let html = `
+        <b>Name:</b> ${d.Name || d.name || "N/A"}<br>
+        <b>Roll Number:</b> ${d.RollNumber || currentRollNo}<br>
+        <b>Course:</b> ${d.courseType || d.CourseType || "N/A"}<br>
+        <b>Department:</b> ${d.Department || d.department || "N/A"}<br>
+        <b>Current Year:</b> ${d.Year || d.year || "N/A"}<br>
+        <b>Status:</b> ${d.authStatus || "N/A"}<br>
+        <b>Email:</b> ${d.email || "N/A"}<br>
+        <b>Legal Consent:</b> ${d.hasAgreedToDisclaimer ? "Agreed" : "Pending"}<br><br>
+        <b>User ID:</b> <span style="font-size:10px; color:#888;">${auth.currentUser.uid}</span>
+    `;
+    el.profileContent.innerHTML = html;
+    el.profileModal.classList.add("active");
+});
+document.getElementById("closeProfileBtn").addEventListener("click", () => el.profileModal.classList.remove("active"));
+
+// ==========================================
 // 🚨 VIEW TOGGLING (USING HIDDEN-VIEW) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
@@ -277,10 +362,7 @@ const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
     [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
-    
-    // CSS .hidden-view safely hides them without interfering with the PC grid layout!
     [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
-    
     activeBtn.classList.add("active");
     viewToShow.classList.remove("hidden-view");
 }
