@@ -325,17 +325,20 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.style.backgroundColor = ringColor;
     // Apply the dynamic color to the "Current" cell background
     // Configure the row to hold the water effect securely
+    // Configure the row to hold the water effect securely
     el.curPctText.style.position = "relative";
     el.curPctText.style.overflow = "hidden";
-    el.curPctText.style.padding = "0"; // Remove default padding so water hits the edges
+    el.curPctText.style.padding = "0"; 
     el.curPctText.style.borderBottom = "none";
     
-    // Choose text color based on background (Black for yellow, White for dark colors)
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
+    // Choose text color based on background
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
 
-    // Inject the moving water background AND the text layered on top
+    // Inject the true horizontal moving water background AND text
     el.curPctText.innerHTML = `
-        <div class="mini-water-fill" style="background-color: ${ringColor}; top: ${100 - Math.min(100, percent)}%;"></div>
+        <div class="row-water-container" style="background-color: ${ringColor}; height: ${Math.min(100, percent)}%;">
+            <div class="row-water-wave"></div>
+        </div>
         <div style="position: relative; z-index: 2; padding: 8px 12px; font-weight: bold; color: ${textColor};">
             Current: ${percent.toFixed(2)}%
         </div>
