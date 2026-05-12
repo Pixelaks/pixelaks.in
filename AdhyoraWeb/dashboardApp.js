@@ -736,6 +736,21 @@ el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open")
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
+// ==========================================
+// SIDEBAR EXTERNAL LINKS
+// ==========================================
+document.getElementById("btnPrivacy").addEventListener("click", () => {
+    window.open("https://pixelaks.in/privacy-adhyora", "_blank");
+});
+
+document.getElementById("btnTerms").addEventListener("click", () => {
+    window.open("https://pixelaks.in/terms-adhyora", "_blank");
+});
+
+document.getElementById("btnCompany").addEventListener("click", () => {
+    window.open("https://pixelaks.in", "_blank");
+});
+
 document.getElementById("btnDevices").addEventListener("click", () => {
     el.sidebar.classList.remove("open"); el.overlay.classList.remove("active");
     el.sessionsModal.classList.add("active"); loadSessions();
