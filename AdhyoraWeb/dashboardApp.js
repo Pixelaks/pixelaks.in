@@ -31,7 +31,6 @@ let optimizedSubjectCache = null;
 let currentDailyDate = new Date(); 
 let cachedMedicalLeaves = []; 
 
-// 🚨 NEW CACHES FOR OPTIMIZATION
 let dailyAttendanceCache = {}; 
 let timetableCache = [];       
 let sessionsCache = new Map(); 
@@ -130,10 +129,32 @@ async function registerWebSession() {
 }
 
 async function syncCollegeAndListen() {
-    try {
-        const colSnap = await getDoc(doc(db, "colleges", collegeID));
-        if (colSnap.exists() && colSnap.data().currentSemesterType) { collegeSemesterType = colSnap.data().currentSemesterType; }
-    } catch(e) {}
+    
+    // --- 🚨 ADDED SUBSCRIPTION MANAGER (Replaces old static getDoc) 🚨 ---
+    onSnapshot(doc(db, "colleges", collegeID), (colSnap) => {
+        if (colSnap.exists()) {
+            let data = colSnap.data();
+            if (data.currentSemesterType) { collegeSemesterType = data.currentSemesterType; }
+
+            const blockPanel = document.getElementById("subscriptionBlockPanel");
+            
+            // If no subscription data exists OR it's expired past grace period
+            if (!data.subscription) {
+                blockPanel.classList.add("active");
+            } else {
+                let expiryTimestamp = data.subscription.expiryDate || 0;
+                let hardBlockDate = new Date(expiryTimestamp * 1000);
+                hardBlockDate.setDate(hardBlockDate.getDate() + 8); // 8 Days Grace Period
+                
+                if (new Date() > hardBlockDate) {
+                    blockPanel.classList.add("active");
+                } else {
+                    blockPanel.classList.remove("active");
+                }
+            }
+        }
+    });
+    // ---------------------------------------------------------------------
 
     const secureUID = auth.currentUser.uid; 
     const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", secureUID));
@@ -154,7 +175,6 @@ async function syncCollegeAndListen() {
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
         
-        // 🚨 BOOT UP THE ZERO-COST LISTENERS ONCE
         if (!isDataListening) {
             isDataListening = true;
             startBackgroundListeners();
@@ -170,9 +190,8 @@ async function syncCollegeAndListen() {
     });
 }
 
-// 🚨 THE FIX: Background caching engine
+// Background caching engine
 function startBackgroundListeners() {
-    // 1. Assignments cache
     let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
     onSnapshot(query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc")), (snap) => {
         cachedAssignments = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
@@ -187,7 +206,6 @@ function startBackgroundListeners() {
         if (!el.assignView.classList.contains("hidden-view")) loadAssignments();
     });
 
-    // 2. Notifications cache
     function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
     let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
     let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
@@ -205,7 +223,6 @@ function startBackgroundListeners() {
         updateNotifUI();
     });
 
-    // 3. Messages cache
     let broadcastCache = []; let privateChatCache = [];
     const updateMsgUI = () => {
         cachedMessages = [...broadcastCache, ...privateChatCache].sort((a,b) => b.time - a.time);
@@ -233,7 +250,6 @@ function startBackgroundListeners() {
         });
     });
 
-    // 4. Sessions cache
     const updateSessionCache = (snap, parentID) => {
         snap.docChanges().forEach(change => {
             if (change.type === "removed") sessionsCache.delete(change.doc.id);
@@ -324,16 +340,13 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
     
-    // Choose text color based on background
     let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
     let targetHeight = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
 
-    // Check if we already built the water effect inside this row
     let existingWater = document.getElementById("animatedRowWater");
     let existingText = document.getElementById("animatedRowText");
 
     if (!existingWater) {
-        // FIRST TIME SETUP: Build the row and inject at 0 height
         el.curPctText.style.position = "relative";
         el.curPctText.style.overflow = "hidden";
         el.curPctText.style.padding = "0"; 
@@ -349,14 +362,12 @@ function updateUIForCurrentSemester(optionalDept) {
             </div>
         `;
 
-        // Wait a tiny fraction of a second, then trigger the rising animation
         setTimeout(() => {
             let waterEl = document.getElementById("animatedRowWater");
             if(waterEl) waterEl.style.height = targetHeight;
         }, 50);
         
     } else {
-        // ALREADY EXISTS: Just update the properties! CSS transitions will handle the smooth animation automatically.
         existingWater.style.backgroundColor = ringColor;
         existingWater.style.height = targetHeight;
         
@@ -374,9 +385,8 @@ function updateUIForCurrentSemester(optionalDept) {
     fetchMarksForSemester(semData.name);
     buildEnrolledSubjectsUI(semData.name); 
 
-    // 🚨 RESET CACHES FOR NEW SEMESTER
     dailyAttendanceCache = {}; 
-    startTimetableListener(); // This flushes and restarts the timetable RAM cache
+    startTimetableListener(); 
 }
 
 function fetchMarksForSemester(semName) {
@@ -736,6 +746,10 @@ el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open")
 document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
 document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
+// --- ADDED: SIGN OUT LISTENER FOR SUSPENSION PANEL ---
+document.getElementById("btnBlockSignOut").addEventListener("click", () => {
+    signOut(auth).then(() => window.location.href = "index.html");
+});
 
 // --- NATIVE BACK BUTTON TRAP (SIGN OUT WARNING) ---
 window.history.pushState({ page: "dashboard" }, "", "");
@@ -743,12 +757,10 @@ window.addEventListener("popstate", (e) => {
     if (confirm("Do you want to sign out?")) {
         signOut(auth).then(() => window.location.href = "index.html");
     } else {
-        // Push state back so the trap works again if they click cancel
         window.history.pushState({ page: "dashboard" }, "", "");
     }
 });
 // --------------------------------------------------
-
 
 // ==========================================
 // SIDEBAR EXTERNAL LINKS
@@ -883,49 +895,39 @@ const sanskritMap = {
 };
 
 function startTitleGlitch() {
-    // Find the title element in the DOM
     const titleEl = document.querySelector('.logo-text');
     if (!titleEl) return;
     
     const originalText = "ADHYORA"; 
     let currentText = originalText.split('');
     
-    // Settings matching your C# script
-    const glitchDuration = 2000; // 2 seconds (Sanskrit stays visible)
-    const minInterval = 3000;    // 3 seconds min wait
-    const maxInterval = 6000;    // 6 seconds max wait
+    const glitchDuration = 2000; 
+    const minInterval = 3000;    
+    const maxInterval = 6000;    
 
     function doGlitch() {
-        // Pick a random letter index
         let rIndex = Math.floor(Math.random() * originalText.length);
         let origChar = originalText[rIndex];
         
         if (sanskritMap[origChar]) {
-            // Swap to Sanskrit
             currentText[rIndex] = sanskritMap[origChar];
             titleEl.innerText = currentText.join('');
             
-            // Revert back to English after glitchDuration
             setTimeout(() => {
                 currentText[rIndex] = origChar;
                 titleEl.innerText = currentText.join('');
                 
-                // Queue the next random glitch!
                 let nextWait = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval);
                 setTimeout(doGlitch, nextWait);
                 
             }, glitchDuration); 
         } else {
-            // Fallback safety
             setTimeout(doGlitch, 1000);
         }
     }
-    
-    // Start the first glitch after a brief initial delay
     setTimeout(doGlitch, 2000);
 }
 
-// Boot up the glitch engine
 startTitleGlitch();
 
 // ==========================================
@@ -935,16 +937,14 @@ const themesModal = document.getElementById("themesModal");
 const btnThemes = document.getElementById("btnThemes");
 const closeThemesBtn = document.getElementById("closeThemesBtn");
 
-// Predefined Theme Maps (Main, Light bg, Nav bg)
 const colorPalettes = {
     blue:   { main: '#3b82f6', light: '#e0f2fe', nav: '#bfdbfe' },
-    yellow: { main: '#eab308', light: '#fef9c3', nav: '#fde047' }, // NEW YELLOW THEME
+    yellow: { main: '#eab308', light: '#fef9c3', nav: '#fde047' }, 
     pink:   { main: '#ec4899', light: '#fce7f3', nav: '#fbcfe8' },
     purple: { main: '#8b5cf6', light: '#ede9fe', nav: '#ddd6fe' },
     orange: { main: '#f97316', light: '#ffedd5', nav: '#fed7aa' }
 };
 
-// Modal Controls
 btnThemes.addEventListener("click", () => {
     el.sidebar.classList.remove("open"); 
     el.overlay.classList.remove("active");
@@ -952,36 +952,30 @@ btnThemes.addEventListener("click", () => {
 });
 closeThemesBtn.addEventListener("click", () => themesModal.classList.remove("active"));
 
-// Apply Theme Function
 function applyTheme(colorKey, isDark) {
     const root = document.documentElement;
     const palette = colorPalettes[colorKey] || colorPalettes.blue;
 
-    // Apply Colors to CSS Variables
     root.style.setProperty('--theme-main', palette.main);
     root.style.setProperty('--theme-light', palette.light);
     root.style.setProperty('--theme-nav', palette.nav);
 
-    // Apply Dark/Light mode class
     if (isDark) {
         document.body.classList.add("dark-mode");
     } else {
         document.body.classList.remove("dark-mode");
     }
 
-    // Update UI Buttons in the Modal
     document.querySelectorAll('.color-swatch').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.theme === colorKey);
     });
     document.getElementById("btnDarkMode").classList.toggle("active", isDark);
     document.getElementById("btnLightMode").classList.toggle("active", !isDark);
 
-    // Save to LocalStorage
     localStorage.setItem("adhyora_theme_color", colorKey);
     localStorage.setItem("adhyora_theme_mode", isDark ? "dark" : "light");
 }
 
-// Event Listeners for Swatches
 document.querySelectorAll('.color-swatch').forEach(swatch => {
     swatch.addEventListener('click', (e) => {
         let selectedColor = e.target.dataset.theme;
@@ -990,7 +984,6 @@ document.querySelectorAll('.color-swatch').forEach(swatch => {
     });
 });
 
-// Event Listeners for Dark/Light Mode
 document.getElementById("btnDarkMode").addEventListener("click", () => {
     let currentColor = localStorage.getItem("adhyora_theme_color") || "blue";
     applyTheme(currentColor, true);
@@ -1000,12 +993,10 @@ document.getElementById("btnLightMode").addEventListener("click", () => {
     applyTheme(currentColor, false);
 });
 
-// --- LOAD SAVED THEME ON BOOT ---
 function loadSavedTheme() {
     let savedColor = localStorage.getItem("adhyora_theme_color") || "blue";
     let savedMode = localStorage.getItem("adhyora_theme_mode") || "light";
     applyTheme(savedColor, savedMode === "dark");
 }
 
-// Call this immediately to apply styles before user sees the screen
 loadSavedTheme();
