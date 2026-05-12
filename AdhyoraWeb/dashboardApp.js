@@ -325,7 +325,7 @@ function updateUIForCurrentSemester(optionalDept) {
     el.badge.style.backgroundColor = ringColor;
     // Apply the dynamic color to the "Current" cell background
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
     let targetHeight = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
 
     // Check if we already built the water effect inside this row
