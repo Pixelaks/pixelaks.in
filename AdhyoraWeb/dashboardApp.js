@@ -105,6 +105,7 @@ if (!collegeID || !studentUID) {
 }
 
 // 🚨 THE FIX: A Safer Device Session Manager 🚨
+// 🚨 THE FIX: A Safer Device Session Manager 🚨
 async function registerWebSession() {
     if (!myWebDeviceID) {
         myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -118,28 +119,27 @@ async function registerWebSession() {
     if (navigator.userAgent.indexOf("Android") != -1) osName = "Android Browser";
     if (navigator.userAgent.indexOf("like Mac") != -1) osName = "iOS Browser";
 
+    const sessionsColRef = collection(db, "colleges", collegeID, "students", currentRollNo, "sessions");
+    const sessionDocRef = doc(sessionsColRef, myWebDeviceID);
+
     try {
-        const sessionRef = doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID);
-        
         // 1. Tell Firebase to log this device in
-        await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
-        
-        // 2. 🚨 THE FIX: Wait 3 full seconds before activating the Security Watchdog!
-        // This ensures Firebase has finished writing the data so you don't get falsely kicked.
-        setTimeout(() => {
-            onSnapshot(sessionRef, (docSnap) => {
-                if (!docSnap.exists()) {
-                    console.warn("Session was revoked remotely. Logging out.");
-                    signOut(auth).then(() => window.location.href = "index.html");
-                }
-            });
-        }, 3000);
-        
+        await setDoc(sessionDocRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
     } catch(e) { 
         console.error("Session Registration Error:", e); 
     }
-}
 
+    // 2. 🚨 THE FIX: Listen to the COLLECTION, just like your Unity C# script!
+    // We ONLY log out if we see an explicit "removed" event for our specific device.
+    onSnapshot(sessionsColRef, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "removed" && change.doc.id === myWebDeviceID) {
+                console.warn("Session was revoked remotely. Logging out.");
+                signOut(auth).then(() => window.location.href = "index.html");
+            }
+        });
+    });
+}
 async function syncCollegeAndListen() {
     try {
         const colSnap = await getDoc(doc(db, "colleges", collegeID));
