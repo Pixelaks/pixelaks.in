@@ -898,3 +898,85 @@ function startTitleGlitch() {
 
 // Boot up the glitch engine
 startTitleGlitch();
+
+// ==========================================
+// THEME & APPEARANCE ENGINE
+// ==========================================
+const themesModal = document.getElementById("themesModal");
+const btnThemes = document.getElementById("btnThemes");
+const closeThemesBtn = document.getElementById("closeThemesBtn");
+
+// Predefined Theme Maps (Main, Light bg, Nav bg)
+const colorPalettes = {
+    blue:   { main: '#3b82f6', light: '#e0f2fe', nav: '#bfdbfe' },
+    green:  { main: '#10b981', light: '#d1fae5', nav: '#a7f3d0' },
+    pink:   { main: '#ec4899', light: '#fce7f3', nav: '#fbcfe8' },
+    purple: { main: '#8b5cf6', light: '#ede9fe', nav: '#ddd6fe' },
+    orange: { main: '#f97316', light: '#ffedd5', nav: '#fed7aa' }
+};
+
+// Modal Controls
+btnThemes.addEventListener("click", () => {
+    el.sidebar.classList.remove("open"); 
+    el.overlay.classList.remove("active");
+    themesModal.classList.add("active");
+});
+closeThemesBtn.addEventListener("click", () => themesModal.classList.remove("active"));
+
+// Apply Theme Function
+function applyTheme(colorKey, isDark) {
+    const root = document.documentElement;
+    const palette = colorPalettes[colorKey] || colorPalettes.blue;
+
+    // Apply Colors to CSS Variables
+    root.style.setProperty('--theme-main', palette.main);
+    root.style.setProperty('--theme-light', palette.light);
+    root.style.setProperty('--theme-nav', palette.nav);
+
+    // Apply Dark/Light mode class
+    if (isDark) {
+        document.body.classList.add("dark-mode");
+    } else {
+        document.body.classList.remove("dark-mode");
+    }
+
+    // Update UI Buttons in the Modal
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === colorKey);
+    });
+    document.getElementById("btnDarkMode").classList.toggle("active", isDark);
+    document.getElementById("btnLightMode").classList.toggle("active", !isDark);
+
+    // Save to LocalStorage
+    localStorage.setItem("adhyora_theme_color", colorKey);
+    localStorage.setItem("adhyora_theme_mode", isDark ? "dark" : "light");
+}
+
+// Event Listeners for Swatches
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', (e) => {
+        let selectedColor = e.target.dataset.theme;
+        let isDark = document.body.classList.contains("dark-mode");
+        applyTheme(selectedColor, isDark);
+    });
+});
+
+// Event Listeners for Dark/Light Mode
+document.getElementById("btnDarkMode").addEventListener("click", () => {
+    let currentColor = localStorage.getItem("adhyora_theme_color") || "blue";
+    applyTheme(currentColor, true);
+});
+document.getElementById("btnLightMode").addEventListener("click", () => {
+    let currentColor = localStorage.getItem("adhyora_theme_color") || "blue";
+    applyTheme(currentColor, false);
+});
+
+// --- LOAD SAVED THEME ON BOOT ---
+function loadSavedTheme() {
+    let savedColor = localStorage.getItem("adhyora_theme_color") || "blue";
+    let savedMode = localStorage.getItem("adhyora_theme_mode") || "light";
+    applyTheme(savedColor, savedMode === "dark");
+}
+
+// Call this immediately to apply styles before user sees the screen
+loadSavedTheme();
