@@ -4,13 +4,14 @@ import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, coll
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
+  authDomain: "adhyora-5d4c1.firebaseapp.com",
+  projectId: "adhyora-5d4c1",
+  storageBucket: "adhyora-5d4c1.firebasestorage.app",
+  messagingSenderId: "206050348148",
+  appId: "1:206050348148:web:da4e421e00ec2f77429521"
 };
+
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -92,20 +93,13 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
-if (!collegeID || !studentUID) { 
-    window.location.href = "index.html"; 
-} else {
+if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
+else {
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            syncCollegeAndListen(); 
-        } else {
-            window.location.href = "index.html";
-        }
+        if (user) syncCollegeAndListen(); else window.location.href = "index.html";
     });
 }
 
-// 🚨 THE FIX: A Safer Device Session Manager 🚨
-// 🚨 THE FIX: A Safer Device Session Manager 🚨
 async function registerWebSession() {
     if (!myWebDeviceID) {
         myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -119,27 +113,16 @@ async function registerWebSession() {
     if (navigator.userAgent.indexOf("Android") != -1) osName = "Android Browser";
     if (navigator.userAgent.indexOf("like Mac") != -1) osName = "iOS Browser";
 
-    const sessionsColRef = collection(db, "colleges", collegeID, "students", currentRollNo, "sessions");
-    const sessionDocRef = doc(sessionsColRef, myWebDeviceID);
-
     try {
-        // 1. Tell Firebase to log this device in
-        await setDoc(sessionDocRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
-    } catch(e) { 
-        console.error("Session Registration Error:", e); 
-    }
-
-    // 2. 🚨 THE FIX: Listen to the COLLECTION, just like your Unity C# script!
-    // We ONLY log out if we see an explicit "removed" event for our specific device.
-    onSnapshot(sessionsColRef, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "removed" && change.doc.id === myWebDeviceID) {
-                console.warn("Session was revoked remotely. Logging out.");
-                signOut(auth).then(() => window.location.href = "index.html");
-            }
+        const sessionRef = doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID);
+        await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
+        
+        onSnapshot(sessionRef, (docSnap) => {
+            if (!docSnap.exists()) signOut(auth).then(() => window.location.href = "index.html");
         });
-    });
+    } catch(e) {}
 }
+
 async function syncCollegeAndListen() {
     try {
         const colSnap = await getDoc(doc(db, "colleges", collegeID));
