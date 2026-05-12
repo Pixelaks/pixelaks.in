@@ -40,7 +40,7 @@ body {
 
 /* --- TRUE GLASSMORPHISM CONTAINER --- */
 .app-container {
-    background: rgba(20, 20, 20, 0.35); /* Sheer dark background */
+    background: rgba(20, 20, 20, 0.25); /* Sheer dark background */
     backdrop-filter: blur(8px); /* Lowered blur so particles are highly visible! */
     -webkit-backdrop-filter: blur(8px);
     
