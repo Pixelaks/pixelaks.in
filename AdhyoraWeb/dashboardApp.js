@@ -48,6 +48,13 @@ let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = 
 let myWebDeviceID = localStorage.getItem("myWebDeviceID");
 let currentStudentProfileData = null; 
 
+// 🚨 NEW LEAVE PREDICTOR STATES 🚨
+let actualProjectedPercent = 0;
+let savedStrictPresent = 0;
+let savedStrictTotal = 0;
+let savedRemainingDays = 0;
+let isStrictCollege = true; // Match your Unity default
+
 // ==========================================
 // DOM ELEMENTS
 // ==========================================
@@ -88,7 +95,15 @@ const el = {
     sessionsModal: document.getElementById("sessionsModal"),
     sessionsList: document.getElementById("sessionsListContainer"),
     profileModal: document.getElementById("profileDetailsModal"),
-    profileContent: document.getElementById("profileDetailsContent")
+    profileContent: document.getElementById("profileDetailsContent"),
+    
+    // 🚨 PREDICTOR UI ELEMENTS
+    predictorModal: document.getElementById("leavePredictorModal"),
+    predictStatusText: document.getElementById("predictStatusText"),
+    leaveDaysInput: document.getElementById("leaveDaysInput"),
+    predictSubmitBtn: document.getElementById("predictSubmitBtn"),
+    predictWaterFill: document.getElementById("predictWaterFill"),
+    predictPercentageText: document.getElementById("predictPercentageText")
 };
 
 // ==========================================
@@ -130,31 +145,32 @@ async function registerWebSession() {
 
 async function syncCollegeAndListen() {
     
-    // --- 🚨 ADDED SUBSCRIPTION MANAGER (Replaces old static getDoc) 🚨 ---
     onSnapshot(doc(db, "colleges", collegeID), (colSnap) => {
         if (colSnap.exists()) {
             let data = colSnap.data();
             if (data.currentSemesterType) { collegeSemesterType = data.currentSemesterType; }
 
             const blockPanel = document.getElementById("subscriptionBlockPanel");
+            const dashboardUI = document.querySelector(".dashboard-container"); 
             
-            // If no subscription data exists OR it's expired past grace period
             if (!data.subscription) {
                 blockPanel.classList.add("active");
+                dashboardUI.style.display = "none";
             } else {
                 let expiryTimestamp = data.subscription.expiryDate || 0;
                 let hardBlockDate = new Date(expiryTimestamp * 1000);
-                hardBlockDate.setDate(hardBlockDate.getDate() + 8); // 8 Days Grace Period
+                hardBlockDate.setDate(hardBlockDate.getDate() + 8); 
                 
                 if (new Date() > hardBlockDate) {
                     blockPanel.classList.add("active");
+                    dashboardUI.style.display = "none"; 
                 } else {
                     blockPanel.classList.remove("active");
+                    dashboardUI.style.display = "flex"; 
                 }
             }
         }
     });
-    // ---------------------------------------------------------------------
 
     const secureUID = auth.currentUser.uid; 
     const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", secureUID));
@@ -190,7 +206,6 @@ async function syncCollegeAndListen() {
     });
 }
 
-// Background caching engine
 function startBackgroundListeners() {
     let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
     onSnapshot(query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc")), (snap) => {
@@ -329,19 +344,71 @@ function updateUIForCurrentSemester(optionalDept) {
     if (optionalDept) el.sbSub.innerHTML = `${optionalDept} &nbsp; <span class="sem-text">${semData.name}</span>`;
     else el.sbSub.innerHTML = el.sbSub.innerHTML.split("&nbsp;")[0] + `&nbsp; <span class="sem-text">${semData.name}</span>`;
 
-    let percent = (semData.strictTotal > 0) ? (semData.strictPresent / semData.strictTotal) * 100 : 0;
-    el.pctText.innerText = `${percent.toFixed(2)}%`; el.curPctText.innerText = `Current: ${percent.toFixed(2)}%`;
+    float simplePercent = (semData.simpleTotalHeld > 0) ? ((float)semData.simpleTotalAttended / semData.simpleTotalHeld) * 100f : 0f;
+    let projectedStrictPercent = 0;
+    let currentStrictPercent = 0;
+
+    savedStrictPresent = 0;
+    savedStrictTotal = 0;
+    savedRemainingDays = 0;
+
+    if (isStrictCollege) {
+        currentStrictPercent = (semData.strictTotal > 0) ? (semData.strictPresent / semData.strictTotal) * 100 : 0;
+        projectedStrictPercent = currentStrictPercent;
+
+        let globalMode = collegeSemesterType || "Odd";
+        let semNum = currentSemesterIndex + 1;
+        let isCurrentlyActiveSem = (globalMode == "Odd" && semNum % 2 != 0) || (globalMode == "Even" && semNum % 2 == 0);
+
+        if (isGlobalDataLoaded && isCurrentlyActiveSem) {
+            let semIsOdd = (semNum % 2 != 0);
+            let range = semIsOdd ? {start: semStarts.keys().next().value, end: semEnds.keys().next().value} : {start: semStarts.keys().next().value, end: semEnds.keys().next().value}; 
+            // Note: The global dates extraction logic is simplified for JS due to Map structure, assuming current year is active.
+
+            if (calWorkingDays.size > 0) {
+                let remainingDays = 0;
+                let iterator = new Date(); iterator.setDate(iterator.getDate() + 1);
+                // Rough estimate based on cached working days ahead of today
+                calWorkingDays.forEach(dateKey => {
+                    let dateObj = new Date(dateKey);
+                    if (dateObj >= iterator) remainingDays++;
+                });
+
+                if (remainingDays > 0) {
+                    savedStrictPresent = semData.strictPresent;
+                    savedStrictTotal = semData.strictTotal;
+                    savedRemainingDays = remainingDays;
+
+                    let projNum = savedStrictPresent + remainingDays;
+                    let projDenom = savedStrictTotal + remainingDays;
+
+                    if (projDenom > 0) projectedStrictPercent = (projNum / projDenom) * 100.0;
+                }
+            }
+        }
+    } else {
+        projectedStrictPercent = simplePercent;
+        currentStrictPercent = simplePercent;
+    }
+
+    actualProjectedPercent = projectedStrictPercent;
+    let currentOverallPercent = isStrictCollege ? currentStrictPercent : simplePercent;
+
+    el.pctText.innerHTML = `<size=40%>Projected<br></size><b>${projectedStrictPercent.toFixed(2)}%</b>`; 
+    el.curPctText.innerText = `Current: ${currentOverallPercent.toFixed(2)}%`;
     el.attClasses.innerText = `Attended: ${semData.strictPresent}`; el.totClasses.innerText = `Total: ${semData.strictTotal}`;
     el.absClasses.innerText = `Absent: ${semData.strictTotal - semData.strictPresent}`;
     el.perPres.innerText = `Periods Present: ${semData.simplePresent}`; el.perTot.innerText = `Total Periods: ${semData.simpleTotal}`;
     el.perAbs.innerText = `Periods Absent: ${semData.simpleTotal - semData.simplePresent}`;
 
-    let ringColor = percent >= 85 ? "#4caf50" : percent >= 70 ? "#ffc107" : percent >= 50 ? "#ff9800" : "#f44336";
-    el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
-    el.badge.style.backgroundColor = ringColor;
+    let ringColor = GetPredictorColor(projectedStrictPercent);
+    let hexColor = "#" + ((1 << 24) + (ringColor.r << 16) + (ringColor.g << 8) + ringColor.b).toString(16).slice(1);
     
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
-    let targetHeight = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
+    el.badge.innerText = projectedStrictPercent >= 85 ? "Excellent" : projectedStrictPercent >= 70 ? "Good" : projectedStrictPercent >= 50 ? "Average" : "Critical";
+    el.badge.style.backgroundColor = hexColor;
+    
+    let textColor = (projectedStrictPercent >= 70 && projectedStrictPercent < 85) ? "#0f172a" : "#ffffff";
+    let targetHeight = `calc(${Math.min(100, Math.max(0, currentOverallPercent))}% - 12px)`;
 
     let existingWater = document.getElementById("animatedRowWater");
     let existingText = document.getElementById("animatedRowText");
@@ -354,11 +421,11 @@ function updateUIForCurrentSemester(optionalDept) {
         el.curPctText.style.backgroundColor = "transparent"; 
 
         el.curPctText.innerHTML = `
-            <div class="row-water-container" id="animatedRowWater" style="background-color: ${ringColor}; height: 0px;">
+            <div class="row-water-container" id="animatedRowWater" style="background-color: ${hexColor}; height: 0px;">
                 <div class="row-water-wave"></div>
             </div>
             <div id="animatedRowText" style="position: relative; z-index: 2; padding: 8px 12px; font-weight: normal; color: ${textColor}; transition: color 0.5s;">
-                Current: ${percent.toFixed(2)}%
+                Current: ${currentOverallPercent.toFixed(2)}%
             </div>
         `;
 
@@ -368,14 +435,14 @@ function updateUIForCurrentSemester(optionalDept) {
         }, 50);
         
     } else {
-        existingWater.style.backgroundColor = ringColor;
+        existingWater.style.backgroundColor = hexColor;
         existingWater.style.height = targetHeight;
         
         existingText.style.color = textColor;
-        existingText.innerText = `Current: ${percent.toFixed(2)}%`;
+        existingText.innerText = `Current: ${currentOverallPercent.toFixed(2)}%`;
     }
-    el.waterFill.style.backgroundColor = ringColor;
-    el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
+    el.waterFill.style.backgroundColor = hexColor;
+    el.waterFill.style.top = `${100 - Math.min(100, projectedStrictPercent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
         const ratio = sub.total > 0 ? (sub.present / sub.total) : 0; const subPct = ratio * 100;
         let barColor = ratio < 0.6 ? "#f44336" : ratio < 0.75 ? "#ff9800" : "#4caf50";
@@ -387,6 +454,14 @@ function updateUIForCurrentSemester(optionalDept) {
 
     dailyAttendanceCache = {}; 
     startTimetableListener(); 
+}
+
+// 🚨 PREDICTOR MATH HELPER 🚨
+function GetPredictorColor(percentage) {
+    if (percentage >= 85) return {r: 76, g: 175, b: 80};      // Green
+    else if (percentage >= 70) return {r: 255, g: 193, b: 7}; // Yellow
+    else if (percentage >= 50) return {r: 255, g: 152, b: 0}; // Orange
+    else return {r: 244, g: 67, b: 54};                       // Red
 }
 
 function fetchMarksForSemester(semName) {
@@ -491,6 +566,82 @@ document.getElementById("btnProfileDetails").addEventListener("click", () => {
     el.profileModal.classList.add("active");
 });
 document.getElementById("closeProfileBtn").addEventListener("click", () => el.profileModal.classList.remove("active"));
+
+// ==========================================
+// 🚨 LEAVE PREDICTOR LOGIC 🚨
+// ==========================================
+document.getElementById("attendanceWater").addEventListener("click", () => {
+    el.predictorModal.classList.add("active");
+    el.leaveDaysInput.value = "";
+    el.predictStatusText.innerHTML = "Enter the days to know the percentage drop.";
+    ResetPredictorVisuals();
+});
+
+document.getElementById("closePredictorBtn").addEventListener("click", () => {
+    el.predictorModal.classList.remove("active");
+});
+
+function ResetPredictorVisuals() {
+    let startColor = GetPredictorColor(actualProjectedPercent);
+    let hexColor = "#" + ((1 << 24) + (startColor.r << 16) + (startColor.g << 8) + startColor.b).toString(16).slice(1);
+    
+    el.predictWaterFill.style.backgroundColor = hexColor;
+    el.predictWaterFill.style.top = `${100 - Math.min(100, actualProjectedPercent)}%`;
+    
+    el.predictPercentageText.innerHTML = `<size=40%>Current<br></size><b><span style="color:${hexColor}">${actualProjectedPercent.toFixed(2)}%</span></b>`;
+}
+
+document.getElementById("predictSubmitBtn").addEventListener("click", () => {
+    let inputVal = el.leaveDaysInput.value;
+    if (!inputVal) return;
+    
+    let leaveDays = parseInt(inputVal);
+    if (isNaN(leaveDays) || leaveDays < 0) leaveDays = 0;
+
+    if (leaveDays > savedRemainingDays) {
+        el.predictStatusText.innerHTML = `<span style="color:#ef4444;">Semester only has ${savedRemainingDays} days remaining. Enter valid days.</span>`;
+        ResetPredictorVisuals();
+        return;
+    }
+
+    el.predictStatusText.innerHTML = `<span style="color:#10b981;">Prediction calculated.</span>`;
+
+    let projNum = savedStrictPresent + (savedRemainingDays - leaveDays);
+    let projDenom = savedStrictTotal + savedRemainingDays;
+    let predictedPercent = 0;
+    
+    if (projDenom > 0) predictedPercent = (projNum / projDenom) * 100.0;
+
+    // Animate the drop!
+    AnimatePrediction(actualProjectedPercent, predictedPercent);
+});
+
+function AnimatePrediction(startValue, targetValue) {
+    let duration = 800; // ms
+    let startTime = null;
+
+    function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        let progress = (timestamp - startTime) / duration;
+        if (progress > 1) progress = 1;
+        
+        // Smooth step easing
+        let easeProgress = progress * progress * (3 - 2 * progress);
+        let currentVal = startValue + (targetValue - startValue) * easeProgress;
+        
+        let currentColor = GetPredictorColor(currentVal);
+        let hexColor = "#" + ((1 << 24) + (currentColor.r << 16) + (currentColor.g << 8) + currentColor.b).toString(16).slice(1);
+        
+        el.predictWaterFill.style.backgroundColor = hexColor;
+        el.predictWaterFill.style.top = `${100 - Math.min(100, currentVal)}%`;
+        el.predictPercentageText.innerHTML = `<size=40%>Predicted<br></size><b><span style="color:${hexColor}">${currentVal.toFixed(2)}%</span></b>`;
+
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    }
+    window.requestAnimationFrame(step);
+}
 
 // ==========================================
 // 🚨 VIEW TOGGLING 🚨
