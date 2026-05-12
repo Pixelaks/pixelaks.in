@@ -323,13 +323,7 @@ function updateUIForCurrentSemester(optionalDept) {
     let ringColor = percent >= 85 ? "#4caf50" : percent >= 70 ? "#ffc107" : percent >= 50 ? "#ff9800" : "#f44336";
     el.badge.innerText = percent >= 85 ? "Excellent" : percent >= 70 ? "Good" : percent >= 50 ? "Average" : "Critical";
     el.badge.style.backgroundColor = ringColor;
-    const liquidWave = document.getElementById("liquidWave");
-    if (liquidWave) {
-        // Math.max ensures the wave is at least 5% high so it doesn't vanish at 0%
-        let fillHeight = Math.max(5, percent); 
-        liquidWave.style.height = `${fillHeight}%`;
-        liquidWave.style.backgroundColor = ringColor;
-    }
+    el.circle.style.background = `conic-gradient(${ringColor} ${(percent/100)*360}deg, #e0e0e0 ${(percent/100)*360}deg)`;
 
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
         const ratio = sub.total > 0 ? (sub.present / sub.total) : 0; const subPct = ratio * 100;
