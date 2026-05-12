@@ -278,6 +278,67 @@ function startBackgroundListeners() {
             if (d.senderID === auth.currentUser.uid) forMe = true;
             else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
             else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
+            if (forMe) { 
+                let role = d.senderRole || "Principal"; 
+                broadcastCache.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", senderRole: role, type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+            }
+        });
+        updateMsgUI();
+    });
+    onSnapshot(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)), (snap) => {
+        privateChatCache = []; 
+        snap.forEach(chatDoc => {
+            onSnapshot(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)), (msgSnap) => {
+                privateChatCache = privateChatCache.filter(m => m.roomID !== chatDoc.id); 
+                msgSnap.forEach(mDoc => { 
+                    let d = mDoc.data(); 
+                    let role = d.senderRole || "Principal"; 
+                    privateChatCache.push({ roomID: chatDoc.id, title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", senderRole: role, type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+                });
+                updateMsgUI();
+            });
+        });
+    });
+
+    const updateSessionCache = (snap, parentID) => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "removed") sessionsCache.delete(change.doc.id);
+            else sessionsCache.set(change.doc.id, { id: change.doc.id, parent: parentID, ...change.doc.data() });
+        });
+        if (el.sessionsModal.classList.contains("active")) loadSessions();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "students", currentRollNo, "sessions")), snap => updateSessionCache(snap, currentRollNo));
+    onSnapshot(query(collection(db, "colleges", collegeID, "students", auth.currentUser.uid, "sessions")), snap => updateSessionCache(snap, auth.currentUser.uid));
+}
+    function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
+    let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
+    let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
+    let inboxCache = []; let globalCache = [];
+    const updateNotifUI = () => {
+        cachedNotifs = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time);
+        if (!el.actualNotifView.classList.contains("hidden-view")) loadActualNotifications();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        inboxCache = []; snap.forEach(doc => { let d = doc.data(); inboxCache.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
+    onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
+        globalCache = []; snap.forEach(doc => { let d = doc.data(); globalCache.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
+
+    let broadcastCache = []; let privateChatCache = [];
+    const updateMsgUI = () => {
+        cachedMessages = [...broadcastCache, ...privateChatCache].sort((a,b) => b.time - a.time);
+        if (!el.msgView.classList.contains("hidden-view")) loadMessages();
+    };
+    onSnapshot(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        broadcastCache = [];
+        snap.forEach(doc => {
+            let d = doc.data(); let target = d.targetSummary || ""; let forMe = false;
+            if (d.senderID === auth.currentUser.uid) forMe = true;
+            else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
+            else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
             if (forMe) { broadcastCache.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
         });
         updateMsgUI();
@@ -723,12 +784,21 @@ function loadActualNotifications() {
     }).join('');
 }
 
+// ❌ Replace your existing loadMessages() function with this:
 function loadMessages() {
     if (cachedMessages.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
+    
     el.msgList.innerHTML = cachedMessages.map(m => {
-        let css = m.type === "broadcast" ? "broadcast" : "";
+        // Evaluate the sender role and assign the correct CSS class!
+        let roleClass = "msg-student"; // Defaults to student (Theme Color)
+        let r = (m.senderRole || "").toLowerCase();
+        
+        if (r.includes("principal") || r.includes("admin")) roleClass = "msg-principal";
+        else if (r.includes("teacher")) roleClass = "msg-teacher";
+
         let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-        return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
+        
+        return `<div class="data-card ${roleClass}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
     }).join('');
 }
 
