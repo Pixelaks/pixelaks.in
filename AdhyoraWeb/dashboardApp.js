@@ -351,7 +351,7 @@ document.getElementById("btnProfileDetails").addEventListener("click", () => {
 document.getElementById("closeProfileBtn").addEventListener("click", () => el.profileModal.classList.remove("active"));
 
 // ==========================================
-// 🚨 VIEW TOGGLING (USING HIDDEN-VIEW) 🚨
+// 🚨 VIEW TOGGLING (ZERO-COST CSS SWITCHING) 🚨
 // ==========================================
 const btnNavMain = document.getElementById("btnNavMain");
 const btnNavAssign = document.getElementById("btnNavAssign");
@@ -362,36 +362,52 @@ const btnNavDaily = document.getElementById("btnNavDaily");
 
 function switchView(activeBtn, viewToShow) {
     [btnNavMain, btnNavAssign, btnNavNotif, btnNavMsg, btnNavTimetable, btnNavDaily].forEach(btn => btn.classList.remove("active"));
+    
+    // Hides all views instantly using CSS. Costs 0 Firebase reads.
     [el.mainView, el.assignView, el.actualNotifView, el.msgView, el.ttView, el.dailyView].forEach(view => view.classList.add("hidden-view"));
+    
     activeBtn.classList.add("active");
     viewToShow.classList.remove("hidden-view");
 }
 
+// 🚨 Notice how clicking buttons NO LONGER triggers database downloads!
 btnNavMain.addEventListener("click", () => switchView(btnNavMain, el.mainView));
-btnNavDaily.addEventListener("click", () => { switchView(btnNavDaily, el.dailyView); loadDailyAttendance(); });
+btnNavAssign.addEventListener("click", () => switchView(btnNavAssign, el.assignView));
+btnNavNotif.addEventListener("click", () => switchView(btnNavNotif, el.actualNotifView));
+btnNavMsg.addEventListener("click", () => switchView(btnNavMsg, el.msgView));
+
 btnNavTimetable.addEventListener("click", () => { 
     switchView(btnNavTimetable, el.ttView); 
     let todayName = new Date().toLocaleString('en-us', {weekday: 'long'});
     let validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     if (!validDays.includes(todayName)) todayName = "Monday";
     document.querySelectorAll('.day-btn').forEach(btn => btn.classList.toggle("active", btn.dataset.day === todayName));
+    
+    // We only load Timetable on click because it depends on the day selected
     loadTimetableForDay(todayName);
 });
 
-btnNavAssign.addEventListener("click", () => { switchView(btnNavAssign, el.assignView); loadAssignments(); });
-btnNavNotif.addEventListener("click", () => { switchView(btnNavNotif, el.actualNotifView); loadActualNotifications(); });
-btnNavMsg.addEventListener("click", () => { switchView(btnNavMsg, el.msgView); loadMessages(); });
+btnNavDaily.addEventListener("click", () => { 
+    switchView(btnNavDaily, el.dailyView); 
+    loadDailyAttendance(); // Keep this triggered because it relies on the date picker
+});
+
 
 // ==========================================
-// 1. ASSIGNMENTS
+// 🚨 1. REAL-TIME ASSIGNMENT LISTENER 🚨
 // ==========================================
-async function loadAssignments() {
+let isAssignmentsListening = false;
+
+function startAssignmentsListener() {
+    if (isAssignmentsListening) return; // Prevent double-billing!
+    isAssignmentsListening = true;
     el.assignList.innerHTML = `<div class="no-data-text">Checking for assignments...</div>`;
-    try {
-        let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-        const q = query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        
+    
+    let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    const q = query(collection(db, "colleges", collegeID, "assignments"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"));
+    
+    // 🚨 onSnapshot keeps the data in RAM and updates the UI silently!
+    onSnapshot(q, (snapshot) => {
         let notifs = []; let mySemStr = `Semester ${currentSemesterIndex + 1}`;
         snapshot.forEach(doc => {
             let d = doc.data(); let sub = d.subject || "Unknown";
@@ -405,71 +421,109 @@ async function loadAssignments() {
         
         if (notifs.length === 0) { el.assignList.innerHTML = `<div class="no-data-text">No Recent Assignments</div>`; return; }
         el.assignList.innerHTML = notifs.map(n => `<div class="data-card assign"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>${n.teach}</span><span class="card-due">Due: ${n.due}</span></div></div>`).join('');
-    } catch(e) { el.assignList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+    }, (error) => {
+        el.assignList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${error.message}</div>`;
+    });
 }
 
 // ==========================================
-// 2. ACTUAL NOTIFICATIONS
+// 🚨 2. REAL-TIME ACTUAL NOTIFICATIONS LISTENER 🚨
 // ==========================================
+let isNotifsListening = false;
 function getSafeTopic(input) { return (!input || input === "All") ? "ALL" : input.replace(/[^a-zA-Z0-9]/g, ''); }
 
-async function loadActualNotifications() {
+function startNotificationsListener() {
+    if (isNotifsListening) return;
+    isNotifsListening = true;
     el.actualNotifList.innerHTML = `<div class="no-data-text">Loading notifications...</div>`;
-    try {
-        let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
-        let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
+    
+    let safeCol = getSafeTopic(collegeID); let safeDept = getSafeTopic(rawDept); let safeYear = getSafeTopic(myYearStr);
+    let myTopics = [`${safeCol}_ALL`, `${safeCol}_STUDENTS_ALL_ALL`, `${safeCol}_STUDENTS_${safeDept}_ALL`, `${safeCol}_STUDENTS_${safeDept}_${safeYear}`];
 
-        const [inboxSnap, globalSnap] = await Promise.all([
-            getDocs(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30))),
-            getDocs(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)))
-        ]);
+    let inboxCache = [];
+    let globalCache = [];
 
-        let notifs = [];
-        inboxSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        globalSnap.forEach(doc => { let d = doc.data(); notifs.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-
-        notifs.sort((a,b) => b.time - a.time);
-        if (notifs.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
-        
-        el.actualNotifList.innerHTML = notifs.map(n => {
+    const updateNotifUI = () => {
+        let combined = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time);
+        if (combined.length === 0) { el.actualNotifList.innerHTML = `<div class="no-data-text">No Notifications</div>`; return; }
+        el.actualNotifList.innerHTML = combined.map(n => {
             let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
             return `<div class="data-card ${n.type}"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora</span><span>${timeStr}</span></div></div>`;
         }).join('');
-    } catch(e) { el.actualNotifList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+    };
+
+    onSnapshot(query(collection(db, "colleges", collegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        inboxCache = [];
+        snap.forEach(doc => { let d = doc.data(); inboxCache.push({ title: d.title || "Notice", body: d.body || "", type: "notif", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
+
+    onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
+        globalCache = [];
+        snap.forEach(doc => { let d = doc.data(); globalCache.push({ title: d.title || "System Update", body: d.body || "", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
+        updateNotifUI();
+    });
 }
 
 // ==========================================
-// 3. MESSAGES
+// 🚨 3. REAL-TIME MESSAGES LISTENER 🚨
 // ==========================================
-async function loadMessages() {
+let isMessagesListening = false;
+
+function startMessagesListener() {
+    if (isMessagesListening) return;
+    isMessagesListening = true;
     el.msgList.innerHTML = `<div class="no-data-text">Loading inbox...</div>`;
-    let msgs = [];
-    try {
-        const broadcastSnap = await getDocs(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)));
-        broadcastSnap.forEach(doc => {
+    
+    let broadcastCache = [];
+    let privateChatCache = [];
+
+    const updateMsgUI = () => {
+        let combined = [...broadcastCache, ...privateChatCache].sort((a,b) => b.time - a.time);
+        if (combined.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
+        el.msgList.innerHTML = combined.map(m => {
+            let css = m.type === "broadcast" ? "broadcast" : "";
+            let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
+        }).join('');
+    };
+
+    onSnapshot(query(collection(db, "colleges", collegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        broadcastCache = [];
+        snap.forEach(doc => {
             let d = doc.data(); let target = d.targetSummary || "";
             let forMe = false;
             if (d.senderID === auth.currentUser.uid) forMe = true;
             else if (target.includes("Everyone") || target.includes("All Students")) forMe = true;
             else { let deptMatch = target.includes("All Depts") || target.includes(rawDept); let yearMatch = target.includes("All Years") || target.includes(myYearStr); if (deptMatch && yearMatch) forMe = true; }
-            if (forMe) { msgs.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
+            if (forMe) { broadcastCache.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || d.senderRole || "System", type: "broadcast", time: d.timestamp ? d.timestamp.toDate() : new Date() }); }
         });
+        updateMsgUI();
+    });
 
-        const chatSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)));
-        for (let chatDoc of chatSnap.docs) {
-            const msgSnap = await getDocs(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)));
-            msgSnap.forEach(mDoc => { let d = mDoc.data(); msgs.push({ title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        }
-
-        msgs.sort((a,b) => b.time - a.time);
-        if (msgs.length === 0) { el.msgList.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
-        el.msgList.innerHTML = msgs.map(m => {
-            let css = m.type === "broadcast" ? "broadcast" : "";
-            let timeStr = m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-            return `<div class="data-card ${css}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender}</span><span>${timeStr}</span></div></div>`;
-        }).join('');
-    } catch(e) { el.msgList.innerHTML = `<div class="no-data-text" style="color:#ef4444;">Error: ${e.message}</div>`; }
+    onSnapshot(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)), (snap) => {
+        privateChatCache = []; // Reset and rebuild from active chats
+        snap.forEach(chatDoc => {
+            onSnapshot(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)), (msgSnap) => {
+                // Filter out old messages from this specific chat room to prevent duplicates
+                privateChatCache = privateChatCache.filter(m => m.roomID !== chatDoc.id); 
+                msgSnap.forEach(mDoc => { 
+                    let d = mDoc.data(); 
+                    privateChatCache.push({ roomID: chatDoc.id, title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+                });
+                updateMsgUI();
+            });
+        });
+    });
 }
+
+// 🚨 Inject this ONE line inside your syncCollegeAndListen() function after processStudentData()
+// This starts the listeners ONCE when the app loads!
+setTimeout(() => {
+    startAssignmentsListener();
+    startNotificationsListener();
+    startMessagesListener();
+}, 1000);
 
 
 // ==========================================
