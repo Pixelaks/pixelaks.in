@@ -329,20 +329,28 @@ function updateUIForCurrentSemester(optionalDept) {
     el.curPctText.style.overflow = "hidden";
     el.curPctText.style.padding = "0"; 
     el.curPctText.style.borderBottom = "none";
-    el.curPctText.style.backgroundColor = "transparent"; // Ensure row background is clear
+    el.curPctText.style.backgroundColor = "transparent"; 
     
     // Choose text color based on background
-    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#000000";
+    let textColor = (percent >= 70 && percent < 85) ? "#0f172a" : "#ffffff";
 
-    // Inject the moving water with calc() to prevent clipping at 100%
+    // INJECT AT HEIGHT 0 FIRST (and removed bold font-weight)
     el.curPctText.innerHTML = `
-        <div class="row-water-container" style="background-color: ${ringColor}; height: calc(${Math.min(100, Math.max(0, percent))}% - 12px);">
+        <div class="row-water-container" id="animatedRowWater" style="background-color: ${ringColor}; height: 0px;">
             <div class="row-water-wave"></div>
         </div>
-        <div style="position: relative; z-index: 2; padding: 8px 12px; font-weight: bold; color: ${textColor};">
+        <div style="position: relative; z-index: 2; padding: 8px 12px; font-weight: normal; color: ${textColor};">
             Current: ${percent.toFixed(2)}%
         </div>
     `;
+
+    // Wait a tiny fraction of a second, then set the final height to trigger the CSS transition!
+    setTimeout(() => {
+        let waterEl = document.getElementById("animatedRowWater");
+        if(waterEl) {
+            waterEl.style.height = `calc(${Math.min(100, Math.max(0, percent))}% - 12px)`;
+        }
+    }, 50);
     el.waterFill.style.backgroundColor = ringColor;
     el.waterFill.style.top = `${100 - Math.min(100, percent)}%`;
     el.subList.innerHTML = (!semData.hasData || semData.subjects.length === 0) ? `<div class="no-data-text">No Attendance Data</div>` : semData.subjects.map(sub => {
@@ -820,3 +828,61 @@ function updateUpcomingEvent() {
     }
     if (!found) el.upcomingTxt.innerHTML = "No upcoming holidays";
 }
+
+// ==========================================
+// ADHYORA TITLE SANSKRIT GLITCH EFFECT
+// ==========================================
+const sanskritMap = {
+    'A': 'अ', 'B': 'ब', 'C': 'क', 'D': 'ड', 'E': 'ए',
+    'F': 'फ', 'G': 'ग', 'H': 'ह', 'I': 'इ', 'J': 'ज',
+    'K': 'क', 'L': 'ल', 'M': 'म', 'N': 'न', 'O': 'ओ',
+    'P': 'प', 'Q': 'क', 'R': 'र', 'S': 'स', 'T': 'ट',
+    'U': 'उ', 'V': 'व', 'W': 'व', 'X': 'श', 'Y': 'य',
+    'Z': 'ज'
+};
+
+function startTitleGlitch() {
+    // Find the title element in the DOM
+    const titleEl = document.querySelector('.logo-text');
+    if (!titleEl) return;
+    
+    const originalText = "ADHYORA"; 
+    let currentText = originalText.split('');
+    
+    // Settings matching your C# script
+    const glitchDuration = 2000; // 2 seconds (Sanskrit stays visible)
+    const minInterval = 3000;    // 3 seconds min wait
+    const maxInterval = 6000;    // 6 seconds max wait
+
+    function doGlitch() {
+        // Pick a random letter index
+        let rIndex = Math.floor(Math.random() * originalText.length);
+        let origChar = originalText[rIndex];
+        
+        if (sanskritMap[origChar]) {
+            // Swap to Sanskrit
+            currentText[rIndex] = sanskritMap[origChar];
+            titleEl.innerText = currentText.join('');
+            
+            // Revert back to English after glitchDuration
+            setTimeout(() => {
+                currentText[rIndex] = origChar;
+                titleEl.innerText = currentText.join('');
+                
+                // Queue the next random glitch!
+                let nextWait = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval);
+                setTimeout(doGlitch, nextWait);
+                
+            }, glitchDuration); 
+        } else {
+            // Fallback safety
+            setTimeout(doGlitch, 1000);
+        }
+    }
+    
+    // Start the first glitch after a brief initial delay
+    setTimeout(doGlitch, 2000);
+}
+
+// Boot up the glitch engine
+startTitleGlitch();
