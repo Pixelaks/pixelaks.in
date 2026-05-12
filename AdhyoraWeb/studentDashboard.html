@@ -108,21 +108,21 @@
             </div>
         </div>
 
-        <div class="scrollable-content" id="assignmentsView" style="display: none;">
+        <div class="scrollable-content flex-column-center" id="assignmentsView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Recent Assignments</h3>
             <div id="assignmentsListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Assignments...</div>
             </div>
         </div>
 
-        <div class="scrollable-content" id="actualNotifView" style="display: none;">
+        <div class="scrollable-content flex-column-center" id="actualNotifView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Notifications</h3>
             <div id="actualNotifListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Notifications...</div>
             </div>
         </div>
 
-        <div class="scrollable-content" id="messagesView" style="display: none;">
+        <div class="scrollable-content flex-column-center" id="messagesView" style="display: none;">
             <h3 style="margin-bottom: 15px; color: #0f172a; text-align: center; width: 100%;">Inbox</h3>
             <div id="messagesListContainer" style="width: 100%; max-width: 500px; margin: 0 auto;">
                 <div class="no-data-text">Loading Messages...</div>
@@ -131,6 +131,7 @@
 
         <div class="bottom-nav-mask">
             <div class="bottom-nav">
+                <button class="icon-btn" id="openSettingsBtn" title="Settings">⚙️</button>
                 <button class="icon-btn active" id="btnNavMain" title="Overview">📊</button>
                 <button class="icon-btn" id="btnNavAssign" title="Assignments">📋</button>
                 <button class="icon-btn" id="btnNavNotif" title="Notifications">🔔</button>
@@ -177,8 +178,6 @@
             <button class="close-modal-btn" id="closeSessionsBtn" style="margin-top: 15px;">Close</button>
         </div>
     </div>
-
-    <button id="openSettingsBtn" class="floating-settings-btn">⚙️</button>
 
     <div id="toast" class="toast"></div>
     <script type="module" src="dashboardApp.js"></script>
