@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 </head>
 <body>
@@ -43,13 +45,15 @@
         </div>
 
         <div id="signInPanel" class="panel">
-            <h6 class="panel-title">Student SignIn</h6>
+            <h2 class="panel-title">Student SignIn</h2>
             
             <input type="email" id="loginEmail" class="input-field" placeholder="Email...">
             
             <div class="password-container">
                 <input type="password" id="loginPassword" class="input-field" placeholder="Password...">
-                <span class="toggle-password" onclick="toggleVisibility('loginPassword', this)">👁️</span>
+                <span class="toggle-password" onclick="toggleVisibility('loginPassword', this)">
+                    <i class="fas fa-eye"></i>
+                </span>
             </div>
 
             <a href="#" class="text-link forgot-pass">Forgot Password?</a>
@@ -68,7 +72,7 @@
         </div>
 
         <div id="registerPanel" class="panel">
-            <h6 class="panel-title">Register</h6>
+            <h2 class="panel-title">Register</h2>
             
             <input type="text" id="regName" class="input-field" placeholder="Name...">
             <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber...">
@@ -76,12 +80,16 @@
             
             <div class="password-container">
                 <input type="password" id="regPassword" class="input-field" placeholder="Password...">
-                <span class="toggle-password" onclick="toggleVisibility('regPassword', this)">👁️</span>
+                <span class="toggle-password" onclick="toggleVisibility('regPassword', this)">
+                    <i class="fas fa-eye"></i>
+                </span>
             </div>
 
             <div class="password-container">
                 <input type="password" id="regConfirmPassword" class="input-field" placeholder="Confirm Password...">
-                <span class="toggle-password" onclick="toggleVisibility('regConfirmPassword', this)">👁️</span>
+                <span class="toggle-password" onclick="toggleVisibility('regConfirmPassword', this)">
+                    <i class="fas fa-eye"></i>
+                </span>
             </div>
             
             <p id="passwordFeedback" class="feedback-text"></p>
