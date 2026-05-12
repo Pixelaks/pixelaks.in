@@ -92,13 +92,19 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 collegeID = urlParams.get('college'); studentUID = urlParams.get('uid');
 
-if (!collegeID || !studentUID) { window.location.href = "index.html"; } 
-else {
+if (!collegeID || !studentUID) { 
+    window.location.href = "index.html"; 
+} else {
     onAuthStateChanged(auth, (user) => {
-        if (user) syncCollegeAndListen(); else window.location.href = "index.html";
+        if (user) {
+            syncCollegeAndListen(); 
+        } else {
+            window.location.href = "index.html";
+        }
     });
 }
 
+// 🚨 THE FIX: A Safer Device Session Manager 🚨
 async function registerWebSession() {
     if (!myWebDeviceID) {
         myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -114,12 +120,24 @@ async function registerWebSession() {
 
     try {
         const sessionRef = doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID);
+        
+        // 1. Tell Firebase to log this device in
         await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
         
-        onSnapshot(sessionRef, (docSnap) => {
-            if (!docSnap.exists()) signOut(auth).then(() => window.location.href = "index.html");
-        });
-    } catch(e) {}
+        // 2. 🚨 THE FIX: Wait 3 full seconds before activating the Security Watchdog!
+        // This ensures Firebase has finished writing the data so you don't get falsely kicked.
+        setTimeout(() => {
+            onSnapshot(sessionRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    console.warn("Session was revoked remotely. Logging out.");
+                    signOut(auth).then(() => window.location.href = "index.html");
+                }
+            });
+        }, 3000);
+        
+    } catch(e) { 
+        console.error("Session Registration Error:", e); 
+    }
 }
 
 async function syncCollegeAndListen() {
