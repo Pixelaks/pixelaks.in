@@ -18,7 +18,7 @@ body {
     align-items: center;
     min-height: 100vh;
     color: var(--text-light);
-    overflow: hidden; /* Prevents scrollbars from particles */
+    overflow: hidden; 
 }
 
 /* Background Particles Container */
@@ -31,11 +31,11 @@ body {
     left: 0;
 }
 
-/* The New Modern Centered Glass Card */
+/* --- TRUE GLASSMORPHISM CONTAINER --- */
 .app-container {
-    background: rgba(10, 10, 10, 0.4); 
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    background: rgba(20, 20, 20, 0.25); /* More transparent */
+    backdrop-filter: blur(12px); /* Reduced blur so particles show through! */
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(46, 204, 113, 0.3);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(46, 204, 113, 0.05);
     width: 100%;
@@ -45,7 +45,7 @@ body {
     padding: 40px 30px;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* THIS CENTERS THE CONTENT VERTICALLY */
+    justify-content: center; 
     position: relative;
     z-index: 2;
     border-radius: 25px;
@@ -60,7 +60,7 @@ body {
     position: relative;
 }
 
-/* --- GLITCH TEXT STYLES --- */
+/* --- GLITCH TEXT STYLES (YATRA ONE) --- */
 .glitch-wrapper {
     position: relative;
     font-family: 'Yatra One', cursive !important; 
@@ -110,8 +110,10 @@ body {
 .panel.active { display: flex; animation: fadeIn 0.4s ease forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Normal Poppins font for the title now! */
 .panel-title {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
     font-size: 24px;
     margin-bottom: 25px;
     color: var(--primary-green);
@@ -166,7 +168,6 @@ body {
 .custom-option:hover { background: var(--primary-green); color: black; font-weight: bold; }
 .custom-option.disabled { color: #555; cursor: not-allowed; background: transparent !important; font-weight: normal; }
 
-
 .password-container { position: relative; width: 100%; }
 .toggle-password {
     position: absolute;
@@ -175,6 +176,7 @@ body {
     cursor: pointer;
     color: #888;
     transition: 0.2s;
+    user-select: none;
 }
 .toggle-password:hover { color: var(--primary-green); }
 
