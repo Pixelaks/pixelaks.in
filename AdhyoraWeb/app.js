@@ -79,7 +79,6 @@ function checkSelection() {
 collegeDropdown.addEventListener("change", checkSelection);
 roleDropdown.addEventListener("change", checkSelection);
 
-// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
 continueBtn.addEventListener("click", (e) => {
     e.preventDefault();
     selectedCollegeID = collegeDropdown.value;
@@ -88,7 +87,6 @@ continueBtn.addEventListener("click", (e) => {
 });
 
 // --- 3. STUDENT LOGIN LOGIC ---
-// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
 signInBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -130,7 +128,6 @@ function resetSignInBtn() {
 }
 
 // --- 4. STUDENT REGISTRATION LOGIC ---
-// 🚨 ADDED (e) and e.preventDefault() HERE 🚨
 registerBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -212,3 +209,102 @@ function getErrorMessage(code) {
         default: return "An error occurred. Try again.";
     }
 }
+
+
+// ==========================================
+// BACKGROUND PARTICLES & GLITCH EFFECTS
+// ==========================================
+
+// Initialize Particles
+tsParticles.load("tsparticles", {
+    particles: {
+        number: { value: 80, density: { enable: true, area: 800 } },
+        color: { value: "#2ecc71" }, 
+        links: { enable: true, distance: 150, color: "#2ecc71", opacity: 0.3, width: 1 },
+        move: { enable: true, speed: 1.5, outModes: { default: "out" } },
+        opacity: { value: 0.4 },
+        size: { value: { min: 1, max: 3 } }
+    },
+    interactivity: {
+        events: { onHover: { enable: true, mode: "grab" }, onClick: { enable: true, mode: "push" } },
+        modes: { grab: { distance: 150, links: { opacity: 0.6 } }, push: { quantity: 4 } }
+    },
+    background: { color: "transparent" } // Handled by CSS body
+});
+
+// Glitch Logic
+const TARGET_TEXT = "ADHYORA";
+const DECODE_SPEED = 6; 
+const CHAOS_CHARS = "अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहABCDEFGHIJKLMNOPQRSTUVWXYZ01010101#@%&*";
+
+const elMain = document.getElementById('text-main');
+const elRed = document.getElementById('text-red');
+const elBlue = document.getElementById('text-blue');
+
+let frame = 0;
+let lockIndex = 0;
+let isComplete = false;
+
+function updateText() {
+    if (isComplete) return;
+    let output = "";
+    
+    for (let i = 0; i < TARGET_TEXT.length; i++) {
+        if (i < lockIndex) {
+            output += TARGET_TEXT[i];
+        } else {
+            output += CHAOS_CHARS[Math.floor(Math.random() * CHAOS_CHARS.length)];
+        }
+    }
+
+    elMain.innerText = output;
+    elRed.innerText = output;
+    elBlue.innerText = output;
+
+    if (Math.random() > 0.8) {
+        elRed.style.transform = `translate(${Math.random()*4 - 2}px, ${Math.random()*4 - 2}px)`;
+        elBlue.style.transform = `translate(${Math.random()*4 - 2}px, ${Math.random()*4 - 2}px)`;
+        elRed.style.opacity = 0.8;
+        elBlue.style.opacity = 0.8;
+    } else {
+        elRed.style.transform = "translate(0,0)";
+        elBlue.style.transform = "translate(0,0)";
+        elRed.style.opacity = 0;
+        elBlue.style.opacity = 0;
+    }
+
+    if (frame % DECODE_SPEED === 0) {
+        lockIndex++;
+        if (lockIndex > TARGET_TEXT.length) {
+            isComplete = true;
+            finishSequence();
+        }
+    }
+    
+    frame++;
+    requestAnimationFrame(updateText);
+}
+
+function finishSequence() {
+    elMain.innerText = TARGET_TEXT;
+    elRed.innerText = TARGET_TEXT;
+    elBlue.innerText = TARGET_TEXT;
+    elRed.style.opacity = 0;
+    elBlue.style.opacity = 0;
+    setInterval(subtleGlitch, 2500);
+}
+
+function subtleGlitch() {
+    if(Math.random() > 0.4) return;
+    elRed.style.opacity = 1;
+    elBlue.style.opacity = 1;
+    elRed.style.transform = `translate(-3px, 0)`;
+    elBlue.style.transform = `translate(3px, 0)`;
+    setTimeout(() => {
+        elRed.style.opacity = 0;
+        elBlue.style.opacity = 0;
+    }, 100);
+}
+
+// Start glitch 500ms after load
+setTimeout(updateText, 500);
