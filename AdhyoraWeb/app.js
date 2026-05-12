@@ -35,9 +35,16 @@ window.switchPanel = function(panelId) {
     document.getElementById(panelId).classList.add('active');
 }
 
-window.toggleVisibility = function(inputId) {
+// 🚨 UPDATED: Now dynamically swaps between 👁️ and 🙈
+window.toggleVisibility = function(inputId, iconElement) {
     const input = document.getElementById(inputId);
-    input.type = input.type === "password" ? "text" : "password";
+    if (input.type === "password") {
+        input.type = "text";
+        iconElement.innerText = "🙈"; // Hide icon
+    } else {
+        input.type = "password";
+        iconElement.innerText = "👁️"; // Show icon
+    }
 }
 
 function showToast(message) {
