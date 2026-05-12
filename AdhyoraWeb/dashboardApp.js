@@ -326,6 +326,7 @@ function updateUIForCurrentSemester(optionalDept) {
     // Apply the dynamic color to the "Current" cell background
     // Configure the row to hold the water effect securely
     // Configure the row to hold the water effect securely
+    // Configure the row to hold the water effect securely
     el.curPctText.style.position = "relative";
     el.curPctText.style.overflow = "hidden";
     el.curPctText.style.padding = "0"; 
