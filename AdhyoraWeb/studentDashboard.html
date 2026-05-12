@@ -202,6 +202,34 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="themesModal">
+        <div class="calendar-container" style="max-width: 350px;">
+            <h3 style="margin-bottom:5px; color: var(--text-main); text-align: center;">APPEARANCE</h3>
+            <div style="width: 100%; height: 1px; background: var(--border-color); margin-bottom: 15px;"></div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Display Mode</h4>
+                <div style="display: flex; gap: 10px;">
+                    <button class="mode-btn" id="btnLightMode" style="flex:1;">☀️ Light</button>
+                    <button class="mode-btn" id="btnDarkMode" style="flex:1;">🌙 Dark</button>
+                </div>
+            </div>
+
+            <div>
+                <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Accent Color</h4>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button class="color-swatch" data-theme="blue" style="background: #3b82f6;"></button>
+                    <button class="color-swatch" data-theme="green" style="background: #10b981;"></button>
+                    <button class="color-swatch" data-theme="pink" style="background: #ec4899;"></button>
+                    <button class="color-swatch" data-theme="purple" style="background: #8b5cf6;"></button>
+                    <button class="color-swatch" data-theme="orange" style="background: #f97316;"></button>
+                </div>
+            </div>
+            
+            <button class="close-modal-btn" id="closeThemesBtn" style="margin-top: 25px;">Close</button>
+        </div>
+    </div>
+    
     <div id="toast" class="toast"></div>
     <script type="module" src="dashboardApp.js"></script>
 </body>
