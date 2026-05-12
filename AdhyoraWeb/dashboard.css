@@ -429,3 +429,10 @@ body.dark-mode .percentage-value { color: #ffffff !important; text-shadow: 0 2px
 }
 .suspend-card { animation: pulse-red 2s infinite; }
 .suspend-card button:hover { background: #dc2626 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+
+/* =========================================
+   FIX: RESTORE SIDEBAR SLIDE ANIMATION
+   ========================================= */
+.sidebar-drawer {
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease !important;
+}
