@@ -1,12 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-// Add these to your import list at the top of dashboardApp.js
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
-
-// Initialize messaging below db and auth
-const messaging = getMessaging(app);
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -18,9 +13,11 @@ const firebaseConfig = {
   appId: "1:206050348148:web:da4e421e00ec2f77429521"
 };
 
+// 🚨 ALL INITIALIZATIONS HAPPEN HERE IN ORDER 🚨
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const messaging = getMessaging(app); // <-- MOVED HERE AFTER 'app' EXISTS!
 
 // ==========================================
 // 🚨 ZERO-COST RAM CACHES 🚨
