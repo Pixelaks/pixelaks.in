@@ -35,15 +35,19 @@ window.switchPanel = function(panelId) {
     document.getElementById(panelId).classList.add('active');
 }
 
-// 🚨 UPDATED: Now dynamically swaps between 👁️ and 🙈
-window.toggleVisibility = function(inputId, iconElement) {
+// 🚨 UPDATED: Now smoothly toggles FontAwesome classes!
+window.toggleVisibility = function(inputId, iconWrapper) {
     const input = document.getElementById(inputId);
+    const icon = iconWrapper.querySelector('i');
+    
     if (input.type === "password") {
         input.type = "text";
-        iconElement.innerText = "🙈"; // Hide icon
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
     } else {
         input.type = "password";
-        iconElement.innerText = "👁️"; // Show icon
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
 }
 
@@ -68,7 +72,6 @@ async function fetchColleges() {
             collegeDropdown.appendChild(option);
         });
 
-        // Build Custom UI for College Selection after data loads
         buildCustomDropdown('collegeDropdown');
 
     } catch (error) {
