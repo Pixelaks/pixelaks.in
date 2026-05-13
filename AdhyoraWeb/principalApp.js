@@ -1,7 +1,7 @@
 // principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -422,15 +422,28 @@ elCompose.openBtn.addEventListener("click", async () => {
     // Fetch Departments if empty
     if (cachedDepartments.length === 0) {
         try {
-            const snap = await getDoc(doc(db, "colleges", currentCollegeID)); // Assuming depts are managed, or pull from a subcollection
-            // Fallback generic fetch (replicating your C# logic)
+            // Fetch directly from the "departments" collection
             const deptQuery = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
-            cachedDepartments = [];
-            deptQuery.forEach(d => cachedDepartments.push({ name: d.data().name || d.id, maxYears: d.data().maxYears || 4 }));
             
+            cachedDepartments = [];
+            deptQuery.forEach(d => {
+                cachedDepartments.push({ 
+                    name: d.data().name || d.id, 
+                    maxYears: d.data().maxYears || 4 
+                });
+            });
+            
+            // Build the Department Dropdown
             elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + 
                 cachedDepartments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
-        } catch(e) { console.error("Error fetching depts"); }
+                
+            // 🚨 FIX: Force the "change" event so the Year dropdown populates instantly!
+            elCompose.deptDrop.dispatchEvent(new Event("change"));
+
+        } catch(e) { 
+            console.error("Error fetching departments:", e); 
+            elCompose.status.innerText = "Error loading departments.";
+        }
     }
 });
 
