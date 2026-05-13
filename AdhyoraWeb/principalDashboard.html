@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Principal Dashboard</title>
+    <link rel="stylesheet" href="principal.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- TOP NAVIGATION ICONS (PC) / BOTTOM NAV (MOBILE) -->
+    <div class="icon-nav-container">
+        <div class="icon-nav">
+            <button class="nav-icon-btn" id="btnSettings" title="Settings"><i class="fas fa-cog"></i></button>
+            <button class="nav-icon-btn" id="btnNotifications" title="Notifications">
+                <i class="fas fa-bell"></i><span class="notification-dot"></span>
+            </button>
+            <button class="nav-icon-btn" id="btnCalendar" title="Calendar"><i class="fas fa-calendar-alt"></i></button>
+            <button class="nav-icon-btn" id="btnMessages" title="Messages">
+                <i class="fas fa-comment-dots"></i><span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        <!-- SIDEBAR (PC) / GRID (MOBILE) -->
+        <aside class="sidebar" id="mainSidebar">
+            <div class="logo-container">
+                <h1 class="logo-text">ADHYORA</h1>
+            </div>
+            
+            <div class="nav-grid">
+                <button class="menu-btn"><span class="btn-text">Roomcode</span> <i class="fas fa-qrcode btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Teacher List</span> <i class="fas fa-chalkboard-teacher btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Students List</span> <i class="fas fa-clipboard-list btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Batch</span> <i class="fas fa-id-badge btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">TimeTable</span> <i class="fas fa-calendar-week btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Data Section</span> <i class="fas fa-chart-bar btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Subject List</span> <i class="fas fa-book-open btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Events</span> <i class="fas fa-calendar-plus btn-icon"></i></button>
+                <button class="menu-btn"><span class="btn-text">Attendance Records</span> <i class="fas fa-user-check btn-icon"></i></button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <div class="welcome-card" id="welcomeCard">
+                <h2 class="welcome-text">Welcome To ADHYORA</h2>
+            </div>
+        </main>
+    </div>
+
+    <!-- SETTINGS & PROFILE OVERLAY (Hidden by default) -->
+    <div class="modal-overlay" id="settingsOverlay">
+        <div class="settings-drawer">
+            <div class="settings-header">
+                <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+                <h3 id="principalNameText">Loading Principal...</h3>
+                <p id="principalEmailText">email@loading.com</p>
+                <div class="role-badge">Principal Administrator</div>
+            </div>
+            
+            <div class="settings-menu">
+                <button class="settings-btn" id="btnContactUs"><i class="fas fa-envelope"></i> Contact Support</button>
+                <button class="settings-btn" id="btnWebsite"><i class="fas fa-globe"></i> Pixelaks Technologies</button>
+                <button class="settings-btn" id="btnPrivacy"><i class="fas fa-shield-alt"></i> Privacy Policy</button>
+                <button class="settings-btn" id="btnTerms"><i class="fas fa-file-contract"></i> Terms & Conditions</button>
+                <button class="settings-btn logout-btn" id="btnSignOut"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+            
+            <div class="settings-footer" id="versionText">Version 1.0.0 (Web)</div>
+            <button class="close-settings" id="closeSettingsBtn"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <script type="module" src="principalApp.js"></script>
+</body>
+</html>
