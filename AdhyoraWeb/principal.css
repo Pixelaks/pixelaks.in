@@ -124,7 +124,6 @@ body {
    ========================================= */
 .main-content {
     flex: 1;
-    /* 🚨 CHANGED: Increased top padding from 40px to 90px to clear the nav icons! */
     padding: 90px 40px 40px 40px; 
     display: flex;
     justify-content: center;
@@ -159,18 +158,15 @@ body {
     background: rgba(255,255,255,0.5);
     padding: 10px 30px;
     border-radius: 15px;
-
-    /* 🚨 ADD THIS LINE TO CENTER THE TEXT: */
     text-align: center; 
 }
+
 /* =========================================
    SETTINGS OVERLAY (Left Slide, Light Theme)
    ========================================= */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); z-index: 100;
-    
-    /* 🚨 CHANGED: Removed display:none so the browser can calculate the slide animation! */
     visibility: hidden; 
     opacity: 0; 
     transition: opacity 0.3s ease, visibility 0.3s;
@@ -181,14 +177,10 @@ body {
     opacity: 1; 
 }
 
-/* Slide smoothly from the LEFT */
 .settings-drawer {
     position: absolute; top: 0; left: -350px; width: 350px; height: 100%;
     background: #ffffff; box-shadow: 5px 0 20px rgba(0,0,0,0.1);
-    
-    /* 🚨 TWEAKED: Made the slide curve slightly smoother */
     transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
-    
     display: flex; flex-direction: column; padding: 30px;
 }
 
@@ -196,7 +188,6 @@ body {
     left: 0; 
 }
 
-/* Move close button to the right so it isn't squished */
 .close-settings {
     position: absolute; top: 20px; right: 20px; background: none; border: none;
     font-size: 24px; color: #888; cursor: pointer; transition: 0.2s;
@@ -217,7 +208,6 @@ body {
 .settings-menu::-webkit-scrollbar { width: 4px; }
 .settings-menu::-webkit-scrollbar-thumb { background: var(--brand-green); border-radius: 4px; }
 
-/* Clean, outlined button style (matches your image perfectly) */
 .settings-btn {
     background: #ffffff; 
     border: 1px solid #e2e8f0; 
@@ -235,14 +225,12 @@ body {
     transform: translateX(4px); 
 }
 
-/* Logout Button (Red tint) */
 .logout-btn { background: #fff5f5; border-color: #fecaca; color: #ef4444; margin-top: auto; }
 .logout-btn i { color: #ef4444; }
 .logout-btn:hover { background: #fee2e2; border-color: #ef4444; color: #dc2626; transform: translateX(4px); }
 
 .settings-footer { text-align: center; font-size: 11px; color: #94a3b8; padding-top: 20px; }
 
-/* Toggle Switch CSS (For Notifications) */
 .toggle-switch {
     width: 36px; height: 18px; background: #cbd5e1; border-radius: 20px; position: relative; pointer-events: none; transition: background-color 0.3s;
 }
@@ -251,41 +239,6 @@ body {
 }
 .toggle-switch.active { background: var(--brand-green); }
 .toggle-switch.active::after { left: 20px; }
-
-
-/* =========================================
-   MOBILE RESPONSIVENESS
-   ========================================= */
-/* =========================================
-   MOBILE RESPONSIVENESS
-   ========================================= */
-@media (max-width: 900px) {
-    .dashboard-wrapper { flex-direction: column; }
-    
-    /* 🚨 Mobile Toggle Logic */
-    .main-content { display: none; padding: 20px; padding-bottom: 120px; }
-    .main-content.mobile-active { display: flex; } /* Shown via JS */
-    
-    .sidebar { 
-        width: 100%; height: 100%; border-right: none; padding: 20px; 
-        justify-content: center; padding-bottom: 120px; 
-    }
-    .sidebar.mobile-hidden { display: none; } /* Hidden via JS */
-
-    .logo-container { margin-bottom: 30px; }
-    .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
-    .menu-btn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; }
-    
-    .icon-nav-container {
-        position: fixed; top: auto; bottom: 0; left: 0; right: 0;
-        background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
-        z-index: 10; display: flex; justify-content: center;
-    }
-    .icon-nav { 
-        width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); 
-        background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px;
-    }
-}
 
 /* =========================================
    DASHBOARD VIEWS & CARDS
@@ -332,16 +285,51 @@ body {
 .cal-cell.normal { color: #334155; }
 .cal-cell.normal:hover { background: var(--bg-grid-color); transform: translateY(-2px); }
 
-/* 🚨 THE TODAY HIGHLIGHT FIX */
 .cal-cell.today { 
     background: var(--brand-green) !important; 
     color: #ffffff !important; 
     box-shadow: 0 4px 12px rgba(74, 222, 128, 0.5); 
     transform: scale(1.1);
     border: 2px solid var(--text-green);
-    z-index: 2; /* Ensures the zoomed box sits above the others */
+    z-index: 2; 
 }
 
 .cal-cell.holiday { color: #ef4444; background: #fef2f2; }
 .cal-cell.semester { color: #3b82f6; background: #eff6ff; }
 .cal-subtitle { font-size: 10px; font-weight: 700; margin-top: -2px; }
+
+/* =========================================
+   MOBILE RESPONSIVENESS
+   ========================================= */
+@media (max-width: 900px) {
+    .dashboard-wrapper { flex-direction: column; }
+    
+    /* 🚨 Mobile Panel Toggle Logic */
+    .main-content { display: none; padding: 15px; padding-bottom: 100px; flex: 1; }
+    .main-content.mobile-active { display: flex; } 
+    
+    .sidebar { 
+        width: 100%; flex: 1; border-right: none; padding: 20px; 
+        justify-content: center; padding-bottom: 100px; transition: all 0.3s ease;
+    }
+    
+    /* 🚨 The Magic Fix: Shrink sidebar to JUST the logo, hide the grid! */
+    .sidebar.mobile-hidden { 
+        flex: none; height: auto; padding-bottom: 0; justify-content: flex-start; 
+    }
+    .sidebar.mobile-hidden .nav-grid { display: none; } 
+
+    .logo-container { margin-bottom: 15px; }
+    .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
+    .menu-btn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; }
+    
+    .icon-nav-container {
+        position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+        background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        z-index: 10; display: flex; justify-content: center;
+    }
+    .icon-nav { 
+        width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); 
+        background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px;
+    }
+}
