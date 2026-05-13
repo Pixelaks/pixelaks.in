@@ -1278,7 +1278,7 @@ async function requestPushPermissions() {
                 ];
 
                 // 🚨 REPLACE THIS URL with your actual Apps Script "Web App" URL!
-                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_NEW_DEPLOYMENT_ID/exec";
+                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
 
                 fetch(APPS_SCRIPT_URL, {
                     method: "POST",
