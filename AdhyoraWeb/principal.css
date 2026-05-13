@@ -326,15 +326,27 @@ body {
 .data-card .card-body { color: #475569; font-size: 13px; line-height: 1.5; margin-bottom: 10px; }
 .data-card .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600; }
 
-/* Calendar Cells */
+/* =========================================
+   CALENDAR CELLS
+   ========================================= */
 .cal-cell {
     aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
-    border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s;
+    border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s ease;
 }
 .cal-cell.empty { background: transparent; cursor: default; }
 .cal-cell.normal { color: #334155; }
-.cal-cell.normal:hover { background: var(--bg-grid-color); }
-.cal-cell.today { background: var(--brand-green); color: white; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.4); }
+.cal-cell.normal:hover { background: var(--bg-grid-color); transform: translateY(-2px); }
+
+/* 🚨 THE TODAY HIGHLIGHT FIX */
+.cal-cell.today { 
+    background: var(--brand-green) !important; 
+    color: #ffffff !important; 
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.5); 
+    transform: scale(1.1);
+    border: 2px solid var(--text-green);
+    z-index: 2; /* Ensures the zoomed box sits above the others */
+}
+
 .cal-cell.holiday { color: #ef4444; background: #fef2f2; }
 .cal-cell.semester { color: #3b82f6; background: #eff6ff; }
-.cal-subtitle { font-size: 9px; font-weight: normal; margin-top: -2px; }
+.cal-subtitle { font-size: 10px; font-weight: 700; margin-top: -2px; }
