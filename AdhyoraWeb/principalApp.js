@@ -57,7 +57,6 @@ if (!currentCollegeID) {
     });
 }
 
-// Set Version (Replicating Application.version)
 el.versionText.innerText = "Version 1.0.0 (Web Admin)";
 
 // ==========================================
@@ -91,7 +90,6 @@ function handleContactUs() {
     const SUPPORT_EMAIL = "pixelaks.technologies@gmail.com";
     const EMAIL_SUBJECT = "Support Request - Principal Web Dashboard";
     
-    // Getting user agent info to replicate SystemInfo diagnostics
     const deviceModel = navigator.userAgent;
     const os = navigator.platform;
     const appVersion = "1.0.0 (Web)";
@@ -108,11 +106,9 @@ function handleContactUs() {
                        `========================`;
 
     const fullMessage = "Please describe your issue here:\n\n\n" + deviceInfo;
-
     const escapedSubject = encodeURIComponent(EMAIL_SUBJECT);
     const escapedBody = encodeURIComponent(fullMessage);
 
-    // Open default mail client
     window.open(`mailto:${SUPPORT_EMAIL}?subject=${escapedSubject}&body=${escapedBody}`, "_blank");
 }
 
@@ -120,35 +116,23 @@ function handleContactUs() {
 // EVENT LISTENERS
 // ==========================================
 
-// Settings Drawer Toggle
-el.btnSettings.addEventListener("click", () => {
-    el.settingsOverlay.classList.add("active");
-});
-el.closeSettingsBtn.addEventListener("click", () => {
-    el.settingsOverlay.classList.remove("active");
-});
+el.btnSettings.addEventListener("click", () => el.settingsOverlay.classList.add("active"));
+el.closeSettingsBtn.addEventListener("click", () => el.settingsOverlay.classList.remove("active"));
 el.settingsOverlay.addEventListener("click", (e) => {
-    if (e.target === el.settingsOverlay) {
-        el.settingsOverlay.classList.remove("active");
-    }
+    if (e.target === el.settingsOverlay) el.settingsOverlay.classList.remove("active");
 });
 
-// External Links & Contact (From C# Script)
 el.btnContactUs.addEventListener("click", handleContactUs);
 el.btnWebsite.addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
 el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/privacy", "_blank"));
 el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
 
-// Sign Out
 el.btnSignOut.addEventListener("click", () => {
     if (confirm("Are you sure you want to sign out?")) {
-        signOut(auth).then(() => {
-            window.location.href = "index.html";
-        });
+        signOut(auth).then(() => window.location.href = "index.html");
     }
 });
 
-// Placeholder clicks for the grid menu buttons
 document.querySelectorAll(".menu-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
         const text = e.currentTarget.querySelector(".btn-text").innerText;
@@ -171,43 +155,33 @@ const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn");
 
 function switchView(targetView, clickedBtn) {
-    // 1. Highlight the correct bottom nav button
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn) clickedBtn.classList.add("active-nav");
 
-    // 2. Hide all interior views
     Object.values(views).forEach(v => {
         if (v) v.classList.add("hidden-view");
     });
 
-    // 3. Mobile vs PC structural toggling
     if (targetView === "HOME") {
-        // Show Grid, Hide Panels (Only matters on Mobile)
         sidebar.classList.remove("mobile-hidden");
         mainContent.classList.remove("mobile-active");
         
-        // On PC, we just show the Welcome Text
         if (window.innerWidth > 900) {
             views.welcome.classList.remove("hidden-view");
         }
     } else {
-        // Hide Grid, Show Panels (Only matters on Mobile)
         sidebar.classList.add("mobile-hidden");
         mainContent.classList.add("mobile-active");
         
-        // Show the specific requested panel
         if (targetView) {
             targetView.classList.remove("hidden-view");
             targetView.style.opacity = 0;
-            setTimeout(() => targetView.style.opacity = 1, 50); // Fade in effect
+            setTimeout(() => targetView.style.opacity = 1, 50); 
         }
     }
 }
 
-// Bind Top/Bottom Nav Icons
-document.getElementById("btnHome").addEventListener("click", (e) => {
-    switchView("HOME", e.currentTarget);
-});
+document.getElementById("btnHome").addEventListener("click", (e) => switchView("HOME", e.currentTarget));
 
 document.getElementById("btnNotifications").addEventListener("click", (e) => {
     switchView(views.notifications, e.currentTarget);
@@ -224,12 +198,6 @@ document.getElementById("btnMessages").addEventListener("click", (e) => {
     document.querySelector("#btnMessages .notification-dot").style.display = "none";
 });
 
-// Settings doesn't switch the view, it just opens the side-drawer overlay
-document.getElementById("btnSettings").addEventListener("click", () => {
-    el.settingsOverlay.classList.add("active");
-});
-
-// Hide Red Dots initially
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
 // ==========================================
@@ -238,7 +206,6 @@ document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display 
 let cachedNotifs = [];
 
 function startInboxListener() {
-    // Determine Topics (from C# GetMyTopics)
     const safeCol = currentCollegeID ? currentCollegeID.replace(/[^a-zA-Z0-9]/g, '') : "ALL";
     const myTopics = [`${safeCol}_ALL`, `${safeCol}_PRINCIPAL`];
 
@@ -250,18 +217,16 @@ function startInboxListener() {
         renderNotifications();
     };
 
-    // 1. Listen to College Inbox
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         inboxCache = []; 
         snap.forEach(doc => { 
             let d = doc.data(); 
             inboxCache.push({ title: d.title || "Notice", body: d.body || "", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
         });
-        document.querySelector("#btnNotifications .notification-dot").style.display = "block"; // Trigger Red Dot
+        document.querySelector("#btnNotifications .notification-dot").style.display = "block"; 
         updateNotifUI();
     });
 
-    // 2. Listen to Global Developer Updates
     onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
         globalCache = []; 
         snap.forEach(doc => { 
@@ -290,7 +255,6 @@ function renderNotifications() {
     }).join('');
 }
 
-// Start listener after profile loads
 setTimeout(startInboxListener, 2000); 
 
 // ==========================================
@@ -400,10 +364,9 @@ function updateUpcomingEvent() {
 let cachedMessages = [];
 let cachedDepartments = [];
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
-const myRealName = "Principal"; // You can dynamically fetch this later if needed
+const myRealName = "Principal"; 
 
 function startMessagesListener() {
-    // Listen to Sent Messages (Broadcasts)
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         cachedMessages = [];
         snap.forEach(doc => {
@@ -435,7 +398,6 @@ function renderMessages() {
     }).join('');
 }
 
-// Start listener after profile loads
 setTimeout(startMessagesListener, 2000);
 
 // --- COMPOSE MODAL LOGIC ---
@@ -457,27 +419,19 @@ elCompose.openBtn.addEventListener("click", async () => {
     elCompose.overlay.classList.add("active");
     elCompose.title.value = ""; elCompose.body.value = ""; elCompose.status.innerText = "";
     
-    // Fetch Departments if empty
     if (cachedDepartments.length === 0) {
         try {
-            // Fetch directly from the "departments" collection
             const deptQuery = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
             
             cachedDepartments = [];
             deptQuery.forEach(d => {
-                cachedDepartments.push({ 
-                    name: d.data().name || d.id, 
-                    maxYears: d.data().maxYears || 4 
-                });
+                cachedDepartments.push({ name: d.data().name || d.id, maxYears: d.data().maxYears || 4 });
             });
             
-            // Build the Department Dropdown
             elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + 
                 cachedDepartments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
                 
-            // 🚨 FIX: Force the "change" event so the Year dropdown populates instantly!
             elCompose.deptDrop.dispatchEvent(new Event("change"));
-
         } catch(e) { 
             console.error("Error fetching departments:", e); 
             elCompose.status.innerText = "Error loading departments.";
@@ -487,7 +441,6 @@ elCompose.openBtn.addEventListener("click", async () => {
 
 elCompose.closeBtn.addEventListener("click", () => elCompose.overlay.classList.remove("active"));
 
-// Dynamic Year Dropdown Toggle
 elCompose.btnStudents.addEventListener("change", (e) => {
     elCompose.yearDrop.style.display = e.target.checked ? "block" : "none";
 });
@@ -499,7 +452,6 @@ elCompose.deptDrop.addEventListener("change", (e) => {
     for(let i=1; i<=maxYears; i++) { elCompose.yearDrop.innerHTML += `<option value="${i}">Year ${i}</option>`; }
 });
 
-// Send Message Logic (Replicating C# NotificationManager)
 elCompose.sendBtn.addEventListener("click", async () => {
     let title = elCompose.title.value.trim();
     let body = elCompose.body.value.trim();
@@ -514,7 +466,7 @@ elCompose.sendBtn.addEventListener("click", async () => {
     
     const getSafeTopic = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
     let deptSafe = getSafeTopic(targetDept);
-    let yearSafe = getSafeTopic("Year " + targetYear); // Match C# formatting
+    let yearSafe = getSafeTopic("Year " + targetYear); 
     let collegeSafe = getSafeTopic(currentCollegeID);
 
     let topicsToPing = [];
@@ -534,14 +486,12 @@ elCompose.sendBtn.addEventListener("click", async () => {
         else targetDescription += `Students (${targetDept} - Year ${targetYear})`;
     }
 
-    // 1. Save History to Firestore
     try {
         await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), {
             title: title, body: body, targetSummary: targetDescription, timestamp: serverTimestamp(),
             type: "broadcast", status: "sent", senderID: currentUserID, senderRole: "Principal", senderName: myRealName
         });
         
-        // 2. Ping Native Topics via Webhook
         const payload = {
             title: `${title} • ${myRealName} (Principal)`,
             body: body,
