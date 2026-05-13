@@ -20,6 +20,10 @@
     if (window.location.hash === "#notifications") {
         localStorage.setItem("pendingNotifOpen", "true");
     }
+    // 🚨 NEW: Save the Assignment intention!
+    if (window.location.hash === "#assignments") {
+        localStorage.setItem("pendingAssignOpen", "true");
+    }
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
