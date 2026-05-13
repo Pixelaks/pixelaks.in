@@ -115,24 +115,32 @@ function checkSelection() {
 collegeDropdown.addEventListener("change", checkSelection);
 roleDropdown.addEventListener("change", checkSelection);
 
-continueBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    selectedCollegeID = collegeDropdown.value;
-    selectedCollegeName = collegeDropdown.options[collegeDropdown.selectedIndex].text;
-    
-    // 🚨 DYNAMIC UI: Hide Roll No and change Titles for Principals
+// --- DYNAMIC UI VISIBILITY (Replicating C# UpdateSecurityInputsVisibility) ---
+function updateSecurityInputsVisibility() {
     const role = roleDropdown.value;
     const regRollNoInput = document.getElementById("regRollNo");
     
     if (role === "Principal") {
         document.getElementById("signInTitle").innerText = "Principal SignIn";
         document.getElementById("registerTitle").innerText = "Principal Registration";
-        regRollNoInput.style.display = "none"; // Hide Roll Number
+        // Hide Roll Number for Principals
+        if (regRollNoInput) regRollNoInput.style.display = "none"; 
     } else {
         document.getElementById("signInTitle").innerText = "Student SignIn";
         document.getElementById("registerTitle").innerText = "Student Registration";
-        regRollNoInput.style.display = "block"; // Show Roll Number
+        // Show Roll Number for Students
+        if (regRollNoInput) regRollNoInput.style.display = "block"; 
     }
+}
+
+// --- CONTINUE BUTTON CLICK ---
+continueBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    selectedCollegeID = collegeDropdown.value;
+    selectedCollegeName = collegeDropdown.options[collegeDropdown.selectedIndex].text;
+    
+    // 🚨 Run the visibility check right before switching panels!
+    updateSecurityInputsVisibility();
 
     window.switchPanel('signInPanel');
 });
