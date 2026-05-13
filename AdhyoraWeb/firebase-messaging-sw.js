@@ -17,6 +17,11 @@ self.addEventListener('notificationclick', function(event) {
       targetAction = 'openNotifications';
       targetHash = '#notifications';
     }
+    // 🚨 NEW: If a Teacher sent this, route them to Assignments!
+    else if (msgType === 'assignment') {
+      targetAction = 'openAssignments';
+      targetHash = '#assignments';
+    }
   } catch(e) {
     console.log("Could not read message type, defaulting to inbox.");
   }
