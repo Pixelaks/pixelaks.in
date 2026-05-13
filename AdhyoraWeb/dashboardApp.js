@@ -187,9 +187,6 @@ async function syncCollegeAndListen() {
         
         registerWebSession();
 
-      // 🚨 ADD THIS LINE RIGHT HERE! 🚨
-        requestPushPermissions();
-
         // 🚨 ADDED MISSING FUNCTION CALL: Fetch working days instantly!
         fetchGlobalCalendarData(); 
         
@@ -205,6 +202,9 @@ async function syncCollegeAndListen() {
         if (!isDataListening) {
             isDataListening = true;
             startBackgroundListeners();
+
+          // ✅ PUT IT RIGHT HERE INSTEAD!
+            requestPushPermissions();
         }
 
         if (!el.ttView.classList.contains("hidden-view")) {
