@@ -30,7 +30,25 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// Handle the user clicking the notification
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // 1. IF ADHYORA IS ALREADY OPEN: Focus it and send a secret message!
+      for (let i = 0; i < windowClients.length; i++) {
+        let client = windowClients[i];
+        if (client.url.includes('pixelaks.in') && 'focus' in client) {
+          client.focus();
+          client.postMessage({ action: 'openMessages' });
+          return;
+        }
+      }
+      // 2. IF COMPLETELY CLOSED: Open a new tab and attach "#inbox" to the URL
+      if (clients.openWindow) {
+        return clients.openWindow('https://pixelaks.in/AdhyoraWeb/index.html#inbox');
+      }
+    })
+  );
 });
