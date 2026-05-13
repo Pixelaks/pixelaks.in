@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
-
+import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -215,6 +214,8 @@ async function syncCollegeAndListen() {
             isDataListening = true;
             startBackgroundListeners();
             requestPushPermissions();
+
+          updateNotificationToggleUI();
         }
 
         if (!el.ttView.classList.contains("hidden-view")) {
@@ -1066,6 +1067,73 @@ document.getElementById("btnDevices").addEventListener("click", () => {
 });
 document.getElementById("closeSessionsBtn").addEventListener("click", () => el.sessionsModal.classList.remove("active"));
 
+// ==========================================
+// 🚨 NOTIFICATION TOGGLE LOGIC
+// ==========================================
+
+// 1. Function to update the visual switch
+function updateNotificationToggleUI() {
+    const toggle = document.getElementById("notifToggleSwitch");
+    if (!toggle) return;
+    
+    // It's considered ON if the browser allows it AND we successfully saved a token in RAM
+    if (Notification.permission === "granted" && myCurrentPushToken !== "") {
+        toggle.classList.add("active");
+    } else {
+        toggle.classList.remove("active");
+    }
+}
+
+// 2. Function to safely destroy the token and unsubscribe
+async function unsubscribePushNotifications() {
+    try {
+        const toggle = document.getElementById("notifToggleSwitch");
+        toggle.style.opacity = "0.5"; // Show it's loading
+
+        // A. Tell Google Firebase to delete this browser's notification link
+        await deleteToken(messaging);
+
+        // B. Remove the token from your Firestore Database so you don't send to dead devices
+        if (myCurrentPushToken && currentRollNo && collegeID) {
+            const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+            await setDoc(studentRef, {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }, { merge: true });
+        }
+        
+        myCurrentPushToken = ""; // Clear from RAM
+        console.log("Successfully unsubscribed from notifications.");
+        
+        toggle.style.opacity = "1";
+        updateNotificationToggleUI();
+    } catch (e) {
+        console.error("Error unsubscribing:", e);
+        alert("Failed to turn off notifications. Please try again.");
+    }
+}
+
+// 3. The Click Event for the Sidebar Button
+document.getElementById("btnToggleNotifications").addEventListener("click", async () => {
+    if (Notification.permission === "denied") {
+        alert("Notifications are completely blocked by your browser. Please click the lock icon in your address bar to allow them.");
+        return;
+    }
+
+    const toggle = document.getElementById("notifToggleSwitch");
+    
+    if (toggle.classList.contains("active")) {
+        // Switch is ON -> Turn it OFF
+        if (confirm("Are you sure you want to disable notifications for this device?")) {
+            await unsubscribePushNotifications();
+        }
+    } else {
+        // Switch is OFF -> Turn it ON (This triggers your existing Firebase permission function)
+        toggle.style.opacity = "0.5";
+        await requestPushPermissions();
+        toggle.style.opacity = "1";
+    }
+});
+
 function loadSessions() {
     if (sessionsCache.size === 0) { el.sessionsList.innerHTML = `<div class="no-data-text">No active sessions found.</div>`; return; }
     
@@ -1347,6 +1415,9 @@ async function requestPushPermissions() {
                     })
                 }).then(() => {
                     console.log("✅ Loophole Complete: Web Browser synced with Native Topics!");
+
+                  updateNotificationToggleUI(); // Automatically turn the switch green!
+                  
                 }).catch(err => console.log("Subscription Fetch Error:", err));
 
             }
