@@ -1322,6 +1322,11 @@ navigator.serviceWorker.addEventListener('message', (event) => {
         const btn = document.getElementById("btnNavNotif");
         if (btn) btn.click();
     }
+    // 🚨 NEW: Handle background assignment click
+    else if (event.data && event.data.action === 'openAssignments') {
+        const btn = document.getElementById("btnNavAssign");
+        if (btn) btn.click();
+    }
 });
 
 // 2. If the app was completely closed:
@@ -1339,6 +1344,14 @@ window.addEventListener('load', () => {
         localStorage.removeItem("pendingNotifOpen");
         setTimeout(() => {
             const btn = document.getElementById("btnNavNotif");
+            if (btn) btn.click();
+        }, 1500); 
+    }
+    // 🚨 NEW: Check for Assignment requests
+    if (window.location.hash === "#assignments" || localStorage.getItem("pendingAssignOpen") === "true") {
+        localStorage.removeItem("pendingAssignOpen");
+        setTimeout(() => {
+            const btn = document.getElementById("btnNavAssign");
             if (btn) btn.click();
         }, 1500); 
     }
