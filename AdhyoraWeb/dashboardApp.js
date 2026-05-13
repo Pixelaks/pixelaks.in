@@ -1239,27 +1239,59 @@ async function requestPushPermissions() {
         if (permission === 'granted') {
             console.log('Notification permission granted.');
             
-            // 🚨 THE FIX: Tell the browser EXACTLY which folder the Service Worker is inside!
+            // 1. Register the Service Worker
             const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
             
-            // Generate a unique token for this specific web browser, passing the custom registration
+            // 2. Generate the Web Push Token
             const currentToken = await getToken(messaging, { 
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
-                serviceWorkerRegistration: swRegistration // <-- Forces Firebase to use the AdhyoraWeb folder
+                serviceWorkerRegistration: swRegistration 
             });
 
             if (currentToken) {
                 console.log("Web Push Token Generated!");
                 
-                // AUTOMATICALLY SAVE TO DATABASE
-                // AUTOMATICALLY SAVE TO DATABASE
+                // 3. Save to Firestore (Backup/History)
                 const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
                 await setDoc(studentRef, { 
-                    webFcmTokens: arrayUnion(currentToken), // 🚨 Now it adds to a LIST instead of overwriting!
+                    webFcmTokens: arrayUnion(currentToken),
                     lastWebLogin: serverTimestamp()
                 }, { merge: true });
                 
-                console.log("Token successfully saved to Student Profile!");
+                console.log("Token saved to Firestore.");
+
+                // 4. THE LOOPHOLE: Force-Subscribe the Web Browser to Native Topics
+                // We generate the exact same "Safe Topic" strings your Unity Admin App uses.
+                const getSafe = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
+                
+                let safeCol = getSafe(collegeID);
+                let safeDept = getSafe(rawDept);
+                let safeYear = getSafe(myYearStr);
+
+                // These match your Unity "Targeting" logic perfectly
+                let topicsToJoin = [
+                    `${safeCol}_ALL`, 
+                    `${safeCol}_STUDENTS_ALL_ALL`, 
+                    `${safeCol}_STUDENTS_${safeDept}_ALL`, 
+                    `${safeCol}_STUDENTS_${safeDept}_${safeYear}`,
+                    `ADHYORA_GLOBAL_USERS` // 🚨 Added so they get your Developer Broadcasts!
+                ];
+
+                // 🚨 REPLACE THIS URL with your actual Apps Script "Web App" URL!
+                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_NEW_DEPLOYMENT_ID/exec";
+
+                fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors", // Uses no-cors to prevent "CORS" errors from Google
+                    body: JSON.stringify({
+                        action: "subscribe",
+                        token: currentToken,
+                        topics: topicsToJoin
+                    })
+                }).then(() => {
+                    console.log("✅ Loophole Complete: Web Browser synced with Native Topics!");
+                }).catch(err => console.log("Subscription Fetch Error:", err));
+
             }
         } else {
             console.log('Unable to get permission to notify.');
