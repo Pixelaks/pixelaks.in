@@ -165,18 +165,32 @@ body {
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); z-index: 100;
-    display: none; opacity: 0; transition: opacity 0.3s;
+    
+    /* 🚨 CHANGED: Removed display:none so the browser can calculate the slide animation! */
+    visibility: hidden; 
+    opacity: 0; 
+    transition: opacity 0.3s ease, visibility 0.3s;
 }
-.modal-overlay.active { display: block; opacity: 1; }
 
-/* 🚨 CHANGED: Slide smoothly from the LEFT */
+.modal-overlay.active { 
+    visibility: visible; 
+    opacity: 1; 
+}
+
+/* Slide smoothly from the LEFT */
 .settings-drawer {
     position: absolute; top: 0; left: -350px; width: 350px; height: 100%;
     background: #ffffff; box-shadow: 5px 0 20px rgba(0,0,0,0.1);
-    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    
+    /* 🚨 TWEAKED: Made the slide curve slightly smoother */
+    transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
+    
     display: flex; flex-direction: column; padding: 30px;
 }
-.modal-overlay.active .settings-drawer { left: 0; }
+
+.modal-overlay.active .settings-drawer { 
+    left: 0; 
+}
 
 /* Move close button to the right so it isn't squished */
 .close-settings {
