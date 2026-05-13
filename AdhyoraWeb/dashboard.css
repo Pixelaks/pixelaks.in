@@ -13,7 +13,14 @@
    GLOBAL RESET & CONTAINERS
    ========================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden; margin: 0; }
+body { 
+    background-color: #ffffff; 
+    width: 100vw; 
+    height: 100vh;       /* Fallback for old browsers */
+    height: 100dvh;      /* 🚨 THE FIX: Dynamic Viewport Height */
+    overflow: hidden; 
+    margin: 0; 
+}
 
 .hidden-view { display: none !important; }
 
@@ -247,7 +254,21 @@ body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden;
 /* =========================================
    BOTTOM NAV
    ========================================= */
-.bottom-nav-mask { position: absolute; bottom: 0; left: 0; right: 0; height: 110px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%); display: flex; justify-content: center; align-items: center; padding-top: 20px; z-index: 10; pointer-events: none; }
+.bottom-nav-mask { 
+    position: fixed; /* 🚨 Changed to Fixed! */
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    height: 110px; 
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 40%, #ffffff 100%); 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    padding-top: 20px; 
+    padding-bottom: env(safe-area-inset-bottom); /* 🚨 Protects against iPhone/Android home bars */
+    z-index: 10; 
+    pointer-events: none; 
+}
 
 .bottom-nav { 
     background-color: #bfdbfe; background-image: radial-gradient(#93c5fd 1.5px, transparent 1.5px); background-size: 12px 12px; 
@@ -441,4 +462,23 @@ body.dark-mode .percentage-value { color: #ffffff !important; text-shadow: 0 2px
    ========================================= */
 .sidebar-drawer {
     transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease !important;
+}
+
+/* =========================================
+   🚨 FIX: LEAVE PREDICTOR FLEXBOX OVERFLOW 
+   ========================================= */
+/* Target the row holding the input and button */
+#leaveDaysInput, #predictSubmitBtn {
+    box-sizing: border-box;
+}
+
+#leaveDaysInput {
+    flex: 1;
+    width: 100%;
+    min-width: 0; /* 🚨 CRITICAL: Forces the input to shrink and stay inside the modal! */
+}
+
+#predictSubmitBtn {
+    flex-shrink: 0; /* Tells the button to never get squished by the input */
+    white-space: nowrap; /* Prevents the word "Calculate" from breaking into two lines */
 }
