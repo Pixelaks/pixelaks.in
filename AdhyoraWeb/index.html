@@ -80,17 +80,19 @@
                 <label for="rememberMe">Always remember me</label>
             </div>
 
+            <!-- Inside the signInPanel -->
             <p class="switch-panel-text">
                 Don't have an account?<br>
-                <a href="#" onclick="switchPanel('registerPanel')" class="text-link">Create One</a>
+                <!-- 🚨 CHANGED href -->
+                <a href="javascript:void(0);" onclick="switchPanel('registerPanel')" class="text-link">Create One</a>
             </p>
         </div>
 
         <div id="registerPanel" class="panel">
-            <!-- 🚨 ADDED ID -->
-            <h2 class="panel-title" id="registerTitle">Register</h2>
+            <h2 class="panel-title" id="registerTitle">Register</h2> 
             
             <input type="text" id="regName" class="input-field" placeholder="Name...">
+            <!-- This is the Roll Number field we will hide via JS -->
             <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber...">
             <input type="email" id="regEmail" class="input-field" placeholder="Email...">
             
@@ -114,7 +116,8 @@
 
             <p class="switch-panel-text">
                 Already have an account?<br>
-                <a href="#" onclick="switchPanel('signInPanel')" class="text-link">SignIn</a>
+                <!-- 🚨 CHANGED href -->
+                <a href="javascript:void(0);" onclick="switchPanel('signInPanel')" class="text-link">SignIn</a>
             </p>
         </div>
 
