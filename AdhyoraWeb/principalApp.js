@@ -157,14 +157,80 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
 });
 
 // ==========================================
-// VIEW SWITCHER LOGIC
+// VIEW SWITCHER LOGIC (Mobile & PC Aware)
 // ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"),
     notifications: document.getElementById("notificationsView"),
     calendar: document.getElementById("calendarView"),
-    messages: document.getElementById("messagesView"),
+    messages: document.getElementById("messagesView")
 };
+
+const sidebar = document.getElementById("mainSidebar");
+const mainContent = document.querySelector(".main-content");
+const navButtons = document.querySelectorAll(".nav-icon-btn");
+
+function switchView(targetView, clickedBtn) {
+    // 1. Highlight the correct bottom nav button
+    navButtons.forEach(btn => btn.classList.remove("active-nav"));
+    if (clickedBtn) clickedBtn.classList.add("active-nav");
+
+    // 2. Hide all interior views
+    Object.values(views).forEach(v => {
+        if (v) v.classList.add("hidden-view");
+    });
+
+    // 3. Mobile vs PC structural toggling
+    if (targetView === "HOME") {
+        // Show Grid, Hide Panels (Only matters on Mobile)
+        sidebar.classList.remove("mobile-hidden");
+        mainContent.classList.remove("mobile-active");
+        
+        // On PC, we just show the Welcome Text
+        if (window.innerWidth > 900) {
+            views.welcome.classList.remove("hidden-view");
+        }
+    } else {
+        // Hide Grid, Show Panels (Only matters on Mobile)
+        sidebar.classList.add("mobile-hidden");
+        mainContent.classList.add("mobile-active");
+        
+        // Show the specific requested panel
+        if (targetView) {
+            targetView.classList.remove("hidden-view");
+            targetView.style.opacity = 0;
+            setTimeout(() => targetView.style.opacity = 1, 50); // Fade in effect
+        }
+    }
+}
+
+// Bind Top/Bottom Nav Icons
+document.getElementById("btnHome").addEventListener("click", (e) => {
+    switchView("HOME", e.currentTarget);
+});
+
+document.getElementById("btnNotifications").addEventListener("click", (e) => {
+    switchView(views.notifications, e.currentTarget);
+    document.querySelector("#btnNotifications .notification-dot").style.display = "none";
+});
+
+document.getElementById("btnCalendar").addEventListener("click", (e) => {
+    switchView(views.calendar, e.currentTarget);
+    if (!calendarLoaded) loadCalendarData();
+});
+
+document.getElementById("btnMessages").addEventListener("click", (e) => {
+    switchView(views.messages, e.currentTarget);
+    document.querySelector("#btnMessages .notification-dot").style.display = "none";
+});
+
+// Settings doesn't switch the view, it just opens the side-drawer overlay
+document.getElementById("btnSettings").addEventListener("click", () => {
+    el.settingsOverlay.classList.add("active");
+});
+
+// Hide Red Dots initially
+document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
 function switchView(targetView) {
     Object.values(views).forEach(v => {
