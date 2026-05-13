@@ -239,7 +239,7 @@ body {
    ========================================= */
 .cal-cell {
     aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
-    border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s ease;
+    border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s ease;
 }
 .cal-cell.empty { background: transparent; cursor: default; }
 .cal-cell.normal { color: #334155; }
@@ -252,7 +252,7 @@ body {
 }
 .cal-cell.holiday { color: #ef4444; background: #fef2f2; }
 .cal-cell.semester { color: #3b82f6; background: #eff6ff; }
-.cal-subtitle { font-size: 10px; font-weight: 700; margin-top: -2px; }
+.cal-subtitle { font-size: 9px; font-weight: 700; margin-top: -2px; }
 
 /* =========================================
    MOBILE RESPONSIVENESS
