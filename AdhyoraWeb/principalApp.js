@@ -162,7 +162,7 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
 const views = {
     welcome: document.getElementById("welcomeView"),
     notifications: document.getElementById("notificationsView"),
-    calendar: document.getElementById("calendarView")
+    calendar: document.getElementById("calendarView"),
     messages: document.getElementById("messagesView"),
 };
 
