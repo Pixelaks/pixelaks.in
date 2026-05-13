@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
