@@ -157,8 +157,10 @@ body {
     background: rgba(255,255,255,0.5);
     padding: 10px 30px;
     border-radius: 15px;
-}
 
+    /* 🚨 ADD THIS LINE TO CENTER THE TEXT: */
+    text-align: center; 
+}
 /* =========================================
    SETTINGS OVERLAY (Left Slide, Light Theme)
    ========================================= */
