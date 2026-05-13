@@ -4,7 +4,6 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
-// 🚨 Paste your config here
 firebase.initializeApp({
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
   authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -16,21 +15,9 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
-messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message ', payload);
+// 🚨 We deleted the onBackgroundMessage block here because Firebase shows it automatically! 🚨
 
-  const notificationTitle = payload.notification ? payload.notification.title : payload.data.title;
-  const notificationOptions = {
-    body: payload.notification ? payload.notification.body : payload.data.message,
-    icon: payload.data.image || '/default-icon.png',
-    data: { url: "/" } // Opens the app when clicked
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle the user clicking the notification
+// Handle the user clicking the automatically generated notification
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
