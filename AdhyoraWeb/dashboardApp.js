@@ -1275,18 +1275,3 @@ function loadSavedTheme() {
 }
 
 loadSavedTheme();
-
-// Catch direct push notifications while the user has the website open!
-onMessage(messaging, (payload) => {
-  console.log('Message received in foreground: ', payload);
-  
-  if (Notification.permission === "granted") {
-      const notificationTitle = payload.notification ? payload.notification.title : payload.data.title;
-      const notificationOptions = {
-        body: payload.notification ? payload.notification.body : payload.data.message,
-        icon: payload.data.image || '/AdhyoraRedSplashIcon.png'
-      };
-      
-      new Notification(notificationTitle, notificationOptions);
-  }
-});
