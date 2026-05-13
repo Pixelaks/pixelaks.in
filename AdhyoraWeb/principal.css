@@ -60,6 +60,8 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
+.nav-icon-btn.active-nav { color: var(--brand-green); transform: scale(1.1); }
+
 .nav-icon-btn {
     background: none; border: none; font-size: 18px; color: var(--text-green); cursor: pointer;
     position: relative; transition: transform 0.2s;
@@ -254,57 +256,34 @@ body {
 /* =========================================
    MOBILE RESPONSIVENESS
    ========================================= */
+/* =========================================
+   MOBILE RESPONSIVENESS
+   ========================================= */
 @media (max-width: 900px) {
     .dashboard-wrapper { flex-direction: column; }
     
-    .main-content { display: none; /* Hide the big welcome card on mobile */ }
+    /* 🚨 Mobile Toggle Logic */
+    .main-content { display: none; padding: 20px; padding-bottom: 120px; }
+    .main-content.mobile-active { display: flex; } /* Shown via JS */
     
-    /* 🚨 CHANGED: Added vertical centering and auto-margins */
     .sidebar { 
-        width: 100%; 
-        height: 100%; 
-        border-right: none; 
-        padding: 20px; 
-        justify-content: center; /* Centers the logo and grid vertically */
-        padding-bottom: 120px; /* Ensure it doesn't hit the bottom nav */
+        width: 100%; height: 100%; border-right: none; padding: 20px; 
+        justify-content: center; padding-bottom: 120px; 
     }
-    
-    .logo-container {
-        margin-bottom: 30px; /* Space between logo and buttons */
-    }
+    .sidebar.mobile-hidden { display: none; } /* Hidden via JS */
 
-    /* 🚨 CHANGED: Constrained width so buttons don't stretch too long */
-    .nav-grid { 
-        display: grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap: 15px; 
-        width: 100%;
-        max-width: 500px;
-        margin: 0 auto; /* Centers the grid horizontally */
-    }
+    .logo-container { margin-bottom: 30px; }
+    .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
+    .menu-btn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; }
     
-    .menu-btn { 
-        flex-direction: row-reverse; 
-        justify-content: center; 
-        gap: 10px; 
-        padding: 25px 10px; 
-        text-align: center;
-    }
-    
-    /* Move nav icons to the bottom */
     .icon-nav-container {
         position: fixed; top: auto; bottom: 0; left: 0; right: 0;
         background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
         z-index: 10; display: flex; justify-content: center;
     }
     .icon-nav { 
-        width: 100%; 
-        max-width: 400px; 
-        justify-content: space-between; 
-        border: 2px solid var(--border-color); 
-        background-color: var(--card-bg); 
-        background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); 
-        background-size: 15px 15px;
+        width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); 
+        background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px;
     }
 }
 
