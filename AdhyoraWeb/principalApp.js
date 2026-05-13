@@ -1,7 +1,7 @@
 // principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -155,3 +155,198 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
         alert(`Navigating to ${text}... (View logic to be implemented)`);
     });
 });
+
+// ==========================================
+// VIEW SWITCHER LOGIC
+// ==========================================
+const views = {
+    welcome: document.getElementById("welcomeView"),
+    notifications: document.getElementById("notificationsView"),
+    calendar: document.getElementById("calendarView")
+};
+
+function switchView(targetView) {
+    Object.values(views).forEach(v => {
+        if (v) v.classList.add("hidden-view");
+    });
+    if (targetView) {
+        targetView.classList.remove("hidden-view");
+        targetView.style.opacity = 0;
+        setTimeout(() => targetView.style.opacity = 1, 50); // Fade in effect
+    }
+}
+
+// Bind Top Nav Icons
+document.getElementById("btnNotifications").addEventListener("click", () => {
+    switchView(views.notifications);
+    document.querySelector("#btnNotifications .notification-dot").style.display = "none"; // Clear dot
+});
+document.getElementById("btnCalendar").addEventListener("click", () => {
+    switchView(views.calendar);
+    if (!calendarLoaded) loadCalendarData(); // Load on first click
+});
+
+// Hide Red Dots initially
+document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
+
+// ==========================================
+// NOTIFICATIONS INBOX (Cloud Connected)
+// ==========================================
+let cachedNotifs = [];
+
+function startInboxListener() {
+    // Determine Topics (from C# GetMyTopics)
+    const safeCol = currentCollegeID ? currentCollegeID.replace(/[^a-zA-Z0-9]/g, '') : "ALL";
+    const myTopics = [`${safeCol}_ALL`, `${safeCol}_PRINCIPAL`];
+
+    let inboxCache = [];
+    let globalCache = [];
+
+    const updateNotifUI = () => {
+        cachedNotifs = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time);
+        renderNotifications();
+    };
+
+    // 1. Listen to College Inbox
+    onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+        inboxCache = []; 
+        snap.forEach(doc => { 
+            let d = doc.data(); 
+            inboxCache.push({ title: d.title || "Notice", body: d.body || "", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+        });
+        document.querySelector("#btnNotifications .notification-dot").style.display = "block"; // Trigger Red Dot
+        updateNotifUI();
+    });
+
+    // 2. Listen to Global Developer Updates
+    onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
+        globalCache = []; 
+        snap.forEach(doc => { 
+            let d = doc.data(); 
+            globalCache.push({ title: d.title || "System Update", body: d.body || "", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+        });
+        document.querySelector("#btnNotifications .notification-dot").style.display = "block";
+        updateNotifUI();
+    });
+}
+
+function renderNotifications() {
+    const listEl = document.getElementById("notificationsList");
+    if (cachedNotifs.length === 0) { 
+        listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; 
+        return; 
+    }
+    
+    listEl.innerHTML = cachedNotifs.map(n => {
+        let timeStr = n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+        return `<div class="data-card">
+                    <div class="card-title">${n.title}</div>
+                    <div class="card-body">${n.body}</div>
+                    <div class="card-meta"><span>Adhyora System</span><span>${timeStr}</span></div>
+                </div>`;
+    }).join('');
+}
+
+// Start listener after profile loads
+setTimeout(startInboxListener, 2000); 
+
+// ==========================================
+// CALENDAR ENGINE
+// ==========================================
+let currentDisplayDate = new Date();
+let cachedCalYear = "";
+let calWorkingDays = new Set();
+let calNonWorkingDays = new Map();
+let semStarts = new Map();
+let semEnds = new Map();
+let calendarLoaded = false;
+
+document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
+document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
+
+async function loadCalendarData() {
+    calendarLoaded = true;
+    document.getElementById("calMonthYearText").innerText = currentDisplayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const grid = document.getElementById("calendarGrid");
+    grid.innerHTML = ""; 
+    document.getElementById("upcomingEventText").innerText = "Loading...";
+
+    let displayYear = currentDisplayDate.getFullYear(); 
+    let displayMonth = currentDisplayDate.getMonth() + 1; 
+    let targetYearStr = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
+    
+    if (cachedCalYear !== targetYearStr) {
+        cachedCalYear = targetYearStr; 
+        calWorkingDays.clear(); calNonWorkingDays.clear(); semStarts.clear(); semEnds.clear();
+        
+        try {
+            const [semDoc, workDoc, holDoc] = await Promise.all([ 
+                getDoc(doc(db, "colleges", currentCollegeID, "semesters", targetYearStr)), 
+                getDoc(doc(db, "colleges", currentCollegeID, "workingDays", targetYearStr)), 
+                getDoc(doc(db, "colleges", currentCollegeID, "nonWorkingDays", targetYearStr)) 
+            ]);
+            
+            if (semDoc.exists()) { 
+                let d = semDoc.data(); 
+                if(d.oddSemester?.startDate) semStarts.set(d.oddSemester.startDate, "Odd"); 
+                if(d.oddSemester?.endDate) semEnds.set(d.oddSemester.endDate, "Odd"); 
+                if(d.evenSemester?.startDate) semStarts.set(d.evenSemester.startDate, "Even"); 
+                if(d.evenSemester?.endDate) semEnds.set(d.evenSemester.endDate, "Even"); 
+            }
+            if (workDoc.exists()) { Object.keys(workDoc.data()).forEach(k => calWorkingDays.add(k)); }
+            if (holDoc.exists()) { Object.entries(holDoc.data()).forEach(([k, v]) => calNonWorkingDays.set(k, v)); }
+        } catch(e) { console.error("Calendar Fetch Error", e); }
+    }
+    
+    renderCalendarGrid(); 
+    updateUpcomingEvent();
+}
+
+function renderCalendarGrid() {
+    const grid = document.getElementById("calendarGrid");
+    grid.innerHTML = ""; 
+    const year = currentDisplayDate.getFullYear(); const month = currentDisplayDate.getMonth(); const today = new Date();
+    const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-cell empty"></div>`; }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        let dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        let cellClass = "cal-cell normal"; let subText = ""; let popupText = "";
+        
+        if (semStarts.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>Start</span>"; popupText = `${semStarts.get(dateStr)} Semester Starts`; } 
+        else if (semEnds.has(dateStr)) { cellClass = "cal-cell semester"; subText = "<br><span class='cal-subtitle'>End</span>"; popupText = `${semEnds.get(dateStr)} Semester Ends`; }
+        else { 
+            if (!calWorkingDays.has(dateStr)) { 
+                if (calNonWorkingDays.has(dateStr)) { cellClass = "cal-cell holiday"; popupText = calNonWorkingDays.get(dateStr); } 
+                else { let dWeek = new Date(year, month, day).getDay(); if (dWeek === 0 || dWeek === 6) { cellClass = "cal-cell holiday"; } } 
+            } 
+        }
+        
+        if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) { cellClass += " today"; }
+        
+        let clickEvent = popupText ? `onclick="alert('${popupText}')"` : "";
+        grid.innerHTML += `<div class="${cellClass}" ${clickEvent}>${day}${subText}</div>`;
+    }
+}
+
+function updateUpcomingEvent() {
+    let checkDate = new Date(); let found = false;
+    for (let i = 0; i < 60; i++) {
+        let fDate = new Date(checkDate); fDate.setDate(checkDate.getDate() + i);
+        let dateStr = `${fDate.getFullYear()}-${String(fDate.getMonth() + 1).padStart(2, '0')}-${String(fDate.getDate()).padStart(2, '0')}`;
+        
+        if (calNonWorkingDays.has(dateStr)) { 
+            let reason = calNonWorkingDays.get(dateStr); 
+            if (reason === "Holiday/Weekend") reason = "Holiday"; 
+            document.getElementById("upcomingEventText").innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - ${reason}`; 
+            found = true; break; 
+        }
+        let dWeek = fDate.getDay(); 
+        if ((dWeek === 0 || dWeek === 6) && !calWorkingDays.has(dateStr)) { 
+            document.getElementById("upcomingEventText").innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - Weekend`; 
+            found = true; break; 
+        }
+    }
+    if (!found) document.getElementById("upcomingEventText").innerHTML = "No upcoming holidays in the next 60 days.";
+}
