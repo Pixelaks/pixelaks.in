@@ -52,14 +52,15 @@
                 <option value="" disabled selected>Select Role</option>
                 <option value="Student">Student</option>
                 <option value="Teacher" disabled>Teacher (App Only)</option>
-                <option value="Principal" disabled>Principal (App Only)</option>
+                <option value="Principal">Principal</option>
             </select>
 
             <button id="continueBtn" class="primary-btn" disabled>Continue</button>
         </div>
 
         <div id="signInPanel" class="panel">
-            <h2 class="panel-title">Student SignIn</h2>
+            <!-- 🚨 ADDED ID -->
+            <h2 class="panel-title" id="signInTitle">Student SignIn</h2>
             
             <input type="email" id="loginEmail" class="input-field" placeholder="Email...">
             
@@ -86,7 +87,8 @@
         </div>
 
         <div id="registerPanel" class="panel">
-            <h2 class="panel-title">Register</h2>
+            <!-- 🚨 ADDED ID -->
+            <h2 class="panel-title" id="registerTitle">Register</h2>
             
             <input type="text" id="regName" class="input-field" placeholder="Name...">
             <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber...">
