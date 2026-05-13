@@ -1,24 +1,39 @@
 // 🚨 1. THIS MUST BE AT THE VERY TOP! 
-// We must catch the click BEFORE Firebase loads!
+// 🚨 1. THIS MUST BE AT THE VERY TOP! 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  event.stopImmediatePropagation(); // 🚨 Block Firebase from stealing the click!
+  event.stopImmediatePropagation();
+
+  // DEFAULT FALLBACK: Open Inbox
+  let targetAction = 'openMessages';
+  let targetHash = '#inbox';
+
+  // THE SMART ROUTER: Read the hidden Firebase payload!
+  try {
+    let msgType = event.notification.data.FCM_MSG.data.type;
+    
+    // If the Developer sent this, route them to Notifications!
+    if (msgType === 'admin_broadcast') {
+      targetAction = 'openNotifications';
+      targetHash = '#notifications';
+    }
+  } catch(e) {
+    console.log("Could not read message type, defaulting to inbox.");
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       
-      // 1. Check if Adhyora is already open in a tab
       for (let i = 0; i < windowClients.length; i++) {
         let client = windowClients[i];
         if (client.url.includes('pixelaks.in')) {
-          client.postMessage({ action: 'openMessages' });
-          return client.focus(); // Focus the existing tab!
+          client.postMessage({ action: targetAction }); // 🚨 DYNAMIC ACTION
+          return client.focus(); 
         }
       }
       
-      // 2. If it is completely closed, open a new tab!
       if (clients.openWindow) {
-        return clients.openWindow('https://pixelaks.in/AdhyoraWeb/index.html#inbox');
+        return clients.openWindow('https://pixelaks.in/AdhyoraWeb/index.html' + targetHash); // 🚨 DYNAMIC HASH
       }
     })
   );
