@@ -104,7 +104,8 @@ fetchColleges();
 
 // --- 2. ROLE SELECTION LOGIC ---
 function checkSelection() {
-    if (collegeDropdown.value !== "" && roleDropdown.value === "Student") {
+    // 🚨 ALLOW CONTINUATION IF ANY VALID ROLE IS SELECTED
+    if (collegeDropdown.value !== "" && roleDropdown.value !== "") {
         continueBtn.disabled = false;
     } else {
         continueBtn.disabled = true;
@@ -118,15 +119,31 @@ continueBtn.addEventListener("click", (e) => {
     e.preventDefault();
     selectedCollegeID = collegeDropdown.value;
     selectedCollegeName = collegeDropdown.options[collegeDropdown.selectedIndex].text;
+    
+    // 🚨 DYNAMIC UI: Hide Roll No and change Titles for Principals
+    const role = roleDropdown.value;
+    const regRollNoInput = document.getElementById("regRollNo");
+    
+    if (role === "Principal") {
+        document.getElementById("signInTitle").innerText = "Principal SignIn";
+        document.getElementById("registerTitle").innerText = "Principal Registration";
+        regRollNoInput.style.display = "none"; // Hide Roll Number
+    } else {
+        document.getElementById("signInTitle").innerText = "Student SignIn";
+        document.getElementById("registerTitle").innerText = "Student Registration";
+        regRollNoInput.style.display = "block"; // Show Roll Number
+    }
+
     window.switchPanel('signInPanel');
 });
 
-// --- 3. STUDENT LOGIN LOGIC ---
+// --- 3. LOGIN LOGIC (STUDENT & PRINCIPAL) ---
 signInBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
     const email = document.getElementById("loginEmail").value.trim().toLowerCase();
     const password = document.getElementById("loginPassword").value;
+    const role = roleDropdown.value;
 
     if (!email || !password) {
         showToast("Enter Email and Password");
@@ -147,9 +164,34 @@ signInBtn.addEventListener("click", async (e) => {
             return;
         }
 
-        showToast("Login Successful!");
-        const rollNo = email.split('@')[0]; 
-        window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
+        // 🚨 ROLE-BASED VERIFICATION & ROUTING
+        if (role === "Student") {
+            showToast("Login Successful!");
+            const rollNo = email.split('@')[0]; 
+            window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
+        } 
+        else if (role === "Principal") {
+            showToast("Verifying Principal Access...");
+            const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
+            const principalSnap = await getDoc(principalRef);
+
+            if (principalSnap.exists()) {
+                // Prevent 'Staff' from logging into the web dashboard directly
+                if (principalSnap.data().subRole === "Staff") {
+                    showToast("Staff must request a 1-time access code to log in via App.");
+                    await signOut(auth);
+                    resetSignInBtn();
+                    return;
+                }
+                
+                showToast("Principal Login Successful!");
+                window.location.href = `principalDashboard.html?college=${selectedCollegeID}`;
+            } else {
+                showToast("Access Denied: Not a Principal here.");
+                await signOut(auth);
+                resetSignInBtn();
+            }
+        }
         
     } catch (error) {
         showToast(getErrorMessage(error.code));
@@ -162,18 +204,24 @@ function resetSignInBtn() {
     signInBtn.innerText = "SignIn";
 }
 
-// --- 4. STUDENT REGISTRATION LOGIC ---
+// --- 4. REGISTRATION LOGIC (STUDENT & PRINCIPAL) ---
 registerBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
+    const role = roleDropdown.value;
     const name = document.getElementById("regName").value.trim();
-    const rollNo = document.getElementById("regRollNo").value.trim().toUpperCase();
     const email = document.getElementById("regEmail").value.trim().toLowerCase();
     const password = document.getElementById("regPassword").value;
     const confirm = document.getElementById("regConfirmPassword").value;
+    const rollNo = document.getElementById("regRollNo").value.trim().toUpperCase();
 
-    if (!name || !rollNo || !email || !password) {
-        showToast("Fill all fields");
+    // Basic Validation
+    if (!name || !email || !password) {
+        showToast("Fill all required fields");
+        return;
+    }
+    if (role === "Student" && !rollNo) {
+        showToast("Roll Number is required for students");
         return;
     }
     if (password !== confirm) {
@@ -185,43 +233,94 @@ registerBtn.addEventListener("click", async (e) => {
     registerBtn.innerText = "Verifying...";
 
     try {
-        const lookupRef = doc(db, "colleges", selectedCollegeID, "public_lookup", rollNo);
-        const lookupSnap = await getDoc(lookupRef);
+        // ==========================================
+        // PRINCIPAL REGISTRATION FLOW
+        // ==========================================
+        if (role === "Principal") {
+            // 1. Check the Principal Lock
+            const lockRef = doc(db, "colleges", selectedCollegeID, "public_lookup", "PRINCIPAL_LOCK");
+            const lockSnap = await getDoc(lockRef);
 
-        if (!lookupSnap.exists()) {
-            showToast(`Verification Failed. Roll No: ${rollNo} not found.`);
-            resetRegBtn();
-            return;
-        }
+            if (lockSnap.exists()) {
+                showToast("Registration Blocked: A Principal is already registered for this college.");
+                resetRegBtn();
+                return;
+            }
 
-        const dbName = lookupSnap.data().name || "";
-        const normalizedInputName = name.replace(/\s/g, "").toLowerCase();
-        const normalizedDbName = dbName.replace(/\s/g, "").toLowerCase();
+            // 2. Create Auth Account
+            registerBtn.innerText = "Creating Account...";
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-        if (normalizedInputName !== normalizedDbName) {
-            showToast("Verification Failed: Name does not match Roll Number.");
-            resetRegBtn();
-            return;
-        }
+            registerBtn.innerText = "Sending Verification...";
+            await sendEmailVerification(user);
 
-        registerBtn.innerText = "Creating Account...";
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+            // 3. Save Principal Profile
+            const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
+            await setDoc(principalRef, {
+                name: name,
+                email: email,
+                role: "Principal",
+                authID: user.uid,
+                userID: user.uid,
+                createdAt: serverTimestamp(),
+                hasAgreedToDisclaimer: false,
+                webFcmTokens: [] // Array ready for dashboard push notifications
+            });
 
-        registerBtn.innerText = "Sending Verification...";
-        await sendEmailVerification(user);
+            // 4. Secure the Lock
+            await setDoc(lockRef, {
+                claimed: true,
+                claimedByUID: user.uid,
+                timestamp: serverTimestamp()
+            });
 
-        const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
-        await updateDoc(studentRef, {
-            userID: user.uid,
-            email: email,
-            authStatus: "Verified"
-        });
-
-        await signOut(auth);
+            await signOut(auth);
+            showToast("Success! A verification link has been sent to your email.");
+            window.switchPanel('signInPanel');
+        } 
         
-        showToast("Success! A verification link has been sent to your email.");
-        window.switchPanel('signInPanel');
+        // ==========================================
+        // STUDENT REGISTRATION FLOW
+        // ==========================================
+        else if (role === "Student") {
+            const lookupRef = doc(db, "colleges", selectedCollegeID, "public_lookup", rollNo);
+            const lookupSnap = await getDoc(lookupRef);
+
+            if (!lookupSnap.exists()) {
+                showToast(`Verification Failed. Roll No: ${rollNo} not found.`);
+                resetRegBtn();
+                return;
+            }
+
+            const dbName = lookupSnap.data().name || "";
+            const normalizedInputName = name.replace(/\s/g, "").toLowerCase();
+            const normalizedDbName = dbName.replace(/\s/g, "").toLowerCase();
+
+            if (normalizedInputName !== normalizedDbName) {
+                showToast("Verification Failed: Name does not match Roll Number.");
+                resetRegBtn();
+                return;
+            }
+
+            registerBtn.innerText = "Creating Account...";
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            registerBtn.innerText = "Sending Verification...";
+            await sendEmailVerification(user);
+
+            const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
+            await updateDoc(studentRef, {
+                userID: user.uid,
+                email: email,
+                authStatus: "Verified"
+            });
+
+            await signOut(auth);
+            showToast("Success! A verification link has been sent to your email.");
+            window.switchPanel('signInPanel');
+        }
 
     } catch (error) {
         showToast(getErrorMessage(error.code));
