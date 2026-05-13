@@ -1275,3 +1275,29 @@ function loadSavedTheme() {
 }
 
 loadSavedTheme();
+
+// ==========================================
+// 🚨 NOTIFICATION CLICK HANDLERS 🚨
+// ==========================================
+
+// 1. If the app was already open in the background, catch the Service Worker's message:
+navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'openMessages') {
+        const msgBtn = document.getElementById("btnNavMsg");
+        if (msgBtn) msgBtn.click();
+    }
+});
+
+// 2. If the app was completely closed, check if it was opened via a notification:
+window.addEventListener('load', () => {
+    if (window.location.hash === "#inbox" || localStorage.getItem("pendingInboxOpen") === "true") {
+        // Clear the memory so it doesn't get stuck on the inbox
+        localStorage.removeItem("pendingInboxOpen");
+        
+        // Wait 1.5 seconds for Firebase data to load, then click the Inbox button!
+        setTimeout(() => {
+            const msgBtn = document.getElementById("btnNavMsg");
+            if (msgBtn) msgBtn.click();
+        }, 1500); 
+    }
+});
