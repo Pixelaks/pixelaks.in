@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, getDoc, getDocs, orderBy, limit, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
@@ -22,6 +22,8 @@ const messaging = getMessaging(app); // <-- MOVED HERE AFTER 'app' EXISTS!
 // ==========================================
 // 🚨 ZERO-COST RAM CACHES 🚨
 // ==========================================
+
+let myCurrentPushToken = ""; // Remembers the token for this session
 let collegeID = ""; let studentUID = ""; let currentRollNo = "";
 let collegeSemesterType = "Odd"; 
 let loadedSemesters = {}; let sortedSemesterKeys = []; let currentSemesterIndex = 0;
@@ -956,12 +958,30 @@ setInterval(updateTimelineVisuals, 60000);
 // ==========================================
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
-document.getElementById("btnSignOut").addEventListener("click", () => { signOut(auth).then(() => window.location.href = "index.html"); });
-document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
-
-document.getElementById("btnBlockSignOut").addEventListener("click", () => {
+// ==========================================
+// 🚨 SMART SIGN OUT (CLEARS TOKENS)
+// ==========================================
+async function handleSignOut() {
+    try {
+        // If we have a token in RAM, delete it from the database!
+        if (myCurrentPushToken && currentRollNo && collegeID) {
+            const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+            await setDoc(studentRef, {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }, { merge: true });
+            console.log("Push Token cleanly removed from database!");
+        }
+    } catch(e) { 
+        console.error("Error removing token", e); 
+    }
+    
+    // Now log them out!
     signOut(auth).then(() => window.location.href = "index.html");
-});
+}
+
+document.getElementById("btnSignOut").addEventListener("click", handleSignOut);
+document.getElementById("btnBlockSignOut").addEventListener("click", handleSignOut);
+document.getElementById("btnContact").addEventListener("click", () => window.open(`mailto:pixelaks.technologies@gmail.com`, '_blank'));
 
 // --- NATIVE BACK BUTTON TRAP (TAB HISTORY & SIGN OUT WARNING) ---
 // 1. Set an invisible "trap" at the very bottom of the history
@@ -976,12 +996,12 @@ window.addEventListener("popstate", (e) => {
         // If they back out of the Main Dashboard, ask to sign out!
         if (pid === "base_trap") {
             if (confirm("Do you want to sign out?")) {
-                signOut(auth).then(() => window.location.href = "index.html");
+                handleSignOut(); // 🚨 CHANGED TO SMART SIGN-OUT
             } else {
                 // They canceled. Put the Main Dashboard back onto the history stack so the trap works again!
                 window.history.pushState({ panelId: "mainDashboardView" }, "", "");
             }
-        } 
+        }
         // Otherwise, figure out which tab they went back to, and load it WITHOUT pushing a new state
         else if (pid === "mainDashboardView") { switchView(btnNavMain, el.mainView, false); }
         else if (pid === "assignmentsView") { switchView(btnNavAssign, el.assignView, false); loadAssignments(); }
@@ -1250,15 +1270,34 @@ async function requestPushPermissions() {
 
             if (currentToken) {
                 console.log("Web Push Token Generated!");
-                
-                // 3. Save to Firestore (Backup/History)
+                myCurrentPushToken = currentToken; // 🚨 SAVE IT IN RAM FOR SIGN OUT
+
+                // 3. THE GHOST KILLER: Save to Firestore safely
                 const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+                const stuSnap = await getDoc(studentRef);
+                
+                let activeTokens = [];
+                if (stuSnap.exists() && stuSnap.data().webFcmTokens) {
+                    activeTokens = stuSnap.data().webFcmTokens;
+                }
+
+                // Remove the old token if it already exists (prevents duplicates)
+                activeTokens = activeTokens.filter(t => t !== currentToken);
+                // Add the new token to the end of the array
+                activeTokens.push(currentToken);
+
+                // 🚨 Limit the array to the 3 most recent logins. 
+                // This instantly deletes orphaned tokens if they clear their cache a lot!
+                if (activeTokens.length > 3) {
+                    activeTokens = activeTokens.slice(activeTokens.length - 3);
+                }
+
                 await setDoc(studentRef, { 
-                    webFcmTokens: arrayUnion(currentToken),
+                    webFcmTokens: activeTokens,
                     lastWebLogin: serverTimestamp()
                 }, { merge: true });
                 
-                console.log("Token saved to Firestore.");
+                console.log("Token saved and array cleaned in Firestore.");
 
                 // 4. THE LOOPHOLE: Force-Subscribe the Web Browser to Native Topics
                 // We generate the exact same "Safe Topic" strings your Unity Admin App uses.
