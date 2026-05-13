@@ -23,7 +23,6 @@ body {
     flex-direction: column;
 }
 
-/* THE SIGNATURE GRID BACKGROUND */
 .dashboard-wrapper {
     flex: 1;
     display: flex;
@@ -41,7 +40,7 @@ body {
 }
 
 /* =========================================
-   TOP NAV ICONS (PC)
+   TOP NAV ICONS
    ========================================= */
 .icon-nav-container {
     position: absolute;
@@ -82,17 +81,13 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    border-right: 1px solid transparent; /* Replaced by grid logic */
+    border-right: 1px solid transparent; 
 }
 
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--brand-green); border-radius: 4px; }
 
-.nav-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+.nav-grid { display: flex; flex-direction: column; gap: 12px; }
 
 .menu-btn {
     background-color: var(--card-bg);
@@ -109,25 +104,23 @@ body {
       linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px);
     background-size: 15px 15px;
 }
-
 .menu-btn:hover {
     background-color: rgba(187, 247, 208, 0.8);
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(74, 222, 128, 0.2);
 }
-
 .btn-text { font-weight: 600; color: var(--text-green); font-size: 14px; }
 .btn-icon { color: var(--text-green); font-size: 16px; opacity: 0.8; }
 
 /* =========================================
-   MAIN CONTENT AREA (The Big Green Grid)
+   MAIN CONTENT AREA
    ========================================= */
 .main-content {
     flex: 1;
     padding: 90px 40px 40px 40px; 
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .welcome-card {
@@ -137,12 +130,10 @@ body {
     border: 2px solid var(--border-color);
     border-radius: 20px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
     box-shadow: 0 10px 30px rgba(0,0,0,0.02);
     position: relative;
     overflow: hidden;
-    /* Grid Pattern */
     background-image: 
       linear-gradient(var(--bg-grid-color) 1px, transparent 1px),
       linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px);
@@ -162,20 +153,14 @@ body {
 }
 
 /* =========================================
-   SETTINGS OVERLAY (Left Slide, Light Theme)
+   SETTINGS OVERLAY
    ========================================= */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); z-index: 100;
-    visibility: hidden; 
-    opacity: 0; 
-    transition: opacity 0.3s ease, visibility 0.3s;
+    visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0.3s;
 }
-
-.modal-overlay.active { 
-    visibility: visible; 
-    opacity: 1; 
-}
+.modal-overlay.active { visibility: visible; opacity: 1; }
 
 .settings-drawer {
     position: absolute; top: 0; left: -350px; width: 350px; height: 100%;
@@ -183,10 +168,7 @@ body {
     transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
     display: flex; flex-direction: column; padding: 30px;
 }
-
-.modal-overlay.active .settings-drawer { 
-    left: 0; 
-}
+.modal-overlay.active .settings-drawer { left: 0; }
 
 .close-settings {
     position: absolute; top: 20px; right: 20px; background: none; border: none;
@@ -209,41 +191,27 @@ body {
 .settings-menu::-webkit-scrollbar-thumb { background: var(--brand-green); border-radius: 4px; }
 
 .settings-btn {
-    background: #ffffff; 
-    border: 1px solid #e2e8f0; 
-    border-radius: 12px; 
-    padding: 15px;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;
     text-align: left; font-size: 14px; font-weight: 600; color: #334155; 
-    cursor: pointer; transition: all 0.2s;
-    display: flex; gap: 10px; align-items: center;
+    cursor: pointer; transition: all 0.2s; display: flex; gap: 10px; align-items: center;
 }
 .settings-btn i { width: 20px; text-align: center; color: var(--brand-green); }
-.settings-btn:hover { 
-    background: #f0fdf4; 
-    border-color: var(--brand-green); 
-    color: var(--text-green); 
-    transform: translateX(4px); 
-}
+.settings-btn:hover { background: #f0fdf4; border-color: var(--brand-green); color: var(--text-green); transform: translateX(4px); }
 
 .logout-btn { background: #fff5f5; border-color: #fecaca; color: #ef4444; margin-top: auto; }
 .logout-btn i { color: #ef4444; }
 .logout-btn:hover { background: #fee2e2; border-color: #ef4444; color: #dc2626; transform: translateX(4px); }
-
 .settings-footer { text-align: center; font-size: 11px; color: #94a3b8; padding-top: 20px; }
 
-.toggle-switch {
-    width: 36px; height: 18px; background: #cbd5e1; border-radius: 20px; position: relative; pointer-events: none; transition: background-color 0.3s;
-}
-.toggle-switch::after {
-    content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
+.toggle-switch { width: 36px; height: 18px; background: #cbd5e1; border-radius: 20px; position: relative; pointer-events: none; transition: background-color 0.3s; }
+.toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 .toggle-switch.active { background: var(--brand-green); }
 .toggle-switch.active::after { left: 20px; }
 
 /* =========================================
    DASHBOARD VIEWS & CARDS
    ========================================= */
-.dashboard-view { transition: opacity 0.3s ease; width: 100%; }
+.dashboard-view { width: 100%; height: 100%; transition: opacity 0.3s ease; }
 .hidden-view { display: none !important; opacity: 0; }
 
 .scrollable-list::-webkit-scrollbar { width: 6px; }
@@ -251,7 +219,6 @@ body {
 
 .no-data-text { text-align: center; color: #94a3b8; font-style: italic; margin-top: 50px; }
 
-/* Notification Cards */
 .data-card {
     background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px;
     border-left: 5px solid var(--brand-green); box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -260,19 +227,12 @@ body {
 .data-card .card-body { color: #475569; font-size: 13px; line-height: 1.5; margin-bottom: 10px; }
 .data-card .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600; }
 
-/* Role-Based Message Colors */
 .msg-principal { border-left-color: var(--brand-green); background-color: #f0fdf4; }
 .msg-teacher { border-left-color: #f59e0b; background-color: #fffbeb; }
 .msg-student { border-left-color: #3b82f6; background-color: #eff6ff; }
 
-/* Compose Modal Animation */
-.compose-modal {
-    transform: translateY(-20px);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.modal-overlay.active .compose-modal {
-    transform: translateY(0);
-}
+.compose-modal { transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-overlay.active .compose-modal { transform: translateY(0); }
 
 /* =========================================
    CALENDAR CELLS
@@ -286,14 +246,10 @@ body {
 .cal-cell.normal:hover { background: var(--bg-grid-color); transform: translateY(-2px); }
 
 .cal-cell.today { 
-    background: var(--brand-green) !important; 
-    color: #ffffff !important; 
-    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.5); 
-    transform: scale(1.1);
-    border: 2px solid var(--text-green);
-    z-index: 2; 
+    background: var(--brand-green) !important; color: #ffffff !important; 
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.5); transform: scale(1.1);
+    border: 2px solid var(--text-green); z-index: 2; 
 }
-
 .cal-cell.holiday { color: #ef4444; background: #fef2f2; }
 .cal-cell.semester { color: #3b82f6; background: #eff6ff; }
 .cal-subtitle { font-size: 10px; font-weight: 700; margin-top: -2px; }
@@ -304,32 +260,26 @@ body {
 @media (max-width: 900px) {
     .dashboard-wrapper { flex-direction: column; }
     
-    /* 🚨 Mobile Panel Toggle Logic */
-    .main-content { display: none; padding: 15px; padding-bottom: 100px; flex: 1; }
+    /* 🚨 SCROLL FIX: Give main-content exact boundary so overflow works */
+    .main-content { display: none; padding: 15px; padding-bottom: 90px; height: 100%; overflow: hidden; flex: 1; }
     .main-content.mobile-active { display: flex; } 
     
-    .sidebar { 
-        width: 100%; flex: 1; border-right: none; padding: 20px; 
-        justify-content: center; padding-bottom: 100px; transition: all 0.3s ease;
-    }
+    .sidebar { width: 100%; height: 100%; border-right: none; padding: 20px; justify-content: center; padding-bottom: 100px; transition: all 0.3s ease; }
     
-    /* 🚨 The Magic Fix: Shrink sidebar to JUST the logo, hide the grid! */
-    .sidebar.mobile-hidden { 
-        flex: none; height: auto; padding-bottom: 0; justify-content: flex-start; 
-    }
-    .sidebar.mobile-hidden .nav-grid { display: none; } 
+    /* 🚨 ADHYORA HIDE FIX: Completely removes the sidebar (and logo) when a panel is open */
+    .sidebar.mobile-hidden { display: none !important; } 
 
     .logo-container { margin-bottom: 15px; }
     .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
     .menu-btn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; }
     
-    .icon-nav-container {
-        position: fixed; top: auto; bottom: 0; left: 0; right: 0;
-        background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
-        z-index: 10; display: flex; justify-content: center;
-    }
-    .icon-nav { 
-        width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); 
-        background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px;
-    }
+    .icon-nav-container { position: fixed; top: auto; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); z-index: 10; display: flex; justify-content: center; }
+    .icon-nav { width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px; }
+
+    /* 🚨 CALENDAR ALIGNMENT FIX: Shrink the gaps slightly so numbers fit inside the box */
+    .calendar-container { padding: 15px !important; margin: 0 auto !important; }
+    .calendar-grid { gap: 4px !important; }
+    .cal-cell { font-size: 12px; border-radius: 8px; }
+    .calendar-header h3 { font-size: 16px !important; }
+    #calendarView { padding: 10px !important; }
 }
