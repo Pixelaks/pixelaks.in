@@ -232,34 +232,6 @@ document.getElementById("btnSettings").addEventListener("click", () => {
 // Hide Red Dots initially
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
-function switchView(targetView) {
-    Object.values(views).forEach(v => {
-        if (v) v.classList.add("hidden-view");
-    });
-    if (targetView) {
-        targetView.classList.remove("hidden-view");
-        targetView.style.opacity = 0;
-        setTimeout(() => targetView.style.opacity = 1, 50); // Fade in effect
-    }
-}
-
-// Bind Top Nav Icons
-document.getElementById("btnNotifications").addEventListener("click", () => {
-    switchView(views.notifications);
-    document.querySelector("#btnNotifications .notification-dot").style.display = "none"; // Clear dot
-});
-document.getElementById("btnCalendar").addEventListener("click", () => {
-    switchView(views.calendar);
-    if (!calendarLoaded) loadCalendarData(); // Load on first click
-});
-
-document.getElementById("btnMessages").addEventListener("click", () => {
-    switchView(views.messages);
-    document.querySelector("#btnMessages .notification-dot").style.display = "none";
-});
-// Hide Red Dots initially
-document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
-
 // ==========================================
 // NOTIFICATIONS INBOX (Cloud Connected)
 // ==========================================
