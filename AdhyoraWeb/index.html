@@ -13,9 +13,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <script>
-    // If opened from a Push Notification, save the intention so it survives the login redirect!
+    // Save the intention so it survives the login redirect!
     if (window.location.hash === "#inbox") {
         localStorage.setItem("pendingInboxOpen", "true");
+    }
+    if (window.location.hash === "#notifications") {
+        localStorage.setItem("pendingNotifOpen", "true");
     }
     </script>
     
