@@ -328,6 +328,20 @@ body {
 .data-card .card-body { color: #475569; font-size: 13px; line-height: 1.5; margin-bottom: 10px; }
 .data-card .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600; }
 
+/* Role-Based Message Colors */
+.msg-principal { border-left-color: var(--brand-green); background-color: #f0fdf4; }
+.msg-teacher { border-left-color: #f59e0b; background-color: #fffbeb; }
+.msg-student { border-left-color: #3b82f6; background-color: #eff6ff; }
+
+/* Compose Modal Animation */
+.compose-modal {
+    transform: translateY(-20px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.active .compose-modal {
+    transform: translateY(0);
+}
+
 /* =========================================
    CALENDAR CELLS
    ========================================= */
