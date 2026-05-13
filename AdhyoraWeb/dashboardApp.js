@@ -182,6 +182,9 @@ async function syncCollegeAndListen() {
     const secureUID = auth.currentUser.uid; 
     const q = query(collection(db, "colleges", collegeID, "students"), where("userID", "==", secureUID));
 
+    // 🚨 PREVENTS THE SNAPSHOT CASCADE
+    let isFirstBoot = true; 
+
     onSnapshot(q, async (snapshot) => {
         if (snapshot.empty) { el.name.innerText = "Profile Not Found"; return; }
         const docSnap = snapshot.docs[0];
@@ -189,14 +192,21 @@ async function syncCollegeAndListen() {
         
         registerWebSession();
 
-        // 🚨 ADDED MISSING FUNCTION CALL: Fetch working days instantly!
-        fetchGlobalCalendarData(); 
-        
-        try {
-            const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
-            cachedMedicalLeaves = [];
-            medSnap.forEach(d => { let data = d.data(); if(data.startDate && data.endDate) cachedMedicalLeaves.push({ start: new Date(data.startDate), end: new Date(data.endDate) }); });
-        } catch(e) {}
+        // 🚨 ONLY FETCH THESE HEAVY ARRAYS ONCE!
+        if (isFirstBoot) {
+            fetchGlobalCalendarData(); 
+            
+            try {
+                const medSnap = await getDocs(query(collection(db, "colleges", collegeID, "medical_leaves"), where("studentID", "==", currentRollNo)));
+                cachedMedicalLeaves = [];
+                medSnap.forEach(d => { 
+                    let data = d.data(); 
+                    if(data.startDate && data.endDate) cachedMedicalLeaves.push({ start: new Date(data.startDate), end: new Date(data.endDate) }); 
+                });
+            } catch(e) { console.error("Medical Leave Error", e); }
+            
+            isFirstBoot = false;
+        }
 
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
@@ -204,8 +214,6 @@ async function syncCollegeAndListen() {
         if (!isDataListening) {
             isDataListening = true;
             startBackgroundListeners();
-
-          // ✅ PUT IT RIGHT HERE INSTEAD!
             requestPushPermissions();
         }
 
@@ -295,18 +303,35 @@ function startBackgroundListeners() {
         });
         updateMsgUI();
     });
+
+    // 🚨 OPTIMIZED CHAT LISTENER 🚨
+    let activeMessageListeners = new Map(); 
+
     onSnapshot(query(collection(db, "colleges", collegeID, "chats"), where("participants", "array-contains", auth.currentUser.uid)), (snap) => {
-        privateChatCache = []; 
-        snap.forEach(chatDoc => {
-            onSnapshot(query(collection(db, "colleges", collegeID, "chats", chatDoc.id, "messages"), orderBy("timestamp", "desc"), limit(20)), (msgSnap) => {
-                privateChatCache = privateChatCache.filter(m => m.roomID !== chatDoc.id); 
-                msgSnap.forEach(mDoc => { 
-                    let d = mDoc.data(); 
-                    let role = d.senderRole || "Principal"; 
-                    privateChatCache.push({ roomID: chatDoc.id, title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", senderRole: role, type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+        snap.docChanges().forEach(change => {
+            let chatID = change.doc.id;
+
+            if (change.type === "added") {
+                let unsub = onSnapshot(query(collection(db, "colleges", collegeID, "chats", chatID, "messages"), orderBy("timestamp", "desc"), limit(20)), (msgSnap) => {
+                    privateChatCache = privateChatCache.filter(m => m.roomID !== chatID); 
+                    msgSnap.forEach(mDoc => { 
+                        let d = mDoc.data(); 
+                        let role = d.senderRole || "Principal"; 
+                        privateChatCache.push({ roomID: chatID, title: d.title || "Message", body: d.body || "", sender: d.senderName || "User", senderRole: role, type: "chat", time: d.timestamp ? d.timestamp.toDate() : new Date() }); 
+                    });
+                    updateMsgUI();
                 });
+                activeMessageListeners.set(chatID, unsub);
+            }
+
+            if (change.type === "removed") {
+                if (activeMessageListeners.has(chatID)) {
+                    activeMessageListeners.get(chatID)(); 
+                    activeMessageListeners.delete(chatID);
+                }
+                privateChatCache = privateChatCache.filter(m => m.roomID !== chatID);
                 updateMsgUI();
-            });
+            }
         });
     });
 
@@ -1270,58 +1295,51 @@ async function requestPushPermissions() {
 
             if (currentToken) {
                 console.log("Web Push Token Generated!");
-                myCurrentPushToken = currentToken; // 🚨 SAVE IT IN RAM FOR SIGN OUT
+                myCurrentPushToken = currentToken; 
 
-                // 3. THE GHOST KILLER: Save to Firestore safely
-                const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
-                const stuSnap = await getDoc(studentRef);
-                
+                // 🚨 ZERO-COST READ: Pull the array straight from RAM!
                 let activeTokens = [];
-                if (stuSnap.exists() && stuSnap.data().webFcmTokens) {
-                    activeTokens = stuSnap.data().webFcmTokens;
+                if (currentStudentProfileData && currentStudentProfileData.webFcmTokens) {
+                    activeTokens = currentStudentProfileData.webFcmTokens;
                 }
 
-                // Remove the old token if it already exists (prevents duplicates)
+                // Remove old duplicate, add new token
                 activeTokens = activeTokens.filter(t => t !== currentToken);
-                // Add the new token to the end of the array
                 activeTokens.push(currentToken);
 
-                // 🚨 Limit the array to the 3 most recent logins. 
-                // This instantly deletes orphaned tokens if they clear their cache a lot!
+                // The 3-Device PC Cache limit (safely protects Android tokens)
                 if (activeTokens.length > 3) {
                     activeTokens = activeTokens.slice(activeTokens.length - 3);
                 }
 
+                const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
                 await setDoc(studentRef, { 
                     webFcmTokens: activeTokens,
                     lastWebLogin: serverTimestamp()
                 }, { merge: true });
                 
-                console.log("Token saved and array cleaned in Firestore.");
+                console.log("Token saved and array cleaned safely.");
 
                 // 4. THE LOOPHOLE: Force-Subscribe the Web Browser to Native Topics
-                // We generate the exact same "Safe Topic" strings your Unity Admin App uses.
                 const getSafe = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
                 
                 let safeCol = getSafe(collegeID);
                 let safeDept = getSafe(rawDept);
                 let safeYear = getSafe(myYearStr);
 
-                // These match your Unity "Targeting" logic perfectly
                 let topicsToJoin = [
                     `${safeCol}_ALL`, 
                     `${safeCol}_STUDENTS_ALL_ALL`, 
                     `${safeCol}_STUDENTS_${safeDept}_ALL`, 
                     `${safeCol}_STUDENTS_${safeDept}_${safeYear}`,
-                    `ADHYORA_GLOBAL_USERS` // 🚨 Added so they get your Developer Broadcasts!
+                    `ADHYORA_GLOBAL_USERS`
                 ];
 
-                // 🚨 REPLACE THIS URL with your actual Apps Script "Web App" URL!
                 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
 
                 fetch(APPS_SCRIPT_URL, {
                     method: "POST",
-                    mode: "no-cors", // Uses no-cors to prevent "CORS" errors from Google
+                    mode: "no-cors",
                     body: JSON.stringify({
                         action: "subscribe",
                         token: currentToken,
