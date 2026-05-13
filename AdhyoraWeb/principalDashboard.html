@@ -49,8 +49,40 @@
 
         <!-- MAIN CONTENT AREA -->
         <main class="main-content">
-            <div class="welcome-card" id="welcomeCard">
-                <h2 class="welcome-text">Welcome To ADHYORA</h2>
+            <div class="welcome-card" id="mainViewContainer">
+                
+                <!-- VIEW 1: Welcome (Default) -->
+                <div id="welcomeView" class="dashboard-view active">
+                    <h2 class="welcome-text">Welcome To ADHYORA</h2>
+                </div>
+
+                <!-- VIEW 2: Notifications -->
+                <div id="notificationsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 30px; display: flex; flex-direction: column;">
+                    <h3 style="margin-bottom: 20px; color: var(--text-green); font-size: 24px; text-align: center; font-family: 'Yatra One', cursive; letter-spacing: 1px;">System Inbox</h3>
+                    <div id="notificationsList" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                        <div class="no-data-text">Loading Notifications...</div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: Calendar -->
+                <div id="calendarView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 30px; display: flex; flex-direction: column; align-items: center;">
+                    <div class="calendar-container" style="width: 100%; max-width: 600px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid var(--border-color);">
+                        <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <button class="nav-icon-btn" id="calPrevMonth" style="background: var(--bg-grid-color); padding: 8px 15px; border-radius: 10px;">&lt;</button>
+                            <h3 id="calMonthYearText" style="color: var(--text-green); font-size: 18px;">Loading...</h3>
+                            <button class="nav-icon-btn" id="calNextMonth" style="background: var(--bg-grid-color); padding: 8px 15px; border-radius: 10px;">&gt;</button>
+                        </div>
+                        <div class="calendar-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #94a3b8; font-size: 12px; margin-bottom: 10px;">
+                            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;"></div>
+                        
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center;">
+                            <p id="upcomingEventText" style="font-size: 13px; color: var(--text-green);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
