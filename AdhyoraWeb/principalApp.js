@@ -243,26 +243,59 @@ function updateUpcomingEvent() {
 }
 
 // ==========================================
-// MESSAGES SYSTEM
+// MESSAGES SYSTEM (WITH INFINITE SCROLL)
 // ==========================================
 let cachedMessages = [];
+let messageLimit = 30; // Start with 30 messages
+let messageListenerUnsub = null;
+let isFetchingMessages = false;
+
 function startMessagesListener() {
-    onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+    if (messageListenerUnsub) messageListenerUnsub(); // Clear old listener when limit increases
+
+    messageListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(messageLimit)), (snap) => {
         cachedMessages = [];
         snap.forEach(doc => {
             let d = doc.data(); let roleClass = (d.senderRole || "").toLowerCase().includes("teacher") ? "msg-teacher" : "msg-principal";
             cachedMessages.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || "System", target: d.targetSummary || "", roleClass: roleClass, time: d.timestamp ? d.timestamp.toDate() : new Date() });
         });
-        document.querySelector("#btnMessages .notification-dot").style.display = "block"; renderMessages();
+        document.querySelector("#btnMessages .notification-dot").style.display = "block"; 
+        renderMessages();
     });
 }
+
 function renderMessages() {
     const listEl = document.getElementById("messagesList");
     if (cachedMessages.length === 0) { listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
+    
+    // Remember scroll position before updating
+    let oldScroll = listEl.scrollTop;
+    
     listEl.innerHTML = cachedMessages.map(m => {
         return `<div class="data-card ${m.roleClass}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender} <span style="color:#94a3b8; font-weight:normal;">→ ${m.target}</span></span><span>${m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span></div></div>`;
     }).join('');
+
+    // Restore scroll position so it doesn't snap to top
+    if (isFetchingMessages) { listEl.scrollTop = oldScroll; }
 }
+
+// 🚀 INFINITE SCROLL DETECTOR
+document.getElementById("messagesList").addEventListener("scroll", (e) => {
+    let el = e.target;
+    // If user scrolls within 50px of the bottom
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 50) {
+        // Only load more if we aren't currently fetching AND there might be more data
+        if (!isFetchingMessages && cachedMessages.length >= messageLimit) {
+            isFetchingMessages = true;
+            messageLimit += 30; // Load 30 more older messages
+            startMessagesListener(); 
+            
+            // Prevent spamming the scroll event
+            setTimeout(() => { isFetchingMessages = false; }, 1000); 
+        }
+    }
+});
+
 setTimeout(startMessagesListener, 2000);
 
 const elCompose = {
@@ -619,7 +652,15 @@ function startStudentListListener() {
 function renderStudentList(searchTerm = "") {
     const listEl = document.getElementById("studentListContainer"); const noData = document.getElementById("slNoDataText");
     let filtered = cachedStudents;
-    if (searchTerm) { let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); }
+    
+    if (searchTerm) { 
+        let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); 
+        filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); 
+    } else {
+        // 🚀 DOM OPTIMIZATION: Only render the first 50 students by default!
+        filtered = filtered.slice(0, 50);
+    }
+    
     if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
     noData.style.display = "none";
     
@@ -642,7 +683,6 @@ function renderStudentList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-
 // 🚀 OPTIMIZATION 5: Debounce Student Search
 document.getElementById("slSearchInput").addEventListener("input", debounce((e) => renderStudentList(e.target.value.trim()), 250));
 
@@ -2213,6 +2253,9 @@ function SUB_RenderList(searchTerm = "") {
     if (searchTerm) {
         let q = searchTerm.toLowerCase();
         filtered = subCachedData.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || s.type.toLowerCase().includes(q));
+    } else {
+        // 🚀 DOM OPTIMIZATION: Only render the first 50 subjects by default!
+        filtered = filtered.slice(0, 50);
     }
 
     if (filtered.length === 0) {
@@ -2244,7 +2287,6 @@ function SUB_RenderList(searchTerm = "") {
     });
     container.innerHTML = html;
 }
-
 // 🚀 OPTIMIZATION 7: Debounce Subject Search
 document.getElementById("subSearchInput").addEventListener("input", debounce((e) => SUB_RenderList(e.target.value.trim()), 250));
 
