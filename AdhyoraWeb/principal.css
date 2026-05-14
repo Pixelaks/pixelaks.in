@@ -313,9 +313,10 @@ body {
 @keyframes waveSlide { 0% { transform: translateX(0); } 100% { transform: translateX(-100px); } }
 .wavy-text { position: relative; z-index: 1; font-weight: bold; color: #334155; font-size: 14px; text-shadow: 0px 0px 5px rgba(255,255,255,0.8); }
 
-.stat-row { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 13px; color: #475569; }
-.stat-row span { font-weight: bold; color: #334155; }
-
+/* 🚨 TEXT ALIGNMENT FIX FOR STATS */
+.stat-row { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: flex-start; gap: 15px; font-size: 13px; color: #475569; }
+.stat-label { width: 120px; font-weight: 600; }
+.stat-value { font-weight: bold; color: #334155; }
 
 /* =========================================
    MOBILE RESPONSIVENESS
