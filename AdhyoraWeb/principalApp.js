@@ -2433,9 +2433,25 @@ async function SS_FetchStudents() {
     } catch(e) { SS_ShowEmpty("Error loading students."); console.error(e); }
 }
 
-window.SS_OnCheckboxChange = (checkbox) => { 
-    if (checkbox.checked) ssSelectedStudents.add(checkbox.dataset.sid);
-    else ssSelectedStudents.delete(checkbox.dataset.sid);
+window.SS_ToggleStudentCard = (sid) => {
+    let chk = document.getElementById(`chk_${sid}`);
+    if (!chk) return;
+
+    // Flip the checkbox state manually
+    chk.checked = !chk.checked; 
+
+    // Update Set and Visuals
+    if (chk.checked) {
+        ssSelectedStudents.add(sid);
+        // Add a nice green highlight to the card!
+        document.getElementById(`card_${sid}`).style.borderColor = "var(--brand-green)";
+        document.getElementById(`card_${sid}`).style.backgroundColor = "rgba(74, 222, 128, 0.05)";
+    } else {
+        ssSelectedStudents.delete(sid);
+        // Reset the card back to normal white
+        document.getElementById(`card_${sid}`).style.borderColor = "#e2e8f0";
+        document.getElementById(`card_${sid}`).style.backgroundColor = "white";
+    }
 
     let btn = document.getElementById("btnOpenStuSubMove");
     btn.disabled = ssSelectedStudents.size === 0;
