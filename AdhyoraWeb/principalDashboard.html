@@ -38,8 +38,6 @@
                 <button class="menu-btn" id="btnNavStudentList"><span class="btn-text">Students List</span> <i class="fas fa-clipboard-list btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavBatch"><span class="btn-text">Batch</span> <i class="fas fa-id-badge btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavTimetable"><span class="btn-text">TimeTable</span> <i class="fas fa-calendar-week btn-icon"></i></button>
-                <!-- 🚨 NEW ASSIGN BUTTON -->
-                <button class="menu-btn" id="btnNavAssign"><span class="btn-text">Assign Classes</span> <i class="fas fa-tasks btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Data Section</span> <i class="fas fa-chart-bar btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Subject List</span> <i class="fas fa-book-open btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
@@ -245,6 +243,7 @@
                     </div>
                 </div>
 
+                <!-- 🚨 TIMETABLE VIEW 🚨 -->
                 <div id="timetableView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
                         <select id="ttSemDrop" class="tt-select-pill"></select>
@@ -262,31 +261,10 @@
                     </div>
                     
                     <div style="display: flex; justify-content: center; gap: 15px; margin-top: 15px; flex-shrink: 0;">
+                        <!-- 🚨 ASSIGN BUTTON IS NOW HERE! -->
+                        <button id="btnTTAssign" class="nav-icon-btn tt-action-btn"><i class="fas fa-tasks"></i> Assign Classes</button>
                         <button id="btnTTSaveStructure" class="nav-icon-btn tt-action-btn"><i class="fas fa-save"></i> Save Structure</button>
                         <button id="btnTTEdit" class="nav-icon-btn tt-action-btn" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;"><i class="fas fa-edit"></i> Edit Categories</button>
-                    </div>
-                </div>
-
-                <!-- 🚨 NEW ASSIGN VIEW (General Dept) 🚨 -->
-                <div id="assignView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #fafafa;">
-                    <div style="background: white; padding: 20px 25px; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); flex-shrink: 0; align-items: center;">
-                        <h2 style="font-size: 20px; color: #333; margin: 0; font-family: 'Poppins', sans-serif;">Assign</h2>
-                        <div class="asn-days-container" id="asnDaysContainer">
-                            <button class="asn-day-btn" data-day="Monday">Mon</button>
-                            <button class="asn-day-btn" data-day="Tuesday">Tue</button>
-                            <button class="asn-day-btn" data-day="Wednesday">Wed</button>
-                            <button class="asn-day-btn" data-day="Thursday">Thu</button>
-                            <button class="asn-day-btn" data-day="Friday">Fri</button>
-                        </div>
-                        <select id="asnSemDrop" class="asn-select-pill" style="width: 100%; max-width: 300px; text-align: center;"></select>
-                    </div>
-
-                    <div id="asnListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; align-items: center;">
-                        <div class="no-data-text">Loading Assign Panel...</div>
-                    </div>
-
-                    <div style="padding: 15px; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; flex-shrink: 0;">
-                        <button id="btnAsnSave" class="asn-save-btn">Save</button>
                     </div>
                 </div>
 
@@ -336,6 +314,7 @@
         </div>
     </div>
 
+    <!-- ROOMCODE MODALS -->
     <div class="modal-overlay" id="addDeptOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('addDeptOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-plus-circle"></i> Add Department</h3><input type="text" id="addDeptInput" placeholder="Department Name (e.g., Bsc Physics)" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><button id="btnAddDeptNext" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Next Step</button></div></div>
     <div class="modal-overlay" id="durationOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('durationOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 id="durationTitle" style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-clock"></i> Set Duration</h3><select id="durationSelect" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3" selected>3 Years</option><option value="4">4 Years</option><option value="5">5 Years</option></select><button id="btnSaveDuration" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Save Duration</button></div></div>
     <div class="modal-overlay" id="combineOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('combineOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-link"></i> Combine Departments</h3><select id="combineSelect1" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 10px;"></select><div style="text-align: center; color: #94a3b8; font-size: 20px; margin-bottom: 10px;"><i class="fas fa-plus"></i></div><select id="combineSelect2" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"></select><button id="btnSubmitCombine" style="width: 100%; background: var(--text-light-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Link Together</button></div></div>
@@ -360,6 +339,33 @@
             <h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-exchange-alt"></i> Move Students</h3>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Select the destination batch for the selected students.</p>
             <div id="moveBatchButtonsContainer" class="scrollable-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <!-- 🚨 NEW ASSIGN OVERLAY MODAL (DESKTOP OPTIMIZED) 🚨 -->
+    <div class="modal-overlay" id="assignOverlay">
+        <div class="compose-modal" style="background: #f8fafc; width: 95%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; margin: auto; margin-top: 5vh; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); position: relative; overflow: hidden; padding: 0;">
+            <button class="close-settings" onclick="document.getElementById('assignOverlay').classList.remove('active')" style="z-index: 10;"><i class="fas fa-times"></i></button>
+            
+            <div style="background: white; padding: 25px; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px; align-items: center; z-index: 5; flex-shrink: 0;">
+                <h2 style="font-size: 24px; color: #1e293b; margin: 0; font-family: 'Poppins', sans-serif; font-weight: 700;">Assign</h2>
+                <div class="asn-days-container" id="asnDaysContainer">
+                    <button class="asn-day-btn" data-day="Monday">Mon</button>
+                    <button class="asn-day-btn" data-day="Tuesday">Tue</button>
+                    <button class="asn-day-btn" data-day="Wednesday">Wed</button>
+                    <button class="asn-day-btn" data-day="Thursday">Thu</button>
+                    <button class="asn-day-btn" data-day="Friday">Fri</button>
+                </div>
+                <select id="asnSemDrop" class="asn-select-pill" style="width: 100%; max-width: 400px; text-align: center;"></select>
+            </div>
+
+            <div id="asnListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; align-items: center;">
+                <div class="no-data-text">Loading Assign Panel...</div>
+            </div>
+
+            <div style="padding: 20px; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; z-index: 5; flex-shrink: 0;">
+                <button id="btnAsnSave" class="asn-save-btn">Save</button>
+            </div>
         </div>
     </div>
 
