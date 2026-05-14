@@ -438,3 +438,81 @@ body {
 .attd-red { color: #ef4444; }      /* Missed completely */
 .attd-black { color: #475569; }    /* Upcoming / Ongoing */
 .attd-empty { color: #cbd5e1; font-weight: normal; } /* No class assigned */
+
+/* =========================================
+   🌙 DARK MODE OVERRIDES
+   ========================================= */
+body.dark-mode {
+    --bg-base: #0f172a;
+    --text-green: #4ade80;
+    --text-light-green: #86efac;
+    --bg-grid-color: rgba(74, 222, 128, 0.05);
+    --card-bg: #1e293b;
+    --border-color: #334155;
+    color: #f8fafc;
+}
+
+body.dark-mode .data-card, 
+body.dark-mode .compose-modal, 
+body.dark-mode .settings-drawer,
+body.dark-mode .sub-card,
+body.dark-mode .evt-card,
+body.dark-mode .asn-card,
+body.dark-mode .welcome-card,
+body.dark-mode .calendar-container {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+body.dark-mode .card-title,
+body.dark-mode .sub-title,
+body.dark-mode .evt-title,
+body.dark-mode .btn-text,
+body.dark-mode .stat-value,
+body.dark-mode .tt-day,
+body.dark-mode .tt-header {
+    color: #f8fafc !important;
+}
+
+body.dark-mode .card-body,
+body.dark-mode .sub-code,
+body.dark-mode .evt-meta,
+body.dark-mode .stat-label {
+    color: #cbd5e1 !important;
+}
+
+body.dark-mode .sidebar {
+    background-color: #0f172a;
+}
+
+body.dark-mode .menu-btn {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode input, 
+body.dark-mode select, 
+body.dark-mode textarea {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+}
+
+body.dark-mode .nav-icon-btn {
+    color: #94a3b8;
+}
+
+body.dark-mode .nav-icon-btn.active-nav {
+    color: var(--brand-green);
+}
+
+body.dark-mode .tt-card {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+body.dark-mode .tt-node {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #4ade80 !important;
+}
