@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove, increment, enableIndexedDbPersistence, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 // 🚀 OPTIMIZATION 1: Imported enableIndexedDbPersistence to cut refresh costs to ZERO
 // Add getMessaging, getToken, deleteToken to your imports
 import { getMessaging, getToken, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
@@ -69,19 +69,14 @@ let sessionsCache = new Map();
 
 async function fetchPrincipalProfile() {
     try {
-        const cSnap = await getDoc(doc(db, "colleges", currentCollegeID));
-        if (cSnap.exists() && cSnap.data().currentSemesterType) {
-            collegeSemesterType = cSnap.data().currentSemesterType;
-        }
-
         const docSnap = await getDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID));
         if (docSnap.exists()) {
             const data = docSnap.data(); myRealName = data.name || "Principal";
             el.principalName.innerText = myRealName; el.principalEmail.innerText = data.email || "No Email Provided";
             
-            // 🚨 Activate Device Management
             registerWebSession();
             startSessionListener();
+            startSubscriptionListener(); // 🚨 START THE MASTER WATCHER
         } else {
             el.principalName.innerText = "Profile Not Found"; el.principalEmail.innerText = "";
         }
@@ -3448,3 +3443,172 @@ window.addEventListener('load', () => {
     else if (hash === "#teacher_requests") setTimeout(() => document.getElementById("btnNavTeacherList").click(), 1000);
     else if (hash === "#events") setTimeout(() => document.getElementById("btnNavEvents").click(), 1000);
 });
+
+// ==========================================
+// 🚨 MASTER SUBSCRIPTION & SEMESTER ENGINE
+// ==========================================
+let subListener = null;
+let cachedExpiryTimestamp = 0;
+let isFirstSubLoad = true;
+const gracePeriodDays = 8;
+
+// Replace these with your actual Razorpay Links!
+const RAZORPAY_MONTHLY = "https://pages.razorpay.com/YOUR_MONTHLY_LINK";
+const RAZORPAY_YEARLY = "https://pages.razorpay.com/YOUR_YEARLY_LINK";
+
+function startSubscriptionListener() {
+    // 🚨 SINGLE LISTENER: Handles both Subscriptions AND Semester syncs for 1 read cost!
+    subListener = onSnapshot(doc(db, "colleges", currentCollegeID), (snapshot) => {
+        if (!snapshot.exists()) return;
+        
+        let data = snapshot.data();
+        
+        // 1. Semester Sync
+        if (data.currentSemesterType) {
+            collegeSemesterType = data.currentSemesterType;
+        }
+
+        // 2. Subscription Engine
+        let subData = data.subscription;
+        if (!subData) {
+            HandleBlockState("Welcome to Adhyora!\nPlease select a plan to activate your account and start your Free Trial.");
+            isFirstSubLoad = false;
+            return;
+        }
+
+        let newExpiry = subData.expiryDate || 0;
+        let newPlan = subData.planType || "Premium";
+        
+        // Smart Check: Did the expiry date just change? (They bought a plan)
+        let dateChanged = (!isFirstSubLoad && newExpiry !== cachedExpiryTimestamp);
+        cachedExpiryTimestamp = newExpiry;
+
+        ValidateExpiry(newExpiry);
+
+        if (dateChanged) {
+            ShowSuccessPanel(newExpiry, newPlan);
+        }
+
+        isFirstSubLoad = false;
+    });
+}
+
+function ValidateExpiry(expirySeconds) {
+    let expiryDate = new Date(expirySeconds * 1000); // Unix to JS Date
+    let today = new Date();
+    
+    // Calculate the Hard Block Date (Expiry + Grace Period)
+    let hardBlockDate = new Date(expiryDate.getTime() + (gracePeriodDays * 24 * 60 * 60 * 1000));
+
+    let daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    let daysLeftInGrace = Math.ceil((hardBlockDate - today) / (1000 * 60 * 60 * 24));
+
+    if (today > hardBlockDate) {
+        let dateStr = expiryDate.toLocaleDateString('en-US', { day:'numeric', month:'short', year:'numeric' });
+        HandleBlockState(`Plan Expired on ${dateStr}.\nRenew to unlock access.`);
+    } 
+    else if (today > expiryDate) {
+        UnlockAccess();
+        TriggerBanner(`Plan Expired! Service completely stops in ${daysLeftInGrace} days.`);
+    }
+    else if (daysUntilExpiry === 7 || daysUntilExpiry <= 3) {
+        UnlockAccess();
+        TriggerBanner(`Reminder: Your Adhyora plan expires in ${daysUntilExpiry} days.`);
+    }
+    else {
+        UnlockAccess();
+        document.getElementById("subWarningBanner").style.display = "none";
+    }
+}
+
+// 🚨 THE ANTI-HACK GHOST UI
+function HandleBlockState(msg) {
+    document.getElementById("subBlockText").innerText = msg;
+    document.getElementById("subBlockPanel").style.display = "flex";
+    
+    // Ghost Mode: Physically erase the UI so deleting the blocker in DevTools reveals nothing!
+    document.querySelector(".main-content").style.display = "none";
+    document.getElementById("mainSidebar").style.display = "none";
+}
+
+function UnlockAccess() {
+    document.getElementById("subBlockPanel").style.display = "none";
+    
+    // Restore UI
+    document.querySelector(".main-content").style.display = "block";
+    document.getElementById("mainSidebar").style.display = "flex";
+}
+
+function TriggerBanner(msg) {
+    let banner = document.getElementById("subWarningBanner");
+    document.getElementById("subWarningText").innerText = msg;
+    banner.style.display = "block";
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => { banner.style.display = "none"; }, 5000);
+}
+
+function ShowSuccessPanel(expirySeconds, planType) {
+    let dateObj = new Date(expirySeconds * 1000);
+    let formattedDate = dateObj.toLocaleDateString('en-US', { day:'numeric', month:'long', year:'numeric' });
+    let displayPlan = planType.charAt(0).toUpperCase() + planType.slice(1);
+
+    document.getElementById("successPlanName").innerText = "Current Plan: " + displayPlan;
+    document.getElementById("successExpiryDate").innerText = "Valid Until: " + formattedDate;
+    
+    document.getElementById("subSuccessPanel").style.display = "flex";
+}
+
+// 🚨 SECURE FIREBASE TRANSACTION: Prevents users from spamming the Free Trial button!
+window.ProcessSubscription = async function(planType) {
+    let loadingTxt = document.getElementById("subBlockLoading");
+    loadingTxt.style.display = "block";
+    loadingTxt.innerText = "Checking eligibility...";
+
+    let docRef = doc(db, "colleges", currentCollegeID);
+    
+    try {
+        let result = await runTransaction(db, async (transaction) => {
+            const sfDoc = await transaction.get(docRef);
+            if (!sfDoc.exists()) throw "Document does not exist!";
+
+            let isTrialAvailable = true;
+            let data = sfDoc.data();
+            if (data.subscription && data.subscription.isTrialUsed === true) {
+                isTrialAvailable = false;
+            }
+
+            // If trial was already used, abort transaction and send to Razorpay
+            if (!isTrialAvailable) return "OPEN_LINK";
+
+            // If trial IS available, calculate exactly 1 month from right now
+            let expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + 1);
+            let expiryTimestamp = Math.floor(expiryDate.getTime() / 1000);
+
+            let subData = {
+                status: "active",
+                planType: "trial",
+                expiryDate: expiryTimestamp,
+                isTrialUsed: true
+            };
+
+            // Commit the update securely
+            transaction.set(docRef, { subscription: subData }, { merge: true });
+            return "TRIAL_ACTIVATED";
+        });
+
+        if (result === "TRIAL_ACTIVATED") {
+            loadingTxt.innerText = "Trial Activated! Unlocking...";
+        } else if (result === "OPEN_LINK") {
+            loadingTxt.innerText = "Opening Secure Payment Page...";
+            let link = planType === 'monthly' ? RAZORPAY_MONTHLY : RAZORPAY_YEARLY;
+            window.open(link + "?collegeid=" + currentCollegeID, "_blank");
+        }
+    } catch (e) {
+        loadingTxt.innerText = "Connection Error. Please try again.";
+        console.error(e);
+    }
+    
+    setTimeout(() => { loadingTxt.style.display = "none"; }, 3000);
+};
