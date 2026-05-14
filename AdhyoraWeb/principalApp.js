@@ -78,7 +78,8 @@ const views = {
     batch: document.getElementById("batchView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
     timetable: document.getElementById("timetableView"),
-    assign: document.getElementById("assignView") // 🚨 THIS WAS MISSING!
+    assign: document.getElementById("assignView"),
+    data: document.getElementById("dataView") // 🚨 ADDED THIS LINE!
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -111,6 +112,7 @@ document.getElementById("btnBackToStudents").addEventListener("click", () => swi
 
 document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
 document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
+document.getElementById("btnNavData").addEventListener("click", () => { switchView(views.data); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
