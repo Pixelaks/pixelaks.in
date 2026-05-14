@@ -1122,18 +1122,16 @@ function BCH_Init() {
     bchLoaded = true;
     let dropSem = document.getElementById("bchSemDrop"); 
     let optionsHtml = "";
-    let activeValue = "1";
+    let activeValue = "";
     
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        let isOdd = (i % 2 !== 0);
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
-            label += " (Active)";
-            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
+            if (!activeValue) activeValue = i.toString(); // Default to first available
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
         }
-        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
-    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
-    
+    dropSem.innerHTML = optionsHtml; 
     bchCurrentSem = activeValue;
     dropSem.value = bchCurrentSem;
 
@@ -1309,18 +1307,16 @@ function TT_Init() {
     ttLoaded = true;
     let dropSem = document.getElementById("ttSemDrop"); 
     let optionsHtml = "";
-    let activeValue = "1"; 
+    let activeValue = ""; 
     
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        let isOdd = (i % 2 !== 0);
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
-            label += " (Active)";
-            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
         }
-        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
-    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
-    
+    dropSem.innerHTML = optionsHtml; 
     ttCurrentSem = activeValue;
     dropSem.value = ttCurrentSem;
     
@@ -1515,18 +1511,16 @@ function ASN_Init(startSem, startDay) {
 
     let dropSem = document.getElementById("asnSemDrop"); 
     let optionsHtml = "";
-    let activeValue = "1";
+    let activeValue = "";
 
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        let isOdd = (i % 2 !== 0);
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
-            label += " (Active)";
-            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
         }
-        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
-    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
-    
+    dropSem.innerHTML = optionsHtml; 
     asnCurrentSem = startSem || activeValue;
     dropSem.value = asnCurrentSem;
     
@@ -2596,18 +2590,16 @@ function SS_Init() {
     ssLoaded = true;
     let dropSem = document.getElementById("ssSemDrop"); 
     let optionsHtml = "";
-    let activeValue = "1";
+    let activeValue = "";
     
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        let isOdd = (i % 2 !== 0);
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
-            label += " (Active)";
-            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
         }
-        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
-    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
-    
+    dropSem.innerHTML = optionsHtml; 
     ssCurrentSem = activeValue;
     dropSem.value = ssCurrentSem;
     
