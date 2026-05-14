@@ -1,7 +1,7 @@
 // principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
@@ -58,10 +58,6 @@ if (!currentCollegeID) {
 }
 
 el.versionText.innerText = "Version 1.0.0 (Web Admin)";
-
-// ==========================================
-// C# TO JS LOGIC TRANSLATION
-// ==========================================
 
 async function fetchPrincipalProfile() {
     try {
@@ -134,6 +130,7 @@ el.btnSignOut.addEventListener("click", () => {
 });
 
 document.querySelectorAll(".menu-btn").forEach(btn => {
+    if(btn.id === "btnNavRoomcode") return; // Let the View Switcher handle this one
     btn.addEventListener("click", (e) => {
         const text = e.currentTarget.querySelector(".btn-text").innerText;
         alert(`Navigating to ${text}... (View logic to be implemented)`);
@@ -145,6 +142,7 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
 // ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"),
+    roomcode: document.getElementById("roomcodeView"),
     notifications: document.getElementById("notificationsView"),
     calendar: document.getElementById("calendarView"),
     messages: document.getElementById("messagesView")
@@ -198,10 +196,15 @@ document.getElementById("btnMessages").addEventListener("click", (e) => {
     document.querySelector("#btnMessages .notification-dot").style.display = "none";
 });
 
-document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
+// Sidebar binding for Roomcode
+document.getElementById("btnNavRoomcode").addEventListener("click", () => {
+    switchView(views.roomcode);
+    if (!rcLoaded) startRoomcodeListener();
+});
+
 
 // ==========================================
-// NOTIFICATIONS INBOX (Cloud Connected)
+// NOTIFICATIONS INBOX
 // ==========================================
 let cachedNotifs = [];
 
@@ -362,7 +365,6 @@ function updateUpcomingEvent() {
 // MESSAGES SYSTEM & COMPOSE LOGIC
 // ==========================================
 let cachedMessages = [];
-let cachedDepartments = [];
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
 const myRealName = "Principal"; 
 
@@ -400,7 +402,6 @@ function renderMessages() {
 
 setTimeout(startMessagesListener, 2000);
 
-// --- COMPOSE MODAL LOGIC ---
 const elCompose = {
     overlay: document.getElementById("composeOverlay"),
     openBtn: document.getElementById("btnOpenCompose"),
@@ -419,34 +420,26 @@ elCompose.openBtn.addEventListener("click", async () => {
     elCompose.overlay.classList.add("active");
     elCompose.title.value = ""; elCompose.body.value = ""; elCompose.status.innerText = "";
     
-    if (cachedDepartments.length === 0) {
+    if (rcCachedDepts.length === 0) {
         try {
             const deptQuery = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
-            
-            cachedDepartments = [];
+            rcCachedDepts = [];
             deptQuery.forEach(d => {
-                cachedDepartments.push({ name: d.data().name || d.id, maxYears: d.data().maxYears || 4 });
+                rcCachedDepts.push({ name: d.data().name || d.id, maxYears: d.data().maxYears || 4 });
             });
-            
-            elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + 
-                cachedDepartments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
-                
-            elCompose.deptDrop.dispatchEvent(new Event("change"));
-        } catch(e) { 
-            console.error("Error fetching departments:", e); 
-            elCompose.status.innerText = "Error loading departments.";
-        }
+        } catch(e) { console.error("Error fetching depts:", e); }
     }
+    
+    elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + 
+        rcCachedDepts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+    elCompose.deptDrop.dispatchEvent(new Event("change"));
 });
 
 elCompose.closeBtn.addEventListener("click", () => elCompose.overlay.classList.remove("active"));
-
-elCompose.btnStudents.addEventListener("change", (e) => {
-    elCompose.yearDrop.style.display = e.target.checked ? "block" : "none";
-});
+elCompose.btnStudents.addEventListener("change", (e) => elCompose.yearDrop.style.display = e.target.checked ? "block" : "none");
 
 elCompose.deptDrop.addEventListener("change", (e) => {
-    let selectedDept = cachedDepartments.find(d => d.name === e.target.value);
+    let selectedDept = rcCachedDepts.find(d => d.name === e.target.value);
     let maxYears = selectedDept ? selectedDept.maxYears : 4;
     elCompose.yearDrop.innerHTML = '<option value="All">All Years</option>';
     for(let i=1; i<=maxYears; i++) { elCompose.yearDrop.innerHTML += `<option value="${i}">Year ${i}</option>`; }
@@ -463,7 +456,6 @@ elCompose.sendBtn.addEventListener("click", async () => {
 
     let targetDept = elCompose.deptDrop.value;
     let targetYear = elCompose.yearDrop.value;
-    
     const getSafeTopic = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
     let deptSafe = getSafeTopic(targetDept);
     let yearSafe = getSafeTopic("Year " + targetYear); 
@@ -493,16 +485,13 @@ elCompose.sendBtn.addEventListener("click", async () => {
         });
         
         const payload = {
-            title: `${title} • ${myRealName} (Principal)`,
-            body: body,
+            title: `${title} • ${myRealName} (Principal)`, body: body,
             image: "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/4c9dc43b4b3fd2c66679498581de26d690053f61/AdhyoraSplashLogo5.png",
             type: "chat", priority: "high", topics: topicsToPing
         };
 
-        fetch(APPS_SCRIPT_URL, {
-            method: "POST", mode: "no-cors",
-            body: JSON.stringify(payload)
-        }).then(() => {
+        fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
+        .then(() => {
             elCompose.status.style.color = "var(--text-light-green)";
             elCompose.status.innerText = "Message Sent Successfully!";
             setTimeout(() => {
@@ -511,14 +500,243 @@ elCompose.sendBtn.addEventListener("click", async () => {
                 elCompose.sendBtn.disabled = false;
             }, 1500);
         }).catch(err => {
-            elCompose.status.innerText = "Message logged, but push failed.";
-            elCompose.sendBtn.innerText = "Send Broadcast";
-            elCompose.sendBtn.disabled = false;
+            elCompose.status.innerText = "Logged, but push failed.";
+            elCompose.sendBtn.innerText = "Send Broadcast"; elCompose.sendBtn.disabled = false;
         });
-
     } catch(e) {
-        elCompose.status.innerText = "Network Error. Try again.";
-        elCompose.sendBtn.innerText = "Send Broadcast";
-        elCompose.sendBtn.disabled = false;
+        elCompose.status.innerText = "Network Error.";
+        elCompose.sendBtn.innerText = "Send Broadcast"; elCompose.sendBtn.disabled = false;
     }
 });
+
+
+// ==========================================
+// ROOMCODE MANAGER (REPLICATING C# RoomCodeGenerator)
+// ==========================================
+let rcLoaded = false;
+let rcCachedDepts = [];
+let rcCurrentAction = "";
+let rcTargetID = "";
+let rcTargetName = "";
+let rcPendingNewName = "";
+let rcIsCreatingNew = false;
+
+// 1. Toast UI
+function showRcToast(msg) {
+    let t = document.getElementById("rcToast");
+    t.innerText = msg;
+    t.style.bottom = "30px";
+    setTimeout(() => t.style.bottom = "-100px", 3000);
+}
+
+// 2. Real-Time Listener
+function startRoomcodeListener() {
+    rcLoaded = true;
+    const listEl = document.getElementById("roomcodeList");
+
+    onSnapshot(collection(db, "colleges", currentCollegeID, "departments"), (snap) => {
+        rcCachedDepts = [];
+        let idToName = {};
+        snap.forEach(d => idToName[d.id] = d.data().name || d.id);
+
+        snap.forEach(doc => {
+            let d = doc.data();
+            let code = d.roomCode || "";
+            // Auto generate if missing
+            if(!code) {
+               code = String(Math.floor(100000 + Math.random() * 900000));
+               RC_SaveCodeToDB(d.name || doc.id, code, d.maxYears || 3, "");
+            }
+            let linkedName = (d.linkedDepartments && d.linkedDepartments.length > 0) ? idToName[d.linkedDepartments[0]] : null;
+            rcCachedDepts.push({ id: doc.id, name: d.name || doc.id, roomCode: code, maxYears: d.maxYears || 3, linkedName: linkedName });
+        });
+        
+        if (rcCachedDepts.length === 0) listEl.innerHTML = `<div class="no-data-text">No Roomcodes Available</div>`;
+        else renderRoomcodes();
+    });
+}
+
+function renderRoomcodes() {
+    const listEl = document.getElementById("roomcodeList");
+    listEl.innerHTML = rcCachedDepts.map(d => {
+        let linkUI = d.linkedName ? `<span style="color:#eab308; font-size:12px; margin-left:8px;" title="Linked to ${d.linkedName}"><i class="fas fa-link"></i> ${d.linkedName}</span>` : "";
+        return `
+        <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
+            <div>
+                <div class="card-title">${d.name} ${linkUI}</div>
+                <div class="card-body" style="margin-bottom:0;">Code: <strong style="font-size:16px; color:var(--brand-green); letter-spacing:1px;">${d.roomCode}</strong> (${d.maxYears} Yrs)</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="action-icon-btn" title="Share" onclick="window.RC_Share('${d.name}', '${d.roomCode}')"><i class="fas fa-share-alt"></i></button>
+                <button class="action-icon-btn" title="Edit Duration" onclick="window.RC_EditDuration('${d.id}', '${d.name}', ${d.maxYears})"><i class="fas fa-pen"></i></button>
+                <button class="action-icon-btn" title="Regenerate" onclick="window.RC_RegenSingle('${d.id}', '${d.name}')"><i class="fas fa-sync-alt"></i></button>
+                <button class="action-icon-btn" title="Delete" style="color:#ef4444;" onclick="window.RC_Delete('${d.id}', '${d.name}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// 3. Row Actions (Exposed to window for HTML onClick)
+window.RC_Share = (name, code) => {
+    let shareText = `Room Code for ${name}: ${code}`;
+    if (navigator.share) { navigator.share({ title: 'Adhyora Room Code', text: shareText }); } 
+    else { navigator.clipboard.writeText(shareText); showRcToast("Room code copied to clipboard!"); }
+};
+
+window.RC_EditDuration = (id, name, years) => {
+    rcIsCreatingNew = false; rcTargetID = id; rcTargetName = name;
+    document.getElementById("durationTitle").innerHTML = `<i class="fas fa-clock"></i> Edit: ${name}`;
+    document.getElementById("durationSelect").value = years;
+    document.getElementById("durationOverlay").classList.add("active");
+};
+
+window.RC_RegenSingle = (id, name) => {
+    rcCurrentAction = "REGEN_SINGLE"; rcTargetName = name;
+    document.getElementById("confirmText").innerHTML = `Regenerate code for <b>${name}</b>?<br>(Teacher will be logged out)`;
+    document.getElementById("confirmOverlay").classList.add("active");
+};
+
+window.RC_Delete = (id, name) => {
+    rcCurrentAction = "DELETE"; rcTargetName = name;
+    document.getElementById("confirmText").innerHTML = `Delete <b>${name}</b>?<br>(All data will be lost)`;
+    document.getElementById("confirmOverlay").classList.add("active");
+};
+
+// 4. Header Actions
+document.getElementById("btnRegenAll").addEventListener("click", () => {
+    if(rcCachedDepts.length === 0) return;
+    rcCurrentAction = "REGEN_ALL";
+    document.getElementById("confirmText").innerHTML = `Regenerate <b>ALL</b> Room Codes?`;
+    document.getElementById("confirmOverlay").classList.add("active");
+});
+
+document.getElementById("btnOpenAddDept").addEventListener("click", () => {
+    document.getElementById("addDeptInput").value = "";
+    document.getElementById("addDeptOverlay").classList.add("active");
+});
+
+document.getElementById("btnOpenCombine").addEventListener("click", () => {
+    if(rcCachedDepts.length < 2) { showRcToast("Need at least 2 departments to combine!"); return; }
+    let options = rcCachedDepts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+    document.getElementById("combineSelect1").innerHTML = options;
+    document.getElementById("combineSelect2").innerHTML = options;
+    document.getElementById("combineSelect2").selectedIndex = 1;
+    document.getElementById("combineOverlay").classList.add("active");
+});
+
+// 5. State Machine Flows
+document.getElementById("btnAddDeptNext").addEventListener("click", () => {
+    rcPendingNewName = document.getElementById("addDeptInput").value.trim();
+    if(!rcPendingNewName) { showRcToast("Enter a name!"); return; }
+    rcCurrentAction = "ADD";
+    document.getElementById("addDeptOverlay").classList.remove("active");
+    document.getElementById("confirmText").innerHTML = `Create new department:<br><b>${rcPendingNewName}</b>?`;
+    document.getElementById("confirmOverlay").classList.add("active");
+});
+
+document.getElementById("btnConfirmYes").addEventListener("click", () => {
+    document.getElementById("confirmOverlay").classList.remove("active");
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinOverlay").classList.add("active");
+});
+
+document.getElementById("btnSubmitCombine").addEventListener("click", () => {
+    let name1 = document.getElementById("combineSelect1").value;
+    let name2 = document.getElementById("combineSelect2").value;
+    if(name1 === name2) { showRcToast("Cannot combine with itself!"); return; }
+    rcCurrentAction = "COMBINE";
+    document.getElementById("combineOverlay").classList.remove("active");
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinOverlay").classList.add("active");
+});
+
+document.getElementById("btnVerifyPin").addEventListener("click", async () => {
+    let pin = document.getElementById("pinInput").value.trim();
+    if(!pin) return;
+    
+    // Check PIN in DB
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
+        let correctPin = (snap.exists() && snap.data().adminPin) ? snap.data().adminPin : "1234";
+        
+        if (pin === correctPin) {
+            document.getElementById("pinOverlay").classList.remove("active");
+            RC_ExecuteAction();
+        } else {
+            showRcToast("Incorrect PIN.");
+        }
+    } catch(e) { showRcToast("Error verifying PIN."); }
+});
+
+document.getElementById("btnSaveDuration").addEventListener("click", () => {
+    document.getElementById("durationOverlay").classList.remove("active");
+    let yrs = parseInt(document.getElementById("durationSelect").value);
+    
+    if (rcIsCreatingNew) {
+        let code = String(Math.floor(100000 + Math.random() * 900000));
+        RC_SaveCodeToDB(rcPendingNewName, code, yrs, "");
+        showRcToast(`Added ${rcPendingNewName}!`);
+    } else {
+        updateDoc(doc(db, "colleges", currentCollegeID, "departments", "DEPT_" + rcTargetName.replace(/\s+/g, '')), { maxYears: yrs });
+        showRcToast("Duration Updated!");
+    }
+});
+
+// 6. DB Execution Methods
+function RC_ExecuteAction() {
+    if (rcCurrentAction === "ADD") {
+        rcIsCreatingNew = true;
+        document.getElementById("durationTitle").innerHTML = `<i class="fas fa-clock"></i> Set Duration`;
+        document.getElementById("durationSelect").value = 3;
+        document.getElementById("durationOverlay").classList.add("active");
+    }
+    else if (rcCurrentAction === "REGEN_SINGLE") {
+        let newCode = String(Math.floor(100000 + Math.random() * 900000));
+        let oldCode = rcCachedDepts.find(d => d.name === rcTargetName)?.roomCode || "";
+        RC_SaveCodeToDB(rcTargetName, newCode, 3, oldCode);
+        RC_KickTeachers(rcTargetName);
+        showRcToast(`New Code Generated`);
+    }
+    else if (rcCurrentAction === "REGEN_ALL") {
+        rcCachedDepts.forEach(d => {
+            let newCode = String(Math.floor(100000 + Math.random() * 900000));
+            RC_SaveCodeToDB(d.name, newCode, d.maxYears, d.roomCode);
+            RC_KickTeachers(d.name);
+        });
+        showRcToast(`All Codes Regenerated`);
+    }
+    else if (rcCurrentAction === "DELETE") {
+        let deptID = "DEPT_" + rcTargetName.replace(/\s+/g, '');
+        deleteDoc(doc(db, "colleges", currentCollegeID, "departments", deptID));
+        RC_KickTeachers(rcTargetName);
+        showRcToast(`Deleted ${rcTargetName}`);
+    }
+    else if (rcCurrentAction === "COMBINE") {
+        let name1 = document.getElementById("combineSelect1").value;
+        let name2 = document.getElementById("combineSelect2").value;
+        let deptID1 = "DEPT_" + name1.replace(/\s+/g, '');
+        let deptID2 = "DEPT_" + name2.replace(/\s+/g, '');
+        
+        const batch = writeBatch(db);
+        batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID1), { linkedDepartments: [deptID2] }, { merge: true });
+        batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID2), { linkedDepartments: [deptID1] }, { merge: true });
+        batch.commit().then(() => showRcToast("Departments Combined!"));
+    }
+}
+
+function RC_SaveCodeToDB(name, code, years, oldCode) {
+    let deptID = "DEPT_" + name.replace(/\s+/g, '');
+    if (oldCode) deleteDoc(doc(db, "colleges", currentCollegeID, "public_lookup", "TEACHER_" + oldCode));
+    
+    setDoc(doc(db, "colleges", currentCollegeID, "departments", deptID), { name: name, roomCode: code, maxYears: years }, { merge: true });
+    setDoc(doc(db, "colleges", currentCollegeID, "public_lookup", "TEACHER_" + code), { collegeID: currentCollegeID, deptID: deptID, deptName: name });
+}
+
+function RC_KickTeachers(deptName) {
+    let deptID = "DEPT_" + deptName.replace(/\s+/g, '');
+    getDocs(query(collection(db, "colleges", currentCollegeID, "teachers"), where("departmentID", "==", deptID))).then(snap => {
+        const batch = writeBatch(db);
+        snap.forEach(docSnap => batch.update(docSnap.ref, { status: "Pending" }));
+        batch.commit();
+    });
+}
