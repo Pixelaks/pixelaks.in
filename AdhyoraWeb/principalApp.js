@@ -1,4 +1,3 @@
-// principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -72,14 +71,15 @@ el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/p
 el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
 el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
 
-// Include Timetable view directly in the master views list!
+// 🚨 Master Views Object 🚨
 const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
     teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
     studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
     batch: document.getElementById("batchView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
-    timetable: document.getElementById("timetableView")
+    timetable: document.getElementById("timetableView"),
+    assign: document.getElementById("assignView") // <-- ADDED!
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -112,6 +112,7 @@ document.getElementById("btnBackToStudents").addEventListener("click", () => swi
 
 document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
 document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
+document.getElementById("btnNavAssign").addEventListener("click", () => { switchView(views.assign); if (!asnLoaded) ASN_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -998,417 +999,486 @@ async function BCH_ExecuteMove(sourceID, targetID, studentIDsArray) {
 }
 
 // ==========================================
-// 🚨 NEW: TIMETABLE MANAGER 
+// TIMETABLE STRUCTURE MANAGER
 // ==========================================
-let ttLoaded = false;
-let ttPhase = 0; // 0 = StructureInput, 1 = Locked
-let ttCurrentSem = "1";
-let ttSelectedDay = "Monday";
-
-let ttSubjectsCached = false;
-let ttAllSubjectsMasterList = [];
-let ttCachedCategoriesList = [];
-let ttCachedSubjectsByCategory = {};
-let ttCachedTimetableStructures = {};
-let ttStructureListener = null;
-
-let ttActiveSlotsData = []; // Array of { period, splitIndex, isSplit, category, subject, teacher, room, bgCol, markerID }
+let ttLoaded = false; let ttPhase = 0; let ttCurrentSem = "1"; let ttSelectedDay = "Monday";
+let ttSubjectsCached = false; let ttAllSubjectsMasterList = []; let ttCachedCategoriesList = []; let ttCachedSubjectsByCategory = {}; let ttCachedTimetableStructures = {}; let ttStructureListener = null;
+let ttActiveSlotsData = []; 
 const ttPeriodEndTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
 
 function TT_Init() {
     ttLoaded = true;
-    
-    // 1. Populate Semester Dropdown
-    let dropSem = document.getElementById("ttSemDrop");
-    dropSem.innerHTML = ""; 
-    let hasSems = false;
-    let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
-    
+    let dropSem = document.getElementById("ttSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0);
-        let label = `Semester ${i}`;
+        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`;
-        hasSems = true;
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    dropSem.selectedIndex = defaultIndex;
-    ttCurrentSem = dropSem.options[defaultIndex].value;
+    dropSem.selectedIndex = defaultIndex; ttCurrentSem = dropSem.options[defaultIndex].value;
+    dropSem.addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
 
-    dropSem.addEventListener("change", (e) => { 
-        ttCurrentSem = e.target.value; 
-        TT_LoadGlobalCategories(); 
-    });
-
-    // 2. Day Selection
     let dBtns = document.querySelectorAll(".tt-day-btn");
     dBtns.forEach(btn => {
         btn.addEventListener("click", (e) => {
-            ttSelectedDay = e.target.dataset.day;
-            dBtns.forEach(b => b.classList.remove("active"));
-            e.target.classList.add("active");
-            TT_LoadTimetableForDay();
+            ttSelectedDay = e.target.dataset.day; dBtns.forEach(b => b.classList.remove("active")); e.target.classList.add("active"); TT_LoadTimetableForDay();
         });
     });
 
-    // 3. Actions
-    document.getElementById("btnTTAssign").addEventListener("click", TT_SaveStructureAndLock);
+    document.getElementById("btnTTSaveStructure").addEventListener("click", TT_SaveStructureAndLock);
     document.getElementById("btnTTEdit").addEventListener("click", () => TT_SetPhase(0));
 
     TT_LoadGlobalCategories();
-    
-    // Timeline Auto-updater
-    setInterval(() => {
-        if (!document.getElementById('timetableView').classList.contains('hidden-view')) {
-            TT_UpdateTimelineVisuals();
-        }
-    }, 60000); // Check every minute
+    setInterval(() => { if (!document.getElementById('timetableView').classList.contains('hidden-view')) TT_UpdateTimelineVisuals(); }, 60000); 
 }
 
 function TT_LoadGlobalCategories() {
-    if (ttSubjectsCached) {
-        TT_ProcessSubjectsFromRAM();
-        return;
-    }
-
+    if (ttSubjectsCached) { TT_ProcessSubjectsFromRAM(); return; }
     getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
         ttAllSubjectsMasterList = [];
-        snap.forEach(doc => {
-            let d = doc.data();
-            ttAllSubjectsMasterList.push({
-                semester: (d.Semester || d.semester || "").toString(),
-                type: (d.Type || d.type || "").trim(),
-                name: (d.Name || d.name || "").trim()
-            });
-        });
-        ttSubjectsCached = true;
-        TT_ProcessSubjectsFromRAM();
+        snap.forEach(doc => { let d = doc.data(); ttAllSubjectsMasterList.push({ semester: (d.Semester || d.semester || "").toString(), type: (d.Type || d.type || "").trim(), name: (d.Name || d.name || "").trim() }); });
+        ttSubjectsCached = true; TT_ProcessSubjectsFromRAM();
     });
 }
 
 function TT_ProcessSubjectsFromRAM() {
-    let types = new Set();
-    ttCachedSubjectsByCategory = {};
-
+    let types = new Set(); ttCachedSubjectsByCategory = {};
     ttAllSubjectsMasterList.forEach(sub => {
         let sems = sub.semester.split(',').map(s => s.trim());
-        if (sems.includes(ttCurrentSem) && sub.type) {
-            types.add(sub.type);
-            if (!ttCachedSubjectsByCategory[sub.type]) ttCachedSubjectsByCategory[sub.type] = [];
-            ttCachedSubjectsByCategory[sub.type].push(sub.name);
-        }
+        if (sems.includes(ttCurrentSem) && sub.type) { types.add(sub.type); if (!ttCachedSubjectsByCategory[sub.type]) ttCachedSubjectsByCategory[sub.type] = []; ttCachedSubjectsByCategory[sub.type].push(sub.name); }
     });
-
     ttCachedCategoriesList = Array.from(types).sort();
     if (!ttCachedCategoriesList.includes("Select Category")) ttCachedCategoriesList.unshift("Select Category");
     if (!ttCachedCategoriesList.includes("Break")) ttCachedCategoriesList.push("Break");
     if (!ttCachedCategoriesList.includes("Lunch")) ttCachedCategoriesList.push("Lunch");
 
-    // Set Today
-    let dayNum = new Date().getDay(); // 0=Sun, 1=Mon...
-    let todayIndex = (dayNum >= 1 && dayNum <= 5) ? dayNum - 1 : 0;
-    const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    
-    ttSelectedDay = daysList[todayIndex];
-    let dBtns = document.querySelectorAll(".tt-day-btn");
-    dBtns.forEach((b, idx) => {
-        if(idx === todayIndex) b.classList.add("active"); else b.classList.remove("active");
-    });
-
+    let dayNum = new Date().getDay(); let todayIndex = (dayNum >= 1 && dayNum <= 5) ? dayNum - 1 : 0; const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    ttSelectedDay = daysList[todayIndex]; let dBtns = document.querySelectorAll(".tt-day-btn");
+    dBtns.forEach((b, idx) => { if(idx === todayIndex) b.classList.add("active"); else b.classList.remove("active"); });
     TT_LoadTimetableForDay();
 }
 
 function TT_LoadTimetableForDay() {
     let docID = `Sem${ttCurrentSem}_${ttSelectedDay}`;
-
-    if (ttStructureListener) ttStructureListener(); // stop old listener
-
-    if (ttCachedTimetableStructures[docID]) {
-        TT_BuildSlotsFromData(ttCachedTimetableStructures[docID]);
-    }
+    if (ttStructureListener) ttStructureListener(); 
+    if (ttCachedTimetableStructures[docID]) TT_BuildSlotsFromData(ttCachedTimetableStructures[docID]);
 
     ttStructureListener = onSnapshot(doc(db, "colleges", currentCollegeID, "timetable_structure", docID), (snapshot) => {
-        let slotsData = {};
-        if (snapshot.exists() && snapshot.data().slots) {
-            slotsData = snapshot.data().slots;
-        }
-        ttCachedTimetableStructures[docID] = slotsData;
-        TT_BuildSlotsFromData(slotsData);
+        let slotsData = {}; if (snapshot.exists() && snapshot.data().slots) slotsData = snapshot.data().slots;
+        ttCachedTimetableStructures[docID] = slotsData; TT_BuildSlotsFromData(slotsData);
     });
 }
 
 function TT_BuildSlotsFromData(slotsData) {
-    ttActiveSlotsData = [];
-    let hasStructure = Object.keys(slotsData).length > 0;
-
+    ttActiveSlotsData = []; let hasStructure = Object.keys(slotsData).length > 0;
     for (let p = 1; p <= 6; p++) {
-        let mainKey = `P${p}`;
-        let mainCat = slotsData[mainKey] || "Select Category";
-        
-        ttActiveSlotsData.push({
-            period: p, splitIndex: 0, isSplit: false,
-            category: mainCat, subject: "Select Subject", teacher: "Waiting for HOD", room: "", bgCol: "white"
-        });
+        let mainKey = `P${p}`; let mainCat = slotsData[mainKey] || "Select Category";
+        ttActiveSlotsData.push({ period: p, splitIndex: 0, isSplit: false, category: mainCat, subject: "Select Subject", teacher: "Waiting for HOD", room: "", bgCol: "white" });
     }
-
-    TT_SetPhase(hasStructure ? 1 : 0); // 1 = Locked, 0 = StructureInput
+    TT_SetPhase(hasStructure ? 1 : 0); 
 }
 
 function TT_SetPhase(phase) {
     ttPhase = phase;
-    document.getElementById("btnTTAssign").style.display = (phase === 0) ? "inline-flex" : "none";
+    document.getElementById("btnTTSaveStructure").style.display = (phase === 0) ? "inline-flex" : "none";
     document.getElementById("btnTTEdit").style.display = (phase === 1) ? "inline-flex" : "none";
     TT_RenderLayout();
 }
 
 function TT_RenderLayout() {
     let wrapper = document.getElementById("ttMainWrapper");
-    
-    // Sort array
-    ttActiveSlotsData.sort((a, b) => {
-        if (a.period !== b.period) return a.period - b.period;
-        return a.splitIndex - b.splitIndex;
-    });
+    ttActiveSlotsData.sort((a, b) => { if (a.period !== b.period) return a.period - b.period; return a.splitIndex - b.splitIndex; });
 
     let html = "";
     ttActiveSlotsData.forEach((slot, idx) => {
         let idBase = `tt_${slot.period}_${slot.splitIndex}`;
-        
-        // Build Category Options
         let catOpts = ttCachedCategoriesList.map(c => `<option value="${c}" ${c === slot.category ? 'selected' : ''}>${c}</option>`).join('');
-        
-        // Build Subject Options (Only if Phase 1 and not a split)
         let subOpts = `<option value="Select Subject">Select Subject</option>`;
-        if (ttPhase === 1 && !slot.isSplit && ttCachedSubjectsByCategory[slot.category]) {
-            subOpts += ttCachedSubjectsByCategory[slot.category].map(s => `<option value="${s}" ${s === slot.subject ? 'selected' : ''}>${s}</option>`).join('');
-        } else if (slot.subject !== "Select Subject") {
-            subOpts += `<option value="${slot.subject}" selected>${slot.subject}</option>`;
-        }
+        if (ttPhase === 1 && !slot.isSplit && ttCachedSubjectsByCategory[slot.category]) subOpts += ttCachedSubjectsByCategory[slot.category].map(s => `<option value="${s}" ${s === slot.subject ? 'selected' : ''}>${s}</option>`).join('');
+        else if (slot.subject !== "Select Subject") subOpts += `<option value="${slot.subject}" selected>${slot.subject}</option>`;
 
-        // Lock Logic
-        let catLocked = (ttPhase === 1) ? "disabled" : "";
-        let subLocked = (ttPhase === 1 && !slot.isSplit) ? "" : "disabled";
+        let catLocked = (ttPhase === 1) ? "disabled" : ""; let subLocked = (ttPhase === 1 && !slot.isSplit) ? "" : "disabled";
+        let cardClass = slot.isSplit ? "tt-card tt-split-card" : "tt-card"; let nodeNum = slot.isSplit ? "" : slot.period;
+        let nodeColor = slot.isSplit ? "transparent" : "white"; let nodeBorder = slot.isSplit ? "none" : "2px solid #333"; let bgPaint = slot.bgCol || "white";
 
-        let cardClass = slot.isSplit ? "tt-card tt-split-card" : "tt-card";
-        let nodeNum = slot.isSplit ? "" : slot.period;
-        let nodeColor = slot.isSplit ? "transparent" : "white";
-        let nodeBorder = slot.isSplit ? "none" : "2px solid #333";
-        let bgPaint = slot.bgCol || "white";
-
-        html += `
-        <div class="tt-row" id="row_${idBase}">
-            <div class="tt-timeline-col">
-                <div class="tt-node" id="node_${idBase}" style="background:${nodeColor}; border:${nodeBorder}">${nodeNum}</div>
-                ${!slot.isSplit && slot.period < 6 ? `<div class="tt-line-bg"><div class="tt-line-fill" id="fill_${idBase}"></div></div>` : ''}
-            </div>
+        html += `<div class="tt-row" id="row_${idBase}">
+            <div class="tt-timeline-col"><div class="tt-node" id="node_${idBase}" style="background:${nodeColor}; border:${nodeBorder}">${nodeNum}</div>${!slot.isSplit && slot.period < 6 ? `<div class="tt-line-bg"><div class="tt-line-fill" id="fill_${idBase}"></div></div>` : ''}</div>
             <div class="${cardClass}" style="background-color: ${bgPaint}">
                 <select class="tt-input-field select" id="cat_${idBase}" ${catLocked}>${catOpts}</select>
                 <select class="tt-input-field select" id="sub_${idBase}" ${subLocked}>${subOpts}</select>
                 <select class="tt-input-field select" disabled><option>${slot.teacher}</option></select>
                 <input type="text" class="tt-input-field" disabled value="${slot.room}" placeholder="Room TBD">
-            </div>
-        </div>`;
+            </div></div>`;
     });
 
-    wrapper.innerHTML = html;
-    TT_UpdateTimelineVisuals();
+    wrapper.innerHTML = html; TT_UpdateTimelineVisuals();
 
-    // Attach Event Listeners
     ttActiveSlotsData.forEach((slot) => {
         let idBase = `tt_${slot.period}_${slot.splitIndex}`;
-        
-        if (!slot.isSplit && ttPhase === 0) {
-            document.getElementById(`cat_${idBase}`).addEventListener("change", (e) => {
-                slot.category = e.target.value;
-            });
-        }
-        
-        if (!slot.isSplit && ttPhase === 1) {
-            document.getElementById(`sub_${idBase}`).addEventListener("change", (e) => {
-                slot.subject = e.target.value;
-                TT_OnSubjectSelectedByPrincipal(slot.period, slot.subject);
-            });
-        }
+        if (!slot.isSplit && ttPhase === 0) document.getElementById(`cat_${idBase}`).addEventListener("change", (e) => { slot.category = e.target.value; });
+        if (!slot.isSplit && ttPhase === 1) document.getElementById(`sub_${idBase}`).addEventListener("change", (e) => { slot.subject = e.target.value; TT_OnSubjectSelectedByPrincipal(slot.period, slot.subject); });
     });
 }
 
 function TT_OnSubjectSelectedByPrincipal(period, subjectName) {
-    // 1. Remove old splits for this period
-    ttActiveSlotsData = ttActiveSlotsData.filter(s => !(s.period === period && s.isSplit));
-    let mainSlot = ttActiveSlotsData.find(s => s.period === period && !s.isSplit);
-    
-    if (subjectName === "Select Subject" || subjectName === "Waiting for HOD" || !subjectName) {
-        mainSlot.teacher = "Waiting for HOD";
-        mainSlot.room = "";
-        mainSlot.bgCol = "white";
-        TT_RenderLayout();
-        return;
-    }
-
-    mainSlot.teacher = "Loading...";
-    TT_RenderLayout(); // Show loading instantly
-
-    // Query DB for Allocation
-    getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"),
-        where("semester", "==", ttCurrentSem),
-        where("day", "==", ttSelectedDay),
-        where("period", "==", period.toString()),
-        where("subjectName", "==", subjectName)
-    )).then(snap => {
-        if (snap.empty) {
-            mainSlot.teacher = "Waiting for HOD";
-            mainSlot.room = "";
-            mainSlot.bgCol = "white";
-            TT_RenderLayout();
-            return;
-        }
-
-        let docs = [];
-        snap.forEach(d => docs.push(d.data()));
-        docs.sort((a,b) => (parseInt(a.splitIndex) || 0) - (parseInt(b.splitIndex) || 0));
-
-        let mainDoc = docs[0];
-        mainSlot.teacher = mainDoc.teacherName || "Unassigned";
-        mainSlot.room = mainDoc.room || "TBD";
-        mainSlot.markerID = mainDoc.teacherID || "";
-        
+    ttActiveSlotsData = ttActiveSlotsData.filter(s => !(s.period === period && s.isSplit)); let mainSlot = ttActiveSlotsData.find(s => s.period === period && !s.isSplit);
+    if (subjectName === "Select Subject" || subjectName === "Waiting for HOD" || !subjectName) { mainSlot.teacher = "Waiting for HOD"; mainSlot.room = ""; mainSlot.bgCol = "white"; TT_RenderLayout(); return; }
+    mainSlot.teacher = "Loading..."; TT_RenderLayout(); 
+    getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", ttCurrentSem), where("day", "==", ttSelectedDay), where("period", "==", period.toString()), where("subjectName", "==", subjectName))).then(snap => {
+        if (snap.empty) { mainSlot.teacher = "Waiting for HOD"; mainSlot.room = ""; mainSlot.bgCol = "white"; TT_RenderLayout(); return; }
+        let docs = []; snap.forEach(d => docs.push(d.data())); docs.sort((a,b) => (parseInt(a.splitIndex) || 0) - (parseInt(b.splitIndex) || 0));
+        let mainDoc = docs[0]; mainSlot.teacher = mainDoc.teacherName || "Unassigned"; mainSlot.room = mainDoc.room || "TBD"; mainSlot.markerID = mainDoc.teacherID || "";
         TT_CheckAttendanceCompliance(mainSlot, subjectName);
-
-        // Process Splits
         for (let i = 1; i < docs.length; i++) {
-            let sDoc = docs[i];
-            let newSplit = {
-                period: period,
-                splitIndex: parseInt(sDoc.splitIndex),
-                isSplit: true,
-                category: mainSlot.category,
-                subject: subjectName,
-                teacher: sDoc.teacherName || "Unassigned",
-                room: sDoc.room || "TBD",
-                bgCol: "white",
-                markerID: sDoc.teacherID || ""
-            };
-            ttActiveSlotsData.push(newSplit);
-            TT_CheckAttendanceCompliance(newSplit, subjectName);
+            let sDoc = docs[i]; let newSplit = { period: period, splitIndex: parseInt(sDoc.splitIndex), isSplit: true, category: mainSlot.category, subject: subjectName, teacher: sDoc.teacherName || "Unassigned", room: sDoc.room || "TBD", bgCol: "white", markerID: sDoc.teacherID || "" };
+            ttActiveSlotsData.push(newSplit); TT_CheckAttendanceCompliance(newSplit, subjectName);
         }
     });
 }
 
 function TT_CheckAttendanceCompliance(slotObj, subjectName) {
-    // Math to get target date
-    let currentDayNum = new Date().getDay();
-    if (currentDayNum === 0) currentDayNum = 7;
-    const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    let targetDayNum = daysList.indexOf(ttSelectedDay) + 1;
-    let daysDiff = targetDayNum - currentDayNum;
-    
-    let targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + daysDiff);
-    let dateStr = targetDate.toISOString().split('T')[0];
+    let currentDayNum = new Date().getDay(); if (currentDayNum === 0) currentDayNum = 7; const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    let targetDayNum = daysList.indexOf(ttSelectedDay) + 1; let daysDiff = targetDayNum - currentDayNum; let targetDate = new Date(); targetDate.setDate(targetDate.getDate() + daysDiff); let dateStr = targetDate.toISOString().split('T')[0];
+    let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60.0); let endTime = ttPeriodEndTimes[slotObj.period - 1]; let isDeadlinePassed = false;
+    let targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()); let nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (targetDateOnly < nowDateOnly) isDeadlinePassed = true; else if (targetDateOnly.getTime() === nowDateOnly.getTime()) { if (currentHour >= endTime) isDeadlinePassed = true; }
+    if (!isDeadlinePassed) { slotObj.bgCol = "white"; TT_RenderLayout(); return; }
 
-    // Check deadlines
-    let now = new Date();
-    let currentHour = now.getHours() + (now.getMinutes() / 60.0);
-    let endTime = ttPeriodEndTimes[slotObj.period - 1];
-
-    let isDeadlinePassed = false;
-    
-    // Wipe time to safely compare dates
-    let targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-    let nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (targetDateOnly < nowDateOnly) {
-        isDeadlinePassed = true;
-    } else if (targetDateOnly.getTime() === nowDateOnly.getTime()) {
-        if (currentHour >= endTime) isDeadlinePassed = true;
-    }
-
-    if (!isDeadlinePassed) {
-        slotObj.bgCol = "white";
-        TT_RenderLayout();
-        return;
-    }
-
-    // Ping DB for Attendance Record
-    let semName = `Semester${ttCurrentSem}`;
-    let cleanSubID = subjectName.replace(/\s+/g, '').replace(/\//g, '-').replace(/\./g, '');
-    let docID = `${dateStr}_${semName}_${cleanSubID}`;
-    let periodKey = `period_${slotObj.period}`;
-
+    let semName = `Semester${ttCurrentSem}`; let cleanSubID = subjectName.replace(/\s+/g, '').replace(/\//g, '-').replace(/\./g, ''); let docID = `${dateStr}_${semName}_${cleanSubID}`; let periodKey = `period_${slotObj.period}`;
     getDoc(doc(db, "colleges", currentCollegeID, "attendance", docID)).then(snap => {
         if (snap.exists() && snap.data()[periodKey]) {
             let pData = snap.data()[periodKey];
-            
-            // NEP Split Check
             if (slotObj.isSplit || pData.batch_teachers) {
-                let batchMap = pData.batch_teachers || {};
-                let bKey = slotObj.isSplit ? slotObj.splitIndex.toString() : "common";
-                
-                if (batchMap[bKey]) {
-                    let markerID = batchMap[bKey].id || "";
-                    slotObj.bgCol = (markerID === slotObj.markerID) ? "rgba(187,247,208,0.6)" : "rgba(254,240,138,0.6)"; // Green : Yellow
-                } else {
-                    slotObj.bgCol = "rgba(254,202,202,0.6)"; // Red
-                }
-            } else {
-                let actualID = pData.markedByTeacherID || "";
-                slotObj.bgCol = (actualID === slotObj.markerID) ? "rgba(187,247,208,0.6)" : "rgba(254,240,138,0.6)";
-            }
-        } else {
-            slotObj.bgCol = "rgba(254,202,202,0.6)"; // Red (Missed!)
-        }
-        TT_RenderLayout();
-    }).catch(e => {
-        slotObj.bgCol = "rgba(254,202,202,0.6)";
-        TT_RenderLayout();
-    });
+                let batchMap = pData.batch_teachers || {}; let bKey = slotObj.isSplit ? slotObj.splitIndex.toString() : "common";
+                if (batchMap[bKey]) { let markerID = batchMap[bKey].id || ""; slotObj.bgCol = (markerID === slotObj.markerID) ? "rgba(187,247,208,0.6)" : "rgba(254,240,138,0.6)"; } else slotObj.bgCol = "rgba(254,202,202,0.6)"; 
+            } else { let actualID = pData.markedByTeacherID || ""; slotObj.bgCol = (actualID === slotObj.markerID) ? "rgba(187,247,208,0.6)" : "rgba(254,240,138,0.6)"; }
+        } else slotObj.bgCol = "rgba(254,202,202,0.6)"; TT_RenderLayout();
+    }).catch(e => { slotObj.bgCol = "rgba(254,202,202,0.6)"; TT_RenderLayout(); });
 }
 
 function TT_SaveStructureAndLock() {
-    document.getElementById("btnTTAssign").innerText = "Saving...";
-    
-    let newSlots = {};
-    ttActiveSlotsData.forEach(s => {
-        if (!s.isSplit) newSlots[`P${s.period}`] = s.category;
-    });
-
+    document.getElementById("btnTTSaveStructure").innerText = "Saving...";
+    let newSlots = {}; ttActiveSlotsData.forEach(s => { if (!s.isSplit) newSlots[`P${s.period}`] = s.category; });
     let docID = `Sem${ttCurrentSem}_${ttSelectedDay}`;
-    setDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", docID), {
-        semester: ttCurrentSem,
-        day: ttSelectedDay,
-        slots: newSlots
-    }, { merge: true }).then(() => {
-        showRcToast("Categories Updated!");
-        document.getElementById("btnTTAssign").innerHTML = '<i class="fas fa-check"></i> Assign / Update';
-        TT_SetPhase(1);
+    setDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", docID), { semester: ttCurrentSem, day: ttSelectedDay, slots: newSlots }, { merge: true }).then(() => {
+        showRcToast("Categories Updated!"); document.getElementById("btnTTSaveStructure").innerHTML = '<i class="fas fa-save"></i> Save Structure'; TT_SetPhase(1);
     });
 }
 
 function TT_UpdateTimelineVisuals() {
-    let now = new Date();
-    let currentHour = now.getHours() + (now.getMinutes() / 60.0);
-
+    let now = new Date(); let currentHour = now.getHours() + (now.getMinutes() / 60.0);
     ttActiveSlotsData.forEach(slot => {
         if (slot.isSplit) return;
-        
-        let pIndex = slot.period - 1;
-        let endTime = ttPeriodEndTimes[pIndex];
-        let startTime = endTime - 1.0;
-        let idBase = `tt_${slot.period}_0`;
+        let pIndex = slot.period - 1; let endTime = ttPeriodEndTimes[pIndex]; let startTime = endTime - 1.0; let idBase = `tt_${slot.period}_0`;
+        let nodeEl = document.getElementById(`node_${idBase}`); let fillEl = document.getElementById(`fill_${idBase}`);
+        if (nodeEl) { let nodeColor = (currentHour >= endTime) ? "#94a3b8" : (currentHour >= startTime && currentHour < endTime) ? "#4ade80" : "white"; nodeEl.style.background = nodeColor; nodeEl.style.color = (nodeColor === "white") ? "#333" : "white"; }
+        if (fillEl) { let fillAmount = (currentHour >= endTime) ? 100 : (currentHour <= startTime) ? 0 : ((currentHour - startTime) / (endTime - startTime)) * 100; fillEl.style.height = `${fillAmount}%`; }
+    });
+}
 
-        let nodeEl = document.getElementById(`node_${idBase}`);
-        let fillEl = document.getElementById(`fill_${idBase}`);
+// ==========================================
+// 🚨 NEW: ASSIGN MANAGER (GENERAL DEPT)
+// ==========================================
+let asnLoaded = false; let asnCurrentSem = "1"; let asnSelectedDay = "Monday";
+let asnGeneralSubjects = []; let asnStudentsByYear = {}; let asnActiveRows = []; // { id, period, splitIndex, isSplit, category, subject, teacher, teacherID, room }
+let asnAllTeachers = [];
 
-        if (nodeEl) {
-            let nodeColor = (currentHour >= endTime) ? "#94a3b8" : (currentHour >= startTime && currentHour < endTime) ? "#4ade80" : "white";
-            nodeEl.style.background = nodeColor;
-            nodeEl.style.color = (nodeColor === "white") ? "#333" : "white";
+function ASN_Init() {
+    asnLoaded = true;
+    let dropSem = document.getElementById("asnSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
+    }
+    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
+    dropSem.selectedIndex = defaultIndex; asnCurrentSem = dropSem.options[defaultIndex].value;
+    dropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
+
+    let dBtns = document.querySelectorAll(".asn-day-btn");
+    dBtns.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            asnSelectedDay = e.target.dataset.day; dBtns.forEach(b => b.classList.remove("active")); e.target.classList.add("active"); ASN_LoadData();
+        });
+    });
+    
+    let dayNum = new Date().getDay(); let todayIndex = (dayNum >= 1 && dayNum <= 5) ? dayNum - 1 : 0; const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    asnSelectedDay = daysList[todayIndex]; dBtns.forEach((b, idx) => { if(idx === todayIndex) b.classList.add("active"); else b.classList.remove("active"); });
+
+    document.getElementById("btnAsnSave").addEventListener("click", ASN_SaveAll);
+
+    // Pre-fetch all teachers
+    getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
+        asnAllTeachers = []; snap.forEach(d => asnAllTeachers.push({ id: d.id, name: d.data().name || d.data().teacherName || "Unknown", dept: d.data().departmentID || "" }));
+        ASN_LoadData();
+    });
+}
+
+async function ASN_LoadData() {
+    document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">Loading Assign Panel...</div>`;
+    
+    // 1. Fetch General Subjects
+    if (asnGeneralSubjects.length === 0) {
+        const subSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subjects"), where("department", "==", "General")));
+        asnGeneralSubjects = []; subSnap.forEach(doc => { let d = doc.data(); asnGeneralSubjects.push({ id: doc.id, name: d.Name || d.name || "", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "").toString() }); });
+    }
+
+    // Filter valid categories
+    let validCats = new Set();
+    asnGeneralSubjects.forEach(s => { if (s.semesters.split(',').map(x=>x.trim()).includes(asnCurrentSem) && s.type && !s.type.toUpperCase().includes("TUTORIAL")) validCats.add(s.type.trim()); });
+    
+    // 2. Fetch Structure
+    let docID = `Sem${asnCurrentSem}_${asnSelectedDay}`;
+    const structSnap = await getDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", docID));
+    if (!structSnap.exists() || !structSnap.data().slots) { document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No General classes structure set for this day.</div>`; return; }
+    
+    let slots = structSnap.data().slots; let validPeriods = []; let pCats = {};
+    for(let i=1; i<=6; i++) {
+        if(slots[`P${i}`]) {
+            let cat = slots[`P${i}`].trim();
+            if(!cat.toUpperCase().includes("TUTORIAL") && validCats.has(cat)) { validPeriods.push(i); pCats[i] = cat; }
         }
+    }
+    if(validPeriods.length === 0) { document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No General classes scheduled today.</div>`; return; }
 
-        if (fillEl) {
-            let fillAmount = (currentHour >= endTime) ? 100 : (currentHour <= startTime) ? 0 : ((currentHour - startTime) / (endTime - startTime)) * 100;
-            fillEl.style.height = `${fillAmount}%`;
+    // 3. Fetch Allocations
+    const allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", "DEPT_General")));
+    let allocsByPeriod = {}; allocSnap.forEach(d => { let p = parseInt(d.data().period); if(!allocsByPeriod[p]) allocsByPeriod[p] = []; allocsByPeriod[p].push(d.data()); });
+
+    asnActiveRows = [];
+    validPeriods.forEach(p => {
+        let cat = pCats[p];
+        if (allocsByPeriod[p]) {
+            let docs = allocsByPeriod[p].sort((a,b) => (parseInt(a.splitIndex)||0) - (parseInt(b.splitIndex)||0));
+            docs.forEach((d, idx) => {
+                asnActiveRows.push({ id: `r_${p}_${idx}`, period: p, splitIndex: parseInt(d.splitIndex)||0, isSplit: (parseInt(d.splitIndex)||0) > 0 || !d.isCommon, category: cat, subject: d.subjectName || "", teacher: d.teacherName || "", teacherID: d.teacherID || "", room: d.room || "" });
+            });
+        } else {
+            asnActiveRows.push({ id: `r_${p}_0`, period: p, splitIndex: 0, isSplit: false, category: cat, subject: "", teacher: "", teacherID: "", room: "" });
         }
     });
+
+    // 4. Pre-fetch Students for split logic
+    let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
+    if (!asnStudentsByYear[yearStr]) {
+        const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
+        asnStudentsByYear[yearStr] = []; stuSnap.forEach(d => asnStudentsByYear[yearStr].push({ id: d.id, ...d.data() }));
+    }
+
+    ASN_RenderLayout();
+}
+
+function ASN_RenderLayout() {
+    let container = document.getElementById("asnListContainer");
+    asnActiveRows.sort((a,b) => { if(a.period !== b.period) return a.period - b.period; return a.splitIndex - b.splitIndex; });
+    
+    let html = "";
+    asnActiveRows.forEach(row => {
+        let catOptions = `<option value="${row.category}">${row.category}</option>`;
+        
+        let subOptions = `<option value="">Select Subject</option>`;
+        asnGeneralSubjects.filter(s => s.type === row.category && s.semesters.split(',').map(x=>x.trim()).includes(asnCurrentSem)).forEach(s => {
+            subOptions += `<option value="${s.name}" ${s.name === row.subject ? 'selected' : ''}>${s.name}</option>`;
+        });
+
+        let teacherOptions = `<option value="">Unassigned</option>`;
+        if (row.subject) {
+            teacherOptions += asnAllTeachers.map(t => `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`).join('');
+        }
+
+        let isDel = row.isSplit; let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : 'split';
+        let cardClass = isDel ? "asn-card split" : "asn-card";
+        let titleText = isDel ? `<span style="color:#ef4444; font-size:12px;">Batch ${row.splitIndex + 1}</span>` : `Period ${row.period}`;
+
+        html += `
+        <div class="${cardClass}" id="card_${row.id}">
+            <div class="asn-period-title">${titleText}</div>
+            <div class="asn-grid">
+                <select class="asn-input select" disabled>${catOptions}</select>
+                <select class="asn-input select" id="sub_${row.id}" ${isDel ? 'disabled' : ''} onchange="ASN_OnSubjectChange('${row.id}', this.value)">${subOptions}</select>
+                <select class="asn-input select" id="tea_${row.id}" onchange="ASN_OnTeacherChange('${row.id}', this.value)">${teacherOptions}</select>
+                <input type="text" class="asn-input" id="rm_${row.id}" value="${row.room}" placeholder="Room" onchange="ASN_OnRoomChange('${row.id}', this.value)">
+            </div>
+            <button class="${btnClass}" onclick="ASN_RequestSplit('${row.id}')">${btnIcon}</button>
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+window.ASN_OnSubjectChange = (rowId, newSub) => {
+    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
+    row.subject = newSub; row.teacher = ""; row.teacherID = ""; row.room = "";
+    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); // Delete old splits
+    
+    if (newSub) {
+        let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${row.period}_0_${newSub.replace(/\s+/g, '').replace(/\//g, '')}`;
+        getDoc(doc(db, "colleges", currentCollegeID, "timetable_allocations", docID)).then(snap => {
+            if (snap.exists()) {
+                row.teacher = snap.data().teacherName || ""; row.teacherID = snap.data().teacherID || ""; row.room = snap.data().room || "";
+                
+                // Fetch splits
+                getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", newSub))).then(bSnap => {
+                    if (bSnap.size > 1) {
+                        let bDocs = []; bSnap.forEach(d => bDocs.push(d.data())); bDocs.sort((a,b) => a.batchName.localeCompare(b.batchName));
+                        for(let i=1; i<bDocs.length; i++) {
+                            asnActiveRows.push({ id: `r_${row.period}_${i}_${Date.now()}`, period: row.period, splitIndex: i, isSplit: true, category: row.category, subject: newSub, teacher: "", teacherID: "", room: "" });
+                        }
+                    }
+                    ASN_RenderLayout();
+                });
+            } else ASN_RenderLayout();
+        });
+    } else ASN_RenderLayout();
+};
+window.ASN_OnTeacherChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; if(val){ let parts = val.split('|'); row.teacherID = parts[0]; row.teacher = parts[1]; } else { row.teacherID = ""; row.teacher = ""; } };
+window.ASN_OnRoomChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; row.room = val; };
+
+window.ASN_RequestSplit = (rowId) => {
+    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
+    let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
+
+    if (row.isSplit) {
+        // Delete split logic
+        let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-trash"></i> Delete Batch'; title.style.color = "#ef4444";
+        document.getElementById("confirmText").innerHTML = isVac ? `Remove a batch for <b>${row.subject}</b>?<br>You will need to reassign departments.` : `Delete this specific batch?<br>Students will be re-distributed.`;
+        document.getElementById("btnConfirmYes").onclick = () => { document.getElementById("confirmOverlay").classList.remove("active"); ASN_ProcessDeleteSplit(row, isVac); };
+        document.getElementById("confirmOverlay").classList.add("active");
+    } else {
+        // Add split logic
+        if (!row.subject) { showRcToast("Select a subject first!"); return; }
+        let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-cut"></i> Divide Class'; title.style.color = "var(--text-green)";
+        document.getElementById("confirmText").innerHTML = `Are you sure you want to divide ALL students for<br><b>${row.subject}</b> into a new batch?`;
+        document.getElementById("btnConfirmYes").onclick = () => { 
+            document.getElementById("confirmOverlay").classList.remove("active"); 
+            if (isVac) ASN_OpenDeptSplit(row, false); else ASN_DivideEvenly(row); 
+        };
+        document.getElementById("confirmOverlay").classList.add("active");
+    }
+};
+
+async function ASN_ProcessDeleteSplit(rowToRemove, isVac) {
+    let p = rowToRemove.period; let sub = rowToRemove.subject;
+    asnActiveRows = asnActiveRows.filter(r => r.id !== rowToRemove.id);
+    let remRows = asnActiveRows.filter(r => r.period === p).sort((a,b) => a.splitIndex - b.splitIndex);
+    remRows.forEach((r, idx) => { r.splitIndex = idx; if(idx === 0) r.isSplit = false; });
+    ASN_RenderLayout();
+
+    if (!sub) return;
+    let newBatches = remRows.length;
+    if (newBatches === 1) {
+        showRcToast("Reverted to a single class.");
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", sub)));
+        snap.forEach(d => deleteDoc(d.ref));
+    } else {
+        if (isVac) ASN_OpenDeptSplit(remRows[0], true);
+        else {
+            showRcToast(`Re-balancing students into ${newBatches} batches...`);
+            const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", sub)));
+            const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref)); await wb.commit();
+            await ASN_ExecuteDivideEvenly(sub, newBatches);
+        }
+    }
+}
+
+async function ASN_DivideEvenly(row) { await ASN_ExecuteDivideEvenly(row.subject, asnActiveRows.filter(r => r.period === row.period).length + 1); let newIdx = asnActiveRows.filter(r => r.period === row.period && r.isSplit).length + 1; asnActiveRows.push({ id: `r_${row.period}_${newIdx}_${Date.now()}`, period: row.period, splitIndex: newIdx, isSplit: true, category: row.category, subject: row.subject, teacher: "", teacherID: "", room: "" }); ASN_RenderLayout(); showRcToast(`Split Class evenly!`); }
+
+async function ASN_ExecuteDivideEvenly(subject, totalBatches) {
+    let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
+    let allStudents = asnStudentsByYear[yearStr].map(s => s.id);
+    let baseSize = Math.floor(allStudents.length / totalBatches); let remainder = allStudents.length % totalBatches;
+    const wb = writeBatch(db); let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, ''); let offset = 0;
+    for(let i=0; i<totalBatches; i++){
+        let size = baseSize + (i < remainder ? 1 : 0); let bStudents = allStudents.slice(offset, offset + size); offset += size; let bName = `Batch ${i+1}`; let docID = `BATCH_Sem${asnCurrentSem}_${cleanSub}_${bName.replace(/\s+/g,'')}`;
+        wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", docID), { batchName: bName, subjectName: subject, semester: asnCurrentSem, studentIDs: bStudents }, {merge: true});
+    }
+    await wb.commit();
+}
+
+let asnPendingDeptRow = null;
+function ASN_OpenDeptSplit(row, isDeleting) {
+    asnPendingDeptRow = row; let sub = row.subject; let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
+    let students = asnStudentsByYear[yearStr]; let uniqueDepts = new Set(); let studentToDept = {};
+    students.forEach(s => {
+        let isEnrolled = false;
+        if(s.enrolledSubjects) { let semKey = "Semester_" + asnCurrentSem; let semSpace = "Semester " + asnCurrentSem; let map = s.enrolledSubjects[semKey] || s.enrolledSubjects[semSpace] || s.enrolledSubjects[asnCurrentSem]; if(map) { Object.values(map).forEach(v => { if(v.toString().trim() === sub.trim()) isEnrolled = true; }); } }
+        if (isEnrolled) { let d = (s.Department || s.department || "Unknown").trim(); uniqueDepts.add(d); studentToDept[s.id] = d; }
+    });
+    if (uniqueDepts.size === 0) { showRcToast("No students enrolled in this subject."); return; }
+
+    getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", sub))).then(snap => {
+        let existingMap = {}; let existCount = snap.size;
+        snap.forEach(d => { let bName = d.data().batchName; (d.data().studentIDs || []).forEach(sid => { if(studentToDept[sid]) existingMap[studentToDept[sid]] = bName; }); });
+        
+        let drop = document.getElementById("dsBatchCount"); drop.innerHTML = `<option value="1">1 Batch (Unified)</option><option value="2">2 Batches</option><option value="3">3 Batches</option><option value="4">4 Batches</option><option value="5">5 Batches</option><option value="6">6 Batches</option>`;
+        let targetCount = existCount > 0 ? existCount : 2; if(isDeleting && targetCount > 1) targetCount--; drop.value = targetCount;
+
+        const renderDepts = () => {
+            let count = parseInt(drop.value); let html = "";
+            Array.from(uniqueDepts).forEach(d => {
+                let opts = count === 1 ? `<option>Unified Class</option>` : Array.from({length:count}, (_,i)=>`<option value="Batch ${i+1}">Batch ${i+1}</option>`).join('') + `<option value="Exclude">Exclude</option>`;
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px 15px; border-radius:10px; border:1px solid #e2e8f0;">
+                    <span style="font-weight:bold; color:#475569; font-size:13px;">${d.replace('DEPT_','')}</span>
+                    <select class="ds-dept-select" data-dept="${d}" style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; outline:none; font-family:'Poppins'; font-size:12px; font-weight:bold; color:var(--text-green);" ${count===1?'disabled':''}>${opts}</select>
+                </div>`;
+            });
+            document.getElementById("dsDeptList").innerHTML = html;
+            if(count > 1) { document.querySelectorAll(".ds-dept-select").forEach(s => { let d = s.dataset.dept; if(existingMap[d]) { let idx = Array.from(s.options).findIndex(o=>o.value===existingMap[d]); if(idx>=0) s.selectedIndex = idx; } }); }
+        };
+        drop.onchange = renderDepts; renderDepts();
+        document.getElementById("btnConfirmDeptSplit").onclick = () => ASN_ConfirmDeptSplit(sub, uniqueDepts, studentToDept);
+        document.getElementById("deptSplitOverlay").classList.add("active");
+    });
+}
+
+async function ASN_ConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
+    document.getElementById("deptSplitOverlay").classList.remove("active"); showRcToast("Saving configurations...");
+    let totalBatches = parseInt(document.getElementById("dsBatchCount").value); let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, '');
+    
+    if (totalBatches === 1) {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", subject)));
+        const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref)); await wb.commit();
+        asnActiveRows = asnActiveRows.filter(r => !(r.period === asnPendingDeptRow.period && r.isSplit)); let mRow = asnActiveRows.find(r => r.period === asnPendingDeptRow.period); if(mRow) { mRow.isSplit = false; mRow.splitIndex = 0; }
+        ASN_RenderLayout(); return;
+    }
+
+    let batchMap = {}; for(let i=1; i<=totalBatches; i++) batchMap[`Batch ${i}`] = [];
+    document.querySelectorAll(".ds-dept-select").forEach(s => { let val = s.value; if(val !== "Exclude") { Object.keys(studentToDept).forEach(sid => { if(studentToDept[sid] === s.dataset.dept) batchMap[val].push(sid); }); } });
+
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", subject)));
+    const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
+    for(let i=1; i<=totalBatches; i++) { wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", `BATCH_Sem${asnCurrentSem}_${cleanSub}_Batch${i}`), { batchName: `Batch ${i}`, subjectName: subject, semester: asnCurrentSem, studentIDs: batchMap[`Batch ${i}`] }, {merge:true}); }
+    await wb.commit();
+
+    let existingCount = asnActiveRows.filter(r => r.period === asnPendingDeptRow.period).length;
+    if (totalBatches > existingCount) { for(let i=existingCount; i<totalBatches; i++) asnActiveRows.push({ id: `r_${asnPendingDeptRow.period}_${i}_${Date.now()}`, period: asnPendingDeptRow.period, splitIndex: i, isSplit: true, category: asnPendingDeptRow.category, subject: subject, teacher: "", teacherID: "", room: "" }); }
+    else if (totalBatches < existingCount) { asnActiveRows = asnActiveRows.filter(r => r.period !== asnPendingDeptRow.period || r.splitIndex < totalBatches); }
+    ASN_RenderLayout(); showRcToast(`Saved as ${totalBatches} batches!`);
+}
+
+async function ASN_SaveAll() {
+    let btn = document.getElementById("btnAsnSave"); btn.innerText = "Saving..."; btn.disabled = true;
+    let tMap = {}; let conflict = false;
+    asnActiveRows.forEach(r => {
+        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
+            if(!tMap[r.period]) tMap[r.period] = {};
+            if(tMap[r.period][r.teacher]) { let eSub = tMap[r.period][r.teacher]; let isVac3 = r.subject.toUpperCase().includes("VAC3") || r.category.toUpperCase().includes("VAC3"); if(!isVac3 || eSub !== r.subject) conflict = true; }
+            else tMap[r.period][r.teacher] = r.subject;
+        }
+    });
+    if(conflict) { showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); btn.innerText = "Save"; btn.disabled = false; return; }
+
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", "DEPT_General")));
+    const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
+
+    asnActiveRows.forEach(r => {
+        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
+            let safeSubj = r.subject.replace(/\s+/g, '').replace(/\//g, ''); let sIdx = r.isSplit ? r.splitIndex.toString() : "0";
+            let isCom = !asnActiveRows.some(x => x.period === r.period && x.isSplit);
+            wb.set(doc(db, "colleges", currentCollegeID, "timetable_allocations", `Sem${asnCurrentSem}_${asnSelectedDay}_P${r.period}_${sIdx}_${safeSubj}`), {
+                semester: asnCurrentSem, day: asnSelectedDay, period: r.period.toString(), category: r.category, subjectName: r.subject, teacherName: r.teacher, teacherID: r.teacherID, departmentID: "DEPT_General", room: r.room, isCommon: isCom, splitIndex: isCom ? null : sIdx
+            }, {merge:true});
+        }
+    });
+    await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save"; btn.disabled = false;
 }
