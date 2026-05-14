@@ -73,7 +73,7 @@ el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/ter
 el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
 
 document.querySelectorAll(".menu-btn").forEach(btn => {
-    if(btn.id === "btnNavRoomcode" || btn.id === "btnNavTeacherList" || btn.id === "btnNavStudentList" || btn.id === "btnNavBatch") return;
+    if(btn.id === "btnNavRoomcode" || btn.id === "btnNavTeacherList" || btn.id === "btnNavStudentList" || btn.id === "btnNavBatch" || btn.id === "btnNavTimetable") return;
     btn.addEventListener("click", (e) => alert(`Navigating to ${e.currentTarget.querySelector(".btn-text").innerText}... (View logic to be implemented)`));
 });
 
@@ -81,7 +81,7 @@ const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
     teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
     studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
-    batch: document.getElementById("batchView"),
+    batch: document.getElementById("batchView"), timetable: document.getElementById("timetableView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView")
 };
 
@@ -112,9 +112,10 @@ document.getElementById("btnNavTeacherList").addEventListener("click", () => { s
 document.getElementById("btnBackToTeachers").addEventListener("click", () => switchView(views.teacherList));
 document.getElementById("btnNavStudentList").addEventListener("click", () => { switchView(views.studentList); if (!slLoaded) startStudentListListener(); });
 document.getElementById("btnBackToStudents").addEventListener("click", () => switchView(views.studentList));
-
-// 🚨 BIND THE NEW BATCH BUTTON
 document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
+
+// 🚨 BIND THE NEW TIMETABLE BUTTON
+document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -587,7 +588,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
-                <button class="action-icon-btn" title="Manage Access" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
+                <button class="action-icon-btn" title="Manage Status" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
                 <button class="action-icon-btn" title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})"><i class="fas fa-comment-dots"></i></button>
             </div>
         </div>`;
@@ -680,7 +681,6 @@ async function SD_BuildUI(specificDate = "All Time") {
     let semDisplay = semKey.replace("_", " ");
     document.getElementById("sdSemesterTitle").innerText = semDisplay;
 
-    // 1. ENROLLED SUBJECTS
     await fetchGlobalSubjects(); 
     let cleanSemNum = semKey.replace(/[^0-9]/g, '');
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
@@ -709,7 +709,6 @@ async function SD_BuildUI(specificDate = "All Time") {
     document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
     SD_FetchMarks(semDisplay);
 
-    // 2. ATTENDANCE PARSING
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
     let subjectAtt = {}; 
 
@@ -829,9 +828,8 @@ function SD_RenderMarksUI(examName) {
     }).join('');
 }
 
-
 // ==========================================
-// 🚨 NEW: BATCH MANAGER (100% C# TRANSLATION)
+// BATCH MANAGER
 // ==========================================
 let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
 function BCH_Init() {
@@ -843,7 +841,6 @@ function BCH_Init() {
         else if (collegeSemesterType === "Even" && !isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
     bchCurrentSem = dropSem.value;
     document.getElementById("bchSemDrop").addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
     document.getElementById("bchCatDrop").addEventListener("change", BCH_RefreshSubjects);
@@ -852,12 +849,9 @@ function BCH_Init() {
 
     if (bchSubjectsCache.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
-            snap.forEach(doc => {
-                let d = doc.data();
-                bchSubjectsCache.push({ id: doc.id, name: d.Name || d.name || "Unnamed", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "1").toString() });
-            });
+            snap.forEach(doc => { let d = doc.data(); bchSubjectsCache.push({ id: doc.id, name: d.Name || d.name || "Unnamed", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "1").toString() }); });
             BCH_RefreshCategories();
-        }).catch(e => console.error("Error fetching subjects for batches."));
+        }).catch(e => {});
     } else { BCH_RefreshCategories(); }
 }
 
@@ -866,9 +860,7 @@ function BCH_RefreshCategories() {
     bchSubjectsCache.forEach(sub => { let sems = sub.semesters.split(',').map(s=>s.trim()); if (sems.includes(bchCurrentSem) && sub.type) types.add(sub.type.trim()); });
     let catDrop = document.getElementById("bchCatDrop");
     if (types.size === 0) catDrop.innerHTML = `<option value="">No Categories</option>`;
-    else {
-        let arr = Array.from(types).sort(); catDrop.innerHTML = `<option value="">Select Category</option>` + arr.map(t => `<option value="${t}">${t}</option>`).join('');
-    }
+    else { let arr = Array.from(types).sort(); catDrop.innerHTML = `<option value="">Select Category</option>` + arr.map(t => `<option value="${t}">${t}</option>`).join(''); }
     BCH_RefreshSubjects();
 }
 
@@ -907,14 +899,12 @@ async function BCH_FetchBatches() {
             Object.keys(batchUpdates).forEach(bID => { wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", bID), { studentIDs: arrayRemove(...batchUpdates[bID]) }); });
             await wb.commit(); BCH_FetchBatches(); return;
         }
-        
         bchBatchesData = rawDocs; await BCH_RenderGroups();
     } catch(e) { BCH_ShowEmpty("Error loading batches."); }
 }
 
 async function BCH_RenderGroups() {
     let container = document.getElementById("bchListContainer"); container.innerHTML = ""; document.getElementById("btnOpenBatchMove").disabled = true;
-    
     let missingIDs = new Set();
     bchBatchesData.forEach(b => { (b.studentIDs || []).forEach(sid => { if (!bchStudentRamCache[sid]) missingIDs.add(sid); }); });
     
@@ -930,38 +920,17 @@ async function BCH_RenderGroups() {
     }
     
     let html = "";
-    bchBatchesData.forEach((b, idx) => {
-        let tName = b.teacherName || "Unassigned"; let room = b.room || "TBD"; let sList = b.studentIDs || [];
-        let studentsHtml = "";
+    bchBatchesData.forEach((b) => {
+        let tName = b.teacherName || "Unassigned"; let room = b.room || "TBD"; let sList = b.studentIDs || []; let studentsHtml = "";
         if (sList.length === 0) { studentsHtml = `<div style="padding:10px; text-align:center; color:#94a3b8; font-size:12px;">No students in this batch</div>`; } 
         else {
             sList.forEach(sid => {
                 let sInfo = bchStudentRamCache[sid] || { name: "Unknown", roll: "N/A", dept: "Unknown Dept" };
-                studentsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);">
-                        <div>
-                            <div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div>
-                            <div style="font-size:11px; color:#64748b;">${sInfo.dept}</div>
-                        </div>
-                    </div>
-                </div>`;
+                studentsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;"><div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);"><div><div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div><div style="font-size:11px; color:#64748b;">${sInfo.dept}</div></div></div></div>`;
             });
         }
-        
-        html += `
-        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
-            <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('bchBody_${b.id}').classList.toggle('hidden-view')">
-                <div style="font-weight:bold; color:var(--text-green); font-size:14px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-green);">${sList.length} Students</span></div>
-                <div style="color:#64748b; font-size:12px;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div>
-            </div>
-            <div id="bchBody_${b.id}" style="padding:10px;">
-                ${studentsHtml}
-            </div>
-        </div>`;
+        html += `<div style="background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);"><div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('bchBody_${b.id}').classList.toggle('hidden-view')"><div style="font-weight:bold; color:var(--text-green); font-size:14px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-green);">${sList.length} Students</span></div><div style="color:#64748b; font-size:12px;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div></div><div id="bchBody_${b.id}" style="padding:10px;">${studentsHtml}</div></div>`;
     });
-    
     container.innerHTML = html;
 }
 
@@ -969,35 +938,253 @@ window.BCH_OnCheckboxChange = () => { let anyChecked = document.querySelector('.
 
 function BCH_OpenMoveModal() {
     let chks = document.querySelectorAll('.bch-student-chk:checked'); if (chks.length === 0) return;
-    let sourceBatchID = chks[0].dataset.bid; 
-    let container = document.getElementById("moveBatchButtonsContainer"); container.innerHTML = "";
-    
+    let sourceBatchID = chks[0].dataset.bid; let container = document.getElementById("moveBatchButtonsContainer"); container.innerHTML = "";
     bchBatchesData.forEach(b => {
-        let btn = document.createElement("button");
-        btn.style.cssText = "width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
-        if (b.id === sourceBatchID) {
-            btn.style.background = "#f1f5f9"; btn.style.color = "#94a3b8"; btn.style.border = "1px solid #e2e8f0"; btn.disabled = true;
-            btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-ban"></i>`;
-        } else {
-            btn.style.background = "white"; btn.style.color = "var(--text-green)"; btn.style.border = "1px solid var(--brand-green)";
-            btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-arrow-right"></i>`;
-            btn.onclick = () => BCH_ExecuteMove(sourceBatchID, b.id, Array.from(chks).filter(c => c.dataset.bid === sourceBatchID).map(c => c.dataset.sid));
-        }
+        let btn = document.createElement("button"); btn.style.cssText = "width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+        if (b.id === sourceBatchID) { btn.style.background = "#f1f5f9"; btn.style.color = "#94a3b8"; btn.style.border = "1px solid #e2e8f0"; btn.disabled = true; btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-ban"></i>`; } 
+        else { btn.style.background = "white"; btn.style.color = "var(--text-green)"; btn.style.border = "1px solid var(--brand-green)"; btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-arrow-right"></i>`; btn.onclick = () => BCH_ExecuteMove(sourceBatchID, b.id, Array.from(chks).filter(c => c.dataset.bid === sourceBatchID).map(c => c.dataset.sid)); }
         container.appendChild(btn);
     });
     document.getElementById("moveBatchOverlay").classList.add("active");
 }
 
 async function BCH_ExecuteMove(sourceID, targetID, studentIDsArray) {
-    if (!studentIDsArray || studentIDsArray.length === 0) return;
-    document.getElementById("moveBatchOverlay").classList.remove("active");
-    BCH_ShowEmpty("Moving students...");
+    if (!studentIDsArray || studentIDsArray.length === 0) return; document.getElementById("moveBatchOverlay").classList.remove("active"); BCH_ShowEmpty("Moving students...");
     try {
-        const wb = writeBatch(db);
-        wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", sourceID), { studentIDs: arrayRemove(...studentIDsArray) });
-        wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", targetID), { studentIDs: arrayUnion(...studentIDsArray) });
-        await wb.commit();
-        BCH_FetchBatches();
-        showRcToast(`Moved ${studentIDsArray.length} student(s) successfully!`);
+        const wb = writeBatch(db); wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", sourceID), { studentIDs: arrayRemove(...studentIDsArray) }); wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", targetID), { studentIDs: arrayUnion(...studentIDsArray) }); await wb.commit();
+        BCH_FetchBatches(); showRcToast(`Moved ${studentIDsArray.length} student(s) successfully!`);
     } catch(e) { BCH_ShowEmpty("Error moving students."); }
+}
+
+// ==========================================
+// 🚨 NEW: TIMETABLE MANAGER 
+// ==========================================
+let ttLoaded = false; let ttCurrentSem = "1"; let ttSelectedDay = "Monday";
+let ttGlobalCategories = []; let ttSubjectsByCategory = {}; 
+let ttTimetableCache = {}; let ttActiveRows = []; let ttIsEditMode = true;
+let ttGlobalSubjects = [];
+
+function TT_Init() {
+    ttLoaded = true;
+    let dropSem = document.getElementById("ttSemDrop"); dropSem.innerHTML = ""; let hasSems = false;
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0);
+        if (collegeSemesterType === "Odd" && isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
+        else if (collegeSemesterType === "Even" && !isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
+    }
+    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
+    
+    ttCurrentSem = dropSem.value;
+    document.getElementById("ttSemDrop").addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
+
+    document.querySelectorAll('.tt-day-btn').forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            document.querySelectorAll('.tt-day-btn').forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active"); ttSelectedDay = e.target.dataset.day; TT_LoadDay();
+        });
+    });
+
+    document.getElementById("ttBtnEdit").addEventListener("click", () => { ttIsEditMode = true; TT_ApplyPhase(); });
+    document.getElementById("ttBtnSave").addEventListener("click", TT_SaveAll);
+
+    // Auto-select today!
+    let dayMap = { 0: "Monday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Monday" };
+    let today = new Date().getDay();
+    ttSelectedDay = dayMap[today];
+    document.querySelectorAll('.tt-day-btn').forEach(b => {
+        if(b.dataset.day === ttSelectedDay) b.classList.add("active"); else b.classList.remove("active");
+    });
+
+    TT_LoadGlobalCategories();
+}
+
+async function TT_LoadGlobalCategories() {
+    try {
+        if (ttGlobalSubjects.length === 0) {
+            const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
+            snap.forEach(doc => { let d = doc.data(); ttGlobalSubjects.push({ type: (d.Type||d.type||"").trim(), name: d.Name||d.name||"Unnamed", sems: (d.Semester||d.semester||"1").toString() }); });
+        }
+        
+        let types = new Set(); ttSubjectsByCategory = {};
+        ttGlobalSubjects.forEach(sub => {
+            if (sub.sems.split(',').map(s=>s.trim()).includes(ttCurrentSem)) {
+                if (sub.type) { types.add(sub.type); if(!ttSubjectsByCategory[sub.type]) ttSubjectsByCategory[sub.type] = []; ttSubjectsByCategory[sub.type].push(sub.name); }
+            }
+        });
+
+        ttGlobalCategories = Array.from(types).sort();
+        if(!ttGlobalCategories.includes("Select Category")) ttGlobalCategories.unshift("Select Category");
+        if(!ttGlobalCategories.includes("Break")) ttGlobalCategories.push("Break");
+        if(!ttGlobalCategories.includes("Lunch")) ttGlobalCategories.push("Lunch");
+
+        TT_LoadDay();
+    } catch(e) { }
+}
+
+function TT_LoadDay() {
+    document.getElementById("ttListContainer").innerHTML = `<div class="no-data-text">Loading ${ttSelectedDay}...</div>`;
+    let docID = `Sem${ttCurrentSem}_${ttSelectedDay}`;
+
+    onSnapshot(doc(db, "colleges", currentCollegeID, "timetable_structure", docID), (snap) => {
+        let slotsData = {};
+        if (snap.exists() && snap.data().slots) slotsData = snap.data().slots;
+        
+        ttTimetableCache[docID] = slotsData;
+        TT_BuildSlots(slotsData);
+    });
+}
+
+function TT_BuildSlots(slotsData) {
+    ttActiveRows = [];
+    if (Object.keys(slotsData).length > 0) {
+        for (let p = 1; p <= 6; p++) {
+            let cat = slotsData[`P${p}`] || "Select Category";
+            ttActiveRows.push({ pNum: p, sIdx: 0, isSplit: false, cat: cat, sub: "Select Subject", teach: "Waiting for HOD", room: "" });
+        }
+        ttIsEditMode = false;
+        TT_FetchAllocations();
+    } else {
+        for (let p = 1; p <= 6; p++) ttActiveRows.push({ pNum: p, sIdx: 0, isSplit: false, cat: "Select Category", sub: "Select Subject", teach: "Waiting for HOD", room: "" });
+        ttIsEditMode = true;
+        TT_RenderGrid();
+    }
+}
+
+async function TT_FetchAllocations() {
+    let q = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", ttCurrentSem), where("day", "==", ttSelectedDay), where("departmentID", "==", "DEPT_General"));
+    const snap = await getDocs(q);
+    
+    let allocs = {};
+    snap.forEach(doc => {
+        let d = doc.data(); let pNum = parseInt(d.period);
+        if(!allocs[pNum]) allocs[pNum] = []; allocs[pNum].push(d);
+    });
+
+    let newRows = [];
+    for (let p = 1; p <= 6; p++) {
+        let baseRow = ttActiveRows.find(r => r.pNum === p);
+        if(!baseRow) continue;
+
+        if (allocs[p]) {
+            let mainDoc = allocs[p].find(d => !d.splitIndex || d.splitIndex === "0");
+            if (mainDoc) {
+                baseRow.sub = mainDoc.subjectName || "Select Subject"; baseRow.teach = mainDoc.teacherName || "Waiting for HOD"; baseRow.room = mainDoc.room || "";
+                newRows.push(baseRow);
+                let splits = allocs[p].filter(d => d.splitIndex && d.splitIndex !== "0").sort((a,b) => parseInt(a.splitIndex) - parseInt(b.splitIndex));
+                splits.forEach(s => { newRows.push({ pNum: p, sIdx: parseInt(s.splitIndex), isSplit: true, cat: baseRow.cat, sub: s.subjectName || "Select Subject", teach: s.teacherName || "Waiting for HOD", room: s.room || "" }); });
+            } else { newRows.push(baseRow); }
+        } else { newRows.push(baseRow); }
+    }
+    ttActiveRows = newRows; TT_RenderGrid();
+}
+
+function TT_RenderGrid() {
+    let html = "";
+    document.getElementById("ttBtnEdit").style.display = ttIsEditMode ? "none" : "block";
+    document.getElementById("ttBtnSave").style.display = ttIsEditMode ? "block" : "none";
+
+    let catOptions = ttGlobalCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    ttActiveRows.forEach((row, idx) => {
+        let subOptions = `<option value="Select Subject">Select Subject</option>`;
+        if (ttSubjectsByCategory[row.cat]) subOptions += ttSubjectsByCategory[row.cat].map(s => `<option value="${s}">${s}</option>`).join('');
+        else if (row.cat.toLowerCase() === "tutorial") subOptions = `<option value="Tutorial">Tutorial</option>`;
+
+        let periodHtml = row.isSplitRow ? `P${row.pNum}<br><span style="font-size:10px; color:#ef4444;">Batch ${row.sIdx + 1}</span>` : `P${row.pNum}`;
+        let bgStyle = row.isSplitRow ? "border-left: 4px solid #ef4444; background: #fff5f5; margin-left:20px;" : "border-left: 4px solid var(--brand-green); background: white;";
+        
+        let catDisabled = (!ttIsEditMode || row.isSplitRow) ? "disabled" : "";
+        let subDisabled = (ttIsEditMode || row.isSplitRow) ? "disabled" : "";
+
+        let btnHtml = "";
+        if (row.isSplitRow) btnHtml = `<button class="action-icon-btn" style="background:#fecaca; color:#b91c1c;" onclick="TT_DeleteSplit(${idx})"><i class="fas fa-trash"></i></button>`;
+        else btnHtml = `<button class="action-icon-btn" style="background:var(--text-light-green); color:white;" onclick="TT_AddSplit(${idx})"><i class="fas fa-plus"></i></button>`;
+
+        html += `
+        <div class="data-card" style="${bgStyle} display:flex; gap:15px; align-items:center; padding:15px;">
+            <div style="font-weight:bold; font-size:16px; color:var(--text-green); min-width:40px; text-align:center;">${periodHtml}</div>
+            <select class="input-field" style="flex:1; padding:8px; border-radius:8px;" ${catDisabled} onchange="TT_UpdateCat(${idx}, this.value)">
+                ${catOptions.replace(`value="${row.cat}"`, `value="${row.cat}" selected`)}
+            </select>
+            <select class="input-field" style="flex:1.5; padding:8px; border-radius:8px;" ${subDisabled} onchange="TT_UpdateSub(${idx}, this.value)">
+                ${subOptions.replace(`value="${row.sub}"`, `value="${row.sub}" selected`)}
+            </select>
+            <div style="flex:1.5; font-size:12px; font-weight:bold; color:#64748b; background:#f1f5f9; padding:8px; border-radius:8px; text-align:center;">${row.teach}</div>
+            <div style="flex:0.5; font-size:12px; font-weight:bold; color:#64748b; background:#f1f5f9; padding:8px; border-radius:8px; text-align:center;">${row.room || "TBD"}</div>
+            ${!ttIsEditMode ? btnHtml : ''}
+        </div>`;
+    });
+    document.getElementById("ttListContainer").innerHTML = html;
+}
+
+window.TT_UpdateCat = (idx, val) => { ttActiveRows[idx].cat = val; ttActiveRows[idx].sub = "Select Subject"; TT_RenderGrid(); };
+window.TT_UpdateSub = (idx, val) => { 
+    ttActiveRows[idx].sub = val; 
+    let safeSubj = val.replace(" ", "").replace("/", "");
+    let docID = `Sem${ttCurrentSem}_${ttSelectedDay}_P${ttActiveRows[idx].pNum}_0_${safeSubj}`;
+    getDoc(doc(db, "colleges", currentCollegeID, "timetable_allocations", docID)).then(snap => {
+        if(snap.exists()) { ttActiveRows[idx].teach = snap.data().teacherName || "Waiting for HOD"; ttActiveRows[idx].room = snap.data().room || "TBD"; } 
+        else { ttActiveRows[idx].teach = "Waiting for HOD"; ttActiveRows[idx].room = "TBD"; }
+        TT_RenderGrid();
+    });
+};
+
+window.TT_AddSplit = (idx) => {
+    let pNum = ttActiveRows[idx].pNum;
+    let splits = ttActiveRows.filter(r => r.pNum === pNum && r.isSplitRow);
+    let newSIdx = splits.length + 1;
+    ttActiveRows.splice(idx + newSIdx, 0, { pNum: pNum, sIdx: newSIdx, isSplit: true, cat: ttActiveRows[idx].cat, sub: ttActiveRows[idx].sub, teach: "Waiting for HOD", room: "TBD" });
+    TT_RenderGrid();
+};
+
+window.TT_DeleteSplit = (idx) => {
+    let target = ttActiveRows[idx];
+    ttActiveRows.splice(idx, 1);
+    let remaining = ttActiveRows.filter(r => r.pNum === target.pNum && r.isSplitRow);
+    remaining.forEach((r, i) => r.sIdx = i + 1);
+    TT_RenderGrid();
+};
+
+function TT_ApplyPhase() { TT_RenderGrid(); }
+
+async function TT_SaveAll() {
+    if (ttIsEditMode) {
+        // Save Structure
+        document.getElementById("ttBtnSave").innerText = "Saving...";
+        let newSlots = {}; ttActiveRows.filter(r => !r.isSplitRow).forEach(r => newSlots[`P${r.pNum}`] = r.cat);
+        try {
+            await setDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", `Sem${ttCurrentSem}_${ttSelectedDay}`), { semester: ttCurrentSem, day: ttSelectedDay, slots: newSlots }, { merge: true });
+            ttIsEditMode = false; document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; TT_RenderGrid(); showRcToast("Categories Saved!");
+        } catch(e) { showRcToast("Save Failed"); }
+    } else {
+        // Save Allocations
+        document.getElementById("ttBtnSave").innerText = "Saving...";
+        let wb = writeBatch(db);
+        
+        // 1. Delete Old
+        const oldSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", ttCurrentSem), where("day", "==", ttSelectedDay), where("departmentID", "==", "DEPT_General")));
+        oldSnap.forEach(d => wb.delete(d.ref));
+
+        // 2. Conflict Check & Save New
+        let teachInPeriod = {};
+        for(let r of ttActiveRows) {
+            if(r.sub === "Select Subject" || !r.sub) continue;
+            if(r.teach !== "Unassigned" && !r.teach.includes("Waiting")) {
+                if(!teachInPeriod[r.pNum]) teachInPeriod[r.pNum] = {};
+                if(teachInPeriod[r.pNum][r.teach]) {
+                    if(!r.cat.toUpperCase().includes("VAC3")) { showRcToast(`Conflict: ${r.teach} in P${r.pNum}`); document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; return; }
+                } else teachInPeriod[r.pNum][r.teach] = r.sub;
+            }
+
+            let safeSubj = r.sub.replace(" ", "").replace("/", "");
+            let isCommon = !ttActiveRows.some(x => x.pNum === r.pNum && x.isSplitRow);
+            let docID = `Sem${ttCurrentSem}_${ttSelectedDay}_P${r.pNum}_${isCommon ? "0" : r.sIdx}_${safeSubj}`;
+            
+            let data = { semester: ttCurrentSem, day: ttSelectedDay, period: r.pNum.toString(), category: r.cat, subjectName: r.sub, teacherName: r.teach, departmentID: "DEPT_General", room: r.room, isCommon: isCommon };
+            if(!isCommon) data.splitIndex = r.sIdx.toString();
+            wb.set(doc(db, "colleges", currentCollegeID, "timetable_allocations", docID), data, { merge: true });
+        }
+        await wb.commit();
+        document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; showRcToast("Timetable Saved!");
+    }
 }
