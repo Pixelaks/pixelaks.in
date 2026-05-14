@@ -834,7 +834,12 @@ window.SL_OpenDashboard = async (sID) => {
             let status = sdStudentData.status || "Approved"; let badge = document.getElementById("sdStatusBadge"); badge.innerText = status; badge.style.color = status==="Approved" ? "#166534" : "#b91c1c"; badge.style.backgroundColor = status==="Approved" ? "#f0fdf4" : "#fef2f2"; badge.style.borderColor = status==="Approved" ? "#86efac" : "#fca5a5";
 
             sdSemKeys = []; for(let i=1; i<=8; i++) sdSemKeys.push(`Semester_${i}`);
-            let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, ''); let studentYear = parseInt(yearStr) || 1; let currentMonth = new Date().getMonth() + 1; let isEvenSem = (currentMonth >= 1 && currentMonth <= 5); let currentSemNum = (studentYear * 2) - (isEvenSem ? 0 : 1);
+            let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, ''); 
+            let studentYear = parseInt(yearStr) || 1; 
+            
+            // 🚨 THE FIX: Perfectly matches your Unity SemesterManager math!
+            let currentSemNum = (collegeSemesterType === "Odd") ? (studentYear * 2) - 1 : (studentYear * 2);
+            
             sdCurrentSemIndex = Math.max(0, Math.min(7, currentSemNum - 1));
             
             document.getElementById("sdDateFilter").value = "";
@@ -2030,7 +2035,8 @@ async function ExecuteSemesterPromotion() {
             currentSem = parseInt(data.currentSemester);
         } else {
             let yearNum = parseInt(rawYear.replace(/\D/g, '')) || 1;
-            currentSem = (yearNum * 2) - 1;
+            // 🚨 THE FIX: Uses the global collegeSemesterType instead of hardcoding to Odd!
+            currentSem = (collegeSemesterType === "Odd") ? (yearNum * 2) - 1 : (yearNum * 2);
         }
 
         let maxYears = deptMaxYears[deptName] || 3;
