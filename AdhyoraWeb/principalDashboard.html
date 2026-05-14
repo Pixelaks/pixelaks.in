@@ -41,7 +41,7 @@
                 <button class="menu-btn" id="btnNavData"><span class="btn-text">Data Section</span> <i class="fas fa-chart-bar btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavSubjectList"><span class="btn-text">Subject List</span> <i class="fas fa-book-open btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavStuSub"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
-                <button class="menu-btn"><span class="btn-text">Events</span> <i class="fas fa-calendar-plus btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavEvents"><span class="btn-text">Events</span> <i class="fas fa-calendar-plus btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Attendance Records</span> <i class="fas fa-user-check btn-icon"></i></button>
             </div>
         </aside>
@@ -360,6 +360,17 @@
 
                     <div id="ssListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
                         <div class="no-data-text" id="ssNoDataText">Select a Semester, Category, and Subject to view enrolled students.</div>
+                    </div>
+                </div>
+
+                <div id="eventsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px;">
+                        <h3 style="color: var(--text-green); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px; margin: 0;">Event Requests</h3>
+                        <div id="evtTotalCount" style="font-weight: bold; color: var(--brand-green); font-size: 14px; background: var(--bg-grid-color); padding: 5px 15px; border-radius: 20px;">Total: 0</div>
+                    </div>
+                    <input type="text" id="evtSearchInput" placeholder="Search events, teachers, or dates..." class="asn-input" style="margin-bottom: 20px; font-size: 14px; padding: 12px 15px;">
+                    <div id="evtListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                        <div class="no-data-text" id="evtNoDataText">Loading Events...</div>
                     </div>
                 </div>
 
