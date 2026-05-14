@@ -864,26 +864,23 @@ let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let b
 function BCH_Init() {
     bchLoaded = true;
     let dropSem = document.getElementById("bchSemDrop"); 
-    dropSem.innerHTML = ""; 
+    let optionsHtml = "";
     let activeValue = "1";
     
     for (let i = 1; i <= 8; i++) {
-        let isOdd = (i % 2 !== 0);
-        if (collegeSemesterType === "Odd" && isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i} (Active)</option>`; }
-        else if (collegeSemesterType === "Even" && !isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i} (Active)</option>`; }
-        else { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; }
-    }
-    if(dropSem.options.length === 0) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    // 🚨 BULLETPROOF FIX: Find the word "(Active)" and force the dropdown index!
-    for (let i = 0; i < dropSem.options.length; i++) {
-        if (dropSem.options[i].text.includes("(Active)")) {
-            dropSem.selectedIndex = i;
-            activeValue = dropSem.options[i].value;
-            break;
+        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
+            label += " (Active)";
+            // 🚨 GUARANTEED FIX
+            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
+        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
+    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
+    
+    // 🚨 Force the value!
     bchCurrentSem = activeValue;
+    dropSem.value = bchCurrentSem;
 
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
@@ -1055,25 +1052,23 @@ const ttPeriodEndTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
 function TT_Init() {
     ttLoaded = true;
     let dropSem = document.getElementById("ttSemDrop"); 
-    dropSem.innerHTML = ""; 
+    let optionsHtml = "";
     let activeValue = "1"; 
     
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
-        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
-    }
-    if(dropSem.options.length === 0) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    // 🚨 BULLETPROOF FIX: Find the word "(Active)" and force the dropdown index!
-    for (let i = 0; i < dropSem.options.length; i++) {
-        if (dropSem.options[i].text.includes("(Active)")) {
-            dropSem.selectedIndex = i;
-            activeValue = dropSem.options[i].value;
-            break;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
+            label += " (Active)";
+            // 🚨 GUARANTEED FIX: Save the exact number the moment we find the first active semester!
+            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
+        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
+    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
+    
+    // 🚨 Force the value using our saved variable!
     ttCurrentSem = activeValue;
+    dropSem.value = ttCurrentSem;
     
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
@@ -1265,30 +1260,23 @@ function ASN_Init(startSem, startDay) {
     asnSelectedDay = startDay || "Monday";
 
     let dropSem = document.getElementById("asnSemDrop"); 
-    dropSem.innerHTML = ""; 
+    let optionsHtml = "";
     let activeValue = "1";
 
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
-        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
-    }
-    if(dropSem.options.length === 0) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    // 🚨 BULLETPROOF FIX: Find the word "(Active)" and force the dropdown index!
-    if (startSem) {
-        for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === startSem) dropSem.selectedIndex = i; }
-        activeValue = startSem;
-    } else {
-        for (let i = 0; i < dropSem.options.length; i++) {
-            if (dropSem.options[i].text.includes("(Active)")) {
-                dropSem.selectedIndex = i;
-                activeValue = dropSem.options[i].value;
-                break;
-            }
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
+            label += " (Active)";
+            // 🚨 GUARANTEED FIX
+            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
+        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
-    asnCurrentSem = activeValue;
+    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
+    
+    // 🚨 Force the value (Use startSem if we came from Timetable, otherwise use Active)
+    asnCurrentSem = startSem || activeValue;
+    dropSem.value = asnCurrentSem;
     
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
@@ -2357,25 +2345,23 @@ let ssSelectedStudents = new Set();
 function SS_Init() {
     ssLoaded = true;
     let dropSem = document.getElementById("ssSemDrop"); 
-    dropSem.innerHTML = ""; 
+    let optionsHtml = "";
     let activeValue = "1";
     
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
-        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
-    }
-    if(dropSem.options.length === 0) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    // 🚨 BULLETPROOF FIX: Find the word "(Active)" and force the dropdown index!
-    for (let i = 0; i < dropSem.options.length; i++) {
-        if (dropSem.options[i].text.includes("(Active)")) {
-            dropSem.selectedIndex = i;
-            activeValue = dropSem.options[i].value;
-            break;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
+            label += " (Active)";
+            // 🚨 GUARANTEED FIX
+            if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
+        optionsHtml += `<option value="${i}">${label}</option>`; 
     }
+    dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
+    
+    // 🚨 Force the value!
     ssCurrentSem = activeValue;
+    dropSem.value = ssCurrentSem;
     
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { ssCurrentSem = e.target.value; SS_RefreshCategories(); });
