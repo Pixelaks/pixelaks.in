@@ -440,7 +440,7 @@ body {
 .attd-empty { color: #cbd5e1; font-weight: normal; } /* No class assigned */
 
 /* =========================================
-   🌙 DARK MODE OVERRIDES
+   🌙 DARK MODE OVERRIDES (ULTIMATE FIX)
    ========================================= */
 body.dark-mode {
     --bg-base: #0f172a;
@@ -452,35 +452,73 @@ body.dark-mode {
     color: #f8fafc;
 }
 
+/* 1. Fix the "Welcome" Box */
+body.dark-mode .welcome-text {
+    background: transparent !important;
+    text-shadow: 0 0 15px rgba(74, 222, 128, 0.3) !important;
+}
+
+/* 2. Fix the White & Colored Cards (Timetable, Assign, Data Uploads) */
 body.dark-mode .data-card, 
 body.dark-mode .compose-modal, 
 body.dark-mode .settings-drawer,
 body.dark-mode .sub-card,
 body.dark-mode .evt-card,
 body.dark-mode .asn-card,
+body.dark-mode .tt-card,
 body.dark-mode .welcome-card,
-body.dark-mode .calendar-container {
+body.dark-mode .calendar-container,
+body.dark-mode .data-upload-card {
     background-color: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important; /* Adds depth so cards don't look boring */
+}
+
+/* 3. Fix the "Assign Classes" Outer Wrapper */
+body.dark-mode .asn-period-wrapper {
+    background-color: #0f172a !important;
     border-color: #334155 !important;
 }
 
+/* 4. Fix Inputs, Selects, and Dropdowns */
+body.dark-mode input, 
+body.dark-mode select, 
+body.dark-mode textarea,
+body.dark-mode .asn-input,
+body.dark-mode .tt-input-field {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+body.dark-mode .asn-input:disabled,
+body.dark-mode .tt-input-field:disabled {
+    background-color: #1e293b !important;
+    color: #94a3b8 !important;
+}
+
+/* 5. Fix Text & Headings */
 body.dark-mode .card-title,
 body.dark-mode .sub-title,
 body.dark-mode .evt-title,
 body.dark-mode .btn-text,
 body.dark-mode .stat-value,
 body.dark-mode .tt-day,
-body.dark-mode .tt-header {
+body.dark-mode .tt-header,
+body.dark-mode .asn-period-header,
+body.dark-mode h4 {
     color: #f8fafc !important;
 }
 
 body.dark-mode .card-body,
 body.dark-mode .sub-code,
 body.dark-mode .evt-meta,
-body.dark-mode .stat-label {
+body.dark-mode .stat-label,
+body.dark-mode p {
     color: #cbd5e1 !important;
 }
 
+/* 6. Fix Sidebar */
 body.dark-mode .sidebar {
     background-color: #0f172a;
 }
@@ -490,29 +528,50 @@ body.dark-mode .menu-btn {
     border-color: #334155;
 }
 
-body.dark-mode input, 
-body.dark-mode select, 
-body.dark-mode textarea {
-    background-color: #0f172a;
-    color: #f8fafc;
-    border-color: #334155;
-}
+body.dark-mode .nav-icon-btn { color: #94a3b8; }
+body.dark-mode .nav-icon-btn.active-nav { color: var(--brand-green); }
 
-body.dark-mode .nav-icon-btn {
-    color: #94a3b8;
-}
-
-body.dark-mode .nav-icon-btn.active-nav {
-    color: var(--brand-green);
-}
-
-body.dark-mode .tt-card {
+/* 7. Fix Action Buttons (Share, Edit, Delete) */
+body.dark-mode .action-icon-btn {
     background-color: #0f172a !important;
-    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid #334155 !important;
+}
+body.dark-mode .action-icon-btn:hover {
+    background-color: #334155 !important;
+    color: var(--brand-green) !important;
 }
 
+/* 8. Fix Timetable Circular Nodes and Weekday Buttons */
 body.dark-mode .tt-node {
     background-color: #1e293b !important;
     color: #f8fafc !important;
     border-color: #4ade80 !important;
+}
+
+body.dark-mode .asn-day-btn,
+body.dark-mode .tt-day-btn {
+    background-color: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-color: #334155 !important;
+}
+
+body.dark-mode .asn-day-btn.active,
+body.dark-mode .tt-day-btn.active {
+    background-color: rgba(74, 222, 128, 0.15) !important;
+    color: var(--brand-green) !important;
+    border-color: var(--brand-green) !important;
+}
+
+/* 9. Fix Top Select Pills */
+body.dark-mode .tt-select-pill,
+body.dark-mode .asn-select-pill {
+    background-color: rgba(74, 222, 128, 0.1) !important;
+    border-color: var(--brand-green) !important;
+    color: var(--brand-green) !important;
+}
+
+/* 10. Fix Data Upload Icons Backgrounds */
+body.dark-mode .up-icon {
+    background-color: #0f172a !important;
 }
