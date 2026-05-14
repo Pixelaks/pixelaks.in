@@ -1,7 +1,7 @@
 // principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -18,6 +18,7 @@ const db = getFirestore(app);
 
 let currentCollegeID = "";
 let currentUserID = "";
+let collegeSemesterType = "Odd";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
 let myRealName = "Principal"; 
 
@@ -42,6 +43,11 @@ el.versionText.innerText = "Version 1.0.0 (Web Admin)";
 
 async function fetchPrincipalProfile() {
     try {
+        const cSnap = await getDoc(doc(db, "colleges", currentCollegeID));
+        if (cSnap.exists() && cSnap.data().currentSemesterType) {
+            collegeSemesterType = cSnap.data().currentSemesterType;
+        }
+
         const docSnap = await getDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID));
         if (docSnap.exists()) {
             const data = docSnap.data(); myRealName = data.name || "Principal";
@@ -67,7 +73,7 @@ el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/ter
 el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
 
 document.querySelectorAll(".menu-btn").forEach(btn => {
-    if(btn.id === "btnNavRoomcode" || btn.id === "btnNavTeacherList" || btn.id === "btnNavStudentList") return;
+    if(btn.id === "btnNavRoomcode" || btn.id === "btnNavTeacherList" || btn.id === "btnNavStudentList" || btn.id === "btnNavBatch") return;
     btn.addEventListener("click", (e) => alert(`Navigating to ${e.currentTarget.querySelector(".btn-text").innerText}... (View logic to be implemented)`));
 });
 
@@ -75,6 +81,7 @@ const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
     teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
     studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
+    batch: document.getElementById("batchView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView")
 };
 
@@ -106,8 +113,14 @@ document.getElementById("btnBackToTeachers").addEventListener("click", () => swi
 document.getElementById("btnNavStudentList").addEventListener("click", () => { switchView(views.studentList); if (!slLoaded) startStudentListListener(); });
 document.getElementById("btnBackToStudents").addEventListener("click", () => switchView(views.studentList));
 
+// 🚨 BIND THE NEW BATCH BUTTON
+document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
+
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
+// ==========================================
+// NOTIFICATIONS INBOX 
+// ==========================================
 let cachedNotifs = [];
 function startInboxListener() {
     const myTopics = [`${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_ALL`, `${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_PRINCIPAL`];
@@ -133,6 +146,9 @@ function renderNotifications() {
 }
 setTimeout(startInboxListener, 2000); 
 
+// ==========================================
+// CALENDAR ENGINE
+// ==========================================
 let currentDisplayDate = new Date();
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map(); let calendarLoaded = false;
 
@@ -203,6 +219,9 @@ function updateUpcomingEvent() {
     if (!found) document.getElementById("upcomingEventText").innerHTML = "No upcoming holidays in the next 60 days.";
 }
 
+// ==========================================
+// MESSAGES SYSTEM
+// ==========================================
 let cachedMessages = [];
 function startMessagesListener() {
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
@@ -568,7 +587,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
-                <button class="action-icon-btn" title="Manage Status" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
+                <button class="action-icon-btn" title="Manage Access" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
                 <button class="action-icon-btn" title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})"><i class="fas fa-comment-dots"></i></button>
             </div>
         </div>`;
@@ -667,23 +686,18 @@ async function SD_BuildUI(specificDate = "All Time") {
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
     let finalSubjects = [];
 
-    // 🚨 Explicitly Enrolled Subjects Map check (handling both Semester_2 and Semester 2)
     let enrollMap = {};
-    if (sdStudentData.enrolledSubjects) {
-        enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
-    }
+    if (sdStudentData.enrolledSubjects) enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
 
     Object.entries(enrollMap).forEach(([k,v]) => {
-        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:#f59e0b; font-size:12px;">[${k}]</b> <span style="font-size:13px; color:#475569;">${v}</span></div>`);
+        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${k}]</b> <span style="font-size:13px; color:#475569;">${v}</span></div>`);
     });
 
-    // 🚨 Implicit Core/MJD/TUTORIAL Subjects 
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
             if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
-                // Duplicate check
                 let isAlreadyEnrolled = finalSubjects.some(existing => existing.includes(sub.displayName));
                 if (!isAlreadyEnrolled) {
                     finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:#475569;">${sub.displayName}</span></div>`);
@@ -741,26 +755,20 @@ async function SD_BuildUI(specificDate = "All Time") {
     }
 }
 
-// 🚨 UPDATED FLUID WAVE CSS MATH
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
-
-    // CSS Wave heights mapped to ensure waves are always visible
-    // Circle: 105% is hidden, roughly -5% is full. We map 0-100 to 105-15.
-    let circleTop = 105 - (percentage * 0.9); 
-    // Row: We map 0-100 to 0-85% height
-    let rowPercent = percentage * 0.85;
+    let visualPercent = 10 + (percentage * 0.75); 
 
     let circleFill = document.getElementById("sdCircleWave");
     circleFill.style.setProperty('--wave-color', col);
-    circleFill.style.top = `${circleTop}%`; 
+    circleFill.style.top = `${105 - visualPercent}%`; 
     
     document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
 
     let rowFill = document.getElementById("sdWavyFill");
     rowFill.style.setProperty('--wave-color', col);
-    rowFill.style.setProperty('--wave-percent', `${rowPercent}%`);
+    rowFill.style.setProperty('--wave-percent', `${visualPercent}%`);
     document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
@@ -819,4 +827,177 @@ function SD_RenderMarksUI(examName) {
         let barHtml = m.max ? `<div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:var(--brand-green); width:${ratio*100}%;"></div></div>` : "";
         return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:#1e293b;">${m.obt}/${maxText} <span style="font-size:10px; color:#64748b;">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
+}
+
+
+// ==========================================
+// 🚨 NEW: BATCH MANAGER (100% C# TRANSLATION)
+// ==========================================
+let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
+function BCH_Init() {
+    bchLoaded = true;
+    let dropSem = document.getElementById("bchSemDrop"); dropSem.innerHTML = ""; let hasSems = false;
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0);
+        if (collegeSemesterType === "Odd" && isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
+        else if (collegeSemesterType === "Even" && !isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
+    }
+    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
+    
+    bchCurrentSem = dropSem.value;
+    document.getElementById("bchSemDrop").addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
+    document.getElementById("bchCatDrop").addEventListener("change", BCH_RefreshSubjects);
+    document.getElementById("bchSubDrop").addEventListener("change", BCH_FetchBatches);
+    document.getElementById("btnOpenBatchMove").addEventListener("click", BCH_OpenMoveModal);
+
+    if (bchSubjectsCache.length === 0) {
+        getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
+            snap.forEach(doc => {
+                let d = doc.data();
+                bchSubjectsCache.push({ id: doc.id, name: d.Name || d.name || "Unnamed", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "1").toString() });
+            });
+            BCH_RefreshCategories();
+        }).catch(e => console.error("Error fetching subjects for batches."));
+    } else { BCH_RefreshCategories(); }
+}
+
+function BCH_RefreshCategories() {
+    let types = new Set();
+    bchSubjectsCache.forEach(sub => { let sems = sub.semesters.split(',').map(s=>s.trim()); if (sems.includes(bchCurrentSem) && sub.type) types.add(sub.type.trim()); });
+    let catDrop = document.getElementById("bchCatDrop");
+    if (types.size === 0) catDrop.innerHTML = `<option value="">No Categories</option>`;
+    else {
+        let arr = Array.from(types).sort(); catDrop.innerHTML = `<option value="">Select Category</option>` + arr.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+    BCH_RefreshSubjects();
+}
+
+function BCH_RefreshSubjects() {
+    let cat = document.getElementById("bchCatDrop").value; let subDrop = document.getElementById("bchSubDrop");
+    if (!cat) { subDrop.innerHTML = `<option value="">Select Subject</option>`; BCH_ShowEmpty("Select a Category and Subject to view batches."); return; }
+    let subs = bchSubjectsCache.filter(s => s.semesters.split(',').map(x=>x.trim()).includes(bchCurrentSem) && s.type.trim() === cat);
+    if (subs.length === 0) { subDrop.innerHTML = `<option value="">No Subjects</option>`; BCH_ShowEmpty("No subjects found for this category."); } 
+    else { subDrop.innerHTML = `<option value="">Select Subject</option>` + subs.sort((a,b)=>a.name.localeCompare(b.name)).map(s => `<option value="${s.name}">${s.name}</option>`).join(''); BCH_ShowEmpty("Select a Subject to view batches."); }
+}
+
+function BCH_ShowEmpty(msg) { document.getElementById("bchListContainer").innerHTML = `<div class="no-data-text">${msg}</div>`; document.getElementById("btnOpenBatchMove").disabled = true; bchBatchesData = []; }
+
+async function BCH_FetchBatches() {
+    let sub = document.getElementById("bchSubDrop").value;
+    if (!sub) { BCH_ShowEmpty("Select a valid Subject to view batches."); return; }
+    BCH_ShowEmpty(`Loading batches for ${sub}...`);
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", bchCurrentSem), where("subjectName", "==", sub)));
+        if (snap.empty) { BCH_ShowEmpty(`No batches found for ${sub}.`); return; }
+        
+        let rawDocs = []; snap.forEach(doc => rawDocs.push({ id: doc.id, ...doc.data() }));
+        rawDocs.sort((a,b) => (a.batchName||"").localeCompare(b.batchName||""));
+        
+        let studentToBatchMap = {}; let needsRepair = false; let batchUpdates = {}; 
+        rawDocs.forEach(d => {
+            let sList = d.studentIDs || [];
+            sList.forEach(sid => {
+                if (studentToBatchMap[sid]) { needsRepair = true; let oldBatch = studentToBatchMap[sid]; if(!batchUpdates[oldBatch]) batchUpdates[oldBatch] = []; batchUpdates[oldBatch].push(sid); }
+                studentToBatchMap[sid] = d.id;
+            });
+        });
+        
+        if (needsRepair) {
+            const wb = writeBatch(db);
+            Object.keys(batchUpdates).forEach(bID => { wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", bID), { studentIDs: arrayRemove(...batchUpdates[bID]) }); });
+            await wb.commit(); BCH_FetchBatches(); return;
+        }
+        
+        bchBatchesData = rawDocs; await BCH_RenderGroups();
+    } catch(e) { BCH_ShowEmpty("Error loading batches."); }
+}
+
+async function BCH_RenderGroups() {
+    let container = document.getElementById("bchListContainer"); container.innerHTML = ""; document.getElementById("btnOpenBatchMove").disabled = true;
+    
+    let missingIDs = new Set();
+    bchBatchesData.forEach(b => { (b.studentIDs || []).forEach(sid => { if (!bchStudentRamCache[sid]) missingIDs.add(sid); }); });
+    
+    if (missingIDs.size > 0) {
+        let idsArray = Array.from(missingIDs);
+        for (let i = 0; i < idsArray.length; i += 30) {
+            let chunk = idsArray.slice(i, i + 30);
+            try {
+                const sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("__name__", "in", chunk)));
+                sSnap.forEach(doc => { let d = doc.data(); bchStudentRamCache[doc.id] = { name: d.Name || d.studentName || "Unknown", roll: d.RollNumber || d.rollNumber || "No Roll", dept: (d.Department || d.department || "Unknown Dept").replace("DEPT_", "") }; });
+            } catch(e) {}
+        }
+    }
+    
+    let html = "";
+    bchBatchesData.forEach((b, idx) => {
+        let tName = b.teacherName || "Unassigned"; let room = b.room || "TBD"; let sList = b.studentIDs || [];
+        let studentsHtml = "";
+        if (sList.length === 0) { studentsHtml = `<div style="padding:10px; text-align:center; color:#94a3b8; font-size:12px;">No students in this batch</div>`; } 
+        else {
+            sList.forEach(sid => {
+                let sInfo = bchStudentRamCache[sid] || { name: "Unknown", roll: "N/A", dept: "Unknown Dept" };
+                studentsHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);">
+                        <div>
+                            <div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div>
+                            <div style="font-size:11px; color:#64748b;">${sInfo.dept}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        
+        html += `
+        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('bchBody_${b.id}').classList.toggle('hidden-view')">
+                <div style="font-weight:bold; color:var(--text-green); font-size:14px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-green);">${sList.length} Students</span></div>
+                <div style="color:#64748b; font-size:12px;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div>
+            </div>
+            <div id="bchBody_${b.id}" style="padding:10px;">
+                ${studentsHtml}
+            </div>
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+window.BCH_OnCheckboxChange = () => { let anyChecked = document.querySelector('.bch-student-chk:checked') !== null; document.getElementById("btnOpenBatchMove").disabled = !anyChecked; };
+
+function BCH_OpenMoveModal() {
+    let chks = document.querySelectorAll('.bch-student-chk:checked'); if (chks.length === 0) return;
+    let sourceBatchID = chks[0].dataset.bid; 
+    let container = document.getElementById("moveBatchButtonsContainer"); container.innerHTML = "";
+    
+    bchBatchesData.forEach(b => {
+        let btn = document.createElement("button");
+        btn.style.cssText = "width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+        if (b.id === sourceBatchID) {
+            btn.style.background = "#f1f5f9"; btn.style.color = "#94a3b8"; btn.style.border = "1px solid #e2e8f0"; btn.disabled = true;
+            btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-ban"></i>`;
+        } else {
+            btn.style.background = "white"; btn.style.color = "var(--text-green)"; btn.style.border = "1px solid var(--brand-green)";
+            btn.innerHTML = `Move to ${b.batchName} <i class="fas fa-arrow-right"></i>`;
+            btn.onclick = () => BCH_ExecuteMove(sourceBatchID, b.id, Array.from(chks).filter(c => c.dataset.bid === sourceBatchID).map(c => c.dataset.sid));
+        }
+        container.appendChild(btn);
+    });
+    document.getElementById("moveBatchOverlay").classList.add("active");
+}
+
+async function BCH_ExecuteMove(sourceID, targetID, studentIDsArray) {
+    if (!studentIDsArray || studentIDsArray.length === 0) return;
+    document.getElementById("moveBatchOverlay").classList.remove("active");
+    BCH_ShowEmpty("Moving students...");
+    try {
+        const wb = writeBatch(db);
+        wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", sourceID), { studentIDs: arrayRemove(...studentIDsArray) });
+        wb.update(doc(db, "colleges", currentCollegeID, "subject_batches", targetID), { studentIDs: arrayUnion(...studentIDsArray) });
+        await wb.commit();
+        BCH_FetchBatches();
+        showRcToast(`Moved ${studentIDsArray.length} student(s) successfully!`);
+    } catch(e) { BCH_ShowEmpty("Error moving students."); }
 }
