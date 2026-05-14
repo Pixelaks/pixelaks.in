@@ -300,31 +300,44 @@ body {
 .tt-action-btn { background: #bbf7d0; color: #166534; border: 1px solid #86efac; padding: 10px 25px; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.2); }
 
 /* =========================================
-   🚨 ASSIGN PANEL DASHBOARD (DESKTOP MODAL)
+   🚨 ASSIGN PANEL DASHBOARD (COMPACT GRID)
    ========================================= */
-.asn-select-pill { background: #bbf7d0; color: #166534; border: 1px solid #86efac; padding: 10px 25px; border-radius: 30px; font-weight: 700; font-size: 15px; outline: none; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 15px rgba(74, 222, 128, 0.2); }
+.asn-select-pill { background: #bbf7d0; color: #166534; border: 1px solid #86efac; padding: 6px 20px; border-radius: 20px; font-weight: 700; font-size: 13px; outline: none; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 2px 8px rgba(74, 222, 128, 0.2); }
 .asn-days-container { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.asn-day-btn { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.asn-day-btn.active { background: #86efac; color: #166534; border-color: #4ade80; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3); transform: translateY(-2px); }
+.asn-day-btn { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 6px 15px; border-radius: 15px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.asn-day-btn.active { background: #86efac; color: #166534; border-color: #4ade80; box-shadow: 0 2px 8px rgba(74, 222, 128, 0.3); transform: translateY(-1px); }
 
 .asn-periods-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 15px;
     width: 100%;
 }
-.asn-period-title { text-align: center; font-weight: 800; color: #166534; font-size: 15px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
 
-.asn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-.asn-input { width: 100%; padding: 12px 15px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; color: #334155; outline: none; transition: border 0.2s; }
+.asn-card { 
+    width: 100%; 
+    background: rgba(240, 253, 244, 0.6); 
+    border: 1px solid #bbf7d0; 
+    border-radius: 12px; 
+    padding: 12px 15px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02); 
+    position: relative; 
+}
+.asn-card.split { border-color: #fde68a; background: rgba(255, 251, 235, 0.6); }
+
+.asn-period-title { text-align: center; font-weight: 800; color: #166534; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.asn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+.asn-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; color: #334155; outline: none; transition: border 0.2s; }
 .asn-input:focus { border-color: #4ade80; }
-.asn-input.select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 15px center; background-size: 1em; padding-right: 35px; }
-.asn-input:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
+.asn-input.select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 1em; padding-right: 25px; }
+.asn-input:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; border-color: #f1f5f9; }
 
-.asn-split-btn { width: 100%; background: #81c784; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 16px; font-family: 'Poppins', sans-serif; letter-spacing: 1px; cursor: pointer; transition: 0.2s; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
-.asn-split-btn:hover { background: #66bb6a; transform: scale(1.02); }
+.asn-split-btn { width: 100%; background: #86efac; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 14px; font-family: 'Poppins', sans-serif; cursor: pointer; transition: 0.2s; }
+.asn-split-btn:hover { background: #4ade80; }
 .asn-split-btn.del { background: #fca5a5; }
 .asn-split-btn.del:hover { background: #f87171; }
 
-.asn-save-btn { background: white; color: #4ade80; border: 2px solid #4ade80; padding: 12px 50px; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-.asn-save-btn:hover { background: #4ade80; color: white; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4); }
+.asn-save-btn { background: white; color: #4ade80; border: 2px solid #4ade80; padding: 8px 25px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.asn-save-btn:hover { background: #4ade80; color: white; }
