@@ -309,9 +309,10 @@ body {
 
 .asn-periods-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px;
     width: 100%;
+    align-items: start; /* 🚨 FIX: This prevents tall columns from stretching the others! */
 }
 
 /* The new outer box grouping a Period together */
