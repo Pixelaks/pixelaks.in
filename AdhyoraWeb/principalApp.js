@@ -3187,19 +3187,28 @@ function updateNotificationToggleUI() {
 // 2. Request Permissions & Subscribe to Principal Topics
 async function requestPushPermissions() {
     try {
+        console.log("🚀 STEP 1: Requesting Browser Permission...");
         const permission = await Notification.requestPermission();
+        console.log("👉 Permission Status:", permission);
+
         if (permission === 'granted') {
-            const swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            console.log("🚀 STEP 2: Registering Service Worker...");
+            
+            // 🚨 REVERTED TO THE EXACT PATH THAT WORKED FOR STUDENTS
+            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            console.log("👉 Service Worker Registered Successfully!", swRegistration);
+
+            console.log("🚀 STEP 3: Asking Firebase for Token...");
             const currentToken = await getToken(messaging, { 
-                // 🚨 REPLACE WITH YOUR ACTUAL VAPID KEY
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
                 serviceWorkerRegistration: swRegistration 
             });
 
             if (currentToken) {
+                console.log("👉 TOKEN GENERATED:", currentToken);
                 myCurrentPushToken = currentToken; 
                 
-                // Fetch Principal Data to manage 3-device limit
+                console.log("🚀 STEP 4: Saving Token to Principal's Firestore Profile...");
                 const principalRef = doc(db, "colleges", currentCollegeID, "principals", currentUserID);
                 const pSnap = await getDoc(principalRef);
                 let activeTokens = [];
@@ -3208,20 +3217,17 @@ async function requestPushPermissions() {
                     activeTokens = pSnap.data().webFcmTokens;
                 }
 
-                // Remove duplicate, add new
                 activeTokens = activeTokens.filter(t => t !== currentToken);
                 activeTokens.push(currentToken);
-
-                // Cap at 3 devices
                 if (activeTokens.length > 3) activeTokens = activeTokens.slice(activeTokens.length - 3);
 
                 await updateDoc(principalRef, { webFcmTokens: activeTokens });
+                console.log("👉 FIRESTORE UPDATED!");
 
-                // Subscribe via Google Apps Script Loophole
+                console.log("🚀 STEP 5: Subscribing to Apps Script Topics...");
                 const getSafe = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
                 let safeCol = getSafe(currentCollegeID);
                 
-                // Principals only need these 3 topics!
                 let topicsToJoin = [
                     `${safeCol}_ALL`, 
                     `${safeCol}_PRINCIPAL`, 
@@ -3234,15 +3240,19 @@ async function requestPushPermissions() {
                         action: "subscribe", token: currentToken, topics: topicsToJoin
                     })
                 }).then(() => {
+                    console.log("✅ ALL STEPS COMPLETE!");
                     updateNotificationToggleUI();
                     showRcToast("✅ Notifications Enabled!");
                 });
+            } else {
+                console.error("❌ Token generation failed: Firebase returned null.");
             }
         } else {
-            alert("Notifications blocked by browser.");
+            alert("Notifications are blocked. Please click the Lock icon next to your URL bar and allow notifications.");
         }
     } catch (error) {
-        console.error('Error getting push token:', error);
+        console.error('🔥 CRITICAL ERROR IN PUSH SETUP:', error);
+        alert("Push Setup Failed: " + error.message);
     }
 }
 
