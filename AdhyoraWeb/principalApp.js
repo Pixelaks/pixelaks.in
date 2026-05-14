@@ -493,9 +493,6 @@ window.TL_ToggleHOD = async (tID, deptID, isHod) => {
     } catch(e) { showRcToast("Error updating HOD status."); }
 };
 
-// ==========================================
-// TEACHER DASHBOARD
-// ==========================================
 let tdCurrentTeacherID = ""; let tdAssignedSubjectsCache = [];
 window.TL_OpenDashboard = (tID) => {
     let teacher = cachedTeachers.find(t => t.id === tID); if (!teacher) return;
@@ -558,6 +555,7 @@ function TD_DrawSubjectRows(hoursMap) {
 document.getElementById("tdDateFilter").addEventListener("change", (e) => TD_FetchHours(e.target.value));
 document.getElementById("tdBtnAllTime").addEventListener("click", () => { document.getElementById("tdDateFilter").value = ""; TD_FetchHours("All Time"); });
 
+
 // ==========================================
 // STUDENT LIST MANAGER
 // ==========================================
@@ -611,13 +609,7 @@ document.getElementById("btnConfirmSA").addEventListener("click", async () => {
 // ==========================================
 // STUDENT DASHBOARD
 // ==========================================
-let sdCurrentStudentID = "";
-let sdStudentData = null;
-let sdSemKeys = [];
-let sdCurrentSemIndex = 0;
-let sdWorkingDays = new Set();
-let sdSemesterRanges = {};
-
+let sdCurrentStudentID = ""; let sdStudentData = null; let sdSemKeys = []; let sdCurrentSemIndex = 0; let sdWorkingDays = new Set(); let sdSemesterRanges = {};
 let sdCachedGlobalSubjects = [];
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
@@ -625,22 +617,13 @@ async function fetchGlobalSubjects() {
         const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         snap.forEach(doc => {
             let d = doc.data();
-            sdCachedGlobalSubjects.push({
-                id: doc.id,
-                cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''),
-                cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""),
-                semesterArray: (d.Semester || d.semester || "").toString(),
-                displayName: d.Name || d.name || "Unnamed",
-                rawType: d.Type || d.type || ""
-            });
+            sdCachedGlobalSubjects.push({ id: doc.id, cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''), cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""), semesterArray: (d.Semester || d.semester || "").toString(), displayName: d.Name || d.name || "Unnamed", rawType: d.Type || d.type || "" });
         });
     } catch(e) {}
 }
 
 window.SL_OpenDashboard = async (sID) => {
-    sdCurrentStudentID = sID;
-    switchView(views.studentDashboard);
-    
+    sdCurrentStudentID = sID; switchView(views.studentDashboard);
     document.getElementById("sdNameText").innerText = "Loading..."; document.getElementById("sdRollText").innerText = ""; document.getElementById("sdStatusBadge").innerText = "..."; document.getElementById("sdSemesterTitle").innerText = "Loading...";
     SD_UpdateWaveUI(0); ["sdStatAtt", "sdStatAbs", "sdStatTot", "sdStatPAtt", "sdStatPAbs", "sdStatPTot"].forEach(id => document.getElementById(id).innerText = "0");
     document.getElementById("sdSubjectList").innerHTML = ""; document.getElementById("sdEnrolledList").innerHTML = "<i>Loading subjects...</i>";
@@ -654,7 +637,6 @@ window.SL_OpenDashboard = async (sID) => {
             if(sDoc.exists()) { let d = sDoc.data(); if(d.oddSemester?.startDate) sdSemesterRanges.Odd = { start: new Date(d.oddSemester.startDate), end: new Date(d.oddSemester.endDate) }; if(d.evenSemester?.startDate) sdSemesterRanges.Even = { start: new Date(d.evenSemester.startDate), end: new Date(d.evenSemester.endDate) }; }
         } catch(e) {}
     }
-
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sID));
         if(snap.exists()) {
@@ -666,8 +648,7 @@ window.SL_OpenDashboard = async (sID) => {
             let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, ''); let studentYear = parseInt(yearStr) || 1; let currentMonth = new Date().getMonth() + 1; let isEvenSem = (currentMonth >= 1 && currentMonth <= 5); let currentSemNum = (studentYear * 2) - (isEvenSem ? 0 : 1);
             sdCurrentSemIndex = Math.max(0, Math.min(7, currentSemNum - 1));
             
-            document.getElementById("sdDateFilter").value = "";
-            document.getElementById("sdBtnAllTime").click(); 
+            document.getElementById("sdDateFilter").value = ""; document.getElementById("sdBtnAllTime").click(); 
         }
     } catch(e) { }
 };
@@ -688,10 +669,7 @@ async function SD_BuildUI(specificDate = "All Time") {
 
     let enrollMap = {};
     if (sdStudentData.enrolledSubjects) enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
-
-    Object.entries(enrollMap).forEach(([k,v]) => {
-        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${k}]</b> <span style="font-size:13px; color:#475569;">${v}</span></div>`);
-    });
+    Object.entries(enrollMap).forEach(([k,v]) => { finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:#f59e0b; font-size:12px;">[${k}]</b> <span style="font-size:13px; color:#475569;">${v}</span></div>`); });
 
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
@@ -699,9 +677,7 @@ async function SD_BuildUI(specificDate = "All Time") {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
             if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
                 let isAlreadyEnrolled = finalSubjects.some(existing => existing.includes(sub.displayName));
-                if (!isAlreadyEnrolled) {
-                    finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:#475569;">${sub.displayName}</span></div>`);
-                }
+                if (!isAlreadyEnrolled) finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:#475569;">${sub.displayName}</span></div>`);
             }
         }
     });
@@ -709,15 +685,8 @@ async function SD_BuildUI(specificDate = "All Time") {
     document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
     SD_FetchMarks(semDisplay);
 
-    let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
-    let subjectAtt = {}; 
-
-    let statsObj = null;
-    if (sdStudentData.attendance_stats) {
-        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
-        if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
-    }
-
+    let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0; let subjectAtt = {}; let statsObj = null;
+    if (sdStudentData.attendance_stats) { let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase()); if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey]; }
     if(statsObj) {
         Object.entries(statsObj).forEach(([subName, s]) => {
             if(subName === "Strict_Global") { strictPresent = s.present || 0; strictTotal = s.total || 0; }
@@ -730,8 +699,7 @@ async function SD_BuildUI(specificDate = "All Time") {
         });
     }
 
-    let projectedAtt = strictTotal > 0 ? strictPresent : simpleAtt;
-    let projectedTot = strictTotal > 0 ? strictTotal : simpleTotal;
+    let projectedAtt = strictTotal > 0 ? strictPresent : simpleAtt; let projectedTot = strictTotal > 0 ? strictTotal : simpleTotal;
     let percent = projectedTot > 0 ? (projectedAtt / projectedTot) * 100 : 0;
     
     SD_UpdateWaveUI(percent);
@@ -741,34 +709,20 @@ async function SD_BuildUI(specificDate = "All Time") {
     if(specificDate === "All Time") {
         document.getElementById("sdNoDataText").style.display = Object.keys(subjectAtt).length === 0 ? "block" : "none";
         document.getElementById("sdNoDataText").innerText = "No attendance data for this semester.";
-        
         document.getElementById("sdSubjectList").innerHTML = Object.entries(subjectAtt).map(([name, data]) => {
             let p = data.p, t = data.t, per = t>0 ? (p/t)*100 : 0; let col = per >= 75 ? "#4CAF50" : (per >= 60 ? "#FF9800" : "#F44336");
-            return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${name}</span> <span style="font-size:12px; font-weight:bold; color:${col};">${per.toFixed(0)}% (${p}/${t})</span></div>
-                <div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${per}%;"></div></div>
-            </div>`;
+            return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${name}</span> <span style="font-size:12px; font-weight:bold; color:${col};">${per.toFixed(0)}% (${p}/${t})</span></div><div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${per}%;"></div></div></div>`;
         }).join('');
-    } else {
-        SD_FetchDailyAttendance(specificDate, semDisplay);
-    }
+    } else SD_FetchDailyAttendance(specificDate, semDisplay);
 }
 
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
-    let txt = percentage.toFixed(2) + "%";
-    let visualPercent = 10 + (percentage * 0.75); 
+    let txt = percentage.toFixed(2) + "%"; let visualPercent = percentage * 0.85; 
 
-    let circleFill = document.getElementById("sdCircleWave");
-    circleFill.style.setProperty('--wave-color', col);
-    circleFill.style.top = `${105 - visualPercent}%`; 
-    
+    let circleFill = document.getElementById("sdCircleWave"); circleFill.style.setProperty('--wave-color', col); circleFill.style.top = `${105 - visualPercent}%`; 
     document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
-
-    let rowFill = document.getElementById("sdWavyFill");
-    rowFill.style.setProperty('--wave-color', col);
-    rowFill.style.setProperty('--wave-percent', `${visualPercent}%`);
-    document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
+    let rowFill = document.getElementById("sdWavyFill"); rowFill.style.setProperty('--wave-color', col); rowFill.style.setProperty('--wave-percent', `${visualPercent}%`); document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
 document.getElementById("sdBtnAllTime").addEventListener("click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
@@ -778,24 +732,11 @@ async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
     const listEl = document.getElementById("sdSubjectList"); listEl.innerHTML = "";
     try {
         const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", targetDate), where("semester", "==", dbSemesterFormat)));
-        if (snap.empty) {
-            document.getElementById("sdNoDataText").style.display = "block"; document.getElementById("sdNoDataText").innerText = "No data available on this date.";
-            document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0"; return;
-        }
+        if (snap.empty) { document.getElementById("sdNoDataText").style.display = "block"; document.getElementById("sdNoDataText").innerText = "No data available on this date."; document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0"; return; }
         document.getElementById("sdNoDataText").style.display = "none";
         let dayPres = 0, dayAbs = 0; let html = "";
         snap.forEach(doc => {
-            let d = doc.data();
-            Object.keys(d).forEach(k => {
-                if (k.startsWith("period_")) {
-                    let pData = d[k];
-                    if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) {
-                        let isPres = pData.attendance[sdCurrentStudentID]; if(isPres) dayPres++; else dayAbs++;
-                        let subName = pData.subject || "Unknown Subject"; let col = isPres ? "#4CAF50" : "#F44336";
-                        html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:bold; font-size:13px; color:#334155;">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span></div>`;
-                    }
-                }
-            });
+            let d = doc.data(); Object.keys(d).forEach(k => { if (k.startsWith("period_")) { let pData = d[k]; if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) { let isPres = pData.attendance[sdCurrentStudentID]; if(isPres) dayPres++; else dayAbs++; let subName = pData.subject || "Unknown Subject"; let col = isPres ? "#4CAF50" : "#F44336"; html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:bold; font-size:13px; color:#334155;">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span></div>`; } } });
         });
         document.getElementById("sdStatPAtt").innerText = dayPres; document.getElementById("sdStatPAbs").innerText = dayAbs; document.getElementById("sdStatPTot").innerText = dayPres + dayAbs; listEl.innerHTML = html;
     } catch(e) { }
@@ -807,17 +748,12 @@ async function SD_FetchMarks(semDisplay) {
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sdCurrentStudentID, "nep_marks", semDisplay));
         if (snap.exists()) {
-            let data = snap.data();
-            Object.entries(data).forEach(([subName, examsMap]) => {
-                Object.entries(examsMap).forEach(([examName, stats]) => { if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); });
-            });
+            let data = snap.data(); Object.entries(data).forEach(([subName, examsMap]) => { Object.entries(examsMap).forEach(([examName, stats]) => { if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); }); });
             let exams = Object.keys(sdCachedMarks).sort();
-            if(exams.length === 0) { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; } 
-            else { drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); SD_RenderMarksUI(exams[0]); }
+            if(exams.length === 0) { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; } else { drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); SD_RenderMarksUI(exams[0]); }
         } else { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; }
     } catch(e) { drop.innerHTML = "<option>Error</option>"; }
 }
-
 document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
 function SD_RenderMarksUI(examName) {
     let marks = sdCachedMarks[examName]; if(!marks) return;
@@ -827,6 +763,7 @@ function SD_RenderMarksUI(examName) {
         return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:#1e293b;">${m.obt}/${maxText} <span style="font-size:10px; color:#64748b;">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
 }
+
 
 // ==========================================
 // BATCH MANAGER
@@ -987,7 +924,7 @@ function TT_Init() {
     document.getElementById("ttBtnEdit").addEventListener("click", () => { ttIsEditMode = true; TT_ApplyPhase(); });
     document.getElementById("ttBtnSave").addEventListener("click", TT_SaveAll);
 
-    // Auto-select today!
+    // Auto-select today
     let dayMap = { 0: "Monday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Monday" };
     let today = new Date().getDay();
     ttSelectedDay = dayMap[today];
@@ -1078,6 +1015,7 @@ async function TT_FetchAllocations() {
     ttActiveRows = newRows; TT_RenderGrid();
 }
 
+// 🚨 THE NEW FLEX TIMELINE RENDERER
 function TT_RenderGrid() {
     let html = "";
     document.getElementById("ttBtnEdit").style.display = ttIsEditMode ? "none" : "block";
@@ -1085,36 +1023,74 @@ function TT_RenderGrid() {
 
     let catOptions = ttGlobalCategories.map(c => `<option value="${c}">${c}</option>`).join('');
 
-    ttActiveRows.forEach((row, idx) => {
-        let subOptions = `<option value="Select Subject">Select Subject</option>`;
-        if (ttSubjectsByCategory[row.cat]) subOptions += ttSubjectsByCategory[row.cat].map(s => `<option value="${s}">${s}</option>`).join('');
-        else if (row.cat.toLowerCase() === "tutorial") subOptions = `<option value="Tutorial">Tutorial</option>`;
+    // Group rows by period to attach the node cleanly!
+    for (let p = 1; p <= 6; p++) {
+        let rowsForPeriod = ttActiveRows.filter(r => r.pNum === p);
+        if (rowsForPeriod.length === 0) continue;
 
-        let periodHtml = row.isSplitRow ? `P${row.pNum}<br><span style="font-size:10px; color:#ef4444;">Batch ${row.sIdx + 1}</span>` : `P${row.pNum}`;
-        let bgStyle = row.isSplitRow ? "border-left: 4px solid #ef4444; background: #fff5f5; margin-left:20px;" : "border-left: 4px solid var(--brand-green); background: white;";
-        
-        let catDisabled = (!ttIsEditMode || row.isSplitRow) ? "disabled" : "";
-        let subDisabled = (ttIsEditMode || row.isSplitRow) ? "disabled" : "";
+        let cardsHtml = rowsForPeriod.map((row) => {
+            let idx = ttActiveRows.indexOf(row);
+            let subOptions = `<option value="Select Subject">Select Subject</option>`;
+            if (ttSubjectsByCategory[row.cat]) subOptions += ttSubjectsByCategory[row.cat].map(s => `<option value="${s}">${s}</option>`).join('');
+            else if (row.cat.toLowerCase() === "tutorial") subOptions = `<option value="Tutorial">Tutorial</option>`;
 
-        let btnHtml = "";
-        if (row.isSplitRow) btnHtml = `<button class="action-icon-btn" style="background:#fecaca; color:#b91c1c;" onclick="TT_DeleteSplit(${idx})"><i class="fas fa-trash"></i></button>`;
-        else btnHtml = `<button class="action-icon-btn" style="background:var(--text-light-green); color:white;" onclick="TT_AddSplit(${idx})"><i class="fas fa-plus"></i></button>`;
+            let periodTitle = row.isSplitRow ? `Period ${row.pNum} <span style="font-size:10px; color:#ef4444;">(Batch ${row.sIdx + 1})</span>` : `Period ${row.pNum}`;
+            let bgClass = row.isSplitRow ? "split-card" : "";
+            
+            let catDisabled = (!ttIsEditMode || row.isSplitRow) ? "disabled" : "";
+            let subDisabled = (ttIsEditMode || row.isSplitRow) ? "disabled" : "";
+
+            let btnHtml = "";
+            let isAllowedToSplit = row.cat && row.cat !== "Select Category" && row.cat !== "Break" && row.cat !== "Lunch";
+            
+            // 🚨 THE FIX: Match the C# Logic for Splitting/Deleting!
+            if (!ttIsEditMode) {
+                if (row.isSplitRow) {
+                    btnHtml = `<button class="split-btn delete-split" onclick="TT_DeleteSplit(${idx})"><i class="fas fa-trash"></i> Remove Batch</button>`;
+                } else if (isAllowedToSplit) {
+                    btnHtml = `<button class="split-btn add-split" onclick="TT_AddSplit(${idx})"><i class="fas fa-code-branch"></i> Split Class</button>`;
+                }
+            }
+
+            // 🚨 HEATMAP LOGIC: Check attendance completion (Simple simulation for now, white background standard)
+            let cardBgStyle = "background: white;";
+
+            return `
+            <div class="tt-card-edit ${bgClass}" id="row_${idx}" style="${cardBgStyle}">
+                <div class="tt-card-header">${periodTitle}</div>
+                <div class="tt-card-grid">
+                    <select class="input-field" ${catDisabled} onchange="TT_UpdateCat(${idx}, this.value)">
+                        ${catOptions.replace(`value="${row.cat}"`, `value="${row.cat}" selected`)}
+                    </select>
+                    <select class="input-field" ${subDisabled} onchange="TT_UpdateSub(${idx}, this.value)">
+                        ${subOptions.replace(`value="${row.sub}"`, `value="${row.sub}" selected`)}
+                    </select>
+                    <select class="input-field" disabled>
+                        <option>${row.teach}</option>
+                    </select>
+                    <input type="text" class="input-field" placeholder="Enter room..." value="${row.room || ""}" disabled>
+                </div>
+                ${btnHtml}
+            </div>`;
+        }).join('');
+
+        // The Connecting Timeline Line (Don't draw a line after Period 6)
+        let lineHtml = (p < 6) ? `<div id="line_p${p}" style="flex: 1; width: 4px; background: #e2e8f0; margin-top: 5px; margin-bottom: 5px; border-radius: 2px; transition: 0.3s;"></div>` : ``;
 
         html += `
-        <div class="data-card" style="${bgStyle} display:flex; gap:15px; align-items:center; padding:15px;">
-            <div style="font-weight:bold; font-size:16px; color:var(--text-green); min-width:40px; text-align:center;">${periodHtml}</div>
-            <select class="input-field" style="flex:1; padding:8px; border-radius:8px;" ${catDisabled} onchange="TT_UpdateCat(${idx}, this.value)">
-                ${catOptions.replace(`value="${row.cat}"`, `value="${row.cat}" selected`)}
-            </select>
-            <select class="input-field" style="flex:1.5; padding:8px; border-radius:8px;" ${subDisabled} onchange="TT_UpdateSub(${idx}, this.value)">
-                ${subOptions.replace(`value="${row.sub}"`, `value="${row.sub}" selected`)}
-            </select>
-            <div style="flex:1.5; font-size:12px; font-weight:bold; color:#64748b; background:#f1f5f9; padding:8px; border-radius:8px; text-align:center;">${row.teach}</div>
-            <div style="flex:0.5; font-size:12px; font-weight:bold; color:#64748b; background:#f1f5f9; padding:8px; border-radius:8px; text-align:center;">${row.room || "TBD"}</div>
-            ${!ttIsEditMode ? btnHtml : ''}
+        <div style="display: flex; gap: 15px; position: relative;">
+            <div style="display: flex; flex-direction: column; align-items: center; width: 30px;">
+                <div class="tt-node" id="node_p${p}">${p}</div>
+                ${lineHtml}
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                ${cardsHtml}
+            </div>
         </div>`;
-    });
+    }
+
     document.getElementById("ttListContainer").innerHTML = html;
+    updateTimelineVisuals(); // Instantly update colors
 }
 
 window.TT_UpdateCat = (idx, val) => { ttActiveRows[idx].cat = val; ttActiveRows[idx].sub = "Select Subject"; TT_RenderGrid(); };
@@ -1129,27 +1105,100 @@ window.TT_UpdateSub = (idx, val) => {
     });
 };
 
+// 🚨 SMART SPLIT (Catches VAC!)
 window.TT_AddSplit = (idx) => {
-    let pNum = ttActiveRows[idx].pNum;
-    let splits = ttActiveRows.filter(r => r.pNum === pNum && r.isSplitRow);
-    let newSIdx = splits.length + 1;
-    ttActiveRows.splice(idx + newSIdx, 0, { pNum: pNum, sIdx: newSIdx, isSplit: true, cat: ttActiveRows[idx].cat, sub: ttActiveRows[idx].sub, teach: "Waiting for HOD", room: "TBD" });
-    TT_RenderGrid();
+    let row = ttActiveRows[idx];
+    if (row.sub === "Select Subject" || !row.sub) { showRcToast("Select a Subject before splitting!"); return; }
+    
+    let cleanSubject = row.sub.toUpperCase().replace(/\s/g, '');
+    let cleanCategory = row.cat.toUpperCase().replace(/\s/g, '');
+    
+    if (cleanSubject.includes("VAC") || cleanCategory.includes("VAC")) {
+        TT_OpenDepartmentSplit(row, false);
+    } else {
+        let pNum = row.pNum;
+        let splits = ttActiveRows.filter(r => r.pNum === pNum && r.isSplitRow);
+        let newSIdx = splits.length + 1;
+        
+        // Insert after the last existing split
+        let lastIdx = ttActiveRows.map((r, i) => r.pNum === pNum ? i : -1).reduce((a,b) => Math.max(a,b));
+        ttActiveRows.splice(lastIdx + 1, 0, { pNum: pNum, sIdx: newSIdx, isSplit: true, cat: row.cat, sub: row.sub, teach: "Waiting for HOD", room: "TBD" });
+        TT_RenderGrid();
+        showRcToast(`Divided into ${splits.length + 2} batches!`);
+    }
 };
 
 window.TT_DeleteSplit = (idx) => {
-    let target = ttActiveRows[idx];
-    ttActiveRows.splice(idx, 1);
-    let remaining = ttActiveRows.filter(r => r.pNum === target.pNum && r.isSplitRow);
-    remaining.forEach((r, i) => r.sIdx = i + 1);
-    TT_RenderGrid();
+    let row = ttActiveRows[idx];
+    let cleanSubject = row.sub.toUpperCase().replace(/\s/g, '');
+    let cleanCategory = row.cat.toUpperCase().replace(/\s/g, '');
+    
+    if (cleanSubject.includes("VAC") || cleanCategory.includes("VAC")) {
+        TT_OpenDepartmentSplit(row, true);
+    } else {
+        ttActiveRows.splice(idx, 1);
+        let remaining = ttActiveRows.filter(r => r.pNum === row.pNum && r.isSplitRow);
+        remaining.forEach((r, i) => r.sIdx = i + 1);
+        TT_RenderGrid();
+    }
 };
+
+let ttPendingSplitRow = null;
+window.TT_OpenDepartmentSplit = async (row, isDeleting) => {
+    ttPendingSplitRow = row;
+    let yearStr = Math.ceil(parseInt(ttCurrentSem) / 2).toString();
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
+    
+    let uniqueDepts = new Set();
+    snap.forEach(doc => {
+        let d = doc.data();
+        let isEnrolled = false;
+        if (d.enrolledSubjects && d.enrolledSubjects[`Semester_${ttCurrentSem}`]) {
+            Object.values(d.enrolledSubjects[`Semester_${ttCurrentSem}`]).forEach(v => { if (v.trim() === row.sub.trim()) isEnrolled = true; });
+        }
+        if (isEnrolled) { let dept = d.Department || d.department || "Unknown"; if(dept) uniqueDepts.add(dept.trim()); }
+    });
+    
+    if (uniqueDepts.size === 0) { showRcToast("No students enrolled in this subject."); return; }
+    
+    document.getElementById("deptSplitOverlay").classList.add("active");
+    
+    let existingSplits = ttActiveRows.filter(r => r.pNum === row.pNum && r.isSplitRow).length;
+    let targetCount = existingSplits > 0 ? existingSplits + 1 : 2;
+    if(isDeleting && targetCount > 1) targetCount--;
+    
+    let drop = document.getElementById("dsBatchCountDrop");
+    drop.innerHTML = `<option value="1">1 Batch (Unified)</option>` + [2,3,4,5,6].map(i => `<option value="${i}">${i} Batches</option>`).join('');
+    drop.value = targetCount;
+    
+    TT_RenderDeptRows(Array.from(uniqueDepts), targetCount);
+    drop.onchange = (e) => TT_RenderDeptRows(Array.from(uniqueDepts), parseInt(e.target.value));
+};
+
+window.TT_RenderDeptRows = (depts, count) => {
+    let container = document.getElementById("dsRowsContainer"); let html = "";
+    let opts = count === 1 ? `<option>Unified Class</option>` : Array.from({length: count}, (_,i) => `<option value="${i+1}">Batch ${i+1}</option>`).join('') + `<option value="0">Exclude</option>`;
+    depts.forEach(d => { html += `<div style="background:#f8fafc; padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${d}</span><select class="input-field ds-dept-sel" data-dept="${d}" style="width:120px; padding:6px; font-size:12px; border-radius:6px;" ${count===1?'disabled':''}>${opts}</select></div>`; });
+    container.innerHTML = html;
+};
+
+document.getElementById("btnConfirmDeptSplit").addEventListener("click", () => {
+    document.getElementById("deptSplitOverlay").classList.remove("active");
+    let count = parseInt(document.getElementById("dsBatchCountDrop").value);
+    
+    ttActiveRows = ttActiveRows.filter(r => !(r.pNum === ttPendingSplitRow.pNum && r.isSplitRow));
+    
+    if (count > 1) {
+        let lastIdx = ttActiveRows.map((r, i) => r.pNum === ttPendingSplitRow.pNum ? i : -1).reduce((a,b) => Math.max(a,b));
+        for(let i=1; i<count; i++) { ttActiveRows.splice(lastIdx + i, 0, { pNum: ttPendingSplitRow.pNum, sIdx: i, isSplit: true, cat: ttPendingSplitRow.cat, sub: ttPendingSplitRow.sub, teach: "Waiting for HOD", room: "TBD" }); }
+    }
+    TT_RenderGrid(); showRcToast("Batches Updated!");
+});
 
 function TT_ApplyPhase() { TT_RenderGrid(); }
 
 async function TT_SaveAll() {
     if (ttIsEditMode) {
-        // Save Structure
         document.getElementById("ttBtnSave").innerText = "Saving...";
         let newSlots = {}; ttActiveRows.filter(r => !r.isSplitRow).forEach(r => newSlots[`P${r.pNum}`] = r.cat);
         try {
@@ -1157,23 +1206,28 @@ async function TT_SaveAll() {
             ttIsEditMode = false; document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; TT_RenderGrid(); showRcToast("Categories Saved!");
         } catch(e) { showRcToast("Save Failed"); }
     } else {
-        // Save Allocations
         document.getElementById("ttBtnSave").innerText = "Saving...";
         let wb = writeBatch(db);
-        
-        // 1. Delete Old
         const oldSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", ttCurrentSem), where("day", "==", ttSelectedDay), where("departmentID", "==", "DEPT_General")));
         oldSnap.forEach(d => wb.delete(d.ref));
 
-        // 2. Conflict Check & Save New
+        // 🚨 PRE-SAVE CONFLICT CHECKER
         let teachInPeriod = {};
         for(let r of ttActiveRows) {
             if(r.sub === "Select Subject" || !r.sub) continue;
             if(r.teach !== "Unassigned" && !r.teach.includes("Waiting")) {
                 if(!teachInPeriod[r.pNum]) teachInPeriod[r.pNum] = {};
                 if(teachInPeriod[r.pNum][r.teach]) {
-                    if(!r.cat.toUpperCase().includes("VAC3")) { showRcToast(`Conflict: ${r.teach} in P${r.pNum}`); document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; return; }
-                } else teachInPeriod[r.pNum][r.teach] = r.sub;
+                    // Only VAC3 is allowed to double-book
+                    let isVac3 = r.cat.toUpperCase().includes("VAC3") || r.sub.toUpperCase().includes("VAC3");
+                    if(!isVac3 || teachInPeriod[r.pNum][r.teach] !== r.sub) { 
+                        showRcToast(`Conflict: ${r.teach} in P${r.pNum}`); 
+                        document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; 
+                        return; 
+                    }
+                } else {
+                    teachInPeriod[r.pNum][r.teach] = r.sub;
+                }
             }
 
             let safeSubj = r.sub.replace(" ", "").replace("/", "");
@@ -1188,3 +1242,32 @@ async function TT_SaveAll() {
         document.getElementById("ttBtnSave").innerHTML = `<i class="fas fa-save"></i> Save All`; showRcToast("Timetable Saved!");
     }
 }
+
+// 🚨 LIVE TIMELINE VISUAL UPDATER
+function updateTimelineVisuals() {
+    if(document.getElementById("timetableView").classList.contains("hidden-view")) return;
+    let now = new Date(); let t = now.getHours() + (now.getMinutes() / 60);
+    let endTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
+    
+    for (let p = 1; p <= 6; p++) {
+        let node = document.getElementById(`node_p${p}`);
+        let line = document.getElementById(`line_p${p}`);
+        if(!node) continue;
+        
+        let endTime = endTimes[p-1];
+        let startTime = endTime - 1.0;
+        if (p === 4) startTime = 13.5; 
+        
+        if (t >= endTime) {
+            node.className = "tt-node completed";
+            if(line) line.style.background = "#94a3b8"; 
+        } else if (t >= startTime && t < endTime) {
+            node.className = "tt-node active";
+            if(line) line.style.background = "var(--brand-green)"; 
+        } else {
+            node.className = "tt-node"; 
+            if(line) line.style.background = "#e2e8f0"; 
+        }
+    }
+}
+setInterval(updateTimelineVisuals, 60000); // Check every minute
