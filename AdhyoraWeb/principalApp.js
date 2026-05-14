@@ -3,7 +3,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 🚨 PASTE YOUR REAL CONFIG HERE 🚨
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
   authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -23,22 +22,12 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4c
 let myRealName = "Principal"; 
 
 const el = {
-    settingsOverlay: document.getElementById("settingsOverlay"),
-    btnSettings: document.getElementById("btnSettings"),
-    closeSettingsBtn: document.getElementById("closeSettingsBtn"),
-    principalName: document.getElementById("principalNameText"),
-    principalEmail: document.getElementById("principalEmailText"),
-    versionText: document.getElementById("versionText"),
-    btnContactUs: document.getElementById("btnContactUs"),
-    btnWebsite: document.getElementById("btnWebsite"),
-    btnPrivacy: document.getElementById("btnPrivacy"),
-    btnTerms: document.getElementById("btnTerms"),
-    btnSignOut: document.getElementById("btnSignOut")
+    settingsOverlay: document.getElementById("settingsOverlay"), btnSettings: document.getElementById("btnSettings"), closeSettingsBtn: document.getElementById("closeSettingsBtn"),
+    principalName: document.getElementById("principalNameText"), principalEmail: document.getElementById("principalEmailText"), versionText: document.getElementById("versionText"),
+    btnContactUs: document.getElementById("btnContactUs"), btnWebsite: document.getElementById("btnWebsite"), btnPrivacy: document.getElementById("btnPrivacy"),
+    btnTerms: document.getElementById("btnTerms"), btnSignOut: document.getElementById("btnSignOut")
 };
 
-// ==========================================
-// INITIALIZATION
-// ==========================================
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
@@ -55,14 +44,12 @@ async function fetchPrincipalProfile() {
     try {
         const docSnap = await getDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID));
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            myRealName = data.name || "Principal";
-            el.principalName.innerText = myRealName;
-            el.principalEmail.innerText = data.email || "No Email Provided";
+            const data = docSnap.data(); myRealName = data.name || "Principal";
+            el.principalName.innerText = myRealName; el.principalEmail.innerText = data.email || "No Email Provided";
         } else {
             el.principalName.innerText = "Profile Not Found"; el.principalEmail.innerText = "";
         }
-    } catch (e) { el.principalName.innerText = "Connection Error"; el.principalEmail.innerText = ""; }
+    } catch (e) {}
 }
 
 function handleContactUs() {
@@ -88,15 +75,10 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
 // VIEW SWITCHER LOGIC
 // ==========================================
 const views = {
-    welcome: document.getElementById("welcomeView"),
-    roomcode: document.getElementById("roomcodeView"),
-    teacherList: document.getElementById("teacherListView"),
-    teacherDashboard: document.getElementById("teacherDashboardView"),
-    studentList: document.getElementById("studentListView"),
-    studentDashboard: document.getElementById("studentDashboardView"),
-    notifications: document.getElementById("notificationsView"),
-    calendar: document.getElementById("calendarView"),
-    messages: document.getElementById("messagesView")
+    welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
+    teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
+    studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
+    notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView")
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -106,7 +88,6 @@ const navButtons = document.querySelectorAll(".nav-icon-btn");
 function switchView(targetView, clickedBtn) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && clickedBtn.classList.contains('nav-icon-btn')) clickedBtn.classList.add("active-nav");
-
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
 
     if (targetView === "HOME") {
@@ -125,8 +106,6 @@ document.getElementById("btnMessages").addEventListener("click", (e) => { switch
 document.getElementById("btnNavRoomcode").addEventListener("click", () => { switchView(views.roomcode); if (!rcLoaded) startRoomcodeListener(); });
 document.getElementById("btnNavTeacherList").addEventListener("click", () => { switchView(views.teacherList); if (!tlLoaded) startTeacherListListener(); });
 document.getElementById("btnBackToTeachers").addEventListener("click", () => switchView(views.teacherList));
-
-// 🚨 BIND THE NEW STUDENT BUTTONS
 document.getElementById("btnNavStudentList").addEventListener("click", () => { switchView(views.studentList); if (!slLoaded) startStudentListListener(); });
 document.getElementById("btnBackToStudents").addEventListener("click", () => switchView(views.studentList));
 
@@ -442,12 +421,10 @@ function startTeacherListListener() {
         document.getElementById("tlTotalTeachers").innerText = `Total: ${cachedTeachers.length}`; renderTeacherList();
     });
 }
-
 function renderTeacherList(searchTerm = "") {
     const listEl = document.getElementById("teacherListContainer"); const noData = document.getElementById("tlNoDataText");
     let filtered = cachedTeachers;
     if (searchTerm) { let lowerTerm = searchTerm.toLowerCase(); filtered = cachedTeachers.filter(t => (t.name || "").toLowerCase().includes(lowerTerm) || (t.departmentID || "").toLowerCase().includes(lowerTerm)); }
-
     if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No teacher matching "${searchTerm}"` : "No teacher requests found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
     noData.style.display = "none";
     
@@ -456,7 +433,6 @@ function renderTeacherList(searchTerm = "") {
         let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
         let hodBadge = isHod ? `<span class="hod-badge">HOD</span>` : "";
         let pendingOption = status === "Pending" ? `<option value="Pending" selected>Pending</option>` : "";
-        
         let tokensArr = []; if (t.fcmTokens) tokensArr = t.fcmTokens; else if (t.fcmToken) tokensArr = [t.fcmToken];
         let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;'); 
 
@@ -478,7 +454,6 @@ function renderTeacherList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-
 document.getElementById("tlSearchInput").addEventListener("input", (e) => renderTeacherList(e.target.value.trim()));
 
 window.TL_UpdateStatus = async (tID, newStatus) => {
@@ -503,7 +478,6 @@ window.TL_UpdateStatus = async (tID, newStatus) => {
         showRcToast(`Status updated to ${newStatus}`);
     } catch(e) { showRcToast("Error updating status."); }
 };
-
 window.TL_ToggleHOD = async (tID, deptID, isHod) => {
     try {
         const batch = writeBatch(db); batch.update(doc(db, "colleges", currentCollegeID, "teachers", tID), { isHOD: isHod });
@@ -516,7 +490,6 @@ window.TL_ToggleHOD = async (tID, deptID, isHod) => {
 // TEACHER DASHBOARD
 // ==========================================
 let tdCurrentTeacherID = ""; let tdAssignedSubjectsCache = [];
-
 window.TL_OpenDashboard = (tID) => {
     let teacher = cachedTeachers.find(t => t.id === tID); if (!teacher) return;
     tdCurrentTeacherID = tID; switchView(views.teacherDashboard);
@@ -526,7 +499,6 @@ window.TL_OpenDashboard = (tID) => {
     tdAssignedSubjectsCache = []; document.getElementById("tdSubjectsList").innerHTML = ""; document.getElementById("tdTimetableGrid").innerHTML = "Loading..."; document.getElementById("tdTotalHoursText").innerText = "0 hrs";
     TD_FetchTimetableAndSubjects(today);
 };
-
 async function TD_FetchTimetableAndSubjects(filterDate) {
     try {
         const [subSnap, ttSnap] = await Promise.all([ getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", tdCurrentTeacherID))), getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("teacherID", "==", tdCurrentTeacherID))) ]);
@@ -534,10 +506,8 @@ async function TD_FetchTimetableAndSubjects(filterDate) {
         TD_GenerateTimetableGrid(ttSnap); TD_FetchHours(filterDate);
     } catch(e) {}
 }
-
 function TD_GenerateTimetableGrid(ttSnap) {
-    const gridEl = document.getElementById("tdTimetableGrid");
-    let grid = Array.from({ length: 6 }, () => Array(6).fill('<span class="tt-empty">--</span>'));
+    const gridEl = document.getElementById("tdTimetableGrid"); let grid = Array.from({ length: 6 }, () => Array(6).fill('<span class="tt-empty">--</span>'));
     const dayMap = { "monday":0, "tuesday":1, "wednesday":2, "thursday":3, "friday":4, "saturday":5 };
     ttSnap.forEach(doc => {
         let d = doc.data(); let dIdx = dayMap[(d.day || "").toLowerCase()]; let pIdx = parseInt(d.period) - 1;
@@ -548,7 +518,6 @@ function TD_GenerateTimetableGrid(ttSnap) {
     for(let i=0; i<6; i++) { html += `<div class="tt-day">${dayLabels[i]}</div>`; grid[i].forEach(cell => html += cell); }
     gridEl.innerHTML = html;
 }
-
 async function TD_FetchHours(targetDate) {
     document.getElementById("tdSubjectsList").innerHTML = ""; document.getElementById("tdTotalHoursText").innerText = "Calc...";
     if (targetDate === "All Time") {
@@ -565,88 +534,44 @@ async function TD_FetchHours(targetDate) {
         try {
             const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", targetDate)));
             let totalHrs = 0; let subjectHours = {};
-            snap.forEach(doc => {
-                let d = doc.data(); Object.keys(d).forEach(k => {
-                    if (k.startsWith("period_") && d[k].markedByTeacherID === tdCurrentTeacherID) { let subName = d[k].subject || "Unknown Subject"; if (!subjectHours[subName]) subjectHours[subName] = 0; subjectHours[subName]++; totalHrs++; }
-                });
-            });
+            snap.forEach(doc => { let d = doc.data(); Object.keys(d).forEach(k => { if (k.startsWith("period_") && d[k].markedByTeacherID === tdCurrentTeacherID) { let subName = d[k].subject || "Unknown Subject"; if (!subjectHours[subName]) subjectHours[subName] = 0; subjectHours[subName]++; totalHrs++; } }); });
             document.getElementById("tdTotalHoursText").innerText = `${totalHrs} hrs`; TD_DrawSubjectRows(subjectHours);
         } catch(e) {}
     }
 }
-
 function TD_DrawSubjectRows(hoursMap) {
     const listEl = document.getElementById("tdSubjectsList"); const noData = document.getElementById("tdNoSubjectsText");
     let html = ""; let drawn = 0;
-    Object.entries(hoursMap).forEach(([name, hrs]) => {
-        html += `<div style="background: white; border: 1px solid var(--brand-green); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(74, 222, 128, 0.1);">
-                    <span style="font-weight: bold; color: #334155; font-size: 13px;">${name}</span> <span style="color: #64748b; font-size: 13px;">Hours: <b style="color: var(--text-green); font-size: 15px;">${hrs}</b></span>
-                 </div>`; drawn++;
-    });
-    tdAssignedSubjectsCache.forEach(sub => {
-        if (!hoursMap[sub]) {
-            html += `<div style="background: white; border: 1px solid #cbd5e1; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: bold; color: #64748b; font-size: 13px;">${sub}</span> <span style="color: #94a3b8; font-size: 13px;">Hours: <b style="font-size: 15px;">0</b></span>
-                     </div>`; drawn++;
-        }
-    });
+    Object.entries(hoursMap).forEach(([name, hrs]) => { html += `<div style="background: white; border: 1px solid var(--brand-green); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(74, 222, 128, 0.1);"><span style="font-weight: bold; color: #334155; font-size: 13px;">${name}</span> <span style="color: #64748b; font-size: 13px;">Hours: <b style="color: var(--text-green); font-size: 15px;">${hrs}</b></span></div>`; drawn++; });
+    tdAssignedSubjectsCache.forEach(sub => { if (!hoursMap[sub]) { html += `<div style="background: white; border: 1px solid #cbd5e1; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: bold; color: #64748b; font-size: 13px;">${sub}</span> <span style="color: #94a3b8; font-size: 13px;">Hours: <b style="font-size: 15px;">0</b></span></div>`; drawn++; } });
     listEl.innerHTML = html; noData.style.display = drawn === 0 ? "block" : "none";
 }
-
 document.getElementById("tdDateFilter").addEventListener("change", (e) => TD_FetchHours(e.target.value));
 document.getElementById("tdBtnAllTime").addEventListener("click", () => { document.getElementById("tdDateFilter").value = ""; TD_FetchHours("All Time"); });
 
 // ==========================================
-// 🚨 NEW: STUDENT LIST MANAGER
+// STUDENT LIST MANAGER
 // ==========================================
-let slLoaded = false;
-let cachedStudents = [];
-
+let slLoaded = false; let cachedStudents = [];
 function startStudentListListener() {
     slLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
-        cachedStudents = [];
-        snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`;
-        renderStudentList();
+        cachedStudents = []; snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
+        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; renderStudentList();
     });
 }
-
 function renderStudentList(searchTerm = "") {
-    const listEl = document.getElementById("studentListContainer");
-    const noData = document.getElementById("slNoDataText");
-    
+    const listEl = document.getElementById("studentListContainer"); const noData = document.getElementById("slNoDataText");
     let filtered = cachedStudents;
-    if (searchTerm) {
-        let terms = searchTerm.toLowerCase().split(':').map(t => t.trim());
-        filtered = cachedStudents.filter(s => {
-            let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase();
-            return terms.every(term => sStr.includes(term));
-        }).slice(0, 50); // Performance limit
-    }
-
-    if (filtered.length === 0) {
-        noData.style.display = "block";
-        noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found.";
-        listEl.innerHTML = ""; listEl.appendChild(noData);
-        return;
-    }
-    
+    if (searchTerm) { let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); }
+    if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
     noData.style.display = "none";
-    
     listEl.innerHTML = filtered.map(s => {
-        let cleanDept = (s.Department || "Unknown").replace("DEPT_", "");
-        let status = s.status || "Approved";
+        let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); let status = s.status || "Approved";
         let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
         let statusLabel = status === "Approved" ? "Active" : status;
-        
-        let tokensArr = [];
-        if (s.fcmTokens) tokensArr = s.fcmTokens;
-        else if (s.fcmToken) tokensArr = [s.fcmToken];
-        let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
-
-        return `
-        <div class="data-card ${statusClass}" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
+        let tokensArr = []; if (s.fcmTokens) tokensArr = s.fcmTokens; else if (s.fcmToken) tokensArr = [s.fcmToken]; let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
+        return `<div class="data-card ${statusClass}" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
             <div style="flex:1; cursor:pointer;" onclick="window.SL_OpenDashboard('${s.id}')">
                 <div class="card-title" style="margin-bottom:2px;">${s.Name || "Unknown"} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
                 <div style="font-size:12px; font-weight:bold; color:#475569; margin-top:4px;">${cleanDept} - Year ${s.Year || "1"}</div>
@@ -660,31 +585,22 @@ function renderStudentList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-
 document.getElementById("slSearchInput").addEventListener("input", (e) => renderStudentList(e.target.value.trim()));
 
-// Admin Approval Panel (For Students)
 let slTargetAdminID = "";
 window.SL_OpenAdmin = (sID, name, currentStatus) => {
-    slTargetAdminID = sID;
-    document.getElementById("saStudentName").innerText = name;
+    slTargetAdminID = sID; document.getElementById("saStudentName").innerText = name;
     document.getElementById("saStatusDrop").value = (currentStatus === "Declined" || currentStatus === "Banned") ? "Declined" : "Approved";
     document.getElementById("studentAdminOverlay").classList.add("active");
 };
-
 document.getElementById("btnConfirmSA").addEventListener("click", async () => {
-    if(!slTargetAdminID) return;
-    let newStatus = document.getElementById("saStatusDrop").value;
-    try {
-        await updateDoc(doc(db, "colleges", currentCollegeID, "students", slTargetAdminID), { status: newStatus });
-        showRcToast(`Status updated to ${newStatus}`);
-        document.getElementById("studentAdminOverlay").classList.remove("active");
-    } catch(e) { showRcToast("Error updating status"); }
+    if(!slTargetAdminID) return; let newStatus = document.getElementById("saStatusDrop").value;
+    try { await updateDoc(doc(db, "colleges", currentCollegeID, "students", slTargetAdminID), { status: newStatus }); showRcToast(`Status updated to ${newStatus}`); document.getElementById("studentAdminOverlay").classList.remove("active"); } catch(e) { showRcToast("Error updating status"); }
 });
 
 
 // ==========================================
-// 🚨 NEW: STUDENT DASHBOARD
+// 🚨 NEW: STUDENT DASHBOARD (WITH CACHED FALLBACKS)
 // ==========================================
 let sdCurrentStudentID = "";
 let sdStudentData = null;
@@ -693,36 +609,42 @@ let sdCurrentSemIndex = 0;
 let sdWorkingDays = new Set();
 let sdSemesterRanges = {};
 
+// 🚨 GLOBALLY CACHED MASTER SUBJECTS
+let sdCachedGlobalSubjects = [];
+async function fetchGlobalSubjects() {
+    if (sdCachedGlobalSubjects.length > 0) return;
+    try {
+        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
+        snap.forEach(doc => {
+            let d = doc.data();
+            sdCachedGlobalSubjects.push({
+                id: doc.id,
+                cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''),
+                cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""),
+                semesterArray: (d.Semester || d.semester || "").toString(),
+                displayName: d.Name || d.name || "Unnamed",
+                rawType: d.Type || d.type || ""
+            });
+        });
+    } catch(e) {}
+}
+
 window.SL_OpenDashboard = async (sID) => {
     sdCurrentStudentID = sID;
     switchView(views.studentDashboard);
     
-    // UI Reset
-    document.getElementById("sdNameText").innerText = "Loading...";
-    document.getElementById("sdRollText").innerText = "";
-    document.getElementById("sdStatusBadge").innerText = "...";
-    document.getElementById("sdSemesterTitle").innerText = "Loading...";
-    SD_UpdateWaveUI(0);
-    ["sdStatAtt", "sdStatAbs", "sdStatTot", "sdStatPAtt", "sdStatPAbs", "sdStatPTot"].forEach(id => document.getElementById(id).innerText = "0");
-    document.getElementById("sdSubjectList").innerHTML = "";
-    document.getElementById("sdEnrolledList").innerHTML = "<i>Loading subjects...</i>";
+    document.getElementById("sdNameText").innerText = "Loading..."; document.getElementById("sdRollText").innerText = ""; document.getElementById("sdStatusBadge").innerText = "..."; document.getElementById("sdSemesterTitle").innerText = "Loading...";
+    SD_UpdateWaveUI(0); ["sdStatAtt", "sdStatAbs", "sdStatTot", "sdStatPAtt", "sdStatPAbs", "sdStatPTot"].forEach(id => document.getElementById(id).innerText = "0");
+    document.getElementById("sdSubjectList").innerHTML = ""; document.getElementById("sdEnrolledList").innerHTML = "<i>Loading subjects...</i>";
     
     // Fetch global dates
     if(sdWorkingDays.size === 0) {
-        let displayYear = new Date().getFullYear(); 
-        let displayMonth = new Date().getMonth() + 1; 
+        let displayYear = new Date().getFullYear(); let displayMonth = new Date().getMonth() + 1; 
         let aYear = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
         try {
-            const [wDoc, sDoc] = await Promise.all([
-                getDoc(doc(db, "colleges", currentCollegeID, "workingDays", aYear)),
-                getDoc(doc(db, "colleges", currentCollegeID, "semesters", aYear))
-            ]);
+            const [wDoc, sDoc] = await Promise.all([ getDoc(doc(db, "colleges", currentCollegeID, "workingDays", aYear)), getDoc(doc(db, "colleges", currentCollegeID, "semesters", aYear)) ]);
             if(wDoc.exists()) Object.entries(wDoc.data()).forEach(([k,v]) => { if(v==="Regular Working Day") sdWorkingDays.add(k); });
-            if(sDoc.exists()) {
-                let d = sDoc.data();
-                if(d.oddSemester?.startDate) sdSemesterRanges.Odd = { start: new Date(d.oddSemester.startDate), end: new Date(d.oddSemester.endDate) };
-                if(d.evenSemester?.startDate) sdSemesterRanges.Even = { start: new Date(d.evenSemester.startDate), end: new Date(d.evenSemester.endDate) };
-            }
+            if(sDoc.exists()) { let d = sDoc.data(); if(d.oddSemester?.startDate) sdSemesterRanges.Odd = { start: new Date(d.oddSemester.startDate), end: new Date(d.oddSemester.endDate) }; if(d.evenSemester?.startDate) sdSemesterRanges.Even = { start: new Date(d.evenSemester.startDate), end: new Date(d.evenSemester.endDate) }; }
         } catch(e) {}
     }
 
@@ -730,233 +652,177 @@ window.SL_OpenDashboard = async (sID) => {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sID));
         if(snap.exists()) {
             sdStudentData = snap.data();
-            document.getElementById("sdNameText").innerText = sdStudentData.Name || "Unknown";
-            document.getElementById("sdRollText").innerText = `Roll No: ${sdStudentData.RollNumber || "N/A"}`;
-            
-            let status = sdStudentData.status || "Approved";
-            let badge = document.getElementById("sdStatusBadge");
-            badge.innerText = status;
-            badge.style.color = status==="Approved" ? "#166534" : "#b91c1c";
-            badge.style.backgroundColor = status==="Approved" ? "#f0fdf4" : "#fef2f2";
-            badge.style.borderColor = status==="Approved" ? "#86efac" : "#fca5a5";
+            document.getElementById("sdNameText").innerText = sdStudentData.Name || "Unknown"; document.getElementById("sdRollText").innerText = `Roll No: ${sdStudentData.RollNumber || "N/A"}`;
+            let status = sdStudentData.status || "Approved"; let badge = document.getElementById("sdStatusBadge"); badge.innerText = status; badge.style.color = status==="Approved" ? "#166534" : "#b91c1c"; badge.style.backgroundColor = status==="Approved" ? "#f0fdf4" : "#fef2f2"; badge.style.borderColor = status==="Approved" ? "#86efac" : "#fca5a5";
 
-            sdSemKeys = [];
-            for(let i=1; i<=8; i++) sdSemKeys.push(`Semester_${i}`);
-            
-            let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, '');
-            let studentYear = parseInt(yearStr) || 1;
-            let currentMonth = new Date().getMonth() + 1;
-            let isEvenSem = (currentMonth >= 1 && currentMonth <= 5); // Simple logic
-            let currentSemNum = (studentYear * 2) - (isEvenSem ? 0 : 1);
-            
+            sdSemKeys = []; for(let i=1; i<=8; i++) sdSemKeys.push(`Semester_${i}`);
+            let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, ''); let studentYear = parseInt(yearStr) || 1; let currentMonth = new Date().getMonth() + 1; let isEvenSem = (currentMonth >= 1 && currentMonth <= 5); let currentSemNum = (studentYear * 2) - (isEvenSem ? 0 : 1);
             sdCurrentSemIndex = Math.max(0, Math.min(7, currentSemNum - 1));
             
-            // Set Filter Date to All Time initially
             document.getElementById("sdDateFilter").value = "";
             document.getElementById("sdBtnAllTime").click(); // Triggers UI build
         }
-    } catch(e) { console.error("Error loading student profile", e); }
+    } catch(e) { }
 };
 
 document.getElementById("sdBtnNextSem").addEventListener("click", () => { if(sdCurrentSemIndex < 7) { sdCurrentSemIndex++; SD_BuildUI(); } });
 document.getElementById("sdBtnPrevSem").addEventListener("click", () => { if(sdCurrentSemIndex > 0) { sdCurrentSemIndex--; SD_BuildUI(); } });
 
-function SD_BuildUI(specificDate = "All Time") {
+async function SD_BuildUI(specificDate = "All Time") {
     if(!sdStudentData) return;
-    let semKey = sdSemKeys[sdCurrentSemIndex];
+    let semKey = sdSemKeys[sdCurrentSemIndex]; // e.g., "Semester_2"
     let semDisplay = semKey.replace("_", " ");
     document.getElementById("sdSemesterTitle").innerText = semDisplay;
 
-    // Build Enrolled Rich Text
-    let enrolledHtml = "<i>No subjects enrolled for this semester.</i>";
+    // 🚨 1. ENROLLED SUBJECTS (With Fallback Math!)
+    await fetchGlobalSubjects(); 
+    let cleanSemNum = semKey.replace(/[^0-9]/g, '');
+    let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
+    let finalSubjects = [];
+
+    // Explicit subjects
     if(sdStudentData.enrolledSubjects && sdStudentData.enrolledSubjects[semKey]) {
-        let subjects = sdStudentData.enrolledSubjects[semKey];
-        enrolledHtml = Object.entries(subjects).map(([k,v]) => `<span style="display:block; padding:8px 0; border-bottom:1px dashed #f1f5f9;"><b style="color:var(--brand-green);">[${k}]</b> ${v}</span>`).join('');
+        Object.entries(sdStudentData.enrolledSubjects[semKey]).forEach(([k,v]) => {
+            finalSubjects.push(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:#f59e0b;">[${k}]</b> ${v}</span>`);
+        });
     }
-    document.getElementById("sdEnrolledList").innerHTML = enrolledHtml;
+
+    // Implicit Core/MJD Subjects
+    sdCachedGlobalSubjects.forEach(sub => {
+        let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
+        if (semMatch) {
+            let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) {
+                finalSubjects.unshift(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:var(--brand-green);">[${sub.rawType}]</b> ${sub.displayName}</span>`);
+            }
+        }
+    });
+
+    document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
 
     // Fetch Marks
     SD_FetchMarks(semDisplay);
 
-    // Calc Attendance
+    // 🚨 2. ATTENDANCE PARSING (Case-Insensitive check)
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
-    let subjectAtt = {}; // { subName: {p, t} }
+    let subjectAtt = {}; 
 
-    if(sdStudentData.attendance_stats && sdStudentData.attendance_stats[semKey.toLowerCase()]) {
-        let stats = sdStudentData.attendance_stats[semKey.toLowerCase()];
-        Object.entries(stats).forEach(([subName, s]) => {
+    let statsObj = null;
+    if (sdStudentData.attendance_stats) {
+        // Find key regardless of caps
+        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
+        if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
+    }
+
+    if(statsObj) {
+        Object.entries(statsObj).forEach(([subName, s]) => {
             if(subName === "Strict_Global") { strictPresent = s.present || 0; strictTotal = s.total || 0; }
             else {
-                let p = s.present || 0, t = s.total || 0;
-                simpleAtt += p; simpleTotal += t;
+                let p = s.present || 0, t = s.total || 0; simpleAtt += p; simpleTotal += t;
                 let cleanSubName = subName.replace("-", "/");
-                if(cleanSubName.endsWith("_DROPPED")) cleanSubName = cleanSubName.replace("_DROPPED", " <span style='color:#ef4444;'>(Dropped)</span>");
+                if(cleanSubName.toUpperCase().endsWith("_DROPPED")) cleanSubName = cleanSubName.substring(0, cleanSubName.length - 8) + " <span style='color:#ef4444; font-size:11px;'>(Dropped)</span>";
                 subjectAtt[cleanSubName] = { p:p, t:t };
             }
         });
     }
 
-    // Projections
-    let projectedAtt = strictPresent, projectedTot = strictTotal;
-    let isCurrentTerm = false; // Simplified checking logic
-    if(isCurrentTerm && sdSemesterRanges.Odd) { // Pseudo logic for active term projections
-        // Add remaining days to both present and total
-    }
-
+    // Fallbacks
+    let projectedAtt = strictTotal > 0 ? strictPresent : simpleAtt;
+    let projectedTot = strictTotal > 0 ? strictTotal : simpleTotal;
     let percent = projectedTot > 0 ? (projectedAtt / projectedTot) * 100 : 0;
     
-    // Update Top Box
     SD_UpdateWaveUI(percent);
-    document.getElementById("sdStatAtt").innerText = strictPresent;
-    document.getElementById("sdStatAbs").innerText = strictTotal - strictPresent;
-    document.getElementById("sdStatTot").innerText = strictTotal;
-    
-    document.getElementById("sdStatPAtt").innerText = simpleAtt;
-    document.getElementById("sdStatPAbs").innerText = simpleTotal - simpleAtt;
-    document.getElementById("sdStatPTot").innerText = simpleTotal;
+    document.getElementById("sdStatAtt").innerText = strictPresent; document.getElementById("sdStatAbs").innerText = strictTotal - strictPresent; document.getElementById("sdStatTot").innerText = strictTotal;
+    document.getElementById("sdStatPAtt").innerText = simpleAtt; document.getElementById("sdStatPAbs").innerText = simpleTotal - simpleAtt; document.getElementById("sdStatPTot").innerText = simpleTotal;
 
     if(specificDate === "All Time") {
-        document.getElementById("sdNoDataText").style.display = "none";
+        document.getElementById("sdNoDataText").style.display = Object.keys(subjectAtt).length === 0 ? "block" : "none";
+        document.getElementById("sdNoDataText").innerText = "No attendance data for this semester.";
+        
         document.getElementById("sdSubjectList").innerHTML = Object.entries(subjectAtt).map(([name, data]) => {
-            let p = data.p, t = data.t, per = t>0 ? (p/t)*100 : 0;
-            let col = per >= 75 ? "#4CAF50" : (per >= 60 ? "#FF9800" : "#F44336");
+            let p = data.p, t = data.t, per = t>0 ? (p/t)*100 : 0; let col = per >= 75 ? "#4CAF50" : (per >= 60 ? "#FF9800" : "#F44336");
             return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${name}</span> <span style="font-size:12px; font-weight:bold; color:${col};">${per.toFixed(0)}% (${p}/${t})</span></div>
                 <div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${per}%;"></div></div>
             </div>`;
         }).join('');
     } else {
-        // Daily fetch
         SD_FetchDailyAttendance(specificDate, semDisplay);
     }
 }
 
-// 🚨 FLUID WAVE CSS UPDATER
+// 🚨 FLUID WAVE CSS UPDATER (Fixed Math for 0% and Dynamic Color)
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
 
-    // Circular Wave
     let circleFill = document.getElementById("sdCircleWave");
-    circleFill.style.backgroundColor = col;
-    // CSS wave translates bottom from -50% to roughly -5% to cover the circle
-    let mappedHeight = -50 + (percentage / 2);
-    circleFill.style.bottom = `${mappedHeight}%`; 
+    circleFill.style.setProperty('--wave-color', col);
+    
+    // 🚨 0% = top: 105% (hidden). 100% = top: -5% (filled). 
+    let offsetTop = 105 - (percentage * 1.1); 
+    circleFill.style.top = `${offsetTop}%`; 
     document.getElementById("sdCircleText").innerText = txt;
 
-    // Row Wave
     let rowFill = document.getElementById("sdWavyFill");
-    rowFill.style.backgroundColor = col;
-    rowFill.style.height = `${percentage}%`;
+    rowFill.style.setProperty('--wave-color', col);
+    rowFill.style.setProperty('--wave-percent', `${percentage}%`);
     document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
-document.getElementById("sdBtnAllTime").addEventListener("click", () => {
-    document.getElementById("sdDateFilter").value = "";
-    SD_BuildUI("All Time");
-});
-document.getElementById("sdDateFilter").addEventListener("change", (e) => {
-    if(e.target.value) SD_BuildUI(e.target.value);
-});
+document.getElementById("sdBtnAllTime").addEventListener("click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
+document.getElementById("sdDateFilter").addEventListener("change", (e) => { if(e.target.value) SD_BuildUI(e.target.value); });
 
 async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
-    const listEl = document.getElementById("sdSubjectList");
-    listEl.innerHTML = "";
-    
+    const listEl = document.getElementById("sdSubjectList"); listEl.innerHTML = "";
     try {
         const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", targetDate), where("semester", "==", dbSemesterFormat)));
-        
         if (snap.empty) {
-            document.getElementById("sdNoDataText").style.display = "block";
-            document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0";
-            return;
+            document.getElementById("sdNoDataText").style.display = "block"; document.getElementById("sdNoDataText").innerText = "No data available on this date.";
+            document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0"; return;
         }
-
         document.getElementById("sdNoDataText").style.display = "none";
-        let dayPres = 0, dayAbs = 0;
-        let html = "";
-
+        let dayPres = 0, dayAbs = 0; let html = "";
         snap.forEach(doc => {
             let d = doc.data();
             Object.keys(d).forEach(k => {
                 if (k.startsWith("period_")) {
                     let pData = d[k];
                     if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) {
-                        let isPres = pData.attendance[sdCurrentStudentID];
-                        if(isPres) dayPres++; else dayAbs++;
-                        
-                        let subName = pData.subject || "Unknown Subject";
-                        let col = isPres ? "#4CAF50" : "#F44336";
-                        html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:bold; font-size:13px; color:#334155;">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span>
-                        </div>`;
+                        let isPres = pData.attendance[sdCurrentStudentID]; if(isPres) dayPres++; else dayAbs++;
+                        let subName = pData.subject || "Unknown Subject"; let col = isPres ? "#4CAF50" : "#F44336";
+                        html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:bold; font-size:13px; color:#334155;">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span></div>`;
                     }
                 }
             });
         });
-
-        document.getElementById("sdStatPAtt").innerText = dayPres;
-        document.getElementById("sdStatPAbs").innerText = dayAbs;
-        document.getElementById("sdStatPTot").innerText = dayPres + dayAbs;
-        listEl.innerHTML = html;
-
-    } catch(e) { console.error("Error fetching daily att"); }
+        document.getElementById("sdStatPAtt").innerText = dayPres; document.getElementById("sdStatPAbs").innerText = dayAbs; document.getElementById("sdStatPTot").innerText = dayPres + dayAbs; listEl.innerHTML = html;
+    } catch(e) { }
 }
 
 let sdCachedMarks = {};
 async function SD_FetchMarks(semDisplay) {
-    let drop = document.getElementById("sdExamDropdown");
-    drop.innerHTML = "<option>Loading...</option>";
-    document.getElementById("sdMarksList").innerHTML = "";
-    document.getElementById("sdNoMarksText").style.display = "none";
-    sdCachedMarks = {};
-
+    let drop = document.getElementById("sdExamDropdown"); drop.innerHTML = "<option>Loading...</option>"; document.getElementById("sdMarksList").innerHTML = ""; document.getElementById("sdNoMarksText").style.display = "none"; sdCachedMarks = {};
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sdCurrentStudentID, "nep_marks", semDisplay));
         if (snap.exists()) {
             let data = snap.data();
             Object.entries(data).forEach(([subName, examsMap]) => {
-                Object.entries(examsMap).forEach(([examName, stats]) => {
-                    if(!sdCachedMarks[examName]) sdCachedMarks[examName] = [];
-                    sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max });
-                });
+                Object.entries(examsMap).forEach(([examName, stats]) => { if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); });
             });
-            
             let exams = Object.keys(sdCachedMarks).sort();
-            if(exams.length === 0) {
-                drop.innerHTML = "<option>No Exams Data</option>";
-                document.getElementById("sdNoMarksText").style.display = "block";
-            } else {
-                drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join('');
-                SD_RenderMarksUI(exams[0]);
-            }
-        } else {
-            drop.innerHTML = "<option>No Exams Data</option>";
-            document.getElementById("sdNoMarksText").style.display = "block";
-        }
+            if(exams.length === 0) { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; } 
+            else { drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); SD_RenderMarksUI(exams[0]); }
+        } else { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; }
     } catch(e) { drop.innerHTML = "<option>Error</option>"; }
 }
 
-document.getElementById("sdExamDropdown").addEventListener("change", (e) => {
-    if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value);
-});
-
+document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
 function SD_RenderMarksUI(examName) {
-    let marks = sdCachedMarks[examName];
-    if(!marks) return;
-    
+    let marks = sdCachedMarks[examName]; if(!marks) return;
     document.getElementById("sdMarksList").innerHTML = marks.map(m => {
-        let maxText = m.max ? m.max : "N/A";
-        let ratio = m.max ? m.obt / m.max : 0;
-        let per = m.max ? (ratio * 100).toFixed(0) + "%" : "";
+        let maxText = m.max ? m.max : "N/A"; let ratio = m.max ? m.obt / m.max : 0; let per = m.max ? (ratio * 100).toFixed(0) + "%" : "";
         let barHtml = m.max ? `<div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:var(--brand-green); width:${ratio*100}%;"></div></div>` : "";
-        
-        return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span style="font-weight:bold; font-size:13px; color:#334155;">${m.sub}</span>
-                <span style="font-size:13px; font-weight:bold; color:#1e293b;">${m.obt}/${maxText} <span style="font-size:10px; color:#64748b;">${per}</span></span>
-            </div>
-            ${barHtml}
-        </div>`;
+        return `<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:#334155;">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:#1e293b;">${m.obt}/${maxText} <span style="font-size:10px; color:#64748b;">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
 }
