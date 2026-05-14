@@ -309,23 +309,46 @@ body {
 
 .asn-periods-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 20px;
     width: 100%;
+}
+
+/* The new outer box grouping a Period together */
+.asn-period-wrapper {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.asn-period-header {
+    text-align: center; font-weight: 800; color: #166534; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;
 }
 
 .asn-card { 
     width: 100%; 
-    background: rgba(240, 253, 244, 0.6); 
-    border: 1px solid #bbf7d0; 
+    background: white; 
+    border: 1px solid #cbd5e1; 
     border-radius: 12px; 
-    padding: 12px 15px; 
+    padding: 15px; 
     box-shadow: 0 2px 5px rgba(0,0,0,0.02); 
     position: relative; 
 }
-.asn-card.split { border-color: #fde68a; background: rgba(255, 251, 235, 0.6); }
 
-.asn-period-title { text-align: center; font-weight: 800; color: #166534; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.asn-card.split { 
+    border-color: #fbbf24; 
+    background: #fffbeb; 
+    margin-top: 5px; /* Creates spacing for the badge */
+}
+
+.asn-batch-badge {
+    position: absolute; top: -12px; left: 15px; background: #fbbf24; color: #78350f; font-size: 11px; padding: 4px 12px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-transform: uppercase;
+}
 
 .asn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 
