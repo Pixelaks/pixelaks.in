@@ -266,7 +266,7 @@
                         <button id="btnTTSaveStructure" class="nav-icon-btn tt-action-btn"><i class="fas fa-save"></i> Save Structure</button>
                         <button id="btnTTEdit" class="nav-icon-btn tt-action-btn" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;"><i class="fas fa-edit"></i> Edit Categories</button>
                     </div>
-                </div>
+                </div> <!-- End of Timetable View -->
 
                 <!-- 🚨 NEW ASSIGN VIEW (DASHBOARD INTEGRATED) 🚨 -->
                 <div id="assignView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;">
@@ -277,7 +277,7 @@
                         <h2 style="font-size: 24px; color: var(--text-green); margin: 0; font-family: 'Poppins', sans-serif; font-weight: 700;">Assign Classes</h2>
                         <button id="btnAsnSave" class="asn-save-btn">Save Timetable</button>
                     </div>
-                
+
                     <!-- Day & Semester Selectors -->
                     <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); margin-bottom: 25px; align-items: center;">
                         <div class="asn-days-container" id="asnDaysContainer">
@@ -289,14 +289,14 @@
                         </div>
                         <select id="asnSemDrop" class="asn-select-pill" style="width: 100%; max-width: 400px; text-align: center;"></select>
                     </div>
-                
+
                     <!-- The Responsive Grid Container for Periods -->
                     <div id="asnListContainer" style="flex: 1;">
                         <div class="no-data-text">Loading Assign Panel...</div>
                     </div>
-
                 </div>
-            </div>
+
+            </div> <!-- 🚨 MOVED IT HERE! Now it safely wraps around the Assign View -->
         </main>
     </div>
 
