@@ -77,7 +77,8 @@ const views = {
     studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
     batch: document.getElementById("batchView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
-    timetable: document.getElementById("timetableView")
+    timetable: document.getElementById("timetableView"),
+    assign: document.getElementById("assignView") // 🚨 THIS WAS MISSING!
 };
 
 const sidebar = document.getElementById("mainSidebar");
