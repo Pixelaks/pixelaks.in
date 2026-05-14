@@ -399,3 +399,23 @@ body {
 .evt-body.active { display: block; }
 .evt-student-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #cbd5e1; }
 .evt-student-row:last-child { border-bottom: none; }
+
+/* =========================================
+   🚨 ATTENDANCE RECORDS STYLES
+   ========================================= */
+.attd-row { display: grid; grid-template-columns: 2fr repeat(6, 1fr); padding: 12px 15px; border-bottom: 1px solid #f1f5f9; align-items: center; text-align: center; font-size: 13px; font-weight: bold; transition: background 0.2s; }
+.attd-row:hover { background: #f8fafc; }
+.attd-teacher-col { text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.attd-teacher-name { color: #1e293b; font-size: 13px; }
+.attd-teacher-dept { color: #94a3b8; font-size: 11px; font-weight: 600; }
+
+.attd-slot { cursor: help; padding: 4px; border-radius: 6px; transition: transform 0.1s; }
+.attd-slot:hover { transform: scale(1.1); }
+.attd-slot u { text-decoration-color: rgba(0,0,0,0.2); text-underline-offset: 3px; }
+
+/* Status Colors */
+.attd-green { color: #16a34a; }    /* Marked properly */
+.attd-yellow { color: #d97706; }   /* Marked by substitute */
+.attd-red { color: #ef4444; }      /* Missed completely */
+.attd-black { color: #475569; }    /* Upcoming / Ongoing */
+.attd-empty { color: #cbd5e1; font-weight: normal; } /* No class assigned */
