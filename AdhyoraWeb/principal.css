@@ -233,7 +233,7 @@ body {
 .msg-teacher { border-left-color: #f59e0b; background-color: #fffbeb; }
 .msg-student { border-left-color: #3b82f6; background-color: #eff6ff; }
 
-/* 🚨 STATUS & TOGGLE COLORS FOR TEACHER LIST */
+/* STATUS & TOGGLE COLORS FOR TEACHER/STUDENT LIST */
 .status-pending { background-color: #fffbeb; border-color: #fcd34d; color: #b45309; }
 .status-approved { background-color: #f0fdf4; border-color: #86efac; color: #166534; }
 .status-declined { background-color: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
@@ -268,11 +268,48 @@ body {
 .cal-cell.semester { color: #3b82f6; background: #eff6ff; }
 .cal-subtitle { font-size: 9px; font-weight: 700; margin-top: -2px; }
 
-/* 🚨 TEACHER TIMETABLE GRID STYLES */
+/* TEACHER TIMETABLE GRID STYLES */
 .tt-header { font-weight: bold; color: #94a3b8; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
 .tt-day { font-weight: bold; color: #64748b; padding-top: 8px; }
 .tt-slot { padding-top: 8px; font-weight: bold; color: var(--text-light-green); }
 .tt-empty { padding-top: 8px; color: #cbd5e1; }
+
+/* =========================================
+   🚨 NEW: STUDENT DASHBOARD FLUID WAVES
+   ========================================= */
+.circle-wave-wrap {
+    width: 130px; height: 130px; border-radius: 50%; border: 6px solid #f1f5f9;
+    position: relative; overflow: hidden; background: white;
+    display: flex; justify-content: center; align-items: center; margin: 0 auto;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+}
+.circle-wave-fill {
+    position: absolute; left: -50%; bottom: var(--fill, -50%); width: 200%; height: 200%;
+    background: var(--brand-green); z-index: 0; transition: bottom 0.5s, background-color 0.5s;
+    border-radius: 40%;
+    animation: waveSpin 6s linear infinite;
+}
+@keyframes waveSpin { 100% { transform: rotate(360deg); } }
+.circle-wave-text { position: relative; z-index: 1; font-size: 26px; font-weight: bold; color: #334155; text-shadow: 0px 0px 5px rgba(255,255,255,0.8); }
+
+.wavy-row {
+    position: relative; background: #f8fafc; text-align: center; padding: 12px;
+    border-bottom: 1px solid #e2e8f0; overflow: hidden; margin: 5px 0;
+}
+.wavy-row-fill {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: var(--fill, 100%);
+    background: var(--brand-green); z-index: 0; transition: height 0.5s, background-color 0.3s;
+}
+.wavy-row-fill::after {
+    content: ''; position: absolute; left: 0; top: -8px; width: 200%; height: 10px;
+    background: radial-gradient(circle at 10px 10px, transparent 10px, var(--brand-green) 11px);
+    background-size: 20px 20px; animation: waveSlide 2s linear infinite;
+}
+@keyframes waveSlide { 0% { transform: translateX(0); } 100% { transform: translateX(-20px); } }
+.wavy-text { position: relative; z-index: 1; font-weight: bold; color: white; font-size: 14px; text-shadow: 0px 1px 3px rgba(0,0,0,0.2); }
+
+.stat-row { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 13px; color: #475569; }
+.stat-row span { font-weight: bold; color: #334155; }
 
 /* =========================================
    MOBILE RESPONSIVENESS
