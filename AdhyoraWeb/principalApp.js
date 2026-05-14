@@ -577,7 +577,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
-                <button class="action-icon-btn" title="Manage Status" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
+                <button class="action-icon-btn" title="Manage Access" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
                 <button class="action-icon-btn" title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})"><i class="fas fa-comment-dots"></i></button>
             </div>
         </div>`;
@@ -679,16 +679,16 @@ async function SD_BuildUI(specificDate = "All Time") {
     // 🚨 Explicitly Enrolled Subjects
     if(sdStudentData.enrolledSubjects && sdStudentData.enrolledSubjects[semKey]) {
         Object.entries(sdStudentData.enrolledSubjects[semKey]).forEach(([k,v]) => {
-            finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${k}]</b> <span>${v}</span></div>`);
+            finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:#f59e0b; font-size:12px;">[${k}]</b> <span>${v}</span></div>`);
         });
     }
 
-    // 🚨 Implicit Core/MJD Subjects (Restored your C# Filter!)
+    // 🚨 Implicit Core/MJD Subjects (RESTORED CHECK!)
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
-            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) {
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) { // <-- 🚨 THIS FILTERS OUT SEC/VAC
                 finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span>${sub.displayName}</span></div>`);
             }
         }
@@ -697,7 +697,7 @@ async function SD_BuildUI(specificDate = "All Time") {
     document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
     SD_FetchMarks(semDisplay);
 
-    // 2. ATTENDANCE PARSING (Case-Insensitive)
+    // 2. ATTENDANCE PARSING
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
     let subjectAtt = {}; 
 
@@ -743,18 +743,20 @@ async function SD_BuildUI(specificDate = "All Time") {
     }
 }
 
-// 🚨 FLUID WAVE CSS UPDATER 
+// 🚨 FLUID WAVE CSS UPDATER WITH MATH CAP
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
 
-    // 🚨 THE MATH FIX: Map 0-100% to a visual 10-85% so the beautiful wave curve is ALWAYS visible at the top!
-    let visualPercent = 10 + (percentage * 0.75); 
+    // 🚨 MATHEMATICAL CAP: Even if attendance is 100%, the visual wave stops at 85% height so the wavy top edge is always visible!
+    let visualPercent = percentage * 0.85; 
 
     let circleFill = document.getElementById("sdCircleWave");
     circleFill.style.setProperty('--wave-color', col);
     circleFill.style.top = `${105 - visualPercent}%`; 
-    document.getElementById("sdCirclePercentVal").innerText = txt;
+    
+    // 🚨 ADDED "PROJECTED" LABEL 
+    document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
 
     let rowFill = document.getElementById("sdWavyFill");
     rowFill.style.setProperty('--wave-color', col);
