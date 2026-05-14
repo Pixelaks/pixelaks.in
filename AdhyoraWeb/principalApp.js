@@ -3189,7 +3189,7 @@ async function requestPushPermissions() {
     try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            const swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
             const currentToken = await getToken(messaging, { 
                 // 🚨 REPLACE WITH YOUR ACTUAL VAPID KEY
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
