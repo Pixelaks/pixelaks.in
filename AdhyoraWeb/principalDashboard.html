@@ -296,12 +296,12 @@
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; flex: 1; align-items: start;">
-                        <div class="data-upload-card">
-                            <div class="up-icon"><i class="fas fa-user-graduate"></i></div>
-                            <h4>Students Roster</h4>
+                        <div class="data-upload-card" style="border-color: #6ee7b7; background: #f0fdf4;">
+                            <div class="up-icon" style="color: #10b981; background: #d1fae5;"><i class="fas fa-user-graduate"></i></div>
+                            <h4 style="color: #047857;">Students Roster</h4>
                             <p>Upload a CSV containing Roll Numbers, Names, and Departments.</p>
                             <input type="file" id="fileStudents" accept=".csv" style="display: none;">
-                            <button onclick="document.getElementById('fileStudents').click()">Select File</button>
+                            <button onclick="document.getElementById('fileStudents').click()" style="background: #10b981; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);">Select File</button>
                         </div>
 
                         <div class="data-upload-card">
