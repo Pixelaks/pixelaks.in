@@ -207,28 +207,31 @@
                     </div>
                 </div>
 
-                <!-- 🚨 TIMETABLE MANAGER VIEW -->
+                <!-- 🚨 THE NEW TIMETABLE VIEW -->
                 <div id="timetableView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
                     
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
                         <h3 style="color: var(--text-green); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px; margin: 0;">Timetable Manager</h3>
-                        <div style="display: flex; gap: 10px;">
-                            <select id="ttSemDrop" class="input-field" style="padding: 8px 15px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-weight: bold; color: var(--text-green);"></select>
-                            <button id="ttBtnEdit" class="nav-icon-btn" style="background: #e2e8f0; color: #334155; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: bold;"><i class="fas fa-pen"></i> Edit Mode</button>
-                            <button id="ttBtnSave" class="nav-icon-btn" style="background: var(--brand-green); color: white; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.4);"><i class="fas fa-save"></i> Save All</button>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="ttSemDrop" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #bbf7d0; outline: none; font-family: 'Poppins'; font-size: 13px; font-weight: bold; color: var(--text-green); background: #bbf7d0; cursor: pointer;"></select>
+                            <button id="ttBtnEditToggle" class="nav-icon-btn" style="background: #f1f5f9; color: #334155; padding: 8px 15px; border-radius: 12px; font-size: 13px; font-weight: bold; border: none; cursor: pointer;"><i class="fas fa-pen"></i> Edit Mode</button>
                         </div>
                     </div>
 
                     <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
-                        <button class="tt-day-btn active" data-day="Monday">Monday</button>
-                        <button class="tt-day-btn" data-day="Tuesday">Tuesday</button>
-                        <button class="tt-day-btn" data-day="Wednesday">Wednesday</button>
-                        <button class="tt-day-btn" data-day="Thursday">Thursday</button>
-                        <button class="tt-day-btn" data-day="Friday">Friday</button>
+                        <button class="tt-day-btn active" data-day="Monday">Mon</button>
+                        <button class="tt-day-btn" data-day="Tuesday">Tue</button>
+                        <button class="tt-day-btn" data-day="Wednesday">Wed</button>
+                        <button class="tt-day-btn" data-day="Thursday">Thu</button>
+                        <button class="tt-day-btn" data-day="Friday">Fri</button>
                     </div>
 
-                    <div id="ttListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 10px;">
+                    <div id="ttListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 0;">
                         <div class="no-data-text" id="ttNoDataText">Loading Structure...</div>
+                    </div>
+
+                    <div style="text-align: center; padding-top: 15px; border-top: 1px solid #e2e8f0; margin-top: 10px;">
+                        <button id="ttBtnAction" style="background: white; border: 1px solid #cbd5e1; color: #475569; padding: 10px 40px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer; font-family: 'Poppins'; transition: 0.2s;">Assign</button>
                     </div>
                 </div>
 
@@ -277,45 +280,13 @@
     <div class="modal-overlay" id="durationOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('durationOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 id="durationTitle" style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-clock"></i> Set Duration</h3><select id="durationSelect" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3" selected>3 Years</option><option value="4">4 Years</option><option value="5">5 Years</option></select><button id="btnSaveDuration" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Save Duration</button></div></div>
     <div class="modal-overlay" id="combineOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('combineOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-link"></i> Combine Departments</h3><select id="combineSelect1" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 10px;"></select><div style="text-align: center; color: #94a3b8; font-size: 20px; margin-bottom: 10px;"><i class="fas fa-plus"></i></div><select id="combineSelect2" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"></select><button id="btnSubmitCombine" style="width: 100%; background: var(--text-light-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Link Together</button></div></div>
     <div class="modal-overlay" id="pinOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); text-align: center;"><button class="close-settings" onclick="document.getElementById('pinOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: #ef4444; margin-bottom: 15px;"><i class="fas fa-lock"></i> Security Check</h3><p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Enter Admin PIN to confirm action.</p><input type="password" id="pinInput" placeholder="****" maxlength="4" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-size: 20px; text-align: center; letter-spacing: 5px; margin-bottom: 20px;"><button id="btnVerifyPin" style="width: 100%; background: #ef4444; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Verify & Execute</button></div></div>
-    
-    <div class="modal-overlay" id="confirmOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
-            <h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-question-circle"></i> Are you sure?</h3>
-            <p id="confirmText" style="font-size: 14px; color: #475569; margin-bottom: 25px;"></p>
-            <div style="display: flex; gap: 15px;">
-                <button id="btnConfirmNo" onclick="document.getElementById('confirmOverlay').classList.remove('active')" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">No</button>
-                <button id="btnConfirmYes" style="flex: 1; background: var(--brand-green); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Yes</button>
-            </div>
-        </div>
-    </div>
-
     <div class="modal-overlay" id="studentAdminOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);"><button class="close-settings" onclick="document.getElementById('studentAdminOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-user-shield"></i> Manage Access</h3><p id="saStudentName" style="font-size: 16px; font-weight: bold; color: #334155; margin-bottom: 20px;">Student Name</p><select id="saStatusDrop" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px; text-align: center;"><option value="Approved">Approved</option><option value="Declined">Declined</option></select><button id="btnConfirmSA" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Confirm Change</button></div></div>
     <div class="modal-overlay" id="moveBatchOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);"><button class="close-settings" onclick="document.getElementById('moveBatchOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-exchange-alt"></i> Move Students</h3><p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Select the destination batch for the selected students.</p><div id="moveBatchButtonsContainer" class="scrollable-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; padding-right: 5px;"></div></div></div>
-
-    <!-- DEPT SPLIT MODAL -->
-    <div class="modal-overlay" id="deptSplitOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; margin-top: 10vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
-            <button class="close-settings" onclick="document.getElementById('deptSplitOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
-            <h3 style="color: var(--text-green); margin-bottom: 5px;"><i class="fas fa-object-ungroup"></i> Split Department</h3>
-            <p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">Assign batches for students in different departments.</p>
-            
-            <div style="margin-bottom: 15px;">
-                <label style="font-size: 13px; font-weight: bold; color: #334155;">Total Batches Required:</label>
-                <select id="dsBatchCountDrop" class="input-field" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-top: 5px;"></select>
-            </div>
-
-            <div id="dsRowsContainer" class="scrollable-list" style="max-height: 40vh; overflow-y: auto; padding-right: 5px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
-                <!-- Auto injected Dept Split Rows -->
-            </div>
-
-            <button id="btnConfirmDeptSplit" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">Save & Split</button>
-        </div>
-    </div>
-
-    <!-- 🚨 NEW WARNING MODAL 🚨 -->
+    <div class="modal-overlay" id="deptSplitOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; margin-top: 10vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);"><button class="close-settings" onclick="document.getElementById('deptSplitOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 5px;"><i class="fas fa-object-ungroup"></i> Split Department</h3><p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">Assign batches for students in different departments.</p><div style="margin-bottom: 15px;"><label style="font-size: 13px; font-weight: bold; color: #334155;">Total Batches Required:</label><select id="dsBatchCountDrop" class="input-field" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-top: 5px;"></select></div><div id="dsRowsContainer" class="scrollable-list" style="max-height: 40vh; overflow-y: auto; padding-right: 5px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;"></div><button id="btnConfirmDeptSplit" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">Save & Split</button></div></div>
+    
     <div class="modal-overlay" id="warningOverlay">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
-            <h3 style="color: #f59e0b; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle"></i> Warning</h3>
+            <h3 id="warningTitle" style="color: #f59e0b; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle"></i> Warning</h3>
             <p id="warningText" style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.6;"></p>
             <div style="display: flex; gap: 15px;">
                 <button id="warningNoBtn" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Cancel</button>
