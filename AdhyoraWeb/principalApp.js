@@ -435,14 +435,38 @@ document.getElementById("btnSubmitCombine").addEventListener("click", () => {
     if(name1 === name2) { showRcToast("Cannot combine with itself!"); return; }
     rcCurrentAction = "COMBINE"; document.getElementById("combineOverlay").classList.remove("active"); document.getElementById("pinInput").value = ""; document.getElementById("pinOverlay").classList.add("active");
 });
+// 🚀 OPTIMIZATION 10: Spam-Proof the Security PIN Button
 document.getElementById("btnVerifyPin").addEventListener("click", async () => {
-    let pin = document.getElementById("pinInput").value.trim(); if(!pin) return;
+    let pinBtn = document.getElementById("btnVerifyPin");
+    let pin = document.getElementById("pinInput").value.trim(); 
+    if(!pin) return;
+
+    // 🚨 LOCK THE BUTTON TO PREVENT DOUBLE-CLICKS
+    pinBtn.innerText = "Verifying..."; 
+    pinBtn.disabled = true; 
+    pinBtn.style.opacity = "0.7";
+
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
         let correctPin = (snap.exists() && snap.data().adminPin) ? snap.data().adminPin : "1234";
-        if (pin === correctPin) { document.getElementById("pinOverlay").classList.remove("active"); RC_ExecuteAction(); } 
-        else showRcToast("Incorrect PIN.");
-    } catch(e) { showRcToast("Error verifying PIN."); }
+        
+        if (pin === correctPin) { 
+            document.getElementById("pinOverlay").classList.remove("active"); 
+            RC_ExecuteAction(); 
+        } else { 
+            showRcToast("Incorrect PIN."); 
+        }
+    } catch(e) { 
+        showRcToast("Error verifying PIN."); 
+    }
+
+    // 🚨 UNLOCK THE BUTTON AFTER 1 SECOND
+    setTimeout(() => {
+        pinBtn.innerText = "Verify & Execute"; 
+        pinBtn.disabled = false;
+        pinBtn.style.opacity = "1";
+        document.getElementById("pinInput").value = "";
+    }, 1000);
 });
 document.getElementById("btnSaveDuration").addEventListener("click", () => {
     document.getElementById("durationOverlay").classList.remove("active"); let yrs = parseInt(document.getElementById("durationSelect").value);
