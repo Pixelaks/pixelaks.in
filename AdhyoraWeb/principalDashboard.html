@@ -42,7 +42,7 @@
                 <button class="menu-btn" id="btnNavSubjectList"><span class="btn-text">Subject List</span> <i class="fas fa-book-open btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavStuSub"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavEvents"><span class="btn-text">Events</span> <i class="fas fa-calendar-plus btn-icon"></i></button>
-                <button class="menu-btn"><span class="btn-text">Attendance Records</span> <i class="fas fa-user-check btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavAttendance"><span class="btn-text">Attendance Records</span> <i class="fas fa-user-check btn-icon"></i></button>
             </div>
         </aside>
 
@@ -373,6 +373,35 @@
                         <div class="no-data-text" id="evtNoDataText">Loading Events...</div>
                     </div>
                 </div>
+
+                <div id="attendanceView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
+                        <h3 style="color: var(--text-green); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px; margin: 0;">Attendance Tracker</h3>
+                        
+                        <div class="asn-days-container" id="attdDaysContainer">
+                            <button class="asn-day-btn" data-day="Monday" data-offset="0">Mon</button>
+                            <button class="asn-day-btn" data-day="Tuesday" data-offset="1">Tue</button>
+                            <button class="asn-day-btn" data-day="Wednesday" data-offset="2">Wed</button>
+                            <button class="asn-day-btn" data-day="Thursday" data-offset="3">Thu</button>
+                            <button class="asn-day-btn" data-day="Friday" data-offset="4">Fri</button>
+                        </div>
+                    </div>
+
+                    <input type="text" id="attdSearchInput" placeholder="Search teacher, department, or subject..." class="asn-input" style="margin-bottom: 15px; font-size: 14px; padding: 12px 15px;">
+                    
+                    <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div style="display: grid; grid-template-columns: 2fr repeat(6, 1fr); background: var(--bg-grid-color); padding: 12px 15px; font-weight: bold; color: var(--text-green); font-size: 13px; text-align: center; border-bottom: 1px solid var(--border-color);">
+                            <div style="text-align: left;">TEACHER</div>
+                            <div>P1</div><div>P2</div><div>P3</div><div>P4</div><div>P5</div><div>P6</div>
+                        </div>
+                        
+                        <div id="attdListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 10px 0;">
+                            <div class="no-data-text">Loading Attendance...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="attdTooltip" style="position: fixed; display: none; background: #1e293b; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; pointer-events: none; z-index: 10000; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">Subject Name</div>
 
             </div> </main>
     </div>
