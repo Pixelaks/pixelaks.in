@@ -1,3 +1,4 @@
+// principalApp.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -15,12 +16,31 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ==========================================
+// 🚨 GLOBAL STATE VARIABLES (MOVED TO TOP TO FIX INITIALIZATION ERRORS)
+// ==========================================
 let currentCollegeID = "";
 let currentUserID = "";
 let collegeSemesterType = "Odd";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
 let myRealName = "Principal"; 
 
+// Modules State
+let cachedNotifs = [];
+let calendarLoaded = false; let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map();
+let cachedMessages = [];
+let composeIsPersonal = false; let composeTargetTokens = [];
+
+let rcLoaded = false; let rcCachedDepts = []; let rcCurrentAction = ""; let rcTargetID = ""; let rcTargetName = ""; let rcPendingNewName = ""; let rcIsCreatingNew = false;
+let tlLoaded = false; let cachedTeachers = []; let tdCurrentTeacherID = ""; let tdAssignedSubjectsCache = [];
+let slLoaded = false; let cachedStudents = []; let slTargetAdminID = "";
+let sdCurrentStudentID = ""; let sdStudentData = null; let sdSemKeys = []; let sdCurrentSemIndex = 0; let sdWorkingDays = new Set(); let sdSemesterRanges = {}; let sdCachedGlobalSubjects = []; let sdCachedMarks = {};
+let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
+let ttLoaded = false; let ttCurrentSem = "1"; let ttSelectedDay = "Monday"; let ttGlobalCategories = new Set(); let ttGeneralCategories = new Set(); let ttSubjectsByCategory = {}; let ttTimetableCache = {}; let ttActiveRows = []; let ttIsEditMode = true; let ttGlobalSubjects = []; let ttTeachersList = []; let ttPendingSplitRow = null;
+
+// ==========================================
+// CORE INITIALIZATION
+// ==========================================
 const el = {
     settingsOverlay: document.getElementById("settingsOverlay"), btnSettings: document.getElementById("btnSettings"), closeSettingsBtn: document.getElementById("closeSettingsBtn"),
     principalName: document.getElementById("principalNameText"), principalEmail: document.getElementById("principalEmailText"), versionText: document.getElementById("versionText"),
@@ -38,7 +58,8 @@ else {
         else { window.location.href = "index.html"; }
     });
 }
-el.versionText.innerText = "Version 1.0.0 (Web Admin)";
+
+if(el.versionText) el.versionText.innerText = "Version 1.0.0 (Web Admin)";
 
 async function fetchPrincipalProfile() {
     try {
@@ -47,9 +68,11 @@ async function fetchPrincipalProfile() {
         const docSnap = await getDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID));
         if (docSnap.exists()) {
             const data = docSnap.data(); myRealName = data.name || "Principal";
-            el.principalName.innerText = myRealName; el.principalEmail.innerText = data.email || "No Email Provided";
+            if(el.principalName) el.principalName.innerText = myRealName; 
+            if(el.principalEmail) el.principalEmail.innerText = data.email || "No Email Provided";
         } else {
-            el.principalName.innerText = "Profile Not Found"; el.principalEmail.innerText = "";
+            if(el.principalName) el.principalName.innerText = "Profile Not Found"; 
+            if(el.principalEmail) el.principalEmail.innerText = "";
         }
     } catch (e) {}
 }
@@ -59,19 +82,14 @@ function handleContactUs() {
     window.open(`mailto:pixelaks.technologies@gmail.com?subject=${encodeURIComponent("Support Request")}&body=${encodeURIComponent("Describe issue here:\n\n\n" + deviceInfo)}`, "_blank");
 }
 
-el.btnSettings.addEventListener("click", () => el.settingsOverlay.classList.add("active"));
-el.closeSettingsBtn.addEventListener("click", () => el.settingsOverlay.classList.remove("active"));
-el.settingsOverlay.addEventListener("click", (e) => { if (e.target === el.settingsOverlay) el.settingsOverlay.classList.remove("active"); });
-el.btnContactUs.addEventListener("click", handleContactUs);
-el.btnWebsite.addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
-el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/privacy", "_blank"));
-el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
-el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
-
-document.querySelectorAll(".menu-btn").forEach(btn => {
-    if(btn.id === "btnNavRoomcode" || btn.id === "btnNavTeacherList" || btn.id === "btnNavStudentList" || btn.id === "btnNavBatch" || btn.id === "btnNavTimetable") return;
-    btn.addEventListener("click", (e) => alert(`Navigating to ${e.currentTarget.querySelector(".btn-text").innerText}... (View logic to be implemented)`));
-});
+if(el.btnSettings) el.btnSettings.addEventListener("click", () => el.settingsOverlay.classList.add("active"));
+if(el.closeSettingsBtn) el.closeSettingsBtn.addEventListener("click", () => el.settingsOverlay.classList.remove("active"));
+if(el.settingsOverlay) el.settingsOverlay.addEventListener("click", (e) => { if (e.target === el.settingsOverlay) el.settingsOverlay.classList.remove("active"); });
+if(el.btnContactUs) el.btnContactUs.addEventListener("click", handleContactUs);
+if(el.btnWebsite) el.btnWebsite.addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
+if(el.btnPrivacy) el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/privacy", "_blank"));
+if(el.btnTerms) el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
+if(el.btnSignOut) el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
 
 const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
@@ -81,7 +99,9 @@ const views = {
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView")
 };
 
-const sidebar = document.getElementById("mainSidebar"); const mainContent = document.querySelector(".main-content"); const navButtons = document.querySelectorAll(".nav-icon-btn");
+const sidebar = document.getElementById("mainSidebar"); 
+const mainContent = document.querySelector(".main-content"); 
+const navButtons = document.querySelectorAll(".nav-icon-btn");
 
 function switchView(targetView, clickedBtn) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
@@ -89,32 +109,36 @@ function switchView(targetView, clickedBtn) {
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
 
     if (targetView === "HOME") {
-        sidebar.classList.remove("mobile-hidden"); mainContent.classList.remove("mobile-active");
-        if (window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
+        if(sidebar) sidebar.classList.remove("mobile-hidden"); 
+        if(mainContent) mainContent.classList.remove("mobile-active");
+        if (window.innerWidth > 900 && views.welcome) views.welcome.classList.remove("hidden-view");
     } else {
-        sidebar.classList.add("mobile-hidden"); mainContent.classList.add("mobile-active");
+        if(sidebar) sidebar.classList.add("mobile-hidden"); 
+        if(mainContent) mainContent.classList.add("mobile-active");
         if (targetView) { targetView.classList.remove("hidden-view"); targetView.style.opacity = 0; setTimeout(() => targetView.style.opacity = 1, 50); }
     }
 }
 
-document.getElementById("btnHome").addEventListener("click", (e) => switchView("HOME", e.currentTarget));
-document.getElementById("btnNotifications").addEventListener("click", (e) => { switchView(views.notifications, e.currentTarget); document.querySelector("#btnNotifications .notification-dot").style.display = "none"; });
-document.getElementById("btnCalendar").addEventListener("click", (e) => { switchView(views.calendar, e.currentTarget); if (!calendarLoaded) loadCalendarData(); });
-document.getElementById("btnMessages").addEventListener("click", (e) => { switchView(views.messages, e.currentTarget); document.querySelector("#btnMessages .notification-dot").style.display = "none"; });
-document.getElementById("btnNavRoomcode").addEventListener("click", () => { switchView(views.roomcode); if (!rcLoaded) startRoomcodeListener(); });
-document.getElementById("btnNavTeacherList").addEventListener("click", () => { switchView(views.teacherList); if (!tlLoaded) startTeacherListListener(); });
-document.getElementById("btnBackToTeachers").addEventListener("click", () => switchView(views.teacherList));
-document.getElementById("btnNavStudentList").addEventListener("click", () => { switchView(views.studentList); if (!slLoaded) startStudentListListener(); });
-document.getElementById("btnBackToStudents").addEventListener("click", () => switchView(views.studentList));
-document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
-document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
+// Attach Safe Listeners
+const safeListener = (id, event, func) => { let element = document.getElementById(id); if (element) element.addEventListener(event, func); };
+
+safeListener("btnHome", "click", (e) => switchView("HOME", e.currentTarget));
+safeListener("btnNotifications", "click", (e) => { switchView(views.notifications, e.currentTarget); let dot = document.querySelector("#btnNotifications .notification-dot"); if(dot) dot.style.display = "none"; });
+safeListener("btnCalendar", "click", (e) => { switchView(views.calendar, e.currentTarget); if (!calendarLoaded) loadCalendarData(); });
+safeListener("btnMessages", "click", (e) => { switchView(views.messages, e.currentTarget); let dot = document.querySelector("#btnMessages .notification-dot"); if(dot) dot.style.display = "none"; });
+safeListener("btnNavRoomcode", "click", () => { switchView(views.roomcode); if (!rcLoaded) startRoomcodeListener(); });
+safeListener("btnNavTeacherList", "click", () => { switchView(views.teacherList); if (!tlLoaded) startTeacherListListener(); });
+safeListener("btnBackToTeachers", "click", () => switchView(views.teacherList));
+safeListener("btnNavStudentList", "click", () => { switchView(views.studentList); if (!slLoaded) startStudentListListener(); });
+safeListener("btnBackToStudents", "click", () => switchView(views.studentList));
+safeListener("btnNavBatch", "click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
+safeListener("btnNavTimetable", "click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
 // ==========================================
 // NOTIFICATIONS INBOX 
 // ==========================================
-let cachedNotifs = [];
 function startInboxListener() {
     const myTopics = [`${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_ALL`, `${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_PRINCIPAL`];
     let inboxCache = []; let globalCache = [];
@@ -122,16 +146,17 @@ function startInboxListener() {
 
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         inboxCache = []; snap.forEach(doc => { let d = doc.data(); inboxCache.push({ title: d.title || "Notice", body: d.body || "", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        document.querySelector("#btnNotifications .notification-dot").style.display = "block"; updateNotifUI();
+        let dot = document.querySelector("#btnNotifications .notification-dot"); if(dot) dot.style.display = "block"; updateNotifUI();
     });
 
     onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
         globalCache = []; snap.forEach(doc => { let d = doc.data(); globalCache.push({ title: d.title || "System Update", body: d.body || "", time: d.timestamp ? d.timestamp.toDate() : new Date() }); });
-        document.querySelector("#btnNotifications .notification-dot").style.display = "block"; updateNotifUI();
+        let dot = document.querySelector("#btnNotifications .notification-dot"); if(dot) dot.style.display = "block"; updateNotifUI();
     });
 }
 function renderNotifications() {
     const listEl = document.getElementById("notificationsList");
+    if(!listEl) return;
     if (cachedNotifs.length === 0) { listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
     listEl.innerHTML = cachedNotifs.map(n => {
         return `<div class="data-card"><div class="card-title">${n.title}</div><div class="card-body">${n.body}</div><div class="card-meta"><span>Adhyora System</span><span>${n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span></div></div>`;
@@ -142,16 +167,14 @@ setTimeout(startInboxListener, 2000);
 // ==========================================
 // CALENDAR ENGINE
 // ==========================================
-let currentDisplayDate = new Date();
-let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map(); let calendarLoaded = false;
-
-document.getElementById("calPrevMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
-document.getElementById("calNextMonth").addEventListener("click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
+safeListener("calPrevMonth", "click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1); loadCalendarData(); });
+safeListener("calNextMonth", "click", () => { currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1); loadCalendarData(); });
 
 async function loadCalendarData() {
     calendarLoaded = true;
-    document.getElementById("calMonthYearText").innerText = currentDisplayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    document.getElementById("calendarGrid").innerHTML = ""; document.getElementById("upcomingEventText").innerText = "Loading...";
+    let title = document.getElementById("calMonthYearText"); if(title) title.innerText = currentDisplayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    let gridEl = document.getElementById("calendarGrid"); if(gridEl) gridEl.innerHTML = ""; 
+    let evtText = document.getElementById("upcomingEventText"); if(evtText) evtText.innerText = "Loading...";
 
     let displayYear = currentDisplayDate.getFullYear(); let displayMonth = currentDisplayDate.getMonth() + 1; 
     let targetYearStr = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
@@ -171,7 +194,9 @@ async function loadCalendarData() {
 }
 
 function renderCalendarGrid() {
-    const grid = document.getElementById("calendarGrid"); grid.innerHTML = ""; 
+    const grid = document.getElementById("calendarGrid"); 
+    if(!grid) return;
+    grid.innerHTML = ""; 
     const year = currentDisplayDate.getFullYear(); const month = currentDisplayDate.getMonth(); const today = new Date();
     const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
     
@@ -194,28 +219,29 @@ function renderCalendarGrid() {
     }
 }
 function updateUpcomingEvent() {
+    let evtText = document.getElementById("upcomingEventText");
+    if(!evtText) return;
     let checkDate = new Date(); let found = false;
     for (let i = 0; i < 60; i++) {
         let fDate = new Date(checkDate); fDate.setDate(checkDate.getDate() + i);
         let dateStr = `${fDate.getFullYear()}-${String(fDate.getMonth() + 1).padStart(2, '0')}-${String(fDate.getDate()).padStart(2, '0')}`;
         if (calNonWorkingDays.has(dateStr)) { 
             let reason = calNonWorkingDays.get(dateStr) === "Holiday/Weekend" ? "Holiday" : calNonWorkingDays.get(dateStr);
-            document.getElementById("upcomingEventText").innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - ${reason}`; 
+            evtText.innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - ${reason}`; 
             found = true; break; 
         }
         let dWeek = fDate.getDay(); 
         if ((dWeek === 0 || dWeek === 6) && !calWorkingDays.has(dateStr)) { 
-            document.getElementById("upcomingEventText").innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - Weekend`; 
+            evtText.innerHTML = `<b>Upcoming:</b> ${fDate.getDate()} ${fDate.toLocaleString('default', { month: 'short' })} - Weekend`; 
             found = true; break; 
         }
     }
-    if (!found) document.getElementById("upcomingEventText").innerHTML = "No upcoming holidays in the next 60 days.";
+    if (!found) evtText.innerHTML = "No upcoming holidays in the next 60 days.";
 }
 
 // ==========================================
-// MESSAGES SYSTEM
+// MESSAGES SYSTEM & COMPOSE LOGIC
 // ==========================================
-let cachedMessages = [];
 function startMessagesListener() {
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         cachedMessages = [];
@@ -223,11 +249,13 @@ function startMessagesListener() {
             let d = doc.data(); let roleClass = (d.senderRole || "").toLowerCase().includes("teacher") ? "msg-teacher" : "msg-principal";
             cachedMessages.push({ title: d.title || "Notice", body: d.body || "", sender: d.senderName || "System", target: d.targetSummary || "", roleClass: roleClass, time: d.timestamp ? d.timestamp.toDate() : new Date() });
         });
-        document.querySelector("#btnMessages .notification-dot").style.display = "block"; renderMessages();
+        let dot = document.querySelector("#btnMessages .notification-dot"); if(dot) dot.style.display = "block"; 
+        renderMessages();
     });
 }
 function renderMessages() {
     const listEl = document.getElementById("messagesList");
+    if(!listEl) return;
     if (cachedMessages.length === 0) { listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; return; }
     listEl.innerHTML = cachedMessages.map(m => {
         return `<div class="data-card ${m.roleClass}"><div class="card-title">${m.title}</div><div class="card-body">${m.body}</div><div class="card-meta"><span>${m.sender} <span style="color:#94a3b8; font-weight:normal;">→ ${m.target}</span></span><span>${m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span></div></div>`;
@@ -242,40 +270,51 @@ const elCompose = {
     deptDrop: document.getElementById("composeDept"), yearDrop: document.getElementById("composeYear"), title: document.getElementById("composeTitle"),
     body: document.getElementById("composeBody"), sendBtn: document.getElementById("btnSendMessage"), status: document.getElementById("composeStatusText")
 };
-let composeIsPersonal = false; let composeTargetTokens = [];
 
 window.OpenCompose = async (isPersonal = false, name = "", tokens = []) => {
-    composeIsPersonal = isPersonal; composeTargetTokens = tokens; elCompose.overlay.classList.add("active");
-    elCompose.title.value = ""; elCompose.body.value = ""; elCompose.status.innerText = "";
+    composeIsPersonal = isPersonal; composeTargetTokens = tokens; 
+    if(elCompose.overlay) elCompose.overlay.classList.add("active");
+    if(elCompose.title) elCompose.title.value = ""; 
+    if(elCompose.body) elCompose.body.value = ""; 
+    if(elCompose.status) elCompose.status.innerText = "";
+    
     if (isPersonal) {
-        elCompose.titleText.innerHTML = `<i class="fas fa-comment-dots"></i> Message to: ${name}`;
-        elCompose.groupFilters.style.display = "none"; elCompose.dropFilters.style.display = "none";
+        if(elCompose.titleText) elCompose.titleText.innerHTML = `<i class="fas fa-comment-dots"></i> Message to: ${name}`;
+        if(elCompose.groupFilters) elCompose.groupFilters.style.display = "none"; 
+        if(elCompose.dropFilters) elCompose.dropFilters.style.display = "none";
     } else {
-        elCompose.titleText.innerHTML = `<i class="fas fa-bullhorn"></i> Send Announcement`;
-        elCompose.groupFilters.style.display = "flex"; elCompose.dropFilters.style.display = "flex";
-        elCompose.btnTeachers.checked = false; elCompose.btnStudents.checked = false; elCompose.yearDrop.style.display = "none";
+        if(elCompose.titleText) elCompose.titleText.innerHTML = `<i class="fas fa-bullhorn"></i> Send Announcement`;
+        if(elCompose.groupFilters) elCompose.groupFilters.style.display = "flex"; 
+        if(elCompose.dropFilters) elCompose.dropFilters.style.display = "flex";
+        if(elCompose.btnTeachers) elCompose.btnTeachers.checked = false; 
+        if(elCompose.btnStudents) elCompose.btnStudents.checked = false; 
+        if(elCompose.yearDrop) elCompose.yearDrop.style.display = "none";
         if (rcCachedDepts.length === 0) {
             try {
                 const deptQuery = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
                 rcCachedDepts = []; deptQuery.forEach(d => rcCachedDepts.push({ name: d.data().name || d.id, maxYears: d.data().maxYears || 4 }));
             } catch(e) {}
         }
-        elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + rcCachedDepts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
-        elCompose.deptDrop.dispatchEvent(new Event("change"));
+        if(elCompose.deptDrop) {
+            elCompose.deptDrop.innerHTML = '<option value="All">All Departments</option>' + rcCachedDepts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            elCompose.deptDrop.dispatchEvent(new Event("change"));
+        }
     }
 };
 
-elCompose.openBtn.addEventListener("click", () => window.OpenCompose(false));
-elCompose.closeBtn.addEventListener("click", () => elCompose.overlay.classList.remove("active"));
-elCompose.btnStudents.addEventListener("change", (e) => elCompose.yearDrop.style.display = e.target.checked ? "block" : "none");
-elCompose.deptDrop.addEventListener("change", (e) => {
+safeListener("btnOpenCompose", "click", () => window.OpenCompose(false));
+safeListener("closeComposeBtn", "click", () => { if(elCompose.overlay) elCompose.overlay.classList.remove("active"); });
+safeListener("toggleStudents", "change", (e) => { if(elCompose.yearDrop) elCompose.yearDrop.style.display = e.target.checked ? "block" : "none"; });
+safeListener("composeDept", "change", (e) => {
     let selectedDept = rcCachedDepts.find(d => d.name === e.target.value);
     let maxYears = selectedDept ? selectedDept.maxYears : 4;
-    elCompose.yearDrop.innerHTML = '<option value="All">All Years</option>';
-    for(let i=1; i<=maxYears; i++) elCompose.yearDrop.innerHTML += `<option value="${i}">Year ${i}</option>`;
+    if(elCompose.yearDrop) {
+        elCompose.yearDrop.innerHTML = '<option value="All">All Years</option>';
+        for(let i=1; i<=maxYears; i++) elCompose.yearDrop.innerHTML += `<option value="${i}">Year ${i}</option>`;
+    }
 });
 
-elCompose.sendBtn.addEventListener("click", async () => {
+safeListener("btnSendMessage", "click", async () => {
     let title = elCompose.title.value.trim(); let body = elCompose.body.value.trim();
     if (!title || !body) { elCompose.status.innerText = "Title and message required."; return; }
     if (!composeIsPersonal && !elCompose.btnTeachers.checked && !elCompose.btnStudents.checked) { elCompose.status.innerText = "Select Teachers or Students."; return; }
@@ -315,8 +354,7 @@ elCompose.sendBtn.addEventListener("click", async () => {
 // ==========================================
 // ROOMCODE MANAGER
 // ==========================================
-let rcLoaded = false; let rcCachedDepts = []; let rcCurrentAction = ""; let rcTargetID = ""; let rcTargetName = ""; let rcPendingNewName = ""; let rcIsCreatingNew = false;
-function showRcToast(msg) { let t = document.getElementById("rcToast"); t.innerText = msg; t.style.bottom = "30px"; setTimeout(() => t.style.bottom = "-100px", 3000); }
+function showRcToast(msg) { let t = document.getElementById("rcToast"); if(t) { t.innerText = msg; t.style.bottom = "30px"; setTimeout(() => t.style.bottom = "-100px", 3000); } }
 
 function startRoomcodeListener() {
     rcLoaded = true;
@@ -328,12 +366,17 @@ function startRoomcodeListener() {
             let linkedName = (d.linkedDepartments && d.linkedDepartments.length > 0) ? idToName[d.linkedDepartments[0]] : null;
             rcCachedDepts.push({ id: doc.id, name: d.name || doc.id, roomCode: code, maxYears: d.maxYears || 3, linkedName: linkedName });
         });
-        if (rcCachedDepts.length === 0) document.getElementById("roomcodeList").innerHTML = `<div class="no-data-text">No Roomcodes Available</div>`;
-        else renderRoomcodes();
+        let listEl = document.getElementById("roomcodeList");
+        if(listEl) {
+            if (rcCachedDepts.length === 0) listEl.innerHTML = `<div class="no-data-text">No Roomcodes Available</div>`;
+            else renderRoomcodes();
+        }
     });
 }
 function renderRoomcodes() {
-    document.getElementById("roomcodeList").innerHTML = rcCachedDepts.map(d => {
+    let listEl = document.getElementById("roomcodeList");
+    if(!listEl) return;
+    listEl.innerHTML = rcCachedDepts.map(d => {
         let linkUI = d.linkedName ? `<span style="color:#eab308; font-size:12px; margin-left:8px;" title="Linked to ${d.linkedName}"><i class="fas fa-link"></i> ${d.linkedName}</span>` : "";
         return `<div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
             <div><div class="card-title">${d.name} ${linkUI}</div><div class="card-body" style="margin-bottom:0;">Code: <strong style="font-size:16px; color:var(--brand-green); letter-spacing:1px;">${d.roomCode}</strong> (${d.maxYears} Yrs)</div></div>
@@ -352,27 +395,30 @@ window.RC_EditDuration = (id, name, years) => { rcIsCreatingNew = false; rcTarge
 window.RC_RegenSingle = (id, name) => { rcCurrentAction = "REGEN_SINGLE"; rcTargetName = name; document.getElementById("confirmText").innerHTML = `Regenerate code for <b>${name}</b>?<br>(Teacher will be logged out)`; document.getElementById("confirmOverlay").classList.add("active"); };
 window.RC_Delete = (id, name) => { rcCurrentAction = "DELETE"; rcTargetName = name; document.getElementById("confirmText").innerHTML = `Delete <b>${name}</b>?<br>(All data will be lost)`; document.getElementById("confirmOverlay").classList.add("active"); };
 
-document.getElementById("btnRegenAll").addEventListener("click", () => { if(rcCachedDepts.length === 0) return; rcCurrentAction = "REGEN_ALL"; document.getElementById("confirmText").innerHTML = `Regenerate <b>ALL</b> Room Codes?`; document.getElementById("confirmOverlay").classList.add("active"); });
-document.getElementById("btnOpenAddDept").addEventListener("click", () => { document.getElementById("addDeptInput").value = ""; document.getElementById("addDeptOverlay").classList.add("active"); });
-document.getElementById("btnOpenCombine").addEventListener("click", () => {
+safeListener("btnRegenAll", "click", () => { if(rcCachedDepts.length === 0) return; rcCurrentAction = "REGEN_ALL"; document.getElementById("confirmText").innerHTML = `Regenerate <b>ALL</b> Room Codes?`; document.getElementById("confirmOverlay").classList.add("active"); });
+safeListener("btnOpenAddDept", "click", () => { document.getElementById("addDeptInput").value = ""; document.getElementById("addDeptOverlay").classList.add("active"); });
+safeListener("btnOpenCombine", "click", () => {
     if(rcCachedDepts.length < 2) { showRcToast("Need at least 2 departments!"); return; }
     let options = rcCachedDepts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
     document.getElementById("combineSelect1").innerHTML = options; document.getElementById("combineSelect2").innerHTML = options; document.getElementById("combineSelect2").selectedIndex = 1;
     document.getElementById("combineOverlay").classList.add("active");
 });
-document.getElementById("btnAddDeptNext").addEventListener("click", () => {
+safeListener("btnAddDeptNext", "click", () => {
     rcPendingNewName = document.getElementById("addDeptInput").value.trim(); if(!rcPendingNewName) { showRcToast("Enter a name!"); return; }
     rcCurrentAction = "ADD"; document.getElementById("addDeptOverlay").classList.remove("active");
     document.getElementById("confirmText").innerHTML = `Create new department:<br><b>${rcPendingNewName}</b>?`; document.getElementById("confirmOverlay").classList.add("active");
 });
-document.getElementById("btnConfirmYes").addEventListener("click", () => { document.getElementById("confirmOverlay").classList.remove("active"); document.getElementById("pinInput").value = ""; document.getElementById("pinOverlay").classList.add("active"); });
-document.getElementById("btnConfirmNo").addEventListener("click", () => { document.getElementById("confirmOverlay").classList.remove("active"); });
-document.getElementById("btnSubmitCombine").addEventListener("click", () => {
+
+// SAFE Confirm Listeners
+safeListener("btnConfirmYes", "click", () => { document.getElementById("confirmOverlay").classList.remove("active"); document.getElementById("pinInput").value = ""; document.getElementById("pinOverlay").classList.add("active"); });
+safeListener("btnConfirmNo", "click", () => { document.getElementById("confirmOverlay").classList.remove("active"); });
+
+safeListener("btnSubmitCombine", "click", () => {
     let name1 = document.getElementById("combineSelect1").value; let name2 = document.getElementById("combineSelect2").value;
     if(name1 === name2) { showRcToast("Cannot combine with itself!"); return; }
     rcCurrentAction = "COMBINE"; document.getElementById("combineOverlay").classList.remove("active"); document.getElementById("pinInput").value = ""; document.getElementById("pinOverlay").classList.add("active");
 });
-document.getElementById("btnVerifyPin").addEventListener("click", async () => {
+safeListener("btnVerifyPin", "click", async () => {
     let pin = document.getElementById("pinInput").value.trim(); if(!pin) return;
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
@@ -381,11 +427,12 @@ document.getElementById("btnVerifyPin").addEventListener("click", async () => {
         else showRcToast("Incorrect PIN.");
     } catch(e) { showRcToast("Error verifying PIN."); }
 });
-document.getElementById("btnSaveDuration").addEventListener("click", () => {
+safeListener("btnSaveDuration", "click", () => {
     document.getElementById("durationOverlay").classList.remove("active"); let yrs = parseInt(document.getElementById("durationSelect").value);
     if (rcIsCreatingNew) { let code = String(Math.floor(100000 + Math.random() * 900000)); RC_SaveCodeToDB(rcPendingNewName, code, yrs, ""); showRcToast(`Added ${rcPendingNewName}!`); } 
     else { updateDoc(doc(db, "colleges", currentCollegeID, "departments", "DEPT_" + rcTargetName.replace(/\s+/g, '')), { maxYears: yrs }); showRcToast("Duration Updated!"); }
 });
+
 function RC_ExecuteAction() {
     if (rcCurrentAction === "ADD") { rcIsCreatingNew = true; document.getElementById("durationTitle").innerHTML = `<i class="fas fa-clock"></i> Set Duration`; document.getElementById("durationSelect").value = 3; document.getElementById("durationOverlay").classList.add("active"); }
     else if (rcCurrentAction === "REGEN_SINGLE") { let newCode = String(Math.floor(100000 + Math.random() * 900000)); let oldCode = rcCachedDepts.find(d => d.name === rcTargetName)?.roomCode || ""; RC_SaveCodeToDB(rcTargetName, newCode, 3, oldCode); RC_KickTeachers(rcTargetName); showRcToast(`New Code Generated`); }
@@ -413,16 +460,17 @@ function RC_KickTeachers(deptName) {
 // ==========================================
 // TEACHER LIST MANAGER
 // ==========================================
-let tlLoaded = false; let cachedTeachers = [];
 function startTeacherListListener() {
     tlLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "teachers"), (snap) => {
         cachedTeachers = []; snap.forEach(doc => { cachedTeachers.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("tlTotalTeachers").innerText = `Total: ${cachedTeachers.length}`; renderTeacherList();
+        let totalText = document.getElementById("tlTotalTeachers"); if(totalText) totalText.innerText = `Total: ${cachedTeachers.length}`; 
+        renderTeacherList();
     });
 }
 function renderTeacherList(searchTerm = "") {
     const listEl = document.getElementById("teacherListContainer"); const noData = document.getElementById("tlNoDataText");
+    if(!listEl || !noData) return;
     let filtered = cachedTeachers;
     if (searchTerm) { let lowerTerm = searchTerm.toLowerCase(); filtered = cachedTeachers.filter(t => (t.name || "").toLowerCase().includes(lowerTerm) || (t.departmentID || "").toLowerCase().includes(lowerTerm)); }
     if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No teacher matching "${searchTerm}"` : "No teacher requests found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
@@ -454,7 +502,7 @@ function renderTeacherList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-document.getElementById("tlSearchInput").addEventListener("input", (e) => renderTeacherList(e.target.value.trim()));
+safeListener("tlSearchInput", "input", (e) => renderTeacherList(e.target.value.trim()));
 
 window.TL_UpdateStatus = async (tID, newStatus) => {
     if (newStatus === "Pending") return; 
@@ -486,7 +534,6 @@ window.TL_ToggleHOD = async (tID, deptID, isHod) => {
     } catch(e) { showRcToast("Error updating HOD status."); }
 };
 
-let tdCurrentTeacherID = ""; let tdAssignedSubjectsCache = [];
 window.TL_OpenDashboard = (tID) => {
     let teacher = cachedTeachers.find(t => t.id === tID); if (!teacher) return;
     tdCurrentTeacherID = tID; switchView(views.teacherDashboard);
@@ -545,22 +592,23 @@ function TD_DrawSubjectRows(hoursMap) {
     });
     listEl.innerHTML = html; noData.style.display = drawn === 0 ? "block" : "none";
 }
-document.getElementById("tdDateFilter").addEventListener("change", (e) => TD_FetchHours(e.target.value));
-document.getElementById("tdBtnAllTime").addEventListener("click", () => { document.getElementById("tdDateFilter").value = ""; TD_FetchHours("All Time"); });
+safeListener("tdDateFilter", "change", (e) => TD_FetchHours(e.target.value));
+safeListener("tdBtnAllTime", "click", () => { document.getElementById("tdDateFilter").value = ""; TD_FetchHours("All Time"); });
 
 // ==========================================
 // STUDENT LIST MANAGER
 // ==========================================
-let slLoaded = false; let cachedStudents = [];
 function startStudentListListener() {
     slLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
         cachedStudents = []; snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; renderStudentList();
+        let txt = document.getElementById("slTotalStudents"); if(txt) txt.innerText = `Total: ${cachedStudents.length}`; 
+        renderStudentList();
     });
 }
 function renderStudentList(searchTerm = "") {
     const listEl = document.getElementById("studentListContainer"); const noData = document.getElementById("slNoDataText");
+    if(!listEl || !noData) return;
     let filtered = cachedStudents;
     if (searchTerm) { let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); }
     if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
@@ -585,15 +633,14 @@ function renderStudentList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-document.getElementById("slSearchInput").addEventListener("input", (e) => renderStudentList(e.target.value.trim()));
+safeListener("slSearchInput", "input", (e) => renderStudentList(e.target.value.trim()));
 
-let slTargetAdminID = "";
 window.SL_OpenAdmin = (sID, name, currentStatus) => {
     slTargetAdminID = sID; document.getElementById("saStudentName").innerText = name;
     document.getElementById("saStatusDrop").value = (currentStatus === "Declined" || currentStatus === "Banned") ? "Declined" : "Approved";
     document.getElementById("studentAdminOverlay").classList.add("active");
 };
-document.getElementById("btnConfirmSA").addEventListener("click", async () => {
+safeListener("btnConfirmSA", "click", async () => {
     if(!slTargetAdminID) return; let newStatus = document.getElementById("saStatusDrop").value;
     try { await updateDoc(doc(db, "colleges", currentCollegeID, "students", slTargetAdminID), { status: newStatus }); showRcToast(`Status updated to ${newStatus}`); document.getElementById("studentAdminOverlay").classList.remove("active"); } catch(e) { showRcToast("Error updating status"); }
 });
@@ -601,7 +648,6 @@ document.getElementById("btnConfirmSA").addEventListener("click", async () => {
 // ==========================================
 // STUDENT DASHBOARD
 // ==========================================
-let sdCurrentStudentID = ""; let sdStudentData = null; let sdSemKeys = []; let sdCurrentSemIndex = 0; let sdWorkingDays = new Set(); let sdSemesterRanges = {}; let sdCachedGlobalSubjects = [];
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
     try { const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects")); snap.forEach(doc => { let d = doc.data(); sdCachedGlobalSubjects.push({ id: doc.id, cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''), cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""), semesterArray: (d.Semester || d.semester || "").toString(), displayName: d.Name || d.name || "Unnamed", rawType: d.Type || d.type || "" }); }); } catch(e) {}
@@ -625,8 +671,8 @@ window.SL_OpenDashboard = async (sID) => {
         }
     } catch(e) { }
 };
-document.getElementById("sdBtnNextSem").addEventListener("click", () => { if(sdCurrentSemIndex < 7) { sdCurrentSemIndex++; SD_BuildUI(); } });
-document.getElementById("sdBtnPrevSem").addEventListener("click", () => { if(sdCurrentSemIndex > 0) { sdCurrentSemIndex--; SD_BuildUI(); } });
+safeListener("sdBtnNextSem", "click", () => { if(sdCurrentSemIndex < 7) { sdCurrentSemIndex++; SD_BuildUI(); } });
+safeListener("sdBtnPrevSem", "click", () => { if(sdCurrentSemIndex > 0) { sdCurrentSemIndex--; SD_BuildUI(); } });
 
 async function SD_BuildUI(specificDate = "All Time") {
     if(!sdStudentData) return;
@@ -683,9 +729,8 @@ function SD_UpdateWaveUI(percentage) {
     let rowFill = document.getElementById("sdWavyFill"); rowFill.style.setProperty('--wave-color', col); rowFill.style.setProperty('--wave-percent', `${visualPercent}%`); document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
-document.getElementById("sdBtnAllTime").addEventListener("click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
-document.getElementById("sdDateFilter").addEventListener("change", (e) => { if(e.target.value) SD_BuildUI(e.target.value); });
-
+safeListener("sdBtnAllTime", "click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
+safeListener("sdDateFilter", "change", (e) => { if(e.target.value) SD_BuildUI(e.target.value); });
 async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
     const listEl = document.getElementById("sdSubjectList"); listEl.innerHTML = "";
     try {
@@ -700,7 +745,6 @@ async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
     } catch(e) { }
 }
 
-let sdCachedMarks = {};
 async function SD_FetchMarks(semDisplay) {
     let drop = document.getElementById("sdExamDropdown"); drop.innerHTML = "<option>Loading...</option>"; document.getElementById("sdMarksList").innerHTML = ""; document.getElementById("sdNoMarksText").style.display = "none"; sdCachedMarks = {};
     try {
@@ -712,7 +756,7 @@ async function SD_FetchMarks(semDisplay) {
         } else { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; }
     } catch(e) { drop.innerHTML = "<option>Error</option>"; }
 }
-document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
+safeListener("sdExamDropdown", "change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
 function SD_RenderMarksUI(examName) {
     let marks = sdCachedMarks[examName]; if(!marks) return;
     document.getElementById("sdMarksList").innerHTML = marks.map(m => {
@@ -722,10 +766,10 @@ function SD_RenderMarksUI(examName) {
     }).join('');
 }
 
+
 // ==========================================
 // BATCH MANAGER
 // ==========================================
-let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
 function BCH_Init() {
     bchLoaded = true;
     let dropSem = document.getElementById("bchSemDrop"); dropSem.innerHTML = ""; let hasSems = false;
@@ -736,10 +780,11 @@ function BCH_Init() {
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     bchCurrentSem = dropSem.value;
-    document.getElementById("bchSemDrop").addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
-    document.getElementById("bchCatDrop").addEventListener("change", BCH_RefreshSubjects);
-    document.getElementById("bchSubDrop").addEventListener("change", BCH_FetchBatches);
-    document.getElementById("btnOpenBatchMove").addEventListener("click", BCH_OpenMoveModal);
+    
+    safeListener("bchSemDrop", "change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
+    safeListener("bchCatDrop", "change", BCH_RefreshSubjects);
+    safeListener("bchSubDrop", "change", BCH_FetchBatches);
+    safeListener("btnOpenBatchMove", "click", BCH_OpenMoveModal);
 
     if (bchSubjectsCache.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
@@ -820,7 +865,7 @@ async function BCH_RenderGroups() {
         else {
             sList.forEach(sid => {
                 let sInfo = bchStudentRamCache[sid] || { name: "Unknown", roll: "N/A", dept: "Unknown Dept" };
-                studentsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;"><div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);"><div><div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div><div style="font-size:11px; color:#64748b;">${sInfo.dept}</div></div></div></div>`;
+                studentsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;"><div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="window.BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);"><div><div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div><div style="font-size:11px; color:#64748b;">${sInfo.dept}</div></div></div></div>`;
             });
         }
         html += `<div style="background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);"><div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('bchBody_${b.id}').classList.toggle('hidden-view')"><div style="font-weight:bold; color:var(--text-green); font-size:14px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-green);">${sList.length} Students</span></div><div style="color:#64748b; font-size:12px;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div></div><div id="bchBody_${b.id}" style="padding:10px;">${studentsHtml}</div></div>`;
@@ -851,13 +896,8 @@ async function BCH_ExecuteMove(sourceID, targetID, studentIDsArray) {
 }
 
 // ==========================================
-// 🚨 NEW: TIMETABLE MANAGER 
+// 🚨 TIMETABLE MANAGER 
 // ==========================================
-let ttLoaded = false; let ttCurrentSem = "1"; let ttSelectedDay = "Monday";
-let ttAllCategories = new Set(); let ttGeneralCategories = new Set(); let ttSubjectsByCategory = {}; 
-let ttTimetableCache = {}; let ttActiveRows = []; let ttIsEditMode = true;
-let ttGlobalSubjects = []; let ttTeachersList = [];
-
 function TT_Init() {
     ttLoaded = true;
     let dropSem = document.getElementById("ttSemDrop"); dropSem.innerHTML = ""; let hasSems = false;
@@ -869,7 +909,7 @@ function TT_Init() {
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     
     ttCurrentSem = dropSem.value;
-    document.getElementById("ttSemDrop").addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
+    safeListener("ttSemDrop", "change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
 
     document.querySelectorAll('.tt-day-btn').forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -878,8 +918,8 @@ function TT_Init() {
         });
     });
 
-    document.getElementById("ttBtnEditToggle").addEventListener("click", () => { ttIsEditMode = true; TT_RenderGrid(); });
-    document.getElementById("ttBtnAction").addEventListener("click", TT_SavePhase);
+    safeListener("ttBtnEditToggle", "click", () => { ttIsEditMode = true; TT_RenderGrid(); });
+    safeListener("ttBtnAction", "click", TT_SavePhase);
 
     let dayMap = { 0: "Monday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Monday" };
     let today = new Date().getDay();
@@ -1013,8 +1053,8 @@ function TT_RenderGrid() {
             
             // 🚨 ONLY SHOW SPLIT BUTTON IF IT'S A GENERAL CATEGORY!
             if (!ttIsEditMode && isGeneral) {
-                if (row.isSplitRow) { btnHtml = `<button class="split-btn delete-split" onclick="TT_DeleteSplit(${idx})"><i class="fas fa-trash"></i> Remove Batch</button>`; } 
-                else if (isAllowedToSplit) { btnHtml = `<button class="split-btn add-split" onclick="TT_AddSplit(${idx})"><i class="fas fa-code-branch"></i> Split Class</button>`; }
+                if (row.isSplitRow) { btnHtml = `<button class="split-btn delete-split" onclick="window.TT_DeleteSplit(${idx})"><i class="fas fa-trash"></i> Remove Batch</button>`; } 
+                else if (isAllowedToSplit) { btnHtml = `<button class="split-btn add-split" onclick="window.TT_AddSplit(${idx})"><i class="fas fa-code-branch"></i> Split Class</button>`; }
             }
 
             let heatMapColor = "var(--brand-green)";
@@ -1033,13 +1073,13 @@ function TT_RenderGrid() {
             <div class="tt-card-edit ${bgClass}" id="row_${idx}">
                 <div class="tt-card-header">${periodTitle}</div>
                 <div class="tt-card-grid">
-                    <select class="input-field" ${catDisabled} onchange="TT_UpdateCat(${idx}, this.value)">
+                    <select class="input-field" ${catDisabled} onchange="window.TT_UpdateCat(${idx}, this.value)">
                         ${catOptions.replace(`value="${row.cat}"`, `value="${row.cat}" selected`)}
                     </select>
-                    <select class="input-field" ${subDisabled} onchange="TT_UpdateSub(${idx}, this.value)">
+                    <select class="input-field" ${subDisabled} onchange="window.TT_UpdateSub(${idx}, this.value)">
                         ${subOptions.replace(`value="${row.sub}"`, `value="${row.sub}" selected`)}
                     </select>
-                    <select class="input-field" ${teachDisabled} onchange="TT_UpdateTeach(${idx}, this)">
+                    <select class="input-field" ${teachDisabled} onchange="window.TT_UpdateTeach(${idx}, this)">
                         ${teachOptions.replace(`value="${row.teach}"`, `value="${row.teach}" selected`)}
                     </select>
                     <input type="text" class="input-field" placeholder="Enter room..." value="${row.room || ""}" ${roomDisabled} oninput="ttActiveRows[${idx}].room = this.value">
@@ -1161,7 +1201,7 @@ window.TT_RenderDeptRows = (depts, count) => {
     container.innerHTML = html;
 };
 
-document.getElementById("btnConfirmDeptSplit").addEventListener("click", () => {
+safeListener("btnConfirmDeptSplit", "click", () => {
     document.getElementById("deptSplitOverlay").classList.remove("active");
     let count = parseInt(document.getElementById("dsBatchCountDrop").value);
     
