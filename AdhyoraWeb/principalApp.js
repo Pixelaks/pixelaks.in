@@ -80,6 +80,7 @@ const views = {
     timetable: document.getElementById("timetableView"),
     assign: document.getElementById("assignView"),
     data: document.getElementById("dataView") // 🚨 ADDED THIS LINE!
+    subjectList: document.getElementById("subjectListView")
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -113,6 +114,7 @@ document.getElementById("btnBackToStudents").addEventListener("click", () => swi
 document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
 document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
 document.getElementById("btnNavData").addEventListener("click", () => { switchView(views.data); });
+document.getElementById("btnNavSubjectList").addEventListener("click", () => { switchView(views.subjectList); if (!subLoaded) SUB_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -410,6 +412,16 @@ function RC_ExecuteAction() {
     else if (rcCurrentAction === "PROMOTE_STUDENTS") {
         document.getElementById("pinOverlay").classList.remove("active");
         ExecuteSemesterPromotion();
+    }
+
+  // Inside RC_ExecuteAction(), append these:
+    else if (rcCurrentAction === "EDIT_SUBJECT") {
+        document.getElementById("pinOverlay").classList.remove("active");
+        SUB_ExecuteEdit();
+    }
+    else if (rcCurrentAction === "DELETE_SUBJECT") {
+        document.getElementById("pinOverlay").classList.remove("active");
+        SUB_ExecuteDelete();
     }
 }
 function RC_SaveCodeToDB(name, code, years, oldCode) {
@@ -2121,4 +2133,168 @@ function DownloadCSV(csvContent, fileName) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// ==========================================
+// 🚨 SUBJECT LIST MANAGER
+// ==========================================
+let subLoaded = false;
+let subCachedData = [];
+let subTargetId = "";
+let subListener = null;
+
+function SUB_Init() {
+    subLoaded = true;
+    if (subListener) subListener(); // Kill old listener
+
+    subListener = onSnapshot(collection(db, "colleges", currentCollegeID, "subjects"), (snap) => {
+        subCachedData = [];
+        snap.forEach(doc => {
+            let d = doc.data();
+            subCachedData.push({
+                code: doc.id,
+                name: d.name || d.Name || "",
+                type: d.type || d.Type || "",
+                department: d.department || d.Department || "",
+                semester: d.semester || d.Semester || ""
+            });
+        });
+        
+        // Sort by Department, then Semester (Matching C# logic)
+        subCachedData.sort((a,b) => {
+            let dCmp = a.department.localeCompare(b.department);
+            if (dCmp !== 0) return dCmp;
+            return a.semester.localeCompare(b.semester);
+        });
+
+        document.getElementById("subTotalCount").innerText = `Total: ${subCachedData.length}`;
+        SUB_RenderList(document.getElementById("subSearchInput").value);
+    });
+}
+
+function SUB_RenderList(searchTerm = "") {
+    let container = document.getElementById("subListContainer");
+    let filtered = subCachedData;
+    
+    if (searchTerm) {
+        let q = searchTerm.toLowerCase();
+        filtered = subCachedData.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || s.type.toLowerCase().includes(q));
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="no-data-text">${searchTerm ? "No subjects match your search." : "No subjects available. Upload Master CSV."}</div>`;
+        return;
+    }
+
+    let html = "";
+    filtered.forEach(s => {
+        // C# Color mapping logic
+        let tUp = s.type.toUpperCase();
+        let badgeClass = "sub-other";
+        if (tUp === "CORE") badgeClass = "sub-core";
+        else if (tUp === "ELECTIVE") badgeClass = "sub-elec";
+        else if (tUp.includes("MLD") || tUp.includes("VAC")) badgeClass = "sub-mld";
+
+        html += `
+        <div class="sub-card ${badgeClass}">
+            <div class="sub-info-col">
+                <div class="sub-badge">${s.type}</div>
+                <div class="sub-title">${s.name}</div>
+                <div class="sub-code">${s.code}</div>
+                <div class="sub-meta"><i class="fas fa-building"></i> ${s.department} &nbsp;•&nbsp; <i class="fas fa-layer-group"></i> Sem ${s.semester}</div>
+            </div>
+            <div class="sub-actions">
+                <button class="action-icon-btn" onclick="SUB_OpenEdit('${s.code}')"><i class="fas fa-pen"></i></button>
+                <button class="action-icon-btn" style="color: #ef4444;" onclick="SUB_RequestDelete('${s.code}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+document.getElementById("subSearchInput").addEventListener("input", (e) => SUB_RenderList(e.target.value));
+
+// --- EDIT SUBJECT ---
+window.SUB_OpenEdit = (code) => {
+    let data = subCachedData.find(s => s.code === code);
+    if(!data) return;
+    subTargetId = code;
+
+    document.getElementById("editSubCode").value = data.code;
+    document.getElementById("editSubName").value = data.name;
+    document.getElementById("editSubType").value = data.type;
+    document.getElementById("editSubDept").value = data.department;
+    document.getElementById("editSubSem").value = data.semester;
+
+    document.getElementById("subjectEditOverlay").classList.add("active");
+};
+
+document.getElementById("btnSaveSubjectEdit").addEventListener("click", () => {
+    document.getElementById("subjectEditOverlay").classList.remove("active");
+    // Trigger Security Check
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinOverlay").classList.add("active");
+    rcCurrentAction = "EDIT_SUBJECT"; 
+});
+
+async function SUB_ExecuteEdit() {
+    showRcToast("Saving Subject...");
+    let newCode = document.getElementById("editSubCode").value.trim();
+    let name = document.getElementById("editSubName").value.trim();
+    let type = document.getElementById("editSubType").value.trim();
+    let dept = document.getElementById("editSubDept").value.trim();
+    let sem = document.getElementById("editSubSem").value.trim();
+    let oldCode = subTargetId;
+
+    if(!newCode || !name) { showRcToast("Code and Name required!"); return; }
+
+    let subRef = collection(db, "colleges", currentCollegeID, "subjects");
+    let data = { 
+        code: newCode, name: name, type: type, department: dept, semester: sem, 
+        search_key: name.toLowerCase(), 
+        isElective: (type.toUpperCase() === "MLD" || type.toUpperCase() === "VAC" || type.toUpperCase() === "SEC"), 
+        lastUpdated: serverTimestamp() 
+    };
+
+    try {
+        if (newCode !== oldCode) {
+            let wb = writeBatch(db);
+            wb.set(doc(subRef, newCode), data, {merge: true});
+            wb.delete(doc(subRef, oldCode));
+            await wb.commit();
+        } else {
+            await updateDoc(doc(subRef, oldCode), data);
+        }
+        showRcToast("✅ Subject Updated Successfully!");
+    } catch(e) { showRcToast("❌ Error updating subject."); }
+}
+
+// --- DELETE SUBJECT ---
+window.SUB_RequestDelete = (code) => {
+    let data = subCachedData.find(s => s.code === code);
+    if(!data) return;
+    subTargetId = code;
+
+    document.getElementById("confirmIconTitle").innerHTML = '<i class="fas fa-trash"></i> Delete Subject';
+    document.getElementById("confirmIconTitle").style.color = "#ef4444";
+    document.getElementById("confirmText").innerHTML = `Are you sure you want to delete<br><b>${data.name} (${data.code})</b>?`;
+    
+    let btnYes = document.getElementById("btnConfirmYes");
+    let newBtnYes = btnYes.cloneNode(true); btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+    newBtnYes.onclick = () => { 
+        document.getElementById("confirmOverlay").classList.remove("active"); 
+        document.getElementById("pinInput").value = "";
+        document.getElementById("pinOverlay").classList.add("active");
+        rcCurrentAction = "DELETE_SUBJECT"; 
+    };
+    
+    document.getElementById("confirmOverlay").classList.add("active");
+};
+
+async function SUB_ExecuteDelete() {
+    showRcToast("Deleting Subject...");
+    try {
+        await deleteDoc(doc(db, "colleges", currentCollegeID, "subjects", subTargetId));
+        showRcToast("✅ Subject Deleted.");
+    } catch(e) { showRcToast("❌ Error deleting subject."); }
 }
