@@ -405,6 +405,12 @@ function RC_ExecuteAction() {
         document.getElementById("pinOverlay").classList.remove("active");
         ExecuteDataUpload();
     }
+
+  // 🚨 ADD THIS LINE 🚨
+    else if (rcCurrentAction === "PROMOTE_STUDENTS") {
+        document.getElementById("pinOverlay").classList.remove("active");
+        ExecuteSemesterPromotion();
+    }
 }
 function RC_SaveCodeToDB(name, code, years, oldCode) {
     let deptID = "DEPT_" + name.replace(/\s+/g, '');
@@ -1805,4 +1811,314 @@ async function ExecuteDataUpload() {
     }
     
     pendingUploadData = null;
+}
+
+// ==========================================
+// 🚨 YEAR UPDATER & PROMOTION ENGINE
+// ==========================================
+document.getElementById("btnOpenPromote").addEventListener("click", () => {
+    document.getElementById("promoteWarningOverlay").classList.add("active");
+});
+
+document.getElementById("btnPromoteProceed").addEventListener("click", () => {
+    document.getElementById("promoteWarningOverlay").classList.remove("active");
+    // Open Security PIN Panel
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinOverlay").classList.add("active");
+    rcCurrentAction = "PROMOTE_STUDENTS"; 
+});
+
+async function ExecuteSemesterPromotion() {
+    showRcToast("Analyzing Departments...");
+    
+    // 1. Fetch Department Max Years
+    let deptMaxYears = {};
+    const deptSnap = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
+    deptSnap.forEach(d => {
+        let name = d.data().name || d.id.replace("DEPT_", "");
+        deptMaxYears[name] = d.data().maxYears ? parseInt(d.data().maxYears) : 3;
+    });
+
+    // 2. Fetch All Students
+    const stuSnap = await getDocs(collection(db, "colleges", currentCollegeID, "students"));
+    if (stuSnap.empty) { showRcToast("No students found."); return; }
+
+    showRcToast(`Promoting ${stuSnap.size} Students...`);
+
+    let wb = writeBatch(db);
+    let batchCount = 0; let promoted = 0; let graduated = 0;
+    let currentRealYear = new Date().getFullYear();
+    let alumniBatchName = "Alumni_" + currentRealYear;
+
+    // 3. Process Logic
+    for (let i = 0; i < stuSnap.docs.length; i++) {
+        let docSnap = stuSnap.docs[i];
+        let data = docSnap.data();
+        if (!data.Department) continue;
+
+        let deptName = data.Department;
+        let rawYear = data.Year ? data.Year.toString() : "1";
+        if (rawYear.startsWith("Alumni")) continue;
+
+        let currentSem = 1;
+        if (data.currentSemester) {
+            currentSem = parseInt(data.currentSemester);
+        } else {
+            let yearNum = parseInt(rawYear.replace(/\D/g, '')) || 1;
+            currentSem = (yearNum * 2) - 1;
+        }
+
+        let maxYears = deptMaxYears[deptName] || 3;
+        let maxSemesters = maxYears * 2;
+
+        let updates = {};
+        if (currentSem >= maxSemesters) {
+            updates.Year = alumniBatchName;
+            updates.status = "Graduated";
+            updates.GraduatedDate = serverTimestamp();
+            graduated++;
+        } else {
+            let newSem = currentSem + 1;
+            let newYear = Math.ceil(newSem / 2);
+            updates.currentSemester = newSem;
+            updates.Year = newYear.toString();
+            promoted++;
+        }
+
+        wb.update(docSnap.ref, updates);
+        batchCount++;
+
+        // Batch commit safely at 450 limit
+        if (batchCount >= 450 || i === stuSnap.docs.length - 1) {
+            await wb.commit();
+            wb = writeBatch(db);
+            batchCount = 0;
+        }
+    }
+    
+    showRcToast(`✅ Success! Promoted: ${promoted} | Graduated: ${graduated}`);
+}
+
+// ==========================================
+// 🚨 EXPORT DATA ENGINE
+// ==========================================
+let expAllDepts = [];
+
+document.getElementById("btnOpenExport").addEventListener("click", async () => {
+    document.getElementById("exportOverlay").classList.add("active");
+    
+    // Fetch departments for dropdown
+    const snap = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
+    expAllDepts = [];
+    snap.forEach(d => {
+        let name = d.data().name || d.id.replace("DEPT_", "");
+        let myrs = d.data().maxYears ? parseInt(d.data().maxYears) : 3;
+        expAllDepts.push({ name: name, maxYears: myrs });
+    });
+    
+    let maxOverall = Math.max(4, ...expAllDepts.map(d => d.maxYears));
+    let yDrop = document.getElementById("expYearDrop");
+    yDrop.innerHTML = "";
+    for(let i=1; i<=maxOverall; i++) yDrop.innerHTML += `<option value="${i}">${i} Year</option>`;
+    
+    ExpFilterDepts(1);
+});
+
+document.getElementById("expYearDrop").addEventListener("change", (e) => {
+    ExpFilterDepts(parseInt(e.target.value));
+});
+
+function ExpFilterDepts(selectedYear) {
+    let dDrop = document.getElementById("expDeptDrop");
+    dDrop.innerHTML = `<option value="All">All Departments</option>`;
+    
+    let validDepts = expAllDepts.filter(d => d.maxYears >= selectedYear).sort((a,b) => a.name.localeCompare(b.name));
+    validDepts.forEach(d => {
+        dDrop.innerHTML += `<option value="${d.name}">${d.name}</option>`;
+    });
+
+    document.getElementById("btnExecuteExport").disabled = (validDepts.length === 0);
+}
+
+// Export Trigger
+document.getElementById("btnExecuteExport").addEventListener("click", async () => {
+    let btn = document.getElementById("btnExecuteExport");
+    btn.innerText = "Processing..."; btn.disabled = true;
+
+    let type = parseInt(document.getElementById("expDataType").value);
+    let year = document.getElementById("expYearDrop").value;
+    let deptSel = document.getElementById("expDeptDrop").value;
+
+    let targetSems = [((year * 2) - 1).toString(), (year * 2).toString()];
+    let deptsToProcess = deptSel === "All" ? expAllDepts.filter(d => d.maxYears >= year).map(d => d.name) : [deptSel];
+
+    try {
+        if (type === 0 || type === 1) {
+            let masterCSV = "";
+            for (let i = 0; i < deptsToProcess.length; i++) {
+                let dName = deptsToProcess[i];
+                showRcToast(`Fetching ${dName} (${i+1}/${deptsToProcess.length})...`);
+                
+                let sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Department", "==", dName), where("Year", "==", year.toString())));
+                let students = sSnap.docs;
+
+                if (students.length > 0) {
+                    masterCSV += `\n########################################\n### DEPARTMENT: ${dName.toUpperCase()} ###\n########################################\n`;
+                    for (let sem of targetSems) {
+                        if (type === 0) masterCSV += await GenerateMarksCSV(students, sem);
+                        else masterCSV += await GenerateStatsCSV(students, sem);
+                    }
+                }
+            }
+            let pfx = deptSel === "All" ? "All" : deptSel.replace(/\s+/g, '');
+            let ftype = type === 0 ? "Marks" : "AttStats";
+            DownloadCSV(masterCSV, `${pfx}_${ftype}_Year${year}.csv`);
+        } 
+        else if (type === 2) {
+            // Logs
+            showRcToast("Fetching Attendance Logs...");
+            let logsRef = collection(db, "colleges", currentCollegeID, "attendance");
+            let logsData = [];
+            for (let sem of targetSems) {
+                let snap = await getDocs(query(logsRef, where("semester", "==", `Semester ${sem}`))); // C# format
+                snap.forEach(d => logsData.push({ id: d.id, ...d.data() }));
+                let snap2 = await getDocs(query(logsRef, where("semester", "==", `Semester_${sem}`))); // Alternate format
+                snap2.forEach(d => logsData.push({ id: d.id, ...d.data() }));
+            }
+
+            for (let i = 0; i < deptsToProcess.length; i++) {
+                let dName = deptsToProcess[i];
+                showRcToast(`Processing Logs: ${dName} (${i+1}/${deptsToProcess.length})...`);
+                let sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Department", "==", dName), where("Year", "==", year.toString())));
+                let students = sSnap.docs;
+
+                if (students.length > 0) {
+                    let logCSV = "Date,Semester,Roll No,Name,P1,P2,P3,P4,P5,P6,Status\n";
+                    logCSV += GenerateLogsCSV(students, logsData);
+                    DownloadCSV(logCSV, `${dName.replace(/\s+/g, '')}_Logs_Year${year}.csv`);
+                }
+            }
+        }
+        showRcToast("✅ Export Complete!");
+    } catch (e) {
+        showRcToast("❌ Export Failed!");
+        console.error(e);
+    }
+    
+    document.getElementById("exportOverlay").classList.remove("active");
+    btn.innerText = "Download CSV"; btn.disabled = false;
+});
+
+// CSV Generator Logic
+async function GenerateMarksCSV(students, sem) {
+    let semKey = `Semester ${sem}`;
+    let globalData = {}; // Exam -> Subject -> Roll -> Stats
+    
+    for (let docSnap of students) {
+        let markSnap = await getDoc(doc(db, "colleges", currentCollegeID, "students", docSnap.id, "nep_marks", semKey));
+        if (markSnap.exists()) {
+            let data = markSnap.data();
+            for (let subject in data) {
+                for (let exam in data[subject]) {
+                    if (!globalData[exam]) globalData[exam] = {};
+                    if (!globalData[exam][subject]) globalData[exam][subject] = {};
+                    globalData[exam][subject][docSnap.id] = data[subject][exam];
+                }
+            }
+        }
+    }
+
+    let csv = `\n========== SEMESTER ${sem} ==========\n`;
+    if (Object.keys(globalData).length === 0) return csv + "No Marks Data Uploaded.\n";
+
+    for (let exam of Object.keys(globalData).sort()) {
+        csv += `\n===== EXAM: ${exam} =====,,,,,,,\n`;
+        for (let sub of Object.keys(globalData[exam]).sort()) {
+            csv += `--- ${sub} ---,,,,,,,\nRoll No,Name,Obtained,Max,Test,Assign,Att,Status\n`;
+            for (let stu of students) {
+                if (globalData[exam][sub][stu.id]) {
+                    let s = globalData[exam][sub][stu.id];
+                    csv += `${stu.id},${stu.data().Name || ""},${s.total||0},${s.max||50},${s.test||0},${s.assign||0},${s.att||0},Present\n`;
+                } else {
+                    csv += `${stu.id},${stu.data().Name || ""},Nil,--,--,--,--,Not Entered\n`;
+                }
+            }
+        }
+    }
+    return csv;
+}
+
+async function GenerateStatsCSV(students, sem) {
+    let semKey = `Semester_${sem}`;
+    let grouped = {};
+    
+    for (let stu of students) {
+        let stats = stu.data().attendance_stats;
+        if (stats && stats[semKey]) {
+            for (let sub in stats[semKey]) {
+                if (sub === "Strict_Global") continue;
+                if (!grouped[sub]) grouped[sub] = [];
+                let s = stats[semKey][sub];
+                let p = s.present || 0; let t = s.total || 0; let pct = t > 0 ? (p/t)*100 : 0;
+                grouped[sub].push({ id: stu.id, name: stu.data().Name || "", p: p, t: t, pct: pct.toFixed(2) });
+            }
+        }
+    }
+
+    let csv = `\n========== SEMESTER ${sem} STATS ==========\n`;
+    for (let sub of Object.keys(grouped).sort()) {
+        csv += `\n--- SUBJECT: ${sub} ---,,,,\nRoll No,Name,Present,Total,Percentage\n`;
+        for (let row of grouped[sub].sort((a,b) => a.id.localeCompare(b.id))) {
+            csv += `${row.id},${row.name},${row.p},${row.t},${row.pct}%\n`;
+        }
+    }
+    return csv;
+}
+
+function GenerateLogsCSV(students, logsData) {
+    let csv = "";
+    // Group logs by Date_Semester
+    let groupedLogs = {};
+    logsData.forEach(l => {
+        let parts = l.id.split('_'); 
+        let key = parts.length >= 2 ? `${parts[0]}_${parts[1]}` : l.id;
+        if (!groupedLogs[key]) groupedLogs[key] = [];
+        groupedLogs[key].push(l);
+    });
+
+    for (let key in groupedLogs) {
+        let kParts = key.split('_'); let dateStr = kParts[0]; let semStr = kParts.length > 1 ? kParts[1] : "";
+        let dailyData = groupedLogs[key];
+
+        for (let stu of students) {
+            let r = stu.id;
+            let p1="-", p2="-", p3="-", p4="-", p5="-", p6="-";
+
+            dailyData.forEach(d => {
+                if (d.period_1 && d.period_1.attendance && d.period_1.attendance[r] !== undefined) p1 = d.period_1.attendance[r] ? "P" : "A";
+                if (d.period_2 && d.period_2.attendance && d.period_2.attendance[r] !== undefined) p2 = d.period_2.attendance[r] ? "P" : "A";
+                if (d.period_3 && d.period_3.attendance && d.period_3.attendance[r] !== undefined) p3 = d.period_3.attendance[r] ? "P" : "A";
+                if (d.period_4 && d.period_4.attendance && d.period_4.attendance[r] !== undefined) p4 = d.period_4.attendance[r] ? "P" : "A";
+                if (d.period_5 && d.period_5.attendance && d.period_5.attendance[r] !== undefined) p5 = d.period_5.attendance[r] ? "P" : "A";
+                if (d.period_6 && d.period_6.attendance && d.period_6.attendance[r] !== undefined) p6 = d.period_6.attendance[r] ? "P" : "A";
+            });
+
+            let status = (p1==="P"||p2==="P"||p3==="P"||p4==="P"||p5==="P"||p6==="P") ? "Present" : "Absent";
+            csv += `${dateStr},${semStr},${r},${stu.data().Name || ""},${p1},${p2},${p3},${p4},${p5},${p6},${status}\n`;
+        }
+        csv += ",,,,,,,,,,\n"; // Blank spacer row
+    }
+    return csv;
+}
+
+function DownloadCSV(csvContent, fileName) {
+    let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
