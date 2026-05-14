@@ -3062,7 +3062,7 @@ function ATTD_GetStatusColorClass(periodIndex, assignedTeacherID, markedByTeache
 }
 
 // 🚨 TOOLTIP ENGINE
-function ATTD_ShowTooltip(event, text) {
+window.ATTD_ShowTooltip = (event, text) => {
     let tooltip = document.getElementById("attdTooltip");
     tooltip.innerText = text;
     tooltip.style.display = "block";
@@ -3070,8 +3070,8 @@ function ATTD_ShowTooltip(event, text) {
     // Position it slightly above the mouse
     tooltip.style.left = (event.clientX + 10) + 'px';
     tooltip.style.top = (event.clientY - 30) + 'px';
-}
+};
 
-function ATTD_HideTooltip() {
+window.ATTD_HideTooltip = () => {
     document.getElementById("attdTooltip").style.display = "none";
-}
+};
