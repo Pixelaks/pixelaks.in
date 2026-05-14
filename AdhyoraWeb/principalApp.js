@@ -1014,34 +1014,44 @@ function TT_Init() {
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     dropSem.selectedIndex = defaultIndex; ttCurrentSem = dropSem.options[defaultIndex].value;
-    dropSem.addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
+    
+    // 🚨 WIPE GHOST LISTENERS
+    let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
+    newDropSem.addEventListener("change", (e) => { ttCurrentSem = e.target.value; TT_LoadGlobalCategories(); });
 
     let dBtns = document.querySelectorAll(".tt-day-btn");
     dBtns.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            ttSelectedDay = e.target.dataset.day; dBtns.forEach(b => b.classList.remove("active")); e.target.classList.add("active"); TT_LoadTimetableForDay();
+        let newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener("click", (e) => {
+            ttSelectedDay = e.target.dataset.day; document.querySelectorAll(".tt-day-btn").forEach(b => b.classList.remove("active")); e.target.classList.add("active"); TT_LoadTimetableForDay();
         });
     });
 
-    document.getElementById("btnTTSaveStructure").addEventListener("click", TT_SaveStructureAndLock);
-    document.getElementById("btnTTEdit").addEventListener("click", () => TT_SetPhase(0));
+    // 🚨 WIPE GHOST LISTENERS for buttons to fix the UI blinking
+    let btnSave = document.getElementById("btnTTSaveStructure"); let newBtnSave = btnSave.cloneNode(true); btnSave.parentNode.replaceChild(newBtnSave, btnSave);
+    newBtnSave.addEventListener("click", TT_SaveStructureAndLock);
+
+    let btnEdit = document.getElementById("btnTTEdit"); let newBtnEdit = btnEdit.cloneNode(true); btnEdit.parentNode.replaceChild(newBtnEdit, btnEdit);
+    newBtnEdit.addEventListener("click", () => TT_SetPhase(0));
     
-  // 🚨 ASSIGN BUTTON LISTENER 🚨
-  document.getElementById("btnTTAssign").addEventListener("click", () => {
-      switchView(views.assign); // Use the dashboard view switcher!
-      ASN_Init(ttCurrentSem, ttSelectedDay); 
-  });
-  
-  // Back Button logic
-  document.getElementById("btnBackToTimetable").addEventListener("click", () => {
-      switchView(views.timetable);
-      TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without duplicating background timers!
-  });
+    let btnAssign = document.getElementById("btnTTAssign"); let newBtnAssign = btnAssign.cloneNode(true); btnAssign.parentNode.replaceChild(newBtnAssign, btnAssign);
+    newBtnAssign.addEventListener("click", () => {
+        switchView(views.assign); 
+        ASN_Init(ttCurrentSem, ttSelectedDay); 
+    });
+    
+    let btnBack = document.getElementById("btnBackToTimetable"); let newBtnBack = btnBack.cloneNode(true); btnBack.parentNode.replaceChild(newBtnBack, btnBack);
+    newBtnBack.addEventListener("click", () => {
+        switchView(views.timetable);
+        TT_LoadTimetableForDay(); // Safely refresh!
+    });
 
     TT_LoadGlobalCategories();
-    setInterval(() => { if (!document.getElementById('timetableView').classList.contains('hidden-view')) TT_UpdateTimelineVisuals(); }, 60000); 
+    
+    // 🚨 KILL DUPLICATE TIMERS TO PREVENT LAG
+    if (window.ttInterval) clearInterval(window.ttInterval);
+    window.ttInterval = setInterval(() => { if (!document.getElementById('timetableView').classList.contains('hidden-view')) TT_UpdateTimelineVisuals(); }, 60000); 
 }
-
 function TT_LoadGlobalCategories() {
     if (ttSubjectsCached) { TT_ProcessSubjectsFromRAM(); return; }
     getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
@@ -1207,7 +1217,7 @@ function ASN_Init(startSem, startDay) {
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === asnCurrentSem) dropSem.selectedIndex = i; }
     
-    // Wipe listeners to prevent duplicates
+    // 🚨 WIPE GHOST LISTENERS
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
 
@@ -1215,20 +1225,16 @@ function ASN_Init(startSem, startDay) {
     dBtns.forEach(btn => {
         let newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener("click", (e) => {
-            asnSelectedDay = e.target.dataset.day; 
-            document.querySelectorAll(".asn-day-btn").forEach(b => b.classList.remove("active")); 
-            e.target.classList.add("active"); 
-            ASN_LoadData();
+            asnSelectedDay = e.target.dataset.day; document.querySelectorAll(".asn-day-btn").forEach(b => b.classList.remove("active")); e.target.classList.add("active"); ASN_LoadData();
         });
     });
-    
     document.querySelectorAll(".asn-day-btn").forEach((b) => { if(b.dataset.day === asnSelectedDay) b.classList.add("active"); else b.classList.remove("active"); });
 
     let btnSave = document.getElementById("btnAsnSave");
     let newBtnSave = btnSave.cloneNode(true); btnSave.parentNode.replaceChild(newBtnSave, btnSave);
     newBtnSave.addEventListener("click", ASN_SaveAll);
 
-    // 🚨 PERFORMANCE FIX: Only fetch teachers ONCE per session
+    // 🚨 CACHE TEACHERS TO KILL LOAD LAG
     if (asnAllTeachers.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
             asnAllTeachers = []; snap.forEach(d => asnAllTeachers.push({ id: d.id, name: d.data().name || d.data().teacherName || "Unknown", dept: d.data().departmentID || "" }));
@@ -1488,8 +1494,26 @@ function ASN_OpenDeptSplit(row, isDeleting) {
 }
 
 async function ASN_ConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
-    document.getElementById("deptSplitOverlay").classList.remove("active"); showRcToast("Saving configurations...");
-    let totalBatches = parseInt(document.getElementById("dsBatchCount").value); let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, '');
+    let totalBatches = parseInt(document.getElementById("dsBatchCount").value); 
+    let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, '');
+    
+    // 🚨 NEW VALIDATION BLOCK: Prevents splitting if a batch is left empty!
+    if (totalBatches > 1) {
+        let selectedBatches = new Set();
+        document.querySelectorAll(".ds-dept-select").forEach(s => {
+            if (s.value !== "Exclude") selectedBatches.add(s.value);
+        });
+        
+        for (let i = 1; i <= totalBatches; i++) {
+            if (!selectedBatches.has(`Batch ${i}`)) {
+                showRcToast(`⚠️ Please assign at least one department to Batch ${i}!`);
+                return; // Stop the split completely!
+            }
+        }
+    }
+
+    document.getElementById("deptSplitOverlay").classList.remove("active"); 
+    showRcToast("Saving configurations...");
     
     if (totalBatches === 1) {
         const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", subject)));
@@ -1522,7 +1546,7 @@ async function ASN_SaveAll() {
             else tMap[r.period][r.teacher] = r.subject;
         }
     });
-    if(conflict) { showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); btn.innerText = "Save"; btn.disabled = false; return; }
+    if(conflict) { showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); btn.innerText = "Save Timetable"; btn.disabled = false; return; }
 
     const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", "DEPT_General")));
     const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
@@ -1536,7 +1560,7 @@ async function ASN_SaveAll() {
             }, {merge:true});
         }
     });
-    await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save"; btn.disabled = false;
-    switchView(views.timetable); // Switch back to Timetable view
-    TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without causing lag!
+    await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save Timetable"; btn.disabled = false;
+    switchView(views.timetable); 
+    TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without triggering the memory leak!
 }
