@@ -638,33 +638,53 @@ document.getElementById("tdDateFilter").addEventListener("change", (e) => TD_Fet
 document.getElementById("tdBtnAllTime").addEventListener("click", () => { document.getElementById("tdDateFilter").value = ""; TD_FetchHours("All Time"); });
 
 // ==========================================
-// STUDENT LIST MANAGER
+// STUDENT LIST MANAGER (RAM INFINITE SCROLL)
 // ==========================================
-let slLoaded = false; let cachedStudents = [];
+let slLoaded = false; 
+let cachedStudents = [];
+let studentRenderLimit = 50; // Start with 50
+
 function startStudentListListener() {
     if (slLoaded) return;
     slLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
-        cachedStudents = []; snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; renderStudentList(document.getElementById("slSearchInput").value);
+        cachedStudents = []; 
+        snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
+        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; 
+        renderStudentList(document.getElementById("slSearchInput").value);
     });
 }
+
 function renderStudentList(searchTerm = "") {
-    const listEl = document.getElementById("studentListContainer"); const noData = document.getElementById("slNoDataText");
+    const listEl = document.getElementById("studentListContainer"); 
+    const noData = document.getElementById("slNoDataText");
     let filtered = cachedStudents;
     
+    // Filter logic
     if (searchTerm) { 
         let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); 
-        filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); 
-    } else {
-        // 🚀 DOM OPTIMIZATION: Only render the first 50 students by default!
-        filtered = filtered.slice(0, 50);
+        filtered = cachedStudents.filter(s => { 
+            let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); 
+            return terms.every(term => sStr.includes(term)); 
+        }); 
     }
     
-    if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
+    if (filtered.length === 0) { 
+        noData.style.display = "block"; 
+        noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; 
+        listEl.innerHTML = ""; 
+        listEl.appendChild(noData); 
+        return; 
+    }
     noData.style.display = "none";
     
-    listEl.innerHTML = filtered.map(s => {
+    // 🚀 RAM SCROLL: Slice the array based on the current limit (Costs $0 Firebase reads)
+    let renderBatch = filtered.slice(0, studentRenderLimit);
+    
+    // Remember scroll position before rebuilding DOM
+    let oldScroll = listEl.scrollTop;
+
+    listEl.innerHTML = renderBatch.map(s => {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); let status = s.status || "Approved";
         let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
         let statusLabel = status === "Approved" ? "Active" : status;
@@ -681,8 +701,33 @@ function renderStudentList(searchTerm = "") {
             </div>
         </div>`;
     }).join('');
+    
     listEl.appendChild(noData); 
+    
+    // Restore scroll
+    listEl.scrollTop = oldScroll;
 }
+
+// Search Input Logic
+document.getElementById("slSearchInput").addEventListener("input", debounce((e) => {
+    studentRenderLimit = 50; // Reset scroll limit when they search
+    renderStudentList(e.target.value.trim());
+}, 250));
+
+// 🚀 SCROLL DETECTOR: Triggers when they reach the bottom of the list
+document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
+    let el = e.target;
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
+        let searchTerm = document.getElementById("slSearchInput").value.trim();
+        let totalCurrentMatches = searchTerm ? cachedStudents.length : cachedStudents.length; // Simplified for length check
+        
+        // If we haven't rendered all the students yet, increase limit by 50 and render
+        if (studentRenderLimit < totalCurrentMatches) {
+            studentRenderLimit += 50;
+            renderStudentList(searchTerm);
+        }
+    }
+});
 // 🚀 OPTIMIZATION 5: Debounce Student Search
 document.getElementById("slSearchInput").addEventListener("input", debounce((e) => renderStudentList(e.target.value.trim()), 250));
 
@@ -2210,12 +2255,13 @@ function DownloadCSV(csvContent, fileName) {
 }
 
 // ==========================================
-// SUBJECT LIST MANAGER
+// SUBJECT LIST MANAGER (RAM INFINITE SCROLL)
 // ==========================================
 let subLoaded = false;
 let subCachedData = [];
 let subTargetId = "";
 let subListener = null;
+let subjectRenderLimit = 50; // Start with 50
 
 function SUB_Init() {
     if (subLoaded) return;
@@ -2253,9 +2299,6 @@ function SUB_RenderList(searchTerm = "") {
     if (searchTerm) {
         let q = searchTerm.toLowerCase();
         filtered = subCachedData.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || s.type.toLowerCase().includes(q));
-    } else {
-        // 🚀 DOM OPTIMIZATION: Only render the first 50 subjects by default!
-        filtered = filtered.slice(0, 50);
     }
 
     if (filtered.length === 0) {
@@ -2263,8 +2306,12 @@ function SUB_RenderList(searchTerm = "") {
         return;
     }
 
+    // 🚀 RAM SCROLL: Slice the array
+    let renderBatch = filtered.slice(0, subjectRenderLimit);
+    let oldScroll = container.scrollTop;
+
     let html = "";
-    filtered.forEach(s => {
+    renderBatch.forEach(s => {
         let tUp = s.type.toUpperCase();
         let badgeClass = "sub-other";
         if (tUp === "CORE") badgeClass = "sub-core";
@@ -2286,7 +2333,26 @@ function SUB_RenderList(searchTerm = "") {
         </div>`;
     });
     container.innerHTML = html;
+    container.scrollTop = oldScroll;
 }
+
+// Search Logic
+document.getElementById("subSearchInput").addEventListener("input", debounce((e) => {
+    subjectRenderLimit = 50; // Reset scroll limit on search
+    SUB_RenderList(e.target.value.trim());
+}, 250));
+
+// 🚀 SCROLL DETECTOR
+document.getElementById("subListContainer").addEventListener("scroll", (e) => {
+    let el = e.target;
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
+        let searchTerm = document.getElementById("subSearchInput").value.trim();
+        if (subjectRenderLimit < subCachedData.length) {
+            subjectRenderLimit += 50;
+            SUB_RenderList(searchTerm);
+        }
+    }
+});
 // 🚀 OPTIMIZATION 7: Debounce Subject Search
 document.getElementById("subSearchInput").addEventListener("input", debounce((e) => SUB_RenderList(e.target.value.trim()), 250));
 
