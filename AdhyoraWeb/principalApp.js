@@ -71,9 +71,6 @@ document.querySelectorAll(".menu-btn").forEach(btn => {
     btn.addEventListener("click", (e) => alert(`Navigating to ${e.currentTarget.querySelector(".btn-text").innerText}... (View logic to be implemented)`));
 });
 
-// ==========================================
-// VIEW SWITCHER LOGIC
-// ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
     teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
@@ -413,7 +410,6 @@ function RC_KickTeachers(deptName) {
 // TEACHER LIST MANAGER
 // ==========================================
 let tlLoaded = false; let cachedTeachers = [];
-
 function startTeacherListListener() {
     tlLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "teachers"), (snap) => {
@@ -611,7 +607,6 @@ let sdCurrentSemIndex = 0;
 let sdWorkingDays = new Set();
 let sdSemesterRanges = {};
 
-// GLOBALLY CACHED MASTER SUBJECTS
 let sdCachedGlobalSubjects = [];
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
@@ -681,18 +676,20 @@ async function SD_BuildUI(specificDate = "All Time") {
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
     let finalSubjects = [];
 
+    // 🚨 Explicitly Enrolled Subjects
     if(sdStudentData.enrolledSubjects && sdStudentData.enrolledSubjects[semKey]) {
         Object.entries(sdStudentData.enrolledSubjects[semKey]).forEach(([k,v]) => {
-            finalSubjects.push(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:#f59e0b;">[${k}]</b> ${v}</span>`);
+            finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${k}]</b> <span>${v}</span></div>`);
         });
     }
 
+    // 🚨 Implicit Core/MJD Subjects (Restored your C# Filter!)
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
-            if (isDeptMatch) { // 🚨 BUG FIXED: Removed the Core/MJD filter so it correctly shows ALL categories!
-                finalSubjects.unshift(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:var(--brand-green);">[${sub.rawType}]</b> ${sub.displayName}</span>`);
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) {
+                finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span>${sub.displayName}</span></div>`);
             }
         }
     });
@@ -700,13 +697,12 @@ async function SD_BuildUI(specificDate = "All Time") {
     document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
     SD_FetchMarks(semDisplay);
 
-    // 2. ATTENDANCE PARSING
+    // 2. ATTENDANCE PARSING (Case-Insensitive)
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
     let subjectAtt = {}; 
 
     let statsObj = null;
     if (sdStudentData.attendance_stats) {
-        // 🚨 BUG FIXED: Case-insensitive search for the semester key!
         let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
         if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
     }
@@ -747,18 +743,18 @@ async function SD_BuildUI(specificDate = "All Time") {
     }
 }
 
-// 🚨 BUG FIXED: Capped the visual percentage so 100% attendance doesn't hide the top wave!
+// 🚨 FLUID WAVE CSS UPDATER 
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
 
-    let visualPercent = percentage * 0.85; 
+    // 🚨 THE MATH FIX: Map 0-100% to a visual 10-85% so the beautiful wave curve is ALWAYS visible at the top!
+    let visualPercent = 10 + (percentage * 0.75); 
 
     let circleFill = document.getElementById("sdCircleWave");
     circleFill.style.setProperty('--wave-color', col);
-    let offsetTop = 105 - visualPercent; 
-    circleFill.style.top = `${offsetTop}%`; 
-    document.getElementById("sdCircleText").innerText = txt;
+    circleFill.style.top = `${105 - visualPercent}%`; 
+    document.getElementById("sdCirclePercentVal").innerText = txt;
 
     let rowFill = document.getElementById("sdWavyFill");
     rowFill.style.setProperty('--wave-color', col);
