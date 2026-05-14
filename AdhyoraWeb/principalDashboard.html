@@ -40,7 +40,7 @@
                 <button class="menu-btn" id="btnNavTimetable"><span class="btn-text">TimeTable</span> <i class="fas fa-calendar-week btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavData"><span class="btn-text">Data Section</span> <i class="fas fa-chart-bar btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavSubjectList"><span class="btn-text">Subject List</span> <i class="fas fa-book-open btn-icon"></i></button>
-                <button class="menu-btn"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavStuSub"><span class="btn-text">Students Subjects</span> <i class="fas fa-book-reader btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Events</span> <i class="fas fa-calendar-plus btn-icon"></i></button>
                 <button class="menu-btn"><span class="btn-text">Attendance Records</span> <i class="fas fa-user-check btn-icon"></i></button>
             </div>
@@ -498,6 +498,35 @@
             </div>
             
             <button id="btnSaveSubjectEdit" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">Save Changes</button>
+        </div>
+    </div>
+
+    <div id="stuSubView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
+            <h3 style="color: var(--text-green); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px; margin: 0;">Student Subjects</h3>
+            <button id="btnOpenStuSubMove" class="nav-icon-btn" style="background: var(--brand-green); color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.4);" disabled><i class="fas fa-exchange-alt" style="margin-right: 8px;"></i> Move Selected</button>
+        </div>
+
+        <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <select id="ssSemDrop" class="input-field" style="flex: 1; min-width: 150px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-weight: bold; color: var(--text-green);"></select>
+            <select id="ssCatDrop" class="input-field" style="flex: 1; min-width: 150px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-weight: bold; color: var(--text-green);"></select>
+            <select id="ssSubDrop" class="input-field" style="flex: 2; min-width: 200px; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-weight: bold; color: var(--text-green);"></select>
+        </div>
+
+        <div id="ssListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+            <div class="no-data-text" id="ssNoDataText">Select a Semester, Category, and Subject to view enrolled students.</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="stuSubMoveOverlay">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+            <button class="close-settings" onclick="document.getElementById('stuSubMoveOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-exchange-alt"></i> Reassign Subject</h3>
+            <p id="ssMoveTitleText" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5;">Select the new subject for the selected students.</p>
+            
+            <select id="ssTargetSubDrop" class="input-field" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px; font-weight: bold; color: var(--text-green);"></select>
+            
+            <button id="btnConfirmStuSubMove" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">Confirm Reassignment</button>
         </div>
     </div>
 
