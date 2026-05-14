@@ -79,7 +79,7 @@ const views = {
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
     timetable: document.getElementById("timetableView"),
     assign: document.getElementById("assignView"),
-    data: document.getElementById("dataView") // 🚨 ADDED THIS LINE!
+    data: document.getElementById("dataView"), // 🚨 ADDED THE COMMA HERE!
     subjectList: document.getElementById("subjectListView")
 };
 
