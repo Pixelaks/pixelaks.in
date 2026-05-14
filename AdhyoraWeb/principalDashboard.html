@@ -319,6 +319,20 @@
                             <input type="file" id="fileCalendar" accept=".csv" style="display: none;">
                             <button onclick="document.getElementById('fileCalendar').click()" style="background: #f59e0b;">Select File</button>
                         </div>
+
+                        <div class="data-upload-card">
+                            <div class="up-icon" style="color: #8b5cf6; background: #e0e7ff;"><i class="fas fa-file-download"></i></div>
+                            <h4>Export Data</h4>
+                            <p>Download Marks, Attendance Stats, and Daily Logs as CSV files.</p>
+                            <button id="btnOpenExport" style="background: #8b5cf6;">Open Exporter</button>
+                        </div>
+
+                        <div class="data-upload-card" style="border-color: #fca5a5; background: #fff5f5;">
+                            <div class="up-icon" style="color: #ef4444; background: #fee2e2;"><i class="fas fa-level-up-alt"></i></div>
+                            <h4 style="color: #991b1b;">Promote Students</h4>
+                            <p style="color: #b91c1c;">Advance all students to the next semester or graduate them.</p>
+                            <button id="btnOpenPromote" style="background: #ef4444; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);">Promote Semester</button>
+                        </div>
                     </div>
                 </div>
 
@@ -423,6 +437,44 @@
     </div>
 
     <div id="rcToast" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: bottom 0.3s; z-index: 9999;">Notification</div>
+
+    <div class="modal-overlay" id="promoteWarningOverlay">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(239, 68, 68, 0.2); border: 2px solid #fca5a5;">
+            <h3 style="color: #ef4444; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle"></i> Warning</h3>
+            <p style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.5;">You are about to promote <b>ALL</b> students to the next semester.<br><br>Students exceeding their course duration will be marked as Graduated Alumni.<br><br>Are you sure you want to proceed?</p>
+            <div style="display: flex; gap: 15px;">
+                <button onclick="document.getElementById('promoteWarningOverlay').classList.remove('active')" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Cancel</button>
+                <button id="btnPromoteProceed" style="flex: 1; background: #ef4444; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="exportOverlay">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid var(--border-color);">
+            <button class="close-settings" onclick="document.getElementById('exportOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="color: #8b5cf6; margin-bottom: 20px; font-size: 20px;"><i class="fas fa-file-export"></i> Export Data</h3>
+            
+            <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 5px; display: block;">Data Type</label>
+            <select id="expDataType" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 15px; font-weight: bold;">
+                <option value="0">NEP Internal Marks (Combined)</option>
+                <option value="1">Attendance Stats (Combined)</option>
+                <option value="2">Daily Logs (Separate Files)</option>
+            </select>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 5px; display: block;">Year</label>
+                    <select id="expYearDrop" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins';"></select>
+                </div>
+                <div style="flex: 2;">
+                    <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 5px; display: block;">Department</label>
+                    <select id="expDeptDrop" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins';"></select>
+                </div>
+            </div>
+
+            <button id="btnExecuteExport" style="width: 100%; background: #8b5cf6; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);">Download CSV</button>
+        </div>
+    </div>
 
     <script type="module" src="principalApp.js"></script>
 </body>
