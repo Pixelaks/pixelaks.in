@@ -71,15 +71,13 @@ el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/p
 el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
 el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
 
-// 🚨 Master Views Object 🚨
 const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
     teacherList: document.getElementById("teacherListView"), teacherDashboard: document.getElementById("teacherDashboardView"),
     studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"),
     batch: document.getElementById("batchView"),
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
-    timetable: document.getElementById("timetableView"),
-    assign: document.getElementById("assignView") // <-- ADDED!
+    timetable: document.getElementById("timetableView")
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -112,7 +110,6 @@ document.getElementById("btnBackToStudents").addEventListener("click", () => swi
 
 document.getElementById("btnNavBatch").addEventListener("click", () => { switchView(views.batch); if (!bchLoaded) BCH_Init(); });
 document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
-document.getElementById("btnNavAssign").addEventListener("click", () => { switchView(views.assign); if (!asnLoaded) ASN_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -1027,6 +1024,12 @@ function TT_Init() {
 
     document.getElementById("btnTTSaveStructure").addEventListener("click", TT_SaveStructureAndLock);
     document.getElementById("btnTTEdit").addEventListener("click", () => TT_SetPhase(0));
+    
+    // 🚨 ASSIGN BUTTON LISTENER 🚨
+    document.getElementById("btnTTAssign").addEventListener("click", () => {
+        document.getElementById("assignOverlay").classList.add("active");
+        ASN_Init(ttCurrentSem, ttSelectedDay); // Open modal with current context!
+    });
 
     TT_LoadGlobalCategories();
     setInterval(() => { if (!document.getElementById('timetableView').classList.contains('hidden-view')) TT_UpdateTimelineVisuals(); }, 60000); 
@@ -1081,6 +1084,7 @@ function TT_BuildSlotsFromData(slotsData) {
 function TT_SetPhase(phase) {
     ttPhase = phase;
     document.getElementById("btnTTSaveStructure").style.display = (phase === 0) ? "inline-flex" : "none";
+    document.getElementById("btnTTAssign").style.display = (phase === 1) ? "inline-flex" : "none";
     document.getElementById("btnTTEdit").style.display = (phase === 1) ? "inline-flex" : "none";
     TT_RenderLayout();
 }
@@ -1179,12 +1183,14 @@ function TT_UpdateTimelineVisuals() {
 // ==========================================
 // 🚨 NEW: ASSIGN MANAGER (GENERAL DEPT)
 // ==========================================
-let asnLoaded = false; let asnCurrentSem = "1"; let asnSelectedDay = "Monday";
-let asnGeneralSubjects = []; let asnStudentsByYear = {}; let asnActiveRows = []; // { id, period, splitIndex, isSplit, category, subject, teacher, teacherID, room }
+let asnCurrentSem = "1"; let asnSelectedDay = "Monday";
+let asnGeneralSubjects = []; let asnStudentsByYear = {}; let asnActiveRows = []; 
 let asnAllTeachers = [];
 
-function ASN_Init() {
-    asnLoaded = true;
+function ASN_Init(startSem, startDay) {
+    asnCurrentSem = startSem || "1"; 
+    asnSelectedDay = startDay || "Monday";
+
     let dropSem = document.getElementById("asnSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
@@ -1192,7 +1198,10 @@ function ASN_Init() {
         dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    dropSem.selectedIndex = defaultIndex; asnCurrentSem = dropSem.options[defaultIndex].value;
+    
+    // Select the correct sem matching the timetable
+    for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === asnCurrentSem) dropSem.selectedIndex = i; }
+    
     dropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
 
     let dBtns = document.querySelectorAll(".asn-day-btn");
@@ -1202,8 +1211,7 @@ function ASN_Init() {
         });
     });
     
-    let dayNum = new Date().getDay(); let todayIndex = (dayNum >= 1 && dayNum <= 5) ? dayNum - 1 : 0; const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    asnSelectedDay = daysList[todayIndex]; dBtns.forEach((b, idx) => { if(idx === todayIndex) b.classList.add("active"); else b.classList.remove("active"); });
+    dBtns.forEach((b) => { if(b.dataset.day === asnSelectedDay) b.classList.add("active"); else b.classList.remove("active"); });
 
     document.getElementById("btnAsnSave").addEventListener("click", ASN_SaveAll);
 
@@ -1286,9 +1294,9 @@ function ASN_RenderLayout() {
             teacherOptions += asnAllTeachers.map(t => `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`).join('');
         }
 
-        let isDel = row.isSplit; let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : 'split';
+        let isDel = row.isSplit; let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; let btnIcon = isDel ? 'delete batch' : 'split';
         let cardClass = isDel ? "asn-card split" : "asn-card";
-        let titleText = isDel ? `<span style="color:#ef4444; font-size:12px;">Batch ${row.splitIndex + 1}</span>` : `Period ${row.period}`;
+        let titleText = isDel ? `<span style="color:#f59e0b; font-size:13px;">Batch ${row.splitIndex + 1}</span>` : `Period ${row.period}`;
 
         html += `
         <div class="${cardClass}" id="card_${row.id}">
@@ -1339,13 +1347,11 @@ window.ASN_RequestSplit = (rowId) => {
     let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
 
     if (row.isSplit) {
-        // Delete split logic
         let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-trash"></i> Delete Batch'; title.style.color = "#ef4444";
         document.getElementById("confirmText").innerHTML = isVac ? `Remove a batch for <b>${row.subject}</b>?<br>You will need to reassign departments.` : `Delete this specific batch?<br>Students will be re-distributed.`;
         document.getElementById("btnConfirmYes").onclick = () => { document.getElementById("confirmOverlay").classList.remove("active"); ASN_ProcessDeleteSplit(row, isVac); };
         document.getElementById("confirmOverlay").classList.add("active");
     } else {
-        // Add split logic
         if (!row.subject) { showRcToast("Select a subject first!"); return; }
         let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-cut"></i> Divide Class'; title.style.color = "var(--text-green)";
         document.getElementById("confirmText").innerHTML = `Are you sure you want to divide ALL students for<br><b>${row.subject}</b> into a new batch?`;
@@ -1481,4 +1487,6 @@ async function ASN_SaveAll() {
         }
     });
     await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save"; btn.disabled = false;
+    document.getElementById("assignOverlay").classList.remove("active");
+    TT_Init(); // Refresh timetable view
 }
