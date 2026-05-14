@@ -543,7 +543,9 @@ function TD_DrawSubjectRows(hoursMap) {
     const listEl = document.getElementById("tdSubjectsList"); const noData = document.getElementById("tdNoSubjectsText");
     let html = ""; let drawn = 0;
     Object.entries(hoursMap).forEach(([name, hrs]) => { html += `<div style="background: white; border: 1px solid var(--brand-green); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(74, 222, 128, 0.1);"><span style="font-weight: bold; color: #334155; font-size: 13px;">${name}</span> <span style="color: #64748b; font-size: 13px;">Hours: <b style="color: var(--text-green); font-size: 15px;">${hrs}</b></span></div>`; drawn++; });
-    tdAssignedSubjectsCache.forEach(sub => { if (!hoursMap[sub]) { html += `<div style="background: white; border: 1px solid #cbd5e1; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: bold; color: #64748b; font-size: 13px;">${sub}</span> <span style="color: #94a3b8; font-size: 13px;">Hours: <b style="font-size: 15px;">0</b></span></div>`; drawn++; } });
+    tdAssignedSubjectsCache.forEach(sub => {
+        if (!hoursMap[sub]) { html += `<div style="background: white; border: 1px solid #cbd5e1; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: bold; color: #64748b; font-size: 13px;">${sub}</span> <span style="color: #94a3b8; font-size: 13px;">Hours: <b style="font-size: 15px;">0</b></span></div>`; drawn++; }
+    });
     listEl.innerHTML = html; noData.style.display = drawn === 0 ? "block" : "none";
 }
 document.getElementById("tdDateFilter").addEventListener("change", (e) => TD_FetchHours(e.target.value));
@@ -566,6 +568,7 @@ function renderStudentList(searchTerm = "") {
     if (searchTerm) { let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); filtered = cachedStudents.filter(s => { let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); return terms.every(term => sStr.includes(term)); }).slice(0, 50); }
     if (filtered.length === 0) { noData.style.display = "block"; noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; listEl.innerHTML = ""; listEl.appendChild(noData); return; }
     noData.style.display = "none";
+    
     listEl.innerHTML = filtered.map(s => {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); let status = s.status || "Approved";
         let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
@@ -598,9 +601,8 @@ document.getElementById("btnConfirmSA").addEventListener("click", async () => {
     try { await updateDoc(doc(db, "colleges", currentCollegeID, "students", slTargetAdminID), { status: newStatus }); showRcToast(`Status updated to ${newStatus}`); document.getElementById("studentAdminOverlay").classList.remove("active"); } catch(e) { showRcToast("Error updating status"); }
 });
 
-
 // ==========================================
-// 🚨 NEW: STUDENT DASHBOARD (WITH CACHED FALLBACKS)
+// STUDENT DASHBOARD
 // ==========================================
 let sdCurrentStudentID = "";
 let sdStudentData = null;
@@ -609,7 +611,7 @@ let sdCurrentSemIndex = 0;
 let sdWorkingDays = new Set();
 let sdSemesterRanges = {};
 
-// 🚨 GLOBALLY CACHED MASTER SUBJECTS
+// GLOBALLY CACHED MASTER SUBJECTS
 let sdCachedGlobalSubjects = [];
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
@@ -637,7 +639,6 @@ window.SL_OpenDashboard = async (sID) => {
     SD_UpdateWaveUI(0); ["sdStatAtt", "sdStatAbs", "sdStatTot", "sdStatPAtt", "sdStatPAbs", "sdStatPTot"].forEach(id => document.getElementById(id).innerText = "0");
     document.getElementById("sdSubjectList").innerHTML = ""; document.getElementById("sdEnrolledList").innerHTML = "<i>Loading subjects...</i>";
     
-    // Fetch global dates
     if(sdWorkingDays.size === 0) {
         let displayYear = new Date().getFullYear(); let displayMonth = new Date().getMonth() + 1; 
         let aYear = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
@@ -660,7 +661,7 @@ window.SL_OpenDashboard = async (sID) => {
             sdCurrentSemIndex = Math.max(0, Math.min(7, currentSemNum - 1));
             
             document.getElementById("sdDateFilter").value = "";
-            document.getElementById("sdBtnAllTime").click(); // Triggers UI build
+            document.getElementById("sdBtnAllTime").click(); 
         }
     } catch(e) { }
 };
@@ -670,46 +671,42 @@ document.getElementById("sdBtnPrevSem").addEventListener("click", () => { if(sdC
 
 async function SD_BuildUI(specificDate = "All Time") {
     if(!sdStudentData) return;
-    let semKey = sdSemKeys[sdCurrentSemIndex]; // e.g., "Semester_2"
+    let semKey = sdSemKeys[sdCurrentSemIndex]; 
     let semDisplay = semKey.replace("_", " ");
     document.getElementById("sdSemesterTitle").innerText = semDisplay;
 
-    // 🚨 1. ENROLLED SUBJECTS (With Fallback Math!)
+    // 1. ENROLLED SUBJECTS
     await fetchGlobalSubjects(); 
     let cleanSemNum = semKey.replace(/[^0-9]/g, '');
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
     let finalSubjects = [];
 
-    // Explicit subjects
     if(sdStudentData.enrolledSubjects && sdStudentData.enrolledSubjects[semKey]) {
         Object.entries(sdStudentData.enrolledSubjects[semKey]).forEach(([k,v]) => {
             finalSubjects.push(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:#f59e0b;">[${k}]</b> ${v}</span>`);
         });
     }
 
-    // Implicit Core/MJD Subjects
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
-            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) {
+            if (isDeptMatch) { // 🚨 BUG FIXED: Removed the Core/MJD filter so it correctly shows ALL categories!
                 finalSubjects.unshift(`<span style="display:block; padding:8px 0; border-bottom:1px dashed #e2e8f0;"><b style="color:var(--brand-green);">[${sub.rawType}]</b> ${sub.displayName}</span>`);
             }
         }
     });
 
     document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
-
-    // Fetch Marks
     SD_FetchMarks(semDisplay);
 
-    // 🚨 2. ATTENDANCE PARSING (Case-Insensitive check)
+    // 2. ATTENDANCE PARSING
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
     let subjectAtt = {}; 
 
     let statsObj = null;
     if (sdStudentData.attendance_stats) {
-        // Find key regardless of caps
+        // 🚨 BUG FIXED: Case-insensitive search for the semester key!
         let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
         if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
     }
@@ -726,7 +723,6 @@ async function SD_BuildUI(specificDate = "All Time") {
         });
     }
 
-    // Fallbacks
     let projectedAtt = strictTotal > 0 ? strictPresent : simpleAtt;
     let projectedTot = strictTotal > 0 ? strictTotal : simpleTotal;
     let percent = projectedTot > 0 ? (projectedAtt / projectedTot) * 100 : 0;
@@ -751,22 +747,22 @@ async function SD_BuildUI(specificDate = "All Time") {
     }
 }
 
-// 🚨 FLUID WAVE CSS UPDATER (Fixed Math for 0% and Dynamic Color)
+// 🚨 BUG FIXED: Capped the visual percentage so 100% attendance doesn't hide the top wave!
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
 
+    let visualPercent = percentage * 0.85; 
+
     let circleFill = document.getElementById("sdCircleWave");
     circleFill.style.setProperty('--wave-color', col);
-    
-    // 🚨 0% = top: 105% (hidden). 100% = top: -5% (filled). 
-    let offsetTop = 105 - (percentage * 1.1); 
+    let offsetTop = 105 - visualPercent; 
     circleFill.style.top = `${offsetTop}%`; 
     document.getElementById("sdCircleText").innerText = txt;
 
     let rowFill = document.getElementById("sdWavyFill");
     rowFill.style.setProperty('--wave-color', col);
-    rowFill.style.setProperty('--wave-percent', `${percentage}%`);
+    rowFill.style.setProperty('--wave-percent', `${visualPercent}%`);
     document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
