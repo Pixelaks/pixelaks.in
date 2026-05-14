@@ -80,24 +80,27 @@ body { background-color: var(--bg-base); color: var(--text-green); height: 100vh
 .cal-cell.today { background: var(--brand-green) !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(74, 222, 128, 0.5); transform: scale(1.1); border: 2px solid var(--text-green); z-index: 2; }
 .cal-cell.holiday { color: #ef4444; background: #fef2f2; } .cal-cell.semester { color: #3b82f6; background: #eff6ff; } .cal-subtitle { font-size: 9px; font-weight: 700; margin-top: -2px; }
 
-/* 🚨 TIMETABLE ROW STYLES 🚨 */
+/* 🚨 REFINED TIMETABLE ROW STYLES (Match Image) */
 .tt-day-btn { flex: 1; min-width: 80px; padding: 10px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Poppins'; font-size: 13px; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.2s; }
 .tt-day-btn.active { background: var(--text-light-green); color: white; border-color: var(--text-light-green); box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3); transform: translateY(-2px); }
-.tt-card-edit { background: white; border: 2px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); position: relative; width: 100%; }
-.tt-card-edit.split-card { border-color: #fca5a5; background: #fef2f2; }
+
+.tt-card-edit { background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); position: relative; width: 100%; transition: 0.3s; }
+.tt-card-edit.split-card { border-left: 4px solid #fca5a5; background: #fef2f2; margin-left: 20px; width: calc(100% - 20px); }
 .tt-card-header { font-weight: bold; color: var(--text-green); margin-bottom: 10px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-.tt-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.tt-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 .tt-card-grid select, .tt-card-grid input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-size: 12px; color: #475569; background: white; }
 .tt-card-grid select:disabled, .tt-card-grid input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
-.split-btn { width: 100%; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; font-size: 13px; font-family: 'Poppins'; }
-.split-btn.add-split { background: var(--brand-green); color: white; }
-.split-btn.add-split:hover { background: var(--text-light-green); }
-.split-btn.delete-split { background: #fca5a5; color: #7f1d1d; }
-.split-btn.delete-split:hover { background: #f87171; }
 
-.tt-node { width: 30px; height: 30px; border-radius: 50%; background: #e2e8f0; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; transition: 0.3s; z-index: 2; position: relative; font-size: 13px; }
-.tt-node.active { background: var(--brand-green); box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); }
-.tt-node.completed { background: #94a3b8; }
+.split-btn { width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; font-size: 13px; font-family: 'Poppins'; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.split-btn.add-split { background: var(--brand-green); color: white; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3); }
+.split-btn.add-split:hover { background: var(--text-light-green); }
+.split-btn.delete-split { background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+.split-btn.delete-split:hover { background: #dc2626; }
+
+.tt-node { width: 30px; height: 30px; border-radius: 50%; background: #94a3b8; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; transition: 0.3s; z-index: 2; position: relative; font-size: 13px; }
+.tt-node.active { background: var(--text-light-green); box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); }
+.tt-node.completed { background: #cbd5e1; }
+.tt-line { flex: 1; width: 4px; background: #cbd5e1; margin-top: 5px; margin-bottom: 5px; border-radius: 2px; transition: 0.3s; }
 
 .circle-wave-wrap { width: 140px; height: 140px; border-radius: 50%; border: 6px solid #f1f5f9; position: relative; overflow: hidden; background: white; display: flex; justify-content: center; align-items: center; margin: 0 auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
 .circle-wave-fill { position: absolute; left: -50%; width: 200%; height: 200%; top: var(--wave-height, 105%); background: var(--wave-color, var(--brand-green)); z-index: 0; transition: top 0.5s ease-out, background-color 0.5s; border-radius: 40%; animation: waveSpin 6s linear infinite; }
