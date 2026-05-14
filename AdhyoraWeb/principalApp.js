@@ -108,9 +108,6 @@ document.getElementById("btnBackToStudents").addEventListener("click", () => swi
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
-// ==========================================
-// NOTIFICATIONS INBOX 
-// ==========================================
 let cachedNotifs = [];
 function startInboxListener() {
     const myTopics = [`${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_ALL`, `${currentCollegeID.replace(/[^a-zA-Z0-9]/g, '')}_PRINCIPAL`];
@@ -136,9 +133,6 @@ function renderNotifications() {
 }
 setTimeout(startInboxListener, 2000); 
 
-// ==========================================
-// CALENDAR ENGINE
-// ==========================================
 let currentDisplayDate = new Date();
 let cachedCalYear = ""; let calWorkingDays = new Set(); let calNonWorkingDays = new Map(); let semStarts = new Map(); let semEnds = new Map(); let calendarLoaded = false;
 
@@ -209,9 +203,6 @@ function updateUpcomingEvent() {
     if (!found) document.getElementById("upcomingEventText").innerHTML = "No upcoming holidays in the next 60 days.";
 }
 
-// ==========================================
-// MESSAGES SYSTEM & COMPOSE LOGIC
-// ==========================================
 let cachedMessages = [];
 function startMessagesListener() {
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "sent_messages"), orderBy("timestamp", "desc"), limit(30)), (snap) => {
@@ -577,7 +568,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
-                <button class="action-icon-btn" title="Manage Access" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
+                <button class="action-icon-btn" title="Manage Status" onclick="window.SL_OpenAdmin('${s.id}', '${s.Name}', '${status}')"><i class="fas fa-user-shield"></i></button>
                 <button class="action-icon-btn" title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})"><i class="fas fa-comment-dots"></i></button>
             </div>
         </div>`;
@@ -676,20 +667,27 @@ async function SD_BuildUI(specificDate = "All Time") {
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
     let finalSubjects = [];
 
-    // 🚨 Explicitly Enrolled Subjects
-    if(sdStudentData.enrolledSubjects && sdStudentData.enrolledSubjects[semKey]) {
-        Object.entries(sdStudentData.enrolledSubjects[semKey]).forEach(([k,v]) => {
-            finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:#f59e0b; font-size:12px;">[${k}]</b> <span>${v}</span></div>`);
-        });
+    // 🚨 Explicitly Enrolled Subjects Map check (handling both Semester_2 and Semester 2)
+    let enrollMap = {};
+    if (sdStudentData.enrolledSubjects) {
+        enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
     }
 
-    // 🚨 Implicit Core/MJD Subjects (RESTORED CHECK!)
+    Object.entries(enrollMap).forEach(([k,v]) => {
+        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:#f59e0b; font-size:12px;">[${k}]</b> <span style="font-size:13px; color:#475569;">${v}</span></div>`);
+    });
+
+    // 🚨 Implicit Core/MJD/TUTORIAL Subjects 
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
             let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
-            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE")) && isDeptMatch) { // <-- 🚨 THIS FILTERS OUT SEC/VAC
-                finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span>${sub.displayName}</span></div>`);
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
+                // Duplicate check
+                let isAlreadyEnrolled = finalSubjects.some(existing => existing.includes(sub.displayName));
+                if (!isAlreadyEnrolled) {
+                    finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed #e2e8f0; display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-green); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:#475569;">${sub.displayName}</span></div>`);
+                }
             }
         }
     });
@@ -743,24 +741,26 @@ async function SD_BuildUI(specificDate = "All Time") {
     }
 }
 
-// 🚨 FLUID WAVE CSS UPDATER WITH MATH CAP
+// 🚨 UPDATED FLUID WAVE CSS MATH
 function SD_UpdateWaveUI(percentage) {
     let col = percentage >= 75 ? "var(--brand-green)" : (percentage >= 60 ? "#f59e0b" : "#ef4444");
     let txt = percentage.toFixed(2) + "%";
 
-    // 🚨 MATHEMATICAL CAP: Even if attendance is 100%, the visual wave stops at 85% height so the wavy top edge is always visible!
-    let visualPercent = percentage * 0.85; 
+    // CSS Wave heights mapped to ensure waves are always visible
+    // Circle: 105% is hidden, roughly -5% is full. We map 0-100 to 105-15.
+    let circleTop = 105 - (percentage * 0.9); 
+    // Row: We map 0-100 to 0-85% height
+    let rowPercent = percentage * 0.85;
 
     let circleFill = document.getElementById("sdCircleWave");
     circleFill.style.setProperty('--wave-color', col);
-    circleFill.style.top = `${105 - visualPercent}%`; 
+    circleFill.style.top = `${circleTop}%`; 
     
-    // 🚨 ADDED "PROJECTED" LABEL 
     document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
 
     let rowFill = document.getElementById("sdWavyFill");
     rowFill.style.setProperty('--wave-color', col);
-    rowFill.style.setProperty('--wave-percent', `${visualPercent}%`);
+    rowFill.style.setProperty('--wave-percent', `${rowPercent}%`);
     document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
 }
 
