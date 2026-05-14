@@ -398,6 +398,11 @@ function RC_ExecuteAction() {
         let deptID1 = "DEPT_" + name1.replace(/\s+/g, ''); let deptID2 = "DEPT_" + name2.replace(/\s+/g, '');
         const batch = writeBatch(db); batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID1), { linkedDepartments: [deptID2] }, { merge: true }); batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID2), { linkedDepartments: [deptID1] }, { merge: true }); batch.commit().then(() => showRcToast("Departments Combined!"));
     }
+  // 🚨 ADD THIS RIGHT AT THE END OF THE FUNCTION:
+    else if (rcCurrentAction === "DATA_UPLOAD") {
+        document.getElementById("pinOverlay").classList.remove("active");
+        ExecuteDataUpload();
+    }
 }
 function RC_SaveCodeToDB(name, code, years, oldCode) {
     let deptID = "DEPT_" + name.replace(/\s+/g, '');
@@ -1563,4 +1568,127 @@ async function ASN_SaveAll() {
     await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save Timetable"; btn.disabled = false;
     switchView(views.timetable); 
     TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without triggering the memory leak!
+}
+
+// ==========================================
+// 🚨 DATA UPLOAD MANAGER
+// ==========================================
+let pendingUploadType = ""; 
+let pendingUploadData = null;
+
+function handleFileSelect(event, type) {
+    let file = event.target.files[0];
+    if (!file) return;
+    
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        let lines = e.target.result.split(/\r?\n/);
+        if(lines.length < 2) { showRcToast("Error: File is empty!"); return; }
+        
+        let header = lines[0];
+        let isValid = false;
+        
+        if (type === "STUDENTS") isValid = DataParser.isValidStudentFormat(header);
+        else if (type === "SUBJECTS") isValid = DataParser.isValidSubjectFormat(header);
+        else if (type === "CALENDAR") isValid = DataParser.isValidCalendarFormat(header);
+
+        if (!isValid) {
+            showRcToast(`❌ Error: Invalid ${type} File Format!`);
+            return;
+        }
+
+        if (type === "STUDENTS") pendingUploadData = DataParser.parseStudents(lines);
+        else if (type === "SUBJECTS") pendingUploadData = DataParser.parseSubjects(lines, currentCollegeID);
+        else if (type === "CALENDAR") pendingUploadData = DataParser.parseCalendar(lines);
+
+        pendingUploadType = type;
+        
+        // Open the existing PIN overlay
+        document.getElementById("pinInput").value = "";
+        document.getElementById("pinOverlay").classList.add("active");
+        rcCurrentAction = "DATA_UPLOAD"; // Hijack the action router!
+    };
+    reader.readAsText(file);
+    event.target.value = ""; // Reset input
+}
+
+document.getElementById('fileStudents').addEventListener('change', (e) => handleFileSelect(e, 'STUDENTS'));
+document.getElementById('fileSubjects').addEventListener('change', (e) => handleFileSelect(e, 'SUBJECTS'));
+document.getElementById('fileCalendar').addEventListener('change', (e) => handleFileSelect(e, 'CALENDAR'));
+
+async function ExecuteDataUpload() {
+    showRcToast(`Uploading ${pendingUploadType}... Please wait.`);
+    
+    if (pendingUploadType === "STUDENTS") {
+        let students = pendingUploadData;
+        let batchCount = 0; let total = 0;
+        let wb = writeBatch(db);
+        
+        // Ensure Depts exist
+        let deptMaxYears = {};
+        students.forEach(s => { if(!deptMaxYears[s.Department] || parseInt(s.Year) > deptMaxYears[s.Department]) deptMaxYears[s.Department] = parseInt(s.Year); });
+        for (let dept in deptMaxYears) {
+            let deptID = "DEPT_" + dept.replace(/\s+/g, '');
+            setDoc(doc(db, "colleges", currentCollegeID, "departments", deptID), { name: dept, maxYears: deptMaxYears[dept] }, {merge: true});
+        }
+
+        for (let i = 0; i < students.length; i++) {
+            let s = students[i];
+            wb.set(doc(db, "colleges", currentCollegeID, "students", s.RollNumber), {
+                SLNumber: s.SLNumber, RollNumber: s.RollNumber, Name: s.Name, Department: s.Department, 
+                DepartmentSearchable: s.Department.toLowerCase(), Year: s.Year, CourseType: s.CourseType, LastUpdated: serverTimestamp()
+            }, {merge:true});
+            
+            wb.set(doc(db, "colleges", currentCollegeID, "public_lookup", s.RollNumber), { collegeID: currentCollegeID, name: s.Name }, {merge:true});
+            
+            batchCount += 2; total++;
+            if (batchCount >= 480 || i === students.length - 1) {
+                await wb.commit();
+                wb = writeBatch(db); batchCount = 0;
+            }
+        }
+        showRcToast(`Success! ${total} Students Uploaded.`);
+    } 
+    else if (pendingUploadType === "SUBJECTS") {
+        let subs = pendingUploadData;
+        let batchCount = 0; let total = 0;
+        let wb = writeBatch(db);
+        
+        for (let i = 0; i < subs.length; i++) {
+            let s = subs[i];
+            wb.set(doc(db, "colleges", currentCollegeID, "subjects", s.code), {
+                code: s.code, name: s.name, type: s.type, department: s.department, semester: s.semester, 
+                search_key: s.search_key, isElective: s.isElective, lastUpdated: serverTimestamp()
+            }, {merge:true});
+            
+            batchCount++; total++;
+            if (batchCount >= 450 || i === subs.length - 1) {
+                await wb.commit();
+                wb = writeBatch(db); batchCount = 0;
+            }
+        }
+        showRcToast(`Success! ${total} Subjects Synced.`);
+    }
+    else if (pendingUploadType === "CALENDAR") {
+        let d = pendingUploadData;
+        let year = d.detectedAcademicYear || "2025-2026";
+        
+        await setDoc(doc(db, "colleges", currentCollegeID, "workingDays", year), d.workingMap);
+        await setDoc(doc(db, "colleges", currentCollegeID, "nonWorkingDays", year), d.nonWorkingMap);
+        
+        await setDoc(doc(db, "colleges", currentCollegeID), {
+            currentSemesterType: d.currentSemType, currentAcademicYear: year, lastCalendarUpdate: serverTimestamp()
+        }, {merge:true});
+
+        await setDoc(doc(db, "colleges", currentCollegeID, "semesters", year), {
+            year: year,
+            oddSemester: { startDate: d.oddStart, endDate: d.oddEnd },
+            evenSemester: { startDate: d.evenStart, endDate: d.evenEnd }
+        });
+
+        await setDoc(doc(db, "colleges", currentCollegeID, "system_flags", "calendar_version"), { updatedAt: serverTimestamp() }, {merge:true});
+        showRcToast(`Calendar Upload Successful! (${d.currentSemType} Sem)`);
+    }
+    
+    pendingUploadData = null;
 }
