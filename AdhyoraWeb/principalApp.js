@@ -3447,18 +3447,18 @@ window.addEventListener('load', () => {
 // ==========================================
 // 🚨 MASTER SUBSCRIPTION & SEMESTER ENGINE
 // ==========================================
-let subListener = null;
+let subscriptionListener = null;
 let cachedExpiryTimestamp = 0;
 let isFirstSubLoad = true;
 const gracePeriodDays = 8;
 
 // Replace these with your actual Razorpay Links!
-const RAZORPAY_MONTHLY = "https://pages.razorpay.com/YOUR_MONTHLY_LINK";
-const RAZORPAY_YEARLY = "https://pages.razorpay.com/YOUR_YEARLY_LINK";
+const RAZORPAY_MONTHLY = "https://pages.razorpay.com/pl_Rv6FL0YCAcrpNB/view";
+const RAZORPAY_YEARLY = "https://pages.razorpay.com/pl_Rv6Dh4gbH5csJe/view";
 
 function startSubscriptionListener() {
     // 🚨 SINGLE LISTENER: Handles both Subscriptions AND Semester syncs for 1 read cost!
-    subListener = onSnapshot(doc(db, "colleges", currentCollegeID), (snapshot) => {
+    subscriptionListener = onSnapshot(doc(db, "colleges", currentCollegeID), (snapshot) => {
         if (!snapshot.exists()) return;
         
         let data = snapshot.data();
