@@ -2318,14 +2318,22 @@ let ssSelectedStudents = new Set();
 
 function SS_Init() {
     ssLoaded = true;
-    let dropSem = document.getElementById("ssSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
+    let dropSem = document.getElementById("ssSemDrop"); dropSem.innerHTML = ""; let hasSems = false; 
+    let activeValue = "1"; // Default fallback
+    
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
-        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
+            label += " (Active)";
+            if (!hasSems) activeValue = i.toString(); // 🚨 FIX: Save the first active semester found!
+        }
         dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === ssCurrentSem) dropSem.selectedIndex = i; }
+    
+    // 🚨 FIX: Force dropdown to select the Active Semester by default
+    ssCurrentSem = activeValue;
+    dropSem.value = ssCurrentSem;
     
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { ssCurrentSem = e.target.value; SS_RefreshCategories(); });
@@ -2336,7 +2344,6 @@ function SS_Init() {
     document.getElementById("btnConfirmStuSubMove").addEventListener("click", SS_ConfirmMovePrep);
 
     if (subCachedData.length === 0) {
-        // We rely on the Subject List cache! If it's empty, we must fetch it.
         getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
             subCachedData = [];
             snap.forEach(doc => { let d = doc.data(); subCachedData.push({ code: doc.id, name: d.name || d.Name || "", type: d.type || d.Type || "", department: d.department || d.Department || "", semester: (d.semester || d.Semester || "").toString() }); });
@@ -2344,7 +2351,6 @@ function SS_Init() {
         });
     } else { SS_RefreshCategories(); }
 }
-
 function SS_RefreshCategories() {
     let types = new Set();
     subCachedData.forEach(sub => { let sems = sub.semester.split(',').map(s=>s.trim()); if (sems.includes(ssCurrentSem) && sub.type) types.add(sub.type.trim()); });
@@ -2409,9 +2415,9 @@ async function SS_FetchStudents() {
                 ssStudentsRamCache.push(docSnap.id);
 
                 html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                <div class="ss-stu-card" id="card_${docSnap.id}" onclick="SS_ToggleStudentCard('${docSnap.id}')" style="display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); cursor:pointer; transition:0.2s;">
                     <div style="display:flex; align-items:center; gap:15px;">
-                        <input type="checkbox" class="ss-student-chk" data-sid="${docSnap.id}" onchange="SS_OnCheckboxChange(this)" style="width:18px; height:18px; accent-color:var(--brand-green); cursor:pointer;">
+                        <input type="checkbox" id="chk_${docSnap.id}" class="ss-student-chk" data-sid="${docSnap.id}" style="width:18px; height:18px; accent-color:var(--brand-green); pointer-events:none;">
                         <div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-green);">${sName} <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(${sRoll})</span></div>
                             <div style="font-size:12px; color:#64748b;">${sDept}</div>
