@@ -383,3 +383,19 @@ body {
 .sub-other { background: #ffedd5; color: #c2410c; border-left-color: #f97316; }
 
 .sub-actions { display: flex; gap: 8px; }
+
+/* =========================================
+   🚨 EVENTS MANAGER STYLES
+   ========================================= */
+.evt-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+.evt-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+.evt-header:hover { background: #f8fafc; }
+.evt-title { font-weight: 800; color: #1e293b; font-size: 16px; margin-bottom: 4px; }
+.evt-meta { color: #64748b; font-size: 12px; font-weight: 600; }
+.evt-status { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+.evt-status.pending { background: #ffedd5; color: #ea580c; border: 1px solid #fed7aa; }
+.evt-status.accepted { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+.evt-body { padding: 15px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: none; }
+.evt-body.active { display: block; }
+.evt-student-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #cbd5e1; }
+.evt-student-row:last-child { border-bottom: none; }
