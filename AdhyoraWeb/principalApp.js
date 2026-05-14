@@ -3221,7 +3221,8 @@ async function requestPushPermissions() {
                 activeTokens.push(currentToken);
                 if (activeTokens.length > 3) activeTokens = activeTokens.slice(activeTokens.length - 3);
 
-                await updateDoc(principalRef, { webFcmTokens: activeTokens });
+                // ADD THIS INSTEAD:
+                await setDoc(principalRef, { webFcmTokens: activeTokens }, { merge: true });
                 console.log("👉 FIRESTORE UPDATED!");
 
                 console.log("🚀 STEP 5: Subscribing to Apps Script Topics...");
@@ -3266,7 +3267,7 @@ async function unsubscribePushNotifications() {
 
         if (myCurrentPushToken && currentCollegeID && currentUserID) {
             const principalRef = doc(db, "colleges", currentCollegeID, "principals", currentUserID);
-            await updateDoc(principalRef, { webFcmTokens: arrayRemove(myCurrentPushToken) });
+            await setDoc(principalRef, { webFcmTokens: arrayRemove(myCurrentPushToken) }, { merge: true });
         }
         
         myCurrentPushToken = ""; 
