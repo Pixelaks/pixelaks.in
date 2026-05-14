@@ -3521,22 +3521,43 @@ function ValidateExpiry(expirySeconds) {
     }
 }
 
-// 🚨 THE ANTI-HACK GHOST UI
+// 🚨 THE ANTI-HACK GHOST UI (UPGRADED)
 function HandleBlockState(msg) {
     document.getElementById("subBlockText").innerText = msg;
-    document.getElementById("subBlockPanel").style.display = "flex";
     
-    // Ghost Mode: Physically erase the UI so deleting the blocker in DevTools reveals nothing!
-    document.querySelector(".main-content").style.display = "none";
-    document.getElementById("mainSidebar").style.display = "none";
+    let blockPanel = document.getElementById("subBlockPanel");
+    
+    // 1. Rescue the panel! If it was accidentally trapped inside the hidden main content, this moves it to safety.
+    document.body.appendChild(blockPanel); 
+    
+    // 2. Force it to be completely visible, overriding any hidden CSS quirks
+    blockPanel.style.display = "flex";
+    blockPanel.style.opacity = "1";
+    blockPanel.style.visibility = "visible";
+    blockPanel.classList.add("active");
+    
+    // 3. Ghost Mode: Erase the dashboard so hackers can't delete the blocker and keep using the app
+    let mainContent = document.querySelector(".main-content");
+    let sidebar = document.getElementById("mainSidebar");
+    
+    if (mainContent) mainContent.style.display = "none";
+    if (sidebar) sidebar.style.display = "none";
 }
 
 function UnlockAccess() {
-    document.getElementById("subBlockPanel").style.display = "none";
+    let blockPanel = document.getElementById("subBlockPanel");
     
-    // Restore UI
-    document.querySelector(".main-content").style.display = "block";
-    document.getElementById("mainSidebar").style.display = "flex";
+    blockPanel.style.display = "none";
+    blockPanel.style.opacity = "0";
+    blockPanel.style.visibility = "hidden";
+    blockPanel.classList.remove("active");
+    
+    // Restore UI by removing the inline "none" styles, letting CSS take over again
+    let mainContent = document.querySelector(".main-content");
+    let sidebar = document.getElementById("mainSidebar");
+    
+    if (mainContent) mainContent.style.display = "";
+    if (sidebar) sidebar.style.display = "";
 }
 
 function TriggerBanner(msg) {
@@ -3556,7 +3577,14 @@ function ShowSuccessPanel(expirySeconds, planType) {
     document.getElementById("successPlanName").innerText = "Current Plan: " + displayPlan;
     document.getElementById("successExpiryDate").innerText = "Valid Until: " + formattedDate;
     
-    document.getElementById("subSuccessPanel").style.display = "flex";
+    let successPanel = document.getElementById("subSuccessPanel");
+    
+    // Rescue and force visibility
+    document.body.appendChild(successPanel);
+    successPanel.style.display = "flex";
+    successPanel.style.opacity = "1";
+    successPanel.style.visibility = "visible";
+    successPanel.classList.add("active");
 }
 
 // 🚨 SECURE FIREBASE TRANSACTION: Prevents users from spamming the Free Trial button!
