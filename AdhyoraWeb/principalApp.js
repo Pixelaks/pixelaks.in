@@ -61,6 +61,12 @@ else {
 }
 el.versionText.innerText = "Version 1.0.0 (Web Admin)";
 
+// ==========================================
+// 🚨 PROFILE, SESSIONS & THEME ENGINE
+// ==========================================
+let myWebDeviceID = localStorage.getItem("myWebDeviceID");
+let sessionsCache = new Map();
+
 async function fetchPrincipalProfile() {
     try {
         const cSnap = await getDoc(doc(db, "colleges", currentCollegeID));
@@ -72,11 +78,113 @@ async function fetchPrincipalProfile() {
         if (docSnap.exists()) {
             const data = docSnap.data(); myRealName = data.name || "Principal";
             el.principalName.innerText = myRealName; el.principalEmail.innerText = data.email || "No Email Provided";
+            
+            // 🚨 Activate Device Management
+            registerWebSession();
+            startSessionListener();
         } else {
             el.principalName.innerText = "Profile Not Found"; el.principalEmail.innerText = "";
         }
     } catch (e) {}
 }
+
+async function registerWebSession() {
+    if (!myWebDeviceID) {
+        myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        localStorage.setItem("myWebDeviceID", myWebDeviceID);
+    }
+    
+    let osName = "Web Browser";
+    if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
+    if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
+    if (navigator.userAgent.indexOf("Linux") != -1) osName = "Linux PC";
+
+    try {
+        const sessionRef = doc(db, "colleges", currentCollegeID, "principals", currentUserID, "sessions", myWebDeviceID);
+        await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
+        
+        // Listen for remote kick
+        onSnapshot(sessionRef, (docSnap) => {
+            if (!docSnap.exists()) signOut(auth).then(() => window.location.href = "index.html");
+        });
+    } catch(e) {}
+}
+
+function startSessionListener() {
+    onSnapshot(query(collection(db, "colleges", currentCollegeID, "principals", currentUserID, "sessions")), (snap) => {
+        sessionsCache.clear();
+        snap.docs.forEach(doc => { sessionsCache.set(doc.id, { id: doc.id, ...doc.data() }); });
+        if (document.getElementById("sessionsModal").classList.contains("active")) renderSessions();
+    });
+}
+
+function renderSessions() {
+    let container = document.getElementById("sessionsListContainer");
+    if (sessionsCache.size === 0) { container.innerHTML = `<div class="no-data-text">No active sessions.</div>`; return; }
+    
+    let html = "";
+    sessionsCache.forEach((d) => {
+        let devName = d.deviceName || "Unknown Device";
+        let isMe = (d.id === myWebDeviceID);
+        if (isMe) devName += " (This Browser)";
+        
+        let timeStr = "Recently";
+        if (d.loginTime) timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+        let btnHtml = isMe ? `<span style="font-size:11px; color:var(--brand-green); font-weight:bold;">Active</span>` : `<button onclick="revokeSession('${d.id}')" style="background:#fef2f2; color:#ef4444; border:1px solid #fca5a5; padding:6px 12px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:11px; transition:0.2s;">Kick</button>`;
+        
+        html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-grid-color); border:1px solid var(--border-color); border-radius:12px; padding:15px;">
+                <div>
+                    <div style="font-weight:bold; color:var(--text-green); font-size:13px; margin-bottom:4px;">${devName}</div>
+                    <div style="font-size:11px; color:#64748b;">Logged in: ${timeStr}</div>
+                </div>
+                ${btnHtml}
+            </div>`;
+    });
+    container.innerHTML = html;
+}
+
+window.revokeSession = async function(sessionID) {
+    if (!confirm("Are you sure you want to log this device out?")) return;
+    try {
+        await deleteDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID, "sessions", sessionID));
+        showRcToast("Device kicked successfully.");
+    } catch(e) { showRcToast("Error revoking session."); }
+};
+
+// --- BUTTON HOOKS ---
+document.getElementById("btnThemes").addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("active");
+    document.getElementById("themesModal").classList.add("active");
+});
+
+document.getElementById("btnDevices").addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("active");
+    document.getElementById("sessionsModal").classList.add("active");
+    renderSessions(); 
+});
+
+// --- THEME LOGIC ---
+function applyTheme(isDark) {
+    if (isDark) {
+        document.body.classList.add("dark-mode");
+        document.getElementById("btnDarkMode").style.border = "2px solid var(--brand-green)";
+        document.getElementById("btnLightMode").style.border = "1px solid #475569";
+    } else {
+        document.body.classList.remove("dark-mode");
+        document.getElementById("btnLightMode").style.border = "2px solid var(--brand-green)";
+        document.getElementById("btnDarkMode").style.border = "1px solid #cbd5e1";
+    }
+    localStorage.setItem("adhyora_principal_theme", isDark ? "dark" : "light");
+}
+
+document.getElementById("btnDarkMode").addEventListener("click", () => applyTheme(true));
+document.getElementById("btnLightMode").addEventListener("click", () => applyTheme(false));
+
+// Load saved theme immediately on boot
+applyTheme(localStorage.getItem("adhyora_principal_theme") === "dark");
+
 
 function handleContactUs() {
     const deviceInfo = `\n========================\nBrowser/Device: ${navigator.userAgent}\nOS: ${navigator.platform}\nApp Version: 1.0.0 (Web)\nCollege ID: ${currentCollegeID}\nRole: Principal\n========================`;
