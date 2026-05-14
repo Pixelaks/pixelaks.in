@@ -3521,43 +3521,49 @@ function ValidateExpiry(expirySeconds) {
     }
 }
 
-// 🚨 THE ANTI-HACK GHOST UI (UPGRADED)
+// 🚨 THE ANTI-HACK GHOST UI (SECURE VERSION)
 function HandleBlockState(msg) {
     document.getElementById("subBlockText").innerText = msg;
     
+    // Hide the initial loader and show the blocker
+    document.getElementById("initialAppLoader").style.display = "none";
     let blockPanel = document.getElementById("subBlockPanel");
     
-    // 1. Rescue the panel! If it was accidentally trapped inside the hidden main content, this moves it to safety.
     document.body.appendChild(blockPanel); 
-    
-    // 2. Force it to be completely visible, overriding any hidden CSS quirks
     blockPanel.style.display = "flex";
     blockPanel.style.opacity = "1";
     blockPanel.style.visibility = "visible";
-    blockPanel.classList.add("active");
     
-    // 3. Ghost Mode: Erase the dashboard so hackers can't delete the blocker and keep using the app
+    // Ensure dashboard remains hidden
     let mainContent = document.querySelector(".main-content");
     let sidebar = document.getElementById("mainSidebar");
-    
-    if (mainContent) mainContent.style.display = "none";
-    if (sidebar) sidebar.style.display = "none";
+    if (mainContent) mainContent.style.setProperty("display", "none", "important");
+    if (sidebar) sidebar.style.setProperty("display", "none", "important");
 }
 
 function UnlockAccess() {
+    // 1. Remove the initial loader
+    const loader = document.getElementById("initialAppLoader");
+    if (loader) loader.style.display = "none";
+
+    // 2. Hide the block panel
     let blockPanel = document.getElementById("subBlockPanel");
-    
     blockPanel.style.display = "none";
     blockPanel.style.opacity = "0";
-    blockPanel.style.visibility = "hidden";
-    blockPanel.classList.remove("active");
-    
-    // Restore UI by removing the inline "none" styles, letting CSS take over again
+
+    // 3. 🚨 THE REVEAL: Physically force the dashboard to appear
     let mainContent = document.querySelector(".main-content");
     let sidebar = document.getElementById("mainSidebar");
     
-    if (mainContent) mainContent.style.display = "";
-    if (sidebar) sidebar.style.display = "";
+    if (mainContent) {
+        mainContent.style.setProperty("display", "block", "important");
+        // Trigger a tiny fade-in for polish
+        mainContent.style.opacity = "0";
+        setTimeout(() => mainContent.style.opacity = "1", 50);
+    }
+    if (sidebar) {
+        sidebar.style.setProperty("display", "flex", "important");
+    }
 }
 
 function TriggerBanner(msg) {
