@@ -81,7 +81,8 @@ const views = {
     assign: document.getElementById("assignView"),
     data: document.getElementById("dataView"), // 🚨 ADDED THE COMMA HERE!
     subjectList: document.getElementById("subjectListView"),
-    stuSub: document.getElementById("stuSubView") // 🚨 ADDED THIS LINE
+    stuSub: document.getElementById("stuSubView"),
+    events: document.getElementById("eventsView") // 🚨 ADDED THIS LINE
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -117,6 +118,7 @@ document.getElementById("btnNavTimetable").addEventListener("click", () => { swi
 document.getElementById("btnNavData").addEventListener("click", () => { switchView(views.data); });
 document.getElementById("btnNavSubjectList").addEventListener("click", () => { switchView(views.subjectList); if (!subLoaded) SUB_Init(); });
 document.getElementById("btnNavStuSub").addEventListener("click", () => { switchView(views.stuSub); if (!ssLoaded) SS_Init(); });
+document.getElementById("btnNavEvents").addEventListener("click", () => { switchView(views.events); if (!evtLoaded) EVT_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -2607,3 +2609,239 @@ async function SS_ExecuteMove() {
 
     } catch(e) { showRcToast("❌ Error moving students."); console.error(e); }
 }
+
+// ==========================================
+// 🚨 EVENT REQUESTS & APPROVAL ENGINE
+// ==========================================
+let evtLoaded = false;
+let evtCachedData = [];
+let evtListener = null;
+
+function EVT_Init() {
+    evtLoaded = true;
+    if (evtListener) evtListener(); 
+
+    evtListener = onSnapshot(query(collection(db, "colleges", currentCollegeID, "event_requests"), orderBy("submittedAt", "desc"), limit(100)), (snap) => {
+        evtCachedData = [];
+        snap.forEach(doc => { evtCachedData.push({ id: doc.id, ...doc.data() }); });
+        
+        document.getElementById("evtTotalCount").innerText = `Total: ${evtCachedData.length}`;
+        EVT_RenderList(document.getElementById("evtSearchInput").value);
+    });
+}
+
+function EVT_RenderList(searchTerm = "") {
+    let container = document.getElementById("evtListContainer");
+    let noData = document.getElementById("evtNoDataText");
+    let filtered = evtCachedData;
+
+    if (searchTerm) {
+        let q = searchTerm.toLowerCase().trim();
+        filtered = evtCachedData.filter(e => (e.eventName||"").toLowerCase().includes(q) || (e.teacherName||"").toLowerCase().includes(q) || (e.date||"").includes(q) || (e.semester||"").toLowerCase().includes(q));
+    }
+
+    if (filtered.length === 0) {
+        noData.style.display = "block"; noData.innerText = searchTerm ? `No requests match '${searchTerm}'.` : "No event requests found.";
+        container.innerHTML = ""; container.appendChild(noData);
+        return;
+    }
+    noData.style.display = "none";
+
+    let html = "";
+    filtered.forEach(e => {
+        let isAcc = e.status === "Accepted";
+        let statusHtml = `<span class="evt-status ${isAcc ? 'accepted' : 'pending'}">${isAcc ? 'ACCEPTED' : 'PENDING'}</span>`;
+        let sList = e.studentIDs || [];
+        let sidsJson = JSON.stringify(sList).replace(/"/g, '&quot;');
+        
+        html += `
+        <div class="evt-card">
+            <div class="evt-header" onclick="EVT_ToggleBody('${e.id}', ${sidsJson})">
+                <div>
+                    <div class="evt-title">${e.eventName || "Special Event"}</div>
+                    <div class="evt-meta">Req: ${e.teacherName || "Unknown"} | ${e.date || ""} | Period ${e.period || 1}</div>
+                </div>
+                ${statusHtml}
+            </div>
+            <div class="evt-body" id="evt_body_${e.id}">
+                ${!isAcc ? `<button id="btn_acc_${e.id}" style="width:100%; background:var(--brand-green); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:15px; box-shadow:0 4px 10px rgba(74, 222, 128, 0.3);" onclick="EVT_Accept('${e.id}')">Approve Event & Save Attendance</button>` : ''}
+                <div id="evt_stu_${e.id}"><i>Loading students...</i></div>
+            </div>
+        </div>`;
+    });
+    
+    container.innerHTML = html; container.appendChild(noData);
+}
+
+document.getElementById("evtSearchInput").addEventListener("input", (e) => EVT_RenderList(e.target.value));
+
+window.EVT_ToggleBody = async (id, sids) => {
+    let body = document.getElementById(`evt_body_${id}`);
+    let stuContainer = document.getElementById(`evt_stu_${id}`);
+    
+    let isOpening = !body.classList.contains("active");
+    body.classList.toggle("active");
+
+    if (isOpening && stuContainer.innerHTML.includes("Loading")) {
+        if (sids.length === 0) { stuContainer.innerHTML = "No students attached."; return; }
+        
+        // 🚨 CHUNKING ENGINE: Fetch students in batches of 30 to bypass Firestore limits
+        let fetchedStudents = [];
+        for (let i = 0; i < sids.length; i += 30) {
+            let chunk = sids.slice(i, i + 30);
+            let sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("__name__", "in", chunk)));
+            sSnap.forEach(d => fetchedStudents.push({ id: d.id, ...d.data() }));
+        }
+
+        let html = "";
+        fetchedStudents.forEach(s => {
+            let dept = (s.Department || s.department || "Unknown").replace("DEPT_", "");
+            html += `<div class="evt-student-row">
+                <div><b style="color:var(--text-green); font-size:13px;">${s.Name || "Unknown"}</b> <span style="font-size:11px; color:#94a3b8;">(${s.RollNumber || s.id})</span></div>
+                <div style="font-size:11px; color:#64748b; font-weight:600;">[${dept}]</div>
+            </div>`;
+        });
+        stuContainer.innerHTML = html;
+    }
+};
+
+window.EVT_Accept = async (id) => {
+    let evt = evtCachedData.find(e => e.id === id); if (!evt) return;
+    let btn = document.getElementById(`btn_acc_${id}`); btn.innerText = "Scanning & Saving..."; btn.disabled = true;
+    showRcToast("Processing Heavy Transaction...");
+
+    let sids = evt.studentIDs || [];
+    if (sids.length === 0) return;
+
+    try {
+        // 1. Chunk Fetch Students to Group by Semester
+        let studentsBySem = {};
+        for (let i = 0; i < sids.length; i += 30) {
+            let chunk = sids.slice(i, i + 30);
+            let sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("__name__", "in", chunk)));
+            sSnap.forEach(d => {
+                let yStr = d.data().Year ? d.data().Year.toString() : "1";
+                let yearNum = parseInt(yStr.replace(/\D/g, '')) || 1;
+                let sem = (collegeSemesterType === "Odd") ? (yearNum * 2) - 1 : (yearNum * 2);
+                if (!studentsBySem[sem]) studentsBySem[sem] = [];
+                studentsBySem[sem].push(d.id);
+            });
+        }
+
+        // 2. RETROACTIVE REFUND SCANNER
+        let dateStr = evt.date; let periodIndex = evt.period || "1"; let pKey = `period_${periodIndex}`;
+        let todaySnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", dateStr)));
+        
+        let wb = writeBatch(db);
+        let ops = 0;
+
+        todaySnap.forEach(docSnap => {
+            let dID = docSnap.id; if (dID.includes("GLOBAL") || dID.includes("EVENTS")) return;
+            let d = docSnap.data();
+            
+            if (d[pKey] && d[pKey].attendance && d[pKey].subject) {
+                let attMap = d[pKey].attendance; let subName = d[pKey].subject;
+                let cleanSub = subName.replace(/\s+/g, '').replace(/\//g, '-').replace(/\./g, '');
+                let semKey = d.semester.replace(" ", "_");
+
+                sids.forEach(uid => {
+                    if (attMap[uid] !== undefined) {
+                        let wasPresent = attMap[uid];
+                        
+                        // Refund the period record
+                        wb.update(docSnap.ref, {
+                            [`${pKey}.attendance.${uid}`]: deleteField(),
+                            [`${pKey}.stats.totalStudents`]: increment(-1),
+                            [`${pKey}.stats.${wasPresent ? 'presentCount' : 'absentCount'}`]: increment(-1)
+                        }); ops++;
+
+                        // Refund the student profile
+                        let sRef = doc(db, "colleges", currentCollegeID, "students", uid);
+                        let rUpdates = {};
+                        rUpdates[`attendance_stats.${semKey}.${cleanSub}.total`] = increment(-1);
+                        if (wasPresent) rUpdates[`attendance_stats.${semKey}.${cleanSub}.present`] = increment(-1);
+                        wb.update(sRef, rUpdates); ops++;
+                    }
+                });
+            }
+        });
+
+        // 3. EVENT SAVE ENGINE
+        for (let sem in studentsBySem) {
+            let semDocKey = `Semester ${sem}`; let semKey = `Semester_${sem}`; let semName = `Semester${sem}`;
+            let eventDocID = `${dateStr}_${semName}_EVENTS`; let globalDocID = `${dateStr}_${semName}_GLOBAL`;
+            
+            let gSnap = await getDoc(doc(db, "colleges", currentCollegeID, "attendance", globalDocID));
+            let allStudentPeriods = gSnap.exists() && gSnap.data().student_periods ? gSnap.data().student_periods : {};
+            let oldStrictScores = gSnap.exists() && gSnap.data().strict_scores_cache ? gSnap.data().strict_scores_cache : {};
+            let newStrictScoresCache = { ...oldStrictScores };
+
+            let attMap = {}; let eventDetailsMap = {}; let pCount = 0;
+            
+            studentsBySem[sem].forEach(uid => {
+                attMap[uid] = true; eventDetailsMap[uid] = evt.eventName; pCount++;
+                
+                let sRef = doc(db, "colleges", currentCollegeID, "students", uid);
+                let ups = {};
+                ups[`attendance_stats.${semKey}.Events.present`] = increment(1);
+                ups[`attendance_stats.${semKey}.Events.total`] = increment(1);
+
+                let myPeriods = allStudentPeriods[uid] || {};
+                myPeriods[`p${periodIndex}`] = true;
+                allStudentPeriods[uid] = myPeriods;
+
+                // Strict Math
+                let morningLost = false; let eveningLost = false;
+                [1,2,3].forEach(p => { if (myPeriods[`p${p}`] === false) morningLost = true; });
+                [4,5,6].forEach(p => { if (myPeriods[`p${p}`] === false) eveningLost = true; });
+                let newStrict = 0; if(!morningLost) newStrict += 0.5; if(!eveningLost) newStrict += 0.5;
+                newStrictScoresCache[uid] = newStrict;
+
+                let isNewDay = oldStrictScores[uid] === undefined;
+                let oldStrict = isNewDay ? 0 : parseFloat(oldStrictScores[uid]);
+                let delta = newStrict - oldStrict;
+
+                if (delta !== 0) ups[`attendance_stats.${semKey}.Strict_Global.present`] = increment(delta);
+                if (isNewDay) ups[`attendance_stats.${semKey}.Strict_Global.total`] = increment(1);
+
+                wb.update(sRef, ups); ops++;
+            });
+
+            // Save Period Block
+            let eRef = doc(db, "colleges", currentCollegeID, "attendance", eventDocID);
+            let periodPayload = { subject: "Special Events", category: "EVENT", markedByTeacherID: evt.teacherID, markedByTeacherName: evt.teacherName, timestamp: serverTimestamp(), stats: { totalStudents: pCount, presentCount: pCount, absentCount: 0 }, attendance: attMap, event_details: eventDetailsMap };
+            let dayData = { [`period_${periodIndex}`]: periodPayload, date: dateStr, semester: semDocKey };
+            wb.set(eRef, dayData, { merge: true }); ops++;
+
+            let gRef = doc(db, "colleges", currentCollegeID, "attendance", globalDocID);
+            wb.set(gRef, { student_periods: allStudentPeriods, strict_scores_cache: newStrictScoresCache }, { merge: true }); ops++;
+        }
+
+        wb.update(doc(db, "colleges", currentCollegeID, "event_requests", id), { status: "Accepted" });
+        await wb.commit();
+
+        showRcToast("✅ Event Approved & Attendance Saved!");
+
+        // 4. Send Push Notification to Teacher
+        let tSnap = await getDoc(doc(db, "colleges", currentCollegeID, "teachers", evt.teacherID));
+        if (tSnap.exists()) {
+            let tokens = [];
+            if (tSnap.data().fcmTokens) tokens = tSnap.data().fcmTokens;
+            else if (tSnap.data().fcmToken) tokens = [tSnap.data().fcmToken];
+
+            if (tokens.length > 0) {
+                fetch(APPS_SCRIPT_URL, {
+                    method: "POST", mode: "no-cors",
+                    body: JSON.stringify({
+                        title: "Event Approved! 🎉", 
+                        body: `Your request for '${evt.eventName}' was accepted.`,
+                        image: "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/4c9dc43b4b3fd2c66679498581de26d690053f61/AdhyoraSplashLogo5.png",
+                        type: "event_request", senderRole: "Principal", priority: "high", tokens: tokens
+                    })
+                });
+            }
+        }
+        EVT_Init(); // Refresh UI
+
+    } catch (e) { btn.innerText = "Accept Request"; btn.disabled = false; showRcToast("❌ Save Failed!"); console.error(e); }
+};
