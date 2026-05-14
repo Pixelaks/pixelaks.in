@@ -82,7 +82,8 @@ const views = {
     data: document.getElementById("dataView"), // 🚨 ADDED THE COMMA HERE!
     subjectList: document.getElementById("subjectListView"),
     stuSub: document.getElementById("stuSubView"),
-    events: document.getElementById("eventsView") // 🚨 ADDED THIS LINE
+    events: document.getElementById("eventsView"),
+    attendance: document.getElementById("attendanceView") // 🚨 ADDED THIS LINE
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -119,6 +120,7 @@ document.getElementById("btnNavData").addEventListener("click", () => { switchVi
 document.getElementById("btnNavSubjectList").addEventListener("click", () => { switchView(views.subjectList); if (!subLoaded) SUB_Init(); });
 document.getElementById("btnNavStuSub").addEventListener("click", () => { switchView(views.stuSub); if (!ssLoaded) SS_Init(); });
 document.getElementById("btnNavEvents").addEventListener("click", () => { switchView(views.events); if (!evtLoaded) EVT_Init(); });
+document.getElementById("btnNavAttendance").addEventListener("click", () => { switchView(views.attendance); if (!attdLoaded) ATTD_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -2845,3 +2847,231 @@ window.EVT_Accept = async (id) => {
 
     } catch (e) { btn.innerText = "Accept Request"; btn.disabled = false; showRcToast("❌ Save Failed!"); console.error(e); }
 };
+
+// ==========================================
+// 🚨 ATTENDANCE RECORDS (GOD-MODE) ENGINE
+// ==========================================
+let attdLoaded = false;
+let attdAllTeachers = [];
+let attdCachedAllocations = {};
+let attdCachedAttendance = {};
+let attdDailyAllocations = {};
+let attdTodayAttendance = {};
+
+let attdSelectedDate = new Date();
+let attdSelectedDayName = "Monday";
+
+let attdAllocListener = null;
+let attdAttListener = null;
+
+// Exact College Bell Times (Format: Hours.Decimal -> 10:30 AM = 10.5)
+const attdPeriodEndTimes = [10.5, 11.5, 12.5, 14.0, 15.0, 16.0];
+
+function ATTD_Init() {
+    attdLoaded = true;
+
+    // Fetch Teachers Once
+    if (attdAllTeachers.length === 0) {
+        getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
+            snap.forEach(doc => {
+                let d = doc.data();
+                attdAllTeachers.push({ id: doc.id, name: d.name || d.teacherName || "Unknown", dept: (d.departmentID || "").replace("DEPT_", "") });
+            });
+            attdAllTeachers.sort((a,b) => a.name.localeCompare(b.name));
+            ATTD_SelectToday();
+        });
+    } else {
+        ATTD_SelectToday();
+    }
+
+    // Setup Search
+    document.getElementById("attdSearchInput").addEventListener("input", () => ATTD_RenderGrid());
+
+    // Setup Day Buttons
+    let dBtns = document.querySelectorAll("#attdDaysContainer .asn-day-btn");
+    dBtns.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            let offset = parseInt(e.target.dataset.offset);
+            ATTD_CalculateDateFromDayIndex(offset);
+        });
+    });
+}
+
+function ATTD_SelectToday() {
+    let now = new Date();
+    let day = now.getDay(); // 0 = Sun, 1 = Mon...
+    let index = (day >= 1 && day <= 5) ? day - 1 : 0; // Default to Monday if Weekend
+    ATTD_CalculateDateFromDayIndex(index);
+}
+
+function ATTD_CalculateDateFromDayIndex(targetIndex) {
+    let now = new Date();
+    let currentDayOfWeek = now.getDay();
+    if (currentDayOfWeek === 0) currentDayOfWeek = 7; // Treat Sunday as 7
+
+    let diff = (targetIndex + 1) - currentDayOfWeek;
+    attdSelectedDate = new Date(now);
+    attdSelectedDate.setDate(now.getDate() + diff);
+    
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    attdSelectedDayName = days[attdSelectedDate.getDay()];
+
+    // UI Updates for Buttons
+    document.querySelectorAll("#attdDaysContainer .asn-day-btn").forEach((btn, idx) => {
+        if (idx === targetIndex) btn.classList.add("active");
+        else btn.classList.remove("active");
+    });
+
+    ATTD_LoadDataForSelectedDay();
+}
+
+function ATTD_LoadDataForSelectedDay() {
+    let dateStr = attdSelectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (attdAllocListener) attdAllocListener();
+    if (attdAttListener) attdAttListener();
+
+    // 🚨 RAM CACHE HIT
+    if (attdCachedAllocations[attdSelectedDayName] && attdCachedAttendance[dateStr]) {
+        attdDailyAllocations = attdCachedAllocations[attdSelectedDayName];
+        attdTodayAttendance = attdCachedAttendance[dateStr];
+        ATTD_RenderGrid();
+    } else {
+        document.getElementById("attdListContainer").innerHTML = `<div class="no-data-text">Loading ${attdSelectedDayName}...</div>`;
+        attdDailyAllocations = {};
+        attdTodayAttendance = {};
+    }
+
+    // 🚨 LIVE LISTENER 1: Timetable Allocations
+    attdAllocListener = onSnapshot(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("day", "==", attdSelectedDayName)), (snap) => {
+        let tempAllocs = {};
+        snap.forEach(doc => {
+            let d = doc.data();
+            if (!d.teacherID || !d.period || !d.subjectName) return;
+            let tID = d.teacherID;
+            let pIndex = parseInt(d.period) - 1;
+            
+            if (!tempAllocs[tID]) tempAllocs[tID] = [];
+            // Prevent duplicates in splits
+            if (!tempAllocs[tID].some(a => a.periodIndex === pIndex)) {
+                tempAllocs[tID].push({ periodIndex: pIndex, subject: d.subjectName });
+            }
+        });
+        
+        attdDailyAllocations = tempAllocs;
+        attdCachedAllocations[attdSelectedDayName] = tempAllocs; // Save to Cache
+        ATTD_RenderGrid();
+    });
+
+    // 🚨 LIVE LISTENER 2: Attendance Records
+    attdAttListener = onSnapshot(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", dateStr)), (snap) => {
+        let tempAttd = {};
+        snap.forEach(doc => {
+            let d = doc.data();
+            for (let i = 1; i <= 6; i++) {
+                let pKey = `period_${i}`;
+                if (d[pKey] && d[pKey].subject && d[pKey].markedByTeacherID) {
+                    let comboKey = `${i - 1}_${d[pKey].subject}`;
+                    tempAttd[comboKey] = { markedByTeacherID: d[pKey].markedByTeacherID };
+                }
+            }
+        });
+
+        attdTodayAttendance = tempAttd;
+        attdCachedAttendance[dateStr] = tempAttd; // Save to Cache
+        ATTD_RenderGrid();
+    });
+}
+
+function ATTD_RenderGrid() {
+    let container = document.getElementById("attdListContainer");
+    let searchFilter = document.getElementById("attdSearchInput").value.toLowerCase().trim();
+    let html = "";
+
+    let visibleCount = 0;
+
+    attdAllTeachers.forEach(teacher => {
+        let myAllocs = attdDailyAllocations[teacher.id] || [];
+
+        // SEARCH FILTER
+        if (searchFilter) {
+            let matchesName = teacher.name.toLowerCase().includes(searchFilter);
+            let matchesDept = teacher.dept.toLowerCase().includes(searchFilter);
+            let matchesSub = myAllocs.some(a => a.subject.toLowerCase().includes(searchFilter));
+            if (!matchesName && !matchesDept && !matchesSub) return;
+        }
+
+        visibleCount++;
+        let rowHtml = `<div class="attd-row"><div class="attd-teacher-col"><span class="attd-teacher-name">${teacher.name}</span><span class="attd-teacher-dept">${teacher.dept}</span></div>`;
+
+        for (let p = 0; p < 6; p++) {
+            let alloc = myAllocs.find(a => a.periodIndex === p);
+            
+            if (!alloc) {
+                rowHtml += `<div class="attd-empty">---</div>`;
+            } else {
+                let comboKey = `${p}_${alloc.subject}`;
+                let markedByID = attdTodayAttendance[comboKey] ? attdTodayAttendance[comboKey].markedByTeacherID : null;
+                
+                let colorClass = ATTD_GetStatusColorClass(p, teacher.id, markedByID);
+                let shortName = alloc.subject.length <= 3 ? alloc.subject.toUpperCase() : alloc.subject.substring(0, 3).toUpperCase();
+                
+                // Tooltip Hover Engine
+                let cleanSub = alloc.subject.replace(/'/g, "\\'");
+                rowHtml += `<div class="attd-slot ${colorClass}" onmouseenter="ATTD_ShowTooltip(event, '${cleanSub}')" onmouseleave="ATTD_HideTooltip()"><u>${shortName}</u></div>`;
+            }
+        }
+        rowHtml += `</div>`;
+        html += rowHtml;
+    });
+
+    if (visibleCount === 0) {
+        container.innerHTML = `<div class="no-data-text">No data found for this filter.</div>`;
+    } else {
+        container.innerHTML = html;
+    }
+}
+
+// 🚨 TIME AND COLOR MATHEMATICS (Matches C# Exactly)
+function ATTD_GetStatusColorClass(periodIndex, assignedTeacherID, markedByTeacherID) {
+    // 1. Marked Already?
+    if (markedByTeacherID) {
+        if (markedByTeacherID === assignedTeacherID) return "attd-green"; // ✅ Green (Normal)
+        else return "attd-yellow"; // ⚠️ Yellow (Substitute)
+    }
+
+    let now = new Date();
+    
+    // Normalize to Midnight to compare days easily
+    let tDateOnly = new Date(attdSelectedDate.getFullYear(), attdSelectedDate.getMonth(), attdSelectedDate.getDate()).getTime();
+    let nDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // 2. Past Day?
+    if (tDateOnly < nDateOnly) return "attd-red"; // 🚨 Red (Missed completely)
+
+    // 3. Future Day?
+    if (tDateOnly > nDateOnly) return "attd-black"; // ⚪ Black (Upcoming)
+
+    // 4. TODAY: Check the exact clock time!
+    let currentHour = now.getHours() + (now.getMinutes() / 60.0);
+    let endTime = attdPeriodEndTimes[periodIndex];
+
+    if (currentHour > endTime) return "attd-red"; // 🚨 Red (Time is up, forgotten!)
+    
+    return "attd-black"; // ⚪ Black (Class is ongoing or upcoming later today)
+}
+
+// 🚨 TOOLTIP ENGINE
+function ATTD_ShowTooltip(event, text) {
+    let tooltip = document.getElementById("attdTooltip");
+    tooltip.innerText = text;
+    tooltip.style.display = "block";
+    
+    // Position it slightly above the mouse
+    tooltip.style.left = (event.clientX + 10) + 'px';
+    tooltip.style.top = (event.clientY - 30) + 'px';
+}
+
+function ATTD_HideTooltip() {
+    document.getElementById("attdTooltip").style.display = "none";
+}
