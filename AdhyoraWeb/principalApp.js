@@ -1025,11 +1025,17 @@ function TT_Init() {
     document.getElementById("btnTTSaveStructure").addEventListener("click", TT_SaveStructureAndLock);
     document.getElementById("btnTTEdit").addEventListener("click", () => TT_SetPhase(0));
     
-    // 🚨 ASSIGN BUTTON LISTENER 🚨
-    document.getElementById("btnTTAssign").addEventListener("click", () => {
-        document.getElementById("assignOverlay").classList.add("active");
-        ASN_Init(ttCurrentSem, ttSelectedDay); // Open modal with current context!
-    });
+  // 🚨 ASSIGN BUTTON LISTENER 🚨
+  document.getElementById("btnTTAssign").addEventListener("click", () => {
+      switchView(views.assign); // Use the dashboard view switcher!
+      ASN_Init(ttCurrentSem, ttSelectedDay); 
+  });
+  
+  // Back Button logic
+  document.getElementById("btnBackToTimetable").addEventListener("click", () => {
+      switchView(views.timetable);
+      TT_Init(); // Refresh timetable when going back
+  });
 
     TT_LoadGlobalCategories();
     setInterval(() => { if (!document.getElementById('timetableView').classList.contains('hidden-view')) TT_UpdateTimelineVisuals(); }, 60000); 
@@ -1311,7 +1317,7 @@ function ASN_RenderLayout() {
         </div>`;
     });
     
-    container.innerHTML = html;
+    container.innerHTML = `<div class="asn-periods-grid">${html}</div>`;
 }
 
 window.ASN_OnSubjectChange = (rowId, newSub) => {
@@ -1487,6 +1493,6 @@ async function ASN_SaveAll() {
         }
     });
     await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save"; btn.disabled = false;
-    document.getElementById("assignOverlay").classList.remove("active");
+    switchView(views.timetable); // Switch back to Timetable view
     TT_Init(); // Refresh timetable view
 }
