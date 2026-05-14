@@ -863,19 +863,34 @@ function SD_RenderMarksUI(examName) {
 let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
 function BCH_Init() {
     bchLoaded = true;
-    let dropSem = document.getElementById("bchSemDrop"); dropSem.innerHTML = ""; let hasSems = false;
+    let dropSem = document.getElementById("bchSemDrop"); dropSem.innerHTML = ""; 
+    
+    // 🚨 FIX: Force the default to 2 if Even, 1 if Odd
+    let defaultSemValue = (collegeSemesterType === "Even") ? "2" : "1";
+    
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0);
-        if (collegeSemesterType === "Odd" && isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
-        else if (collegeSemesterType === "Even" && !isOdd) { dropSem.innerHTML += `<option value="${i}">Semester ${i}</option>`; hasSems = true; }
+        let label = `Semester ${i}`;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
     }
-    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     
-    bchCurrentSem = dropSem.value;
-    document.getElementById("bchSemDrop").addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
-    document.getElementById("bchCatDrop").addEventListener("change", BCH_RefreshSubjects);
-    document.getElementById("bchSubDrop").addEventListener("change", BCH_FetchBatches);
-    document.getElementById("btnOpenBatchMove").addEventListener("click", BCH_OpenMoveModal);
+    // 🚨 FIX: Set the exact value
+    bchCurrentSem = defaultSemValue;
+    dropSem.value = bchCurrentSem;
+
+    // 🚨 WIPE ALL GHOST LISTENERS
+    let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
+    newDropSem.addEventListener("change", (e) => { bchCurrentSem = e.target.value; BCH_RefreshCategories(); });
+
+    let catDrop = document.getElementById("bchCatDrop"); let newCatDrop = catDrop.cloneNode(true); catDrop.parentNode.replaceChild(newCatDrop, catDrop);
+    newCatDrop.addEventListener("change", BCH_RefreshSubjects);
+
+    let subDrop = document.getElementById("bchSubDrop"); let newSubDrop = subDrop.cloneNode(true); subDrop.parentNode.replaceChild(newSubDrop, subDrop);
+    newSubDrop.addEventListener("change", BCH_FetchBatches);
+
+    let btnMove = document.getElementById("btnOpenBatchMove"); let newBtnMove = btnMove.cloneNode(true); btnMove.parentNode.replaceChild(newBtnMove, btnMove);
+    newBtnMove.addEventListener("click", BCH_OpenMoveModal);
 
     if (bchSubjectsCache.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
@@ -1039,14 +1054,20 @@ const ttPeriodEndTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
 
 function TT_Init() {
     ttLoaded = true;
-    let dropSem = document.getElementById("ttSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
+    let dropSem = document.getElementById("ttSemDrop"); dropSem.innerHTML = ""; 
+    
+    // 🚨 FIX: Force the default to 2 if Even, 1 if Odd
+    let defaultSemValue = (collegeSemesterType === "Even") ? "2" : "1";
+    
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`;
     }
-    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    dropSem.selectedIndex = defaultIndex; ttCurrentSem = dropSem.options[defaultIndex].value;
+    
+    // 🚨 FIX: Set the exact value
+    ttCurrentSem = defaultSemValue;
+    dropSem.value = ttCurrentSem;
     
     // 🚨 WIPE GHOST LISTENERS
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
@@ -1060,7 +1081,6 @@ function TT_Init() {
         });
     });
 
-    // 🚨 WIPE GHOST LISTENERS for buttons to fix the UI blinking
     let btnSave = document.getElementById("btnTTSaveStructure"); let newBtnSave = btnSave.cloneNode(true); btnSave.parentNode.replaceChild(newBtnSave, btnSave);
     newBtnSave.addEventListener("click", TT_SaveStructureAndLock);
 
@@ -1238,17 +1258,21 @@ let asnGeneralSubjects = []; let asnStudentsByYear = {}; let asnActiveRows = [];
 let asnAllTeachers = [];
 
 function ASN_Init(startSem, startDay) {
-    asnCurrentSem = startSem || "1"; 
+    // 🚨 FIX: Force the default to 2 if Even, 1 if Odd
+    let defaultSemValue = (collegeSemesterType === "Even") ? "2" : "1";
+    asnCurrentSem = startSem || defaultSemValue; 
     asnSelectedDay = startDay || "Monday";
 
-    let dropSem = document.getElementById("asnSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
+    let dropSem = document.getElementById("asnSemDrop"); dropSem.innerHTML = ""; 
+    
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
     }
-    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === asnCurrentSem) dropSem.selectedIndex = i; }
+    
+    // 🚨 FIX: Set the exact value
+    dropSem.value = asnCurrentSem;
     
     // 🚨 WIPE GHOST LISTENERS
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
@@ -2318,30 +2342,36 @@ let ssSelectedStudents = new Set();
 
 function SS_Init() {
     ssLoaded = true;
-    let dropSem = document.getElementById("ssSemDrop"); dropSem.innerHTML = ""; let hasSems = false; 
-    let activeValue = "1"; // Default fallback
+    let dropSem = document.getElementById("ssSemDrop"); dropSem.innerHTML = ""; 
+    
+    // 🚨 FIX: Force the default to 2 if Even, 1 if Odd
+    let defaultSemValue = (collegeSemesterType === "Even") ? "2" : "1";
     
     for (let i = 1; i <= 8; i++) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
-        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
-            label += " (Active)";
-            if (!hasSems) activeValue = i.toString(); // 🚨 FIX: Save the first active semester found!
-        }
-        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; 
     }
-    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
     
-    // 🚨 FIX: Force dropdown to select the Active Semester by default
-    ssCurrentSem = activeValue;
+    // 🚨 FIX: Set the exact value
+    ssCurrentSem = defaultSemValue;
     dropSem.value = ssCurrentSem;
     
+    // 🚨 WIPE ALL GHOST LISTENERS
     let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
     newDropSem.addEventListener("change", (e) => { ssCurrentSem = e.target.value; SS_RefreshCategories(); });
 
-    document.getElementById("ssCatDrop").addEventListener("change", SS_RefreshSubjects);
-    document.getElementById("ssSubDrop").addEventListener("change", SS_FetchStudents);
-    document.getElementById("btnOpenStuSubMove").addEventListener("click", SS_OpenMoveModal);
-    document.getElementById("btnConfirmStuSubMove").addEventListener("click", SS_ConfirmMovePrep);
+    let catDrop = document.getElementById("ssCatDrop"); let newCatDrop = catDrop.cloneNode(true); catDrop.parentNode.replaceChild(newCatDrop, catDrop);
+    newCatDrop.addEventListener("change", SS_RefreshSubjects);
+
+    let subDrop = document.getElementById("ssSubDrop"); let newSubDrop = subDrop.cloneNode(true); subDrop.parentNode.replaceChild(newSubDrop, subDrop);
+    newSubDrop.addEventListener("change", SS_FetchStudents);
+
+    let btnMove = document.getElementById("btnOpenStuSubMove"); let newBtnMove = btnMove.cloneNode(true); btnMove.parentNode.replaceChild(newBtnMove, btnMove);
+    newBtnMove.addEventListener("click", SS_OpenMoveModal);
+
+    let btnConfirm = document.getElementById("btnConfirmStuSubMove"); let newBtnConfirm = btnConfirm.cloneNode(true); btnConfirm.parentNode.replaceChild(newBtnConfirm, btnConfirm);
+    newBtnConfirm.addEventListener("click", SS_ConfirmMovePrep);
 
     if (subCachedData.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
