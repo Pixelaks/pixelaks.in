@@ -1,6 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Yatra+One&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
+/* 🚨 SECURITY SHIELD: Hide everything on load */
+.main-content, #mainSidebar {
+    display: none !important;
+}
+
 /* =========================================
    🚀 DOM VIRTUALIZATION (SCROLL OPTIMIZATION)
    ========================================= */
