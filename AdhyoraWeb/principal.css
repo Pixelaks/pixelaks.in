@@ -1,6 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Yatra+One&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
+/* =========================================
+   🚀 DOM VIRTUALIZATION (SCROLL OPTIMIZATION)
+   ========================================= */
+.data-card, 
+.sub-card, 
+.ss-stu-card, 
+.evt-card, 
+.asn-card, 
+.attd-row {
+    /* Tells the browser NOT to render or paint this element if it's off-screen */
+    content-visibility: auto;
+    
+    /* Gives the browser an estimated height so your scrollbar doesn't glitch jump */
+    contain-intrinsic-size: 120px; 
+    
+    /* Forces the browser to use the GPU (Hardware Acceleration) for these elements */
+    will-change: transform; 
+}
+
 :root {
     --brand-green: #4ade80;
     --text-green: #166534;
