@@ -1205,44 +1205,52 @@ function ASN_Init(startSem, startDay) {
         dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
     }
     if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
-    
-    // Select the correct sem matching the timetable
     for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === asnCurrentSem) dropSem.selectedIndex = i; }
     
-    dropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
+    // Wipe listeners to prevent duplicates
+    let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
+    newDropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; ASN_LoadData(); });
 
     let dBtns = document.querySelectorAll(".asn-day-btn");
     dBtns.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            asnSelectedDay = e.target.dataset.day; dBtns.forEach(b => b.classList.remove("active")); e.target.classList.add("active"); ASN_LoadData();
+        let newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener("click", (e) => {
+            asnSelectedDay = e.target.dataset.day; 
+            document.querySelectorAll(".asn-day-btn").forEach(b => b.classList.remove("active")); 
+            e.target.classList.add("active"); 
+            ASN_LoadData();
         });
     });
     
-    dBtns.forEach((b) => { if(b.dataset.day === asnSelectedDay) b.classList.add("active"); else b.classList.remove("active"); });
+    document.querySelectorAll(".asn-day-btn").forEach((b) => { if(b.dataset.day === asnSelectedDay) b.classList.add("active"); else b.classList.remove("active"); });
 
-    document.getElementById("btnAsnSave").addEventListener("click", ASN_SaveAll);
+    let btnSave = document.getElementById("btnAsnSave");
+    let newBtnSave = btnSave.cloneNode(true); btnSave.parentNode.replaceChild(newBtnSave, btnSave);
+    newBtnSave.addEventListener("click", ASN_SaveAll);
 
-    // Pre-fetch all teachers
-    getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
-        asnAllTeachers = []; snap.forEach(d => asnAllTeachers.push({ id: d.id, name: d.data().name || d.data().teacherName || "Unknown", dept: d.data().departmentID || "" }));
+    // 🚨 PERFORMANCE FIX: Only fetch teachers ONCE per session
+    if (asnAllTeachers.length === 0) {
+        getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
+            asnAllTeachers = []; snap.forEach(d => asnAllTeachers.push({ id: d.id, name: d.data().name || d.data().teacherName || "Unknown", dept: d.data().departmentID || "" }));
+            ASN_LoadData();
+        });
+    } else {
         ASN_LoadData();
-    });
+    }
 }
 
 async function ASN_LoadData() {
     document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">Loading Assign Panel...</div>`;
     
-    // 1. Fetch General Subjects
+    // 🚨 PERFORMANCE FIX: Only fetch subjects ONCE
     if (asnGeneralSubjects.length === 0) {
         const subSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subjects"), where("department", "==", "General")));
         asnGeneralSubjects = []; subSnap.forEach(doc => { let d = doc.data(); asnGeneralSubjects.push({ id: doc.id, name: d.Name || d.name || "", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "").toString() }); });
     }
 
-    // Filter valid categories
     let validCats = new Set();
     asnGeneralSubjects.forEach(s => { if (s.semesters.split(',').map(x=>x.trim()).includes(asnCurrentSem) && s.type && !s.type.toUpperCase().includes("TUTORIAL")) validCats.add(s.type.trim()); });
     
-    // 2. Fetch Structure
     let docID = `Sem${asnCurrentSem}_${asnSelectedDay}`;
     const structSnap = await getDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", docID));
     if (!structSnap.exists() || !structSnap.data().slots) { document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No General classes structure set for this day.</div>`; return; }
@@ -1256,7 +1264,6 @@ async function ASN_LoadData() {
     }
     if(validPeriods.length === 0) { document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No General classes scheduled today.</div>`; return; }
 
-    // 3. Fetch Allocations
     const allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", "DEPT_General")));
     let allocsByPeriod = {}; allocSnap.forEach(d => { let p = parseInt(d.data().period); if(!allocsByPeriod[p]) allocsByPeriod[p] = []; allocsByPeriod[p].push(d.data()); });
 
@@ -1273,7 +1280,7 @@ async function ASN_LoadData() {
         }
     });
 
-    // 4. Pre-fetch Students for split logic
+    // 🚨 PERFORMANCE FIX: Only fetch students ONCE per year
     let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
     if (!asnStudentsByYear[yearStr]) {
         const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
@@ -1285,37 +1292,62 @@ async function ASN_LoadData() {
 
 function ASN_RenderLayout() {
     let container = document.getElementById("asnListContainer");
-    asnActiveRows.sort((a,b) => { if(a.period !== b.period) return a.period - b.period; return a.splitIndex - b.splitIndex; });
     
+    // Group rows by period
+    let groupedRows = {};
+    asnActiveRows.forEach(r => {
+        if (!groupedRows[r.period]) groupedRows[r.period] = [];
+        groupedRows[r.period].push(r);
+    });
+
     let html = "";
-    asnActiveRows.forEach(row => {
-        let catOptions = `<option value="${row.category}">${row.category}</option>`;
+    
+    // Build the UI grouped by Period Box
+    Object.keys(groupedRows).sort((a,b) => a - b).forEach(p => {
+        let rows = groupedRows[p].sort((a,b) => a.splitIndex - b.splitIndex);
         
-        let subOptions = `<option value="">Select Subject</option>`;
-        asnGeneralSubjects.filter(s => s.type === row.category && s.semesters.split(',').map(x=>x.trim()).includes(asnCurrentSem)).forEach(s => {
-            subOptions += `<option value="${s.name}" ${s.name === row.subject ? 'selected' : ''}>${s.name}</option>`;
+        // 🚨 Start Period Wrapper
+        html += `<div class="asn-period-wrapper">`;
+        html += `<div class="asn-period-header">Period ${p}</div>`;
+        
+        rows.forEach((row, idx) => {
+            let catOptions = `<option value="${row.category}">${row.category}</option>`;
+            let subOptions = `<option value="">Select Subject</option>`;
+            asnGeneralSubjects.filter(s => s.type === row.category && s.semesters.split(',').map(x=>x.trim()).includes(asnCurrentSem)).forEach(s => {
+                subOptions += `<option value="${s.name}" ${s.name === row.subject ? 'selected' : ''}>${s.name}</option>`;
+            });
+
+            let teacherOptions = `<option value="">Unassigned</option>`;
+            if (row.subject) {
+                teacherOptions += asnAllTeachers.map(t => `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`).join('');
+            }
+
+            let isDel = row.isSplit; 
+            let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; 
+            let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : '<i class="fas fa-cut"></i> Split';
+            let cardClass = isDel ? "asn-card split" : "asn-card";
+            
+            // Add Batch Badges if split
+            let badgeHtml = "";
+            if (rows.length > 1) {
+                badgeHtml = `<div class="asn-batch-badge">Batch ${idx + 1}</div>`;
+            }
+
+            html += `
+            <div class="${cardClass}" id="card_${row.id}">
+                ${badgeHtml}
+                <div class="asn-grid">
+                    <select class="asn-input select" disabled>${catOptions}</select>
+                    <select class="asn-input select" id="sub_${row.id}" ${isDel ? 'disabled' : ''} onchange="ASN_OnSubjectChange('${row.id}', this.value)">${subOptions}</select>
+                    <select class="asn-input select" id="tea_${row.id}" onchange="ASN_OnTeacherChange('${row.id}', this.value)">${teacherOptions}</select>
+                    <input type="text" class="asn-input" id="rm_${row.id}" value="${row.room}" placeholder="Room" onchange="ASN_OnRoomChange('${row.id}', this.value)">
+                </div>
+                <button class="${btnClass}" onclick="ASN_RequestSplit('${row.id}')">${btnIcon}</button>
+            </div>`;
         });
-
-        let teacherOptions = `<option value="">Unassigned</option>`;
-        if (row.subject) {
-            teacherOptions += asnAllTeachers.map(t => `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`).join('');
-        }
-
-        let isDel = row.isSplit; let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; let btnIcon = isDel ? 'delete batch' : 'split';
-        let cardClass = isDel ? "asn-card split" : "asn-card";
-        let titleText = isDel ? `<span style="color:#f59e0b; font-size:13px;">Batch ${row.splitIndex + 1}</span>` : `Period ${row.period}`;
-
-        html += `
-        <div class="${cardClass}" id="card_${row.id}">
-            <div class="asn-period-title">${titleText}</div>
-            <div class="asn-grid">
-                <select class="asn-input select" disabled>${catOptions}</select>
-                <select class="asn-input select" id="sub_${row.id}" ${isDel ? 'disabled' : ''} onchange="ASN_OnSubjectChange('${row.id}', this.value)">${subOptions}</select>
-                <select class="asn-input select" id="tea_${row.id}" onchange="ASN_OnTeacherChange('${row.id}', this.value)">${teacherOptions}</select>
-                <input type="text" class="asn-input" id="rm_${row.id}" value="${row.room}" placeholder="Room" onchange="ASN_OnRoomChange('${row.id}', this.value)">
-            </div>
-            <button class="${btnClass}" onclick="ASN_RequestSplit('${row.id}')">${btnIcon}</button>
-        </div>`;
+        
+        // 🚨 End Period Wrapper
+        html += `</div>`;
     });
     
     container.innerHTML = `<div class="asn-periods-grid">${html}</div>`;
@@ -1353,20 +1385,31 @@ window.ASN_RequestSplit = (rowId) => {
     let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
     let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
 
+    // 🚨 FIX: Now uses the dedicated 'asnConfirmOverlay' to prevent PIN bugs!
     if (row.isSplit) {
-        let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-trash"></i> Delete Batch'; title.style.color = "#ef4444";
-        document.getElementById("confirmText").innerHTML = isVac ? `Remove a batch for <b>${row.subject}</b>?<br>You will need to reassign departments.` : `Delete this specific batch?<br>Students will be re-distributed.`;
-        document.getElementById("btnConfirmYes").onclick = () => { document.getElementById("confirmOverlay").classList.remove("active"); ASN_ProcessDeleteSplit(row, isVac); };
-        document.getElementById("confirmOverlay").classList.add("active");
+        let title = document.getElementById("asnConfirmTitle"); 
+        title.innerHTML = '<i class="fas fa-trash"></i> Delete Batch'; title.style.color = "#ef4444";
+        document.getElementById("asnConfirmText").innerHTML = isVac ? `Remove a batch for <b>${row.subject}</b>?<br>You will need to reassign departments.` : `Delete this specific batch?<br>Students will be re-distributed.`;
+        
+        let btnYes = document.getElementById("btnAsnConfirmYes");
+        let newBtnYes = btnYes.cloneNode(true); btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+        newBtnYes.onclick = () => { document.getElementById("asnConfirmOverlay").classList.remove("active"); ASN_ProcessDeleteSplit(row, isVac); };
+        
+        document.getElementById("asnConfirmOverlay").classList.add("active");
     } else {
         if (!row.subject) { showRcToast("Select a subject first!"); return; }
-        let title = document.getElementById("confirmIconTitle"); title.innerHTML = '<i class="fas fa-cut"></i> Divide Class'; title.style.color = "var(--text-green)";
-        document.getElementById("confirmText").innerHTML = `Are you sure you want to divide ALL students for<br><b>${row.subject}</b> into a new batch?`;
-        document.getElementById("btnConfirmYes").onclick = () => { 
-            document.getElementById("confirmOverlay").classList.remove("active"); 
+        let title = document.getElementById("asnConfirmTitle"); 
+        title.innerHTML = '<i class="fas fa-cut"></i> Divide Class'; title.style.color = "var(--text-green)";
+        document.getElementById("asnConfirmText").innerHTML = `Are you sure you want to divide ALL students for<br><b>${row.subject}</b> into a new batch?`;
+        
+        let btnYes = document.getElementById("btnAsnConfirmYes");
+        let newBtnYes = btnYes.cloneNode(true); btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+        newBtnYes.onclick = () => { 
+            document.getElementById("asnConfirmOverlay").classList.remove("active"); 
             if (isVac) ASN_OpenDeptSplit(row, false); else ASN_DivideEvenly(row); 
         };
-        document.getElementById("confirmOverlay").classList.add("active");
+        
+        document.getElementById("asnConfirmOverlay").classList.add("active");
     }
 };
 
