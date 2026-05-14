@@ -1573,8 +1573,116 @@ async function ASN_SaveAll() {
 }
 
 // ==========================================
-// 🚨 DATA UPLOAD MANAGER
+// 🚨 DATA UPLOAD MANAGER & PARSER
 // ==========================================
+
+// 1. DEFINE THE PARSER FIRST (No 'export' keyword needed!)
+const csvSplitter = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+
+const DataParser = {
+    isValidStudentFormat: (header) => {
+        if (!header) return false;
+        let h = header.toLowerCase();
+        return h.includes("roll") || h.includes("register") || h.includes("sl no");
+    },
+    isValidSubjectFormat: (header) => {
+        if (!header) return false;
+        let h = header.toLowerCase();
+        let hasSubject = h.includes("code") && (h.includes("subject") || h.includes("name"));
+        let hasStudent = h.includes("roll") || h.includes("register") || h.includes("sl no");
+        let hasCalendar = h.includes("date") || h.includes("working");
+        return hasSubject && !hasStudent && !hasCalendar;
+    },
+    isValidCalendarFormat: (header) => {
+        if (!header) return false;
+        let h = header.toLowerCase();
+        let hasCalendar = h.includes("date") || h.includes("event") || h.includes("working");
+        let hasStudent = h.includes("roll") || h.includes("register");
+        return hasCalendar && !hasStudent;
+    },
+    parseStudents: (lines) => {
+        let students = [];
+        const spellFixer = { "botony": "Botany", "computerscience": "Computer Science", "maths": "Mathematics", "commerce": "Commerce", "economics": "Economics" };
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            let row = lines[i].split(csvSplitter).map(v => v.trim().replace(/^"|"$/g, ''));
+            if (row.length < 6) continue;
+            let rawDept = row[3]; let courseType = row[5];
+            let finalDept = generateDeptName(rawDept, courseType, spellFixer);
+            students.push({ SLNumber: row[0], RollNumber: row[1], Name: row[2].replace(/\./g, " "), Department: finalDept, Year: row[4], CourseType: courseType });
+        }
+        return students;
+    },
+    parseSubjects: (lines) => {
+        let subjects = [];
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            let row = lines[i].split(csvSplitter).map(v => v.trim().replace(/^"|"$/g, ''));
+            if (row.length < 5) continue;
+            let code = row[0]; let name = row[1]; let type = row[2].toUpperCase().trim(); let dept = row[3];
+            let sems = [];
+            for (let s = 4; s < row.length; s++) { let val = row[s].toUpperCase().trim(); if (val && val !== "NIL") sems.push(val); }
+            if (type.includes("MJD")) {
+                if (sems.includes("4") || sems.includes("IV")) type = "MJD 4";
+                else if (sems.includes("5") || sems.includes("V")) type = "MJD 5";
+                else if (sems.includes("6") || sems.includes("VI")) type = "MJD 6";
+            }
+            subjects.push({ code: code, name: name, type: type, department: dept, semester: sems.join(","), search_key: name.toLowerCase(), isElective: (type === "MLD" || type === "VAC" || type === "SEC") });
+        }
+        return subjects;
+    },
+    parseCalendar: (lines) => {
+        let workingMap = {}; let nonWorkingMap = {}; let oddStart = "", oddEnd = "", evenStart = "", evenEnd = "";
+        let currentYear = new Date().getFullYear(); let currentMonth = 0; let detectedAcademicYear = "";
+        const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            let row = lines[i].split(csvSplitter).map(v => v.trim().replace(/^"|"$/g, ''));
+            if (row.length < 3) continue;
+            let colDate = row[0]; let colEvent = row.length > 2 ? row[2] : ""; let colWork = row.length > 3 ? row[3] : "";
+            let monthMatch = colEvent.match(/^([a-z]+)[\s\-](\d{2,4})$/i);
+            if (monthMatch) {
+                let mStr = monthMatch[1].toLowerCase().substring(0,3); currentMonth = monthNames.indexOf(mStr) + 1;
+                let yStr = monthMatch[2]; currentYear = yStr.length === 2 ? 2000 + parseInt(yStr) : parseInt(yStr);
+                if (!detectedAcademicYear) detectedAcademicYear = `${currentYear}-${currentYear + 1}`;
+                continue;
+            }
+            if (currentMonth > 0 && !isNaN(parseInt(colDate))) {
+                let day = parseInt(colDate); let fullDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                let eventUpper = colEvent.toUpperCase();
+                if (eventUpper.includes("START OF ODD")) oddStart = fullDate; else if (eventUpper.includes("END OF ODD")) oddEnd = fullDate; else if (eventUpper.includes("START OF EVEN")) evenStart = fullDate; else if (eventUpper.includes("END OF EVEN")) evenEnd = fullDate;
+                let isWorking = colWork && !isNaN(parseInt(colWork));
+                if (isWorking) workingMap[fullDate] = "Regular Working Day"; else nonWorkingMap[fullDate] = colEvent ? colEvent : "Holiday/Weekend";
+            }
+        }
+        let currentSemType = "Odd"; let today = new Date().toISOString().split('T')[0];
+        if (evenStart && evenEnd && today >= evenStart && today <= evenEnd) currentSemType = "Even";
+        return { workingMap, nonWorkingMap, detectedAcademicYear, oddStart, oddEnd, evenStart, evenEnd, currentSemType };
+    }
+};
+
+function generateDeptName(raw, courseType, spellFixer) {
+    let input = raw.trim(); let cType = courseType.toUpperCase(); let isPG = cType.includes("PG") || cType.includes("POST"); let detectedPrefix = "";
+    if (/\b(BSc|MSc|B\.Sc|M\.Sc)\b/i.test(input)) detectedPrefix = isPG ? "MSc" : "BSc";
+    else if (/\b(BCom|MCom|B\.Com|M\.Com)\b/i.test(input)) detectedPrefix = isPG ? "MCom" : "BCom";
+    else if (/\b(BA|MA|B\.A|M\.A)\b/i.test(input)) detectedPrefix = isPG ? "MA" : "BA";
+    else if (/\b(BBA|MBA|B\.B\.A|M\.B\.A)\b/i.test(input)) detectedPrefix = isPG ? "MBA" : "BBA";
+    else if (/\b(BCA|MCA|B\.C\.A|M\.C\.A)\b/i.test(input)) detectedPrefix = isPG ? "MCA" : "BCA";
+    let core = input.replace(/^(MSc|BSc|MA|BA|BCom|MCom|BBA|BCA|B\.Sc|M\.Sc|B\.A|M\.A|B\.Com|M\.Com|B\.B\.A|B\.C\.A)(?=\s|$)\s*/i, "").trim(); core = core.replace(/^[.\s-]+/, "");
+    let lowerCore = core.toLowerCase().replace(/\s+/g, '');
+    if (spellFixer[lowerCore]) core = spellFixer[lowerCore]; else core = core.charAt(0).toUpperCase() + core.slice(1).toLowerCase();
+    let finalPrefix = detectedPrefix;
+    if (!finalPrefix) {
+        if (core.includes("Commerce") || core.includes("Account")) finalPrefix = isPG ? "MCom" : "BCom";
+        else if (core.includes("Business") || core.includes("Manage")) finalPrefix = isPG ? "MBA" : "BBA";
+        else if (core.includes("Application") || core.includes("Computing")) finalPrefix = isPG ? "MCA" : "BCA";
+        else if (/(logy|ics|try|math|physics|science|biotech|nature|geo|electronics|botany)$/i.test(core)) finalPrefix = isPG ? "MSc" : "BSc";
+        else finalPrefix = isPG ? "MA" : "BA";
+    }
+    return `${finalPrefix} ${core}`;
+}
+
+// 2. NOW SET UP THE BUTTON LISTENERS
 let pendingUploadType = ""; 
 let pendingUploadData = null;
 
@@ -1582,14 +1690,17 @@ function handleFileSelect(event, type) {
     let file = event.target.files[0];
     if (!file) return;
     
+    showRcToast(`Reading ${type} file...`);
+    
     let reader = new FileReader();
     reader.onload = function(e) {
         let lines = e.target.result.split(/\r?\n/);
-        if(lines.length < 2) { showRcToast("Error: File is empty!"); return; }
+        if(lines.length < 2) { showRcToast("❌ Error: File is empty!"); return; }
         
         let header = lines[0];
         let isValid = false;
         
+        // Since DataParser is defined above, this will now work perfectly!
         if (type === "STUDENTS") isValid = DataParser.isValidStudentFormat(header);
         else if (type === "SUBJECTS") isValid = DataParser.isValidSubjectFormat(header);
         else if (type === "CALENDAR") isValid = DataParser.isValidCalendarFormat(header);
@@ -1600,33 +1711,35 @@ function handleFileSelect(event, type) {
         }
 
         if (type === "STUDENTS") pendingUploadData = DataParser.parseStudents(lines);
-        else if (type === "SUBJECTS") pendingUploadData = DataParser.parseSubjects(lines, currentCollegeID);
+        else if (type === "SUBJECTS") pendingUploadData = DataParser.parseSubjects(lines);
         else if (type === "CALENDAR") pendingUploadData = DataParser.parseCalendar(lines);
 
         pendingUploadType = type;
         
-        // Open the existing PIN overlay
+        let countMsg = (type === "CALENDAR") ? "Calendar Parsed" : `${pendingUploadData.length} Items Found`;
+        showRcToast(`✅ Success: ${countMsg}. Waiting for PIN...`);
+        
         document.getElementById("pinInput").value = "";
         document.getElementById("pinOverlay").classList.add("active");
-        rcCurrentAction = "DATA_UPLOAD"; // Hijack the action router!
+        rcCurrentAction = "DATA_UPLOAD"; 
     };
     reader.readAsText(file);
-    event.target.value = ""; // Reset input
+    event.target.value = ""; 
 }
 
 document.getElementById('fileStudents').addEventListener('change', (e) => handleFileSelect(e, 'STUDENTS'));
 document.getElementById('fileSubjects').addEventListener('change', (e) => handleFileSelect(e, 'SUBJECTS'));
 document.getElementById('fileCalendar').addEventListener('change', (e) => handleFileSelect(e, 'CALENDAR'));
 
+// 3. EXECUTE THE UPLOAD
 async function ExecuteDataUpload() {
-    showRcToast(`Uploading ${pendingUploadType}... Please wait.`);
+    showRcToast(`🚀 Uploading ${pendingUploadType}... Please wait.`);
     
     if (pendingUploadType === "STUDENTS") {
         let students = pendingUploadData;
         let batchCount = 0; let total = 0;
         let wb = writeBatch(db);
         
-        // Ensure Depts exist
         let deptMaxYears = {};
         students.forEach(s => { if(!deptMaxYears[s.Department] || parseInt(s.Year) > deptMaxYears[s.Department]) deptMaxYears[s.Department] = parseInt(s.Year); });
         for (let dept in deptMaxYears) {
@@ -1640,7 +1753,6 @@ async function ExecuteDataUpload() {
                 SLNumber: s.SLNumber, RollNumber: s.RollNumber, Name: s.Name, Department: s.Department, 
                 DepartmentSearchable: s.Department.toLowerCase(), Year: s.Year, CourseType: s.CourseType, LastUpdated: serverTimestamp()
             }, {merge:true});
-            
             wb.set(doc(db, "colleges", currentCollegeID, "public_lookup", s.RollNumber), { collegeID: currentCollegeID, name: s.Name }, {merge:true});
             
             batchCount += 2; total++;
@@ -1649,7 +1761,7 @@ async function ExecuteDataUpload() {
                 wb = writeBatch(db); batchCount = 0;
             }
         }
-        showRcToast(`Success! ${total} Students Uploaded.`);
+        showRcToast(`✅ Success! ${total} Students Uploaded.`);
     } 
     else if (pendingUploadType === "SUBJECTS") {
         let subs = pendingUploadData;
@@ -1669,7 +1781,7 @@ async function ExecuteDataUpload() {
                 wb = writeBatch(db); batchCount = 0;
             }
         }
-        showRcToast(`Success! ${total} Subjects Synced.`);
+        showRcToast(`✅ Success! ${total} Subjects Synced.`);
     }
     else if (pendingUploadType === "CALENDAR") {
         let d = pendingUploadData;
@@ -1689,7 +1801,7 @@ async function ExecuteDataUpload() {
         });
 
         await setDoc(doc(db, "colleges", currentCollegeID, "system_flags", "calendar_version"), { updatedAt: serverTimestamp() }, {merge:true});
-        showRcToast(`Calendar Upload Successful! (${d.currentSemType} Sem)`);
+        showRcToast(`✅ Calendar Upload Successful! (${d.currentSemType} Sem)`);
     }
     
     pendingUploadData = null;
