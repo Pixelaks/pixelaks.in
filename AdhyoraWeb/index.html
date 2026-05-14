@@ -20,9 +20,15 @@
     if (window.location.hash === "#notifications") {
         localStorage.setItem("pendingNotifOpen", "true");
     }
-    // 🚨 NEW: Save the Assignment intention!
     if (window.location.hash === "#assignments") {
         localStorage.setItem("pendingAssignOpen", "true");
+    }
+    // 🚨 ADD THESE TWO FOR THE PRINCIPAL DASHBOARD 🚨
+    if (window.location.hash === "#teacher_requests") {
+        localStorage.setItem("pendingTeacherReqOpen", "true");
+    }
+    if (window.location.hash === "#events") {
+        localStorage.setItem("pendingEventReqOpen", "true");
     }
     </script>
     
