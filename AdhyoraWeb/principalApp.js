@@ -1035,7 +1035,7 @@ function TT_Init() {
   // Back Button logic
   document.getElementById("btnBackToTimetable").addEventListener("click", () => {
       switchView(views.timetable);
-      TT_Init(); // Refresh timetable when going back
+      TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without duplicating background timers!
   });
 
     TT_LoadGlobalCategories();
@@ -1538,5 +1538,5 @@ async function ASN_SaveAll() {
     });
     await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save"; btn.disabled = false;
     switchView(views.timetable); // Switch back to Timetable view
-    TT_Init(); // Refresh timetable view
+    TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without causing lag!
 }
