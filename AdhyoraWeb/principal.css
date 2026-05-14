@@ -39,9 +39,6 @@ body {
     margin: 20px 0;
 }
 
-/* =========================================
-   TOP NAV ICONS
-   ========================================= */
 .icon-nav-container {
     position: absolute;
     top: 20px;
@@ -72,9 +69,6 @@ body {
     background-color: #ef4444; border-radius: 50%; border: 1px solid #fff;
 }
 
-/* =========================================
-   SIDEBAR & MENU BUTTONS
-   ========================================= */
 .sidebar {
     width: 300px;
     padding: 20px;
@@ -112,9 +106,6 @@ body {
 .btn-text { font-weight: 600; color: var(--text-green); font-size: 14px; }
 .btn-icon { color: var(--text-green); font-size: 16px; opacity: 0.8; }
 
-/* =========================================
-   MAIN CONTENT AREA
-   ========================================= */
 .main-content {
     flex: 1;
     padding: 90px 40px 40px 40px; 
@@ -152,9 +143,6 @@ body {
     text-align: center; 
 }
 
-/* =========================================
-   SETTINGS OVERLAY
-   ========================================= */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); z-index: 100;
@@ -208,9 +196,6 @@ body {
 .toggle-switch.active { background: var(--brand-green); }
 .toggle-switch.active::after { left: 20px; }
 
-/* =========================================
-   DASHBOARD VIEWS & CARDS
-   ========================================= */
 .dashboard-view { width: 100%; height: 100%; transition: opacity 0.3s ease; }
 .hidden-view { display: none !important; opacity: 0; }
 
@@ -247,9 +232,6 @@ body {
 }
 .action-icon-btn:hover { background: #e2e8f0; color: var(--text-green); transform: scale(1.1); }
 
-/* =========================================
-   CALENDAR CELLS
-   ========================================= */
 .cal-cell {
     aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
     border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s ease;
@@ -313,10 +295,10 @@ body {
 @keyframes waveSlide { 0% { transform: translateX(0); } 100% { transform: translateX(-100px); } }
 .wavy-text { position: relative; z-index: 1; font-weight: bold; color: #334155; font-size: 14px; text-shadow: 0px 0px 5px rgba(255,255,255,0.8); }
 
-/* 🚨 TEXT ALIGNMENT FIX FOR STATS */
 .stat-row { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: flex-start; gap: 15px; font-size: 13px; color: #475569; }
 .stat-label { width: 120px; font-weight: 600; }
 .stat-value { font-weight: bold; color: #334155; }
+
 
 /* =========================================
    MOBILE RESPONSIVENESS
