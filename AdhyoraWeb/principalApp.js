@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚀 OPTIMIZATION 1: Imported enableIndexedDbPersistence to cut refresh costs to ZERO
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// Add getMessaging, getToken, deleteToken to your imports
+import { getMessaging, getToken, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -15,6 +16,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+// Then initialize it right after your db variable:
+const messaging = getMessaging(app);
 
 // 🚀 OPTIMIZATION 2: Enable Local Disk Caching. This prevents the massive Firebase read spike when you refresh the page.
 try {
@@ -3163,3 +3166,149 @@ window.ATTD_ShowTooltip = (event, text) => {
 window.ATTD_HideTooltip = () => {
     document.getElementById("attdTooltip").style.display = "none";
 };
+
+// ==========================================
+// 🚨 PRINCIPAL PUSH NOTIFICATION ENGINE 🚨
+// ==========================================
+let myCurrentPushToken = "";
+
+// 1. Check UI State on Load
+function updateNotificationToggleUI() {
+    const toggle = document.getElementById("notifToggleSwitch");
+    if (!toggle) return;
+    if (Notification.permission === "granted" && myCurrentPushToken !== "") {
+        toggle.classList.add("active");
+    } else {
+        toggle.classList.remove("active");
+    }
+}
+
+// 2. Request Permissions & Subscribe to Principal Topics
+async function requestPushPermissions() {
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            const currentToken = await getToken(messaging, { 
+                // 🚨 REPLACE WITH YOUR ACTUAL VAPID KEY
+                vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
+                serviceWorkerRegistration: swRegistration 
+            });
+
+            if (currentToken) {
+                myCurrentPushToken = currentToken; 
+                
+                // Fetch Principal Data to manage 3-device limit
+                const principalRef = doc(db, "colleges", currentCollegeID, "principals", currentUserID);
+                const pSnap = await getDoc(principalRef);
+                let activeTokens = [];
+                
+                if (pSnap.exists() && pSnap.data().webFcmTokens) {
+                    activeTokens = pSnap.data().webFcmTokens;
+                }
+
+                // Remove duplicate, add new
+                activeTokens = activeTokens.filter(t => t !== currentToken);
+                activeTokens.push(currentToken);
+
+                // Cap at 3 devices
+                if (activeTokens.length > 3) activeTokens = activeTokens.slice(activeTokens.length - 3);
+
+                await updateDoc(principalRef, { webFcmTokens: activeTokens });
+
+                // Subscribe via Google Apps Script Loophole
+                const getSafe = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
+                let safeCol = getSafe(currentCollegeID);
+                
+                // Principals only need these 3 topics!
+                let topicsToJoin = [
+                    `${safeCol}_ALL`, 
+                    `${safeCol}_PRINCIPAL`, 
+                    `ADHYORA_GLOBAL_USERS`
+                ];
+
+                fetch(APPS_SCRIPT_URL, {
+                    method: "POST", mode: "no-cors",
+                    body: JSON.stringify({
+                        action: "subscribe", token: currentToken, topics: topicsToJoin
+                    })
+                }).then(() => {
+                    updateNotificationToggleUI();
+                    showRcToast("✅ Notifications Enabled!");
+                });
+            }
+        } else {
+            alert("Notifications blocked by browser.");
+        }
+    } catch (error) {
+        console.error('Error getting push token:', error);
+    }
+}
+
+// 3. Unsubscribe Logic
+async function unsubscribePushNotifications() {
+    try {
+        const toggle = document.getElementById("notifToggleSwitch");
+        toggle.style.opacity = "0.5";
+
+        await deleteToken(messaging);
+
+        if (myCurrentPushToken && currentCollegeID && currentUserID) {
+            const principalRef = doc(db, "colleges", currentCollegeID, "principals", currentUserID);
+            await updateDoc(principalRef, { webFcmTokens: arrayRemove(myCurrentPushToken) });
+        }
+        
+        myCurrentPushToken = ""; 
+        toggle.style.opacity = "1";
+        updateNotificationToggleUI();
+        showRcToast("Notifications Disabled.");
+    } catch (e) {
+        console.error("Error unsubscribing:", e);
+    }
+}
+
+// 4. Toggle Button Listener
+document.getElementById("btnToggleNotifications").addEventListener("click", async () => {
+    const toggle = document.getElementById("notifToggleSwitch");
+    if (toggle.classList.contains("active")) {
+        if (confirm("Disable notifications for this browser?")) await unsubscribePushNotifications();
+    } else {
+        toggle.style.opacity = "0.5";
+        await requestPushPermissions();
+        toggle.style.opacity = "1";
+    }
+});
+
+// 5. Smart Sign Out (Clears Token before logging out)
+document.getElementById("btnSignOut").addEventListener("click", async () => {
+    if (confirm("Sign out?")) {
+        if (myCurrentPushToken && currentCollegeID && currentUserID) {
+            await updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            });
+        }
+        signOut(auth).then(() => window.location.href = "index.html");
+    }
+});
+
+// ==========================================
+// 🚨 NOTIFICATION CLICK ROUTER 🚨
+// ==========================================
+navigator.serviceWorker.addEventListener('message', (event) => {
+    if (!event.data || !event.data.action) return;
+    
+    if (event.data.action === 'openMessages') document.getElementById("btnMessages").click();
+    else if (event.data.action === 'openNotifications') document.getElementById("btnNotifications").click();
+    else if (event.data.action === 'openTeacherReq') document.getElementById("btnNavTeacherList").click();
+    else if (event.data.action === 'openEventReq') document.getElementById("btnNavEvents").click();
+});
+
+window.addEventListener('load', () => {
+    // Read Hash from URL (If opened from closed state)
+    let hash = window.location.hash;
+    
+    if (hash === "#inbox") setTimeout(() => document.getElementById("btnMessages").click(), 1000);
+    else if (hash === "#notifications") setTimeout(() => document.getElementById("btnNotifications").click(), 1000);
+    else if (hash === "#teacher_requests") setTimeout(() => document.getElementById("btnNavTeacherList").click(), 1000);
+    else if (hash === "#events") setTimeout(() => document.getElementById("btnNavEvents").click(), 1000);
+});
