@@ -1229,10 +1229,11 @@ async function BCH_RenderGroups() {
         else {
             sList.forEach(sid => {
                 let sInfo = bchStudentRamCache[sid] || { name: "Unknown", roll: "N/A", dept: "Unknown Dept" };
+                // 🚨 ADDED: Card ID, pointer cursor, click listener, and pointer-events:none on the checkbox!
                 studentsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;">
+                <div class="bch-stu-card" id="bch_card_${sid}" onclick="BCH_ToggleStudentCard('${sid}')" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:0.2s;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" onchange="BCH_OnCheckboxChange()" style="width:16px; height:16px; accent-color:var(--brand-green);">
+                        <input type="checkbox" id="bch_chk_${sid}" class="bch-student-chk" data-sid="${sid}" data-bid="${b.id}" style="width:16px; height:16px; accent-color:var(--brand-green); pointer-events:none;">
                         <div>
                             <div style="font-size:13px; font-weight:bold; color:var(--text-green);">${sInfo.name} <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(${sInfo.roll})</span></div>
                             <div style="font-size:11px; color:#64748b;">${sInfo.dept}</div>
@@ -1258,6 +1259,23 @@ async function BCH_RenderGroups() {
 }
 
 window.BCH_OnCheckboxChange = () => { let anyChecked = document.querySelector('.bch-student-chk:checked') !== null; document.getElementById("btnOpenBatchMove").disabled = !anyChecked; };
+
+// 🚨 NEW: Programmatically clicks the checkbox and highlights the row
+window.BCH_ToggleStudentCard = (sid) => {
+    let chk = document.getElementById(`bch_chk_${sid}`);
+    if (!chk) return;
+    
+    chk.checked = !chk.checked; 
+    
+    let card = document.getElementById(`bch_card_${sid}`);
+    if (chk.checked) {
+        card.style.backgroundColor = "rgba(74, 222, 128, 0.05)"; // Green tint
+    } else {
+        card.style.backgroundColor = "transparent"; // Reset
+    }
+    
+    BCH_OnCheckboxChange(); // Update the Move button state
+};
 
 function BCH_OpenMoveModal() {
     let chks = document.querySelectorAll('.bch-student-chk:checked'); if (chks.length === 0) return;
