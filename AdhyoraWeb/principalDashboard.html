@@ -139,15 +139,16 @@
                         </div>
                     </div>
 
+                    <!-- Semester Navigation Banner -->
                     <div style="background: var(--brand-green); color: white; padding: 10px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">
                         <button id="sdBtnPrevSem" style="background: rgba(255,255,255,0.2); border: none; color: white; font-weight: bold; padding: 8px 15px; border-radius: 8px; cursor: pointer;">&lt;</button>
                         <h3 id="sdSemesterTitle" style="margin: 0; font-size: 18px;">Loading...</h3>
                         <button id="sdBtnNextSem" style="background: rgba(255,255,255,0.2); border: none; color: white; font-weight: bold; padding: 8px 15px; border-radius: 8px; cursor: pointer;">&gt;</button>
                     </div>
 
+                    <!-- Middle Section: Attendance -->
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
                         <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 20px; flex: 1; min-width: 250px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                            <!-- 🚨 NEW FLUID CSS CIRCLE WAVE -->
                             <div class="circle-wave-wrap">
                                 <div class="circle-wave-fill" id="sdCircleWave"></div>
                                 <div class="circle-wave-text" id="sdCircleText">--%</div>
@@ -160,7 +161,6 @@
                             <div class="stat-row">Absent: <span id="sdStatAbs">0</span></div>
                             <div class="stat-row">Total: <span id="sdStatTot">0</span></div>
                             
-                            <!-- 🚨 NEW FLUID CSS ROW WAVE -->
                             <div class="wavy-row" id="sdWavyRow">
                                 <div class="wavy-row-fill" id="sdWavyFill"></div>
                                 <span class="wavy-text" id="sdWavyText">Current: --%</span>
@@ -172,30 +172,35 @@
                         </div>
                     </div>
 
+                    <!-- 🚨 SCROLLABLE BOTTOM SECTION -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        
+                        <!-- Date Filter Box -->
+                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; height: 350px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <input type="date" id="sdDateFilter" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-size: 13px; width: 60%;">
                                 <button id="sdBtnAllTime" style="background: var(--bg-grid-color); color: var(--text-green); border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">All Time</button>
                             </div>
-                            <div id="sdSubjectList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                            <div id="sdSubjectList" class="scrollable-list" style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 5px;"></div>
                             <div class="no-data-text" id="sdNoDataText" style="display: none; margin-top: 10px;">No data available.</div>
                         </div>
 
-                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                        <!-- Marks Box -->
+                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; height: 350px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-grid-color); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
                                 <span style="font-weight: bold; color: var(--text-green); font-size: 14px;">Internal Marks</span>
                                 <select id="sdExamDropdown" style="padding: 5px; border-radius: 5px; border: 1px solid #cbd5e1; font-family: 'Poppins'; outline: none; font-size: 12px;">
                                     <option>Loading...</option>
                                 </select>
                             </div>
-                            <div id="sdMarksList" style="display: flex; flex-direction: column; gap: 10px; flex: 1;"></div>
+                            <div id="sdMarksList" class="scrollable-list" style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 5px;"></div>
                             <div class="no-data-text" id="sdNoMarksText" style="display: none;">No Exams Data</div>
                         </div>
                         
-                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <!-- Enrolled Box -->
+                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; height: 350px;">
                             <div style="background: var(--bg-grid-color); color: var(--text-green); padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; font-size: 14px;">Enrolled Subjects</div>
-                            <div id="sdEnrolledList" style="font-size: 13px; color: #475569; line-height: 1.8;">Loading subjects...</div>
+                            <div id="sdEnrolledList" class="scrollable-list" style="font-size: 13px; color: #475569; line-height: 1.8; flex: 1; overflow-y: auto; padding-right: 5px;">Loading subjects...</div>
                         </div>
                     </div>
                 </div>
