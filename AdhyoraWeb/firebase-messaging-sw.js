@@ -12,15 +12,22 @@ self.addEventListener('notificationclick', function(event) {
   try {
     let msgType = event.notification.data.FCM_MSG.data.type;
     
-    // If the Developer sent this, route them to Notifications!
     if (msgType === 'admin_broadcast') {
       targetAction = 'openNotifications';
       targetHash = '#notifications';
     }
-    // 🚨 NEW: If a Teacher sent this, route them to Assignments!
     else if (msgType === 'assignment') {
       targetAction = 'openAssignments';
       targetHash = '#assignments';
+    }
+    // 🚨 ADD THESE TWO LINES FOR THE PRINCIPAL DASHBOARD 🚨
+    else if (msgType === 'teacher_request') {
+      targetAction = 'openTeacherReq';
+      targetHash = '#teacher_requests';
+    }
+    else if (msgType === 'event_request') {
+      targetAction = 'openEventReq';
+      targetHash = '#events';
     }
   } catch(e) {
     console.log("Could not read message type, defaulting to inbox.");
