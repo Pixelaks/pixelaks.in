@@ -80,7 +80,8 @@ const views = {
     timetable: document.getElementById("timetableView"),
     assign: document.getElementById("assignView"),
     data: document.getElementById("dataView"), // 🚨 ADDED THE COMMA HERE!
-    subjectList: document.getElementById("subjectListView")
+    subjectList: document.getElementById("subjectListView"),
+    stuSub: document.getElementById("stuSubView") // 🚨 ADDED THIS LINE
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -115,6 +116,7 @@ document.getElementById("btnNavBatch").addEventListener("click", () => { switchV
 document.getElementById("btnNavTimetable").addEventListener("click", () => { switchView(views.timetable); if (!ttLoaded) TT_Init(); });
 document.getElementById("btnNavData").addEventListener("click", () => { switchView(views.data); });
 document.getElementById("btnNavSubjectList").addEventListener("click", () => { switchView(views.subjectList); if (!subLoaded) SUB_Init(); });
+document.getElementById("btnNavStuSub").addEventListener("click", () => { switchView(views.stuSub); if (!ssLoaded) SS_Init(); });
 
 document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 
@@ -422,6 +424,12 @@ function RC_ExecuteAction() {
     else if (rcCurrentAction === "DELETE_SUBJECT") {
         document.getElementById("pinOverlay").classList.remove("active");
         SUB_ExecuteDelete();
+    }
+
+  // Inside RC_ExecuteAction(), append this:
+    else if (rcCurrentAction === "MOVE_STU_SUB") {
+        document.getElementById("pinOverlay").classList.remove("active");
+        SS_ExecuteMove();
     }
 }
 function RC_SaveCodeToDB(name, code, years, oldCode) {
@@ -2297,4 +2305,255 @@ async function SUB_ExecuteDelete() {
         await deleteDoc(doc(db, "colleges", currentCollegeID, "subjects", subTargetId));
         showRcToast("✅ Subject Deleted.");
     } catch(e) { showRcToast("❌ Error deleting subject."); }
+}
+
+// ==========================================
+// 🚨 STUDENTS SUBJECTS REASSIGNMENT MANAGER
+// ==========================================
+let ssLoaded = false; 
+let ssCurrentSem = "1"; 
+let ssStudentsRamCache = []; 
+let ssActiveSubjects = [];
+let ssSelectedStudents = new Set();
+
+function SS_Init() {
+    ssLoaded = true;
+    let dropSem = document.getElementById("ssSemDrop"); dropSem.innerHTML = ""; let hasSems = false; let defaultIndex = (collegeSemesterType === "Even") ? 1 : 0;
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
+        if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) label += " (Active)";
+        dropSem.innerHTML += `<option value="${i}">${label}</option>`; hasSems = true;
+    }
+    if(!hasSems) dropSem.innerHTML = `<option value="1">Semester 1</option>`; 
+    for(let i=0; i<dropSem.options.length; i++) { if(dropSem.options[i].value === ssCurrentSem) dropSem.selectedIndex = i; }
+    
+    let newDropSem = dropSem.cloneNode(true); dropSem.parentNode.replaceChild(newDropSem, dropSem);
+    newDropSem.addEventListener("change", (e) => { ssCurrentSem = e.target.value; SS_RefreshCategories(); });
+
+    document.getElementById("ssCatDrop").addEventListener("change", SS_RefreshSubjects);
+    document.getElementById("ssSubDrop").addEventListener("change", SS_FetchStudents);
+    document.getElementById("btnOpenStuSubMove").addEventListener("click", SS_OpenMoveModal);
+    document.getElementById("btnConfirmStuSubMove").addEventListener("click", SS_ConfirmMovePrep);
+
+    if (subCachedData.length === 0) {
+        // We rely on the Subject List cache! If it's empty, we must fetch it.
+        getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
+            subCachedData = [];
+            snap.forEach(doc => { let d = doc.data(); subCachedData.push({ code: doc.id, name: d.name || d.Name || "", type: d.type || d.Type || "", department: d.department || d.Department || "", semester: (d.semester || d.Semester || "").toString() }); });
+            SS_RefreshCategories();
+        });
+    } else { SS_RefreshCategories(); }
+}
+
+function SS_RefreshCategories() {
+    let types = new Set();
+    subCachedData.forEach(sub => { let sems = sub.semester.split(',').map(s=>s.trim()); if (sems.includes(ssCurrentSem) && sub.type) types.add(sub.type.trim()); });
+    let catDrop = document.getElementById("ssCatDrop");
+    if (types.size === 0) catDrop.innerHTML = `<option value="">No Categories</option>`;
+    else {
+        let arr = Array.from(types).sort(); catDrop.innerHTML = `<option value="">Select Category</option>` + arr.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+    SS_RefreshSubjects();
+}
+
+function SS_RefreshSubjects() {
+    let cat = document.getElementById("ssCatDrop").value; let subDrop = document.getElementById("ssSubDrop");
+    if (!cat) { subDrop.innerHTML = `<option value="">Select Subject</option>`; SS_ShowEmpty("Select a Category and Subject to view enrolled students."); return; }
+    
+    ssActiveSubjects = subCachedData.filter(s => s.semester.split(',').map(x=>x.trim()).includes(ssCurrentSem) && s.type.trim() === cat);
+    if (ssActiveSubjects.length === 0) { subDrop.innerHTML = `<option value="">No Subjects</option>`; SS_ShowEmpty("No subjects found for this category."); } 
+    else { subDrop.innerHTML = `<option value="">Select Subject</option>` + ssActiveSubjects.sort((a,b)=>a.name.localeCompare(b.name)).map(s => `<option value="${s.name}">${s.name}</option>`).join(''); SS_ShowEmpty("Select a Subject to view enrolled students."); }
+}
+
+function SS_ShowEmpty(msg) { 
+    document.getElementById("ssListContainer").innerHTML = `<div class="no-data-text">${msg}</div>`; 
+    document.getElementById("btnOpenStuSubMove").disabled = true; 
+    ssSelectedStudents.clear();
+}
+
+async function SS_FetchStudents() {
+    let cat = document.getElementById("ssCatDrop").value;
+    let sub = document.getElementById("ssSubDrop").value;
+    if (!sub || !cat) { SS_ShowEmpty("Select a valid Subject to view students."); return; }
+    SS_ShowEmpty(`Loading students enrolled in ${sub}...`);
+    
+    ssStudentsRamCache = [];
+    ssSelectedStudents.clear();
+
+    let cleanSubFilter = sub.replace(/\s+/g, '').toLowerCase();
+
+    // Determine the year to fetch students efficiently
+    let targetYear = Math.ceil(parseInt(ssCurrentSem) / 2).toString();
+
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYear)));
+        
+        let html = "";
+        let count = 0;
+
+        snap.forEach(docSnap => {
+            let d = docSnap.data();
+            if (!d.enrolledSubjects) return;
+
+            let semMap = d.enrolledSubjects[`Semester_${ssCurrentSem}`] || d.enrolledSubjects[`Semester ${ssCurrentSem}`] || d.enrolledSubjects[ssCurrentSem];
+            if (!semMap || !semMap[cat]) return;
+
+            let stuSubClean = semMap[cat].toString().replace(/\s+/g, '').toLowerCase();
+            
+            if (stuSubClean === cleanSubFilter) {
+                count++;
+                let sName = d.Name || d.name || "Unknown";
+                let sRoll = d.RollNumber || d.rollNumber || docSnap.id;
+                let sDept = (d.Department || d.department || "Unknown Dept").replace("DEPT_", "");
+
+                ssStudentsRamCache.push(docSnap.id);
+
+                html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <input type="checkbox" class="ss-student-chk" data-sid="${docSnap.id}" onchange="SS_OnCheckboxChange(this)" style="width:18px; height:18px; accent-color:var(--brand-green); cursor:pointer;">
+                        <div>
+                            <div style="font-size:14px; font-weight:bold; color:var(--text-green);">${sName} <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(${sRoll})</span></div>
+                            <div style="font-size:12px; color:#64748b;">${sDept}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+        });
+
+        if (count === 0) SS_ShowEmpty(`No students found enrolled in "${sub}".`);
+        else document.getElementById("ssListContainer").innerHTML = html;
+
+    } catch(e) { SS_ShowEmpty("Error loading students."); console.error(e); }
+}
+
+window.SS_OnCheckboxChange = (checkbox) => { 
+    if (checkbox.checked) ssSelectedStudents.add(checkbox.dataset.sid);
+    else ssSelectedStudents.delete(checkbox.dataset.sid);
+
+    let btn = document.getElementById("btnOpenStuSubMove");
+    btn.disabled = ssSelectedStudents.size === 0;
+    btn.innerHTML = ssSelectedStudents.size > 0 ? `<i class="fas fa-exchange-alt" style="margin-right: 8px;"></i> Move (${ssSelectedStudents.size})` : `<i class="fas fa-exchange-alt" style="margin-right: 8px;"></i> Move Selected`;
+};
+
+function SS_OpenMoveModal() {
+    if (ssSelectedStudents.size === 0) return;
+    let currentSub = document.getElementById("ssSubDrop").value;
+    
+    let targetDrop = document.getElementById("ssTargetSubDrop");
+    targetDrop.innerHTML = "";
+    
+    let validTargets = ssActiveSubjects.filter(s => s.name !== currentSub);
+    if (validTargets.length === 0) {
+        showRcToast("No other subjects available in this category!");
+        return;
+    }
+
+    validTargets.forEach(s => {
+        targetDrop.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+    });
+
+    document.getElementById("ssMoveTitleText").innerHTML = `Move <b style="color:var(--text-green);">${ssSelectedStudents.size} Student(s)</b><br>from <b>${currentSub}</b> to...?`;
+    document.getElementById("stuSubMoveOverlay").classList.add("active");
+}
+
+function SS_ConfirmMovePrep() {
+    document.getElementById("stuSubMoveOverlay").classList.remove("active");
+    // Trigger Security Check
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinOverlay").classList.add("active");
+    rcCurrentAction = "MOVE_STU_SUB"; 
+}
+
+async function SS_ExecuteMove() {
+    if (ssSelectedStudents.size === 0) return;
+    showRcToast(`Moving ${ssSelectedStudents.size} Students...`);
+
+    let cat = document.getElementById("ssCatDrop").value;
+    let oldSub = document.getElementById("ssSubDrop").value;
+    let newSub = document.getElementById("ssTargetSubDrop").value;
+    let semKey = `Semester_${ssCurrentSem}`;
+    let semNum = ssCurrentSem;
+
+    try {
+        // 1. Fetch Target Batches
+        let newBatchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", newSub)));
+        let newBatches = [];
+        newBatchSnap.forEach(d => { newBatches.push({ ref: d.ref, count: (d.data().studentIDs || []).length, incoming: [] }); });
+
+        // 2. Fetch Old Batches to erase from
+        let oldBatchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", oldSub)));
+        let sidsArr = Array.from(ssSelectedStudents);
+
+        let wb = writeBatch(db);
+        let ops = 0;
+
+        // A. Remove from old
+        oldBatchSnap.forEach(d => {
+            wb.update(d.ref, { studentIDs: arrayRemove(...sidsArr) });
+            ops++;
+        });
+
+        // B. Load Balance into new
+        if (newBatches.length > 0) {
+            sidsArr.forEach(sid => {
+                newBatches.sort((a,b) => a.count - b.count);
+                newBatches[0].incoming.push(sid);
+                newBatches[0].count++;
+            });
+
+            newBatches.forEach(b => {
+                if (b.incoming.length > 0) {
+                    wb.update(b.ref, { studentIDs: arrayUnion(...b.incoming) });
+                    ops++;
+                }
+            });
+        }
+
+        // C. Update Profiles & Drop old attendance
+        for (let i = 0; i < sidsArr.length; i++) {
+            let sid = sidsArr[i];
+            let stuRef = doc(db, "colleges", currentCollegeID, "students", sid);
+            
+            let updates = {};
+            updates[`enrolledSubjects.Semester_${ssCurrentSem}.${cat}`] = newSub;
+            updates[`assigned_by.Semester_${ssCurrentSem}.${cat}`] = "Principal";
+            updates[`assignment_timestamps.Semester_${ssCurrentSem}.${cat}`] = serverTimestamp();
+
+            // Fetch to drop attendance
+            let sDoc = await getDoc(stuRef);
+            if (sDoc.exists()) {
+                let stats = sDoc.data().attendance_stats;
+                if (stats && stats[semKey]) {
+                    let semMap = stats[semKey];
+                    let oldKey = Object.keys(semMap).find(k => k.replace(/\s+/g,'').toLowerCase() === oldSub.replace(/\s+/g,'').replace(/\//g,'-').replace(/\./g,'').toLowerCase());
+                    
+                    if (oldKey) {
+                        updates[`attendance_stats.${semKey}.${oldKey}_DROPPED`] = semMap[oldKey];
+                        updates[`attendance_stats.${semKey}.${oldKey}`] = deleteField();
+                    }
+
+                    // Restore logic
+                    let restKey = Object.keys(semMap).find(k => k.toLowerCase().endsWith("_dropped") && k.substring(0, k.length - 8).replace(/\s+/g,'').toLowerCase() === newSub.replace(/\s+/g,'').replace(/\//g,'-').replace(/\./g,'').toLowerCase());
+                    if (restKey) {
+                        updates[`attendance_stats.${semKey}.${restKey.substring(0, restKey.length - 8)}`] = semMap[restKey];
+                        updates[`attendance_stats.${semKey}.${restKey}`] = deleteField();
+                    }
+                }
+            }
+
+            wb.update(stuRef, updates);
+            ops++;
+
+            if (ops >= 450) {
+                await wb.commit();
+                wb = writeBatch(db); ops = 0;
+            }
+        }
+        await wb.commit();
+        
+        showRcToast("✅ Move Successful!");
+        SS_FetchStudents(); // Refresh the list!
+
+    } catch(e) { showRcToast("❌ Error moving students."); console.error(e); }
 }
