@@ -1,19 +1,36 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// 🚀 OPTIMIZATION 1: Imported enableIndexedDbPersistence to cut refresh costs to ZERO
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, writeBatch, deleteField, arrayUnion, arrayRemove, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
-  authDomain: "adhyora-5d4c1.firebaseapp.com",
-  projectId: "adhyora-5d4c1",
-  storageBucket: "adhyora-5d4c1.firebasestorage.app",
-  messagingSenderId: "206050348148",
-  appId: "1:206050348148:web:da4e421e00ec2f77429521"
+    apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
+    authDomain: "adhyora-5d4c1.firebaseapp.com",
+    projectId: "adhyora-5d4c1",
+    storageBucket: "adhyora-5d4c1.firebasestorage.app",
+    messagingSenderId: "206050348148",
+    appId: "1:206050348148:web:da4e421e00ec2f77429521"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// 🚀 OPTIMIZATION 2: Enable Local Disk Caching. This prevents the massive Firebase read spike when you refresh the page.
+try {
+    enableIndexedDbPersistence(db).catch((err) => {
+        console.warn("Firebase Offline Persistence Notice: ", err.code);
+    });
+} catch(e) {}
+
+// 🚀 OPTIMIZATION 3: Debounce Function. This stops the UI from freezing when typing in search bars.
+function debounce(func, wait = 300) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
 
 let currentCollegeID = "";
 let currentUserID = "";
@@ -79,11 +96,11 @@ const views = {
     notifications: document.getElementById("notificationsView"), calendar: document.getElementById("calendarView"), messages: document.getElementById("messagesView"),
     timetable: document.getElementById("timetableView"),
     assign: document.getElementById("assignView"),
-    data: document.getElementById("dataView"), // 🚨 ADDED THE COMMA HERE!
+    data: document.getElementById("dataView"),
     subjectList: document.getElementById("subjectListView"),
     stuSub: document.getElementById("stuSubView"),
     events: document.getElementById("eventsView"),
-    attendance: document.getElementById("attendanceView") // 🚨 ADDED THIS LINE
+    attendance: document.getElementById("attendanceView")
 };
 
 const sidebar = document.getElementById("mainSidebar");
@@ -332,6 +349,7 @@ let rcLoaded = false; let rcCachedDepts = []; let rcCurrentAction = ""; let rcTa
 function showRcToast(msg) { let t = document.getElementById("rcToast"); t.innerText = msg; t.style.bottom = "30px"; setTimeout(() => t.style.bottom = "-100px", 3000); }
 
 function startRoomcodeListener() {
+    if (rcLoaded) return;
     rcLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "departments"), (snap) => {
         rcCachedDepts = []; let idToName = {}; snap.forEach(d => idToName[d.id] = d.data().name || d.id);
@@ -408,19 +426,14 @@ function RC_ExecuteAction() {
         let deptID1 = "DEPT_" + name1.replace(/\s+/g, ''); let deptID2 = "DEPT_" + name2.replace(/\s+/g, '');
         const batch = writeBatch(db); batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID1), { linkedDepartments: [deptID2] }, { merge: true }); batch.set(doc(db, "colleges", currentCollegeID, "departments", deptID2), { linkedDepartments: [deptID1] }, { merge: true }); batch.commit().then(() => showRcToast("Departments Combined!"));
     }
-  // 🚨 ADD THIS RIGHT AT THE END OF THE FUNCTION:
     else if (rcCurrentAction === "DATA_UPLOAD") {
         document.getElementById("pinOverlay").classList.remove("active");
         ExecuteDataUpload();
     }
-
-  // 🚨 ADD THIS LINE 🚨
     else if (rcCurrentAction === "PROMOTE_STUDENTS") {
         document.getElementById("pinOverlay").classList.remove("active");
         ExecuteSemesterPromotion();
     }
-
-  // Inside RC_ExecuteAction(), append these:
     else if (rcCurrentAction === "EDIT_SUBJECT") {
         document.getElementById("pinOverlay").classList.remove("active");
         SUB_ExecuteEdit();
@@ -429,8 +442,6 @@ function RC_ExecuteAction() {
         document.getElementById("pinOverlay").classList.remove("active");
         SUB_ExecuteDelete();
     }
-
-  // Inside RC_ExecuteAction(), append this:
     else if (rcCurrentAction === "MOVE_STU_SUB") {
         document.getElementById("pinOverlay").classList.remove("active");
         SS_ExecuteMove();
@@ -454,10 +465,11 @@ function RC_KickTeachers(deptName) {
 // ==========================================
 let tlLoaded = false; let cachedTeachers = [];
 function startTeacherListListener() {
+    if (tlLoaded) return;
     tlLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "teachers"), (snap) => {
         cachedTeachers = []; snap.forEach(doc => { cachedTeachers.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("tlTotalTeachers").innerText = `Total: ${cachedTeachers.length}`; renderTeacherList();
+        document.getElementById("tlTotalTeachers").innerText = `Total: ${cachedTeachers.length}`; renderTeacherList(document.getElementById("tlSearchInput").value);
     });
 }
 function renderTeacherList(searchTerm = "") {
@@ -493,7 +505,9 @@ function renderTeacherList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-document.getElementById("tlSearchInput").addEventListener("input", (e) => renderTeacherList(e.target.value.trim()));
+
+// 🚀 OPTIMIZATION 4: Debounce Search Input
+document.getElementById("tlSearchInput").addEventListener("input", debounce((e) => renderTeacherList(e.target.value.trim()), 250));
 
 window.TL_UpdateStatus = async (tID, newStatus) => {
     if (newStatus === "Pending") return; 
@@ -595,10 +609,11 @@ document.getElementById("tdBtnAllTime").addEventListener("click", () => { docume
 // ==========================================
 let slLoaded = false; let cachedStudents = [];
 function startStudentListListener() {
+    if (slLoaded) return;
     slLoaded = true;
     onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
         cachedStudents = []; snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
-        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; renderStudentList();
+        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; renderStudentList(document.getElementById("slSearchInput").value);
     });
 }
 function renderStudentList(searchTerm = "") {
@@ -627,7 +642,9 @@ function renderStudentList(searchTerm = "") {
     }).join('');
     listEl.appendChild(noData); 
 }
-document.getElementById("slSearchInput").addEventListener("input", (e) => renderStudentList(e.target.value.trim()));
+
+// 🚀 OPTIMIZATION 5: Debounce Student Search
+document.getElementById("slSearchInput").addEventListener("input", debounce((e) => renderStudentList(e.target.value.trim()), 250));
 
 let slTargetAdminID = "";
 window.SL_OpenAdmin = (sID, name, currentStatus) => {
@@ -653,6 +670,14 @@ let sdSemesterRanges = {};
 let sdCachedGlobalSubjects = [];
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
+
+    // 🚀 OPTIMIZATION 6: Load from Session Storage to prevent constant Database hits
+    let localCache = sessionStorage.getItem(`adhyora_subjects_${currentCollegeID}`);
+    if (localCache) {
+        sdCachedGlobalSubjects = JSON.parse(localCache);
+        return;
+    }
+
     try {
         const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         snap.forEach(doc => {
@@ -666,6 +691,7 @@ async function fetchGlobalSubjects() {
                 rawType: d.Type || d.type || ""
             });
         });
+        sessionStorage.setItem(`adhyora_subjects_${currentCollegeID}`, JSON.stringify(sdCachedGlobalSubjects));
     } catch(e) {}
 }
 
@@ -866,6 +892,7 @@ function SD_RenderMarksUI(examName) {
 // ==========================================
 let bchLoaded = false; let bchSubjectsCache = []; let bchCurrentSem = "1"; let bchBatchesData = []; let bchStudentRamCache = {};
 function BCH_Init() {
+    if (bchLoaded) return;
     bchLoaded = true;
     let dropSem = document.getElementById("bchSemDrop"); 
     let optionsHtml = "";
@@ -875,14 +902,12 @@ function BCH_Init() {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
             label += " (Active)";
-            // 🚨 GUARANTEED FIX
             if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
         optionsHtml += `<option value="${i}">${label}</option>`; 
     }
     dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
     
-    // 🚨 Force the value!
     bchCurrentSem = activeValue;
     dropSem.value = bchCurrentSem;
 
@@ -1054,6 +1079,7 @@ let ttActiveSlotsData = [];
 const ttPeriodEndTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
 
 function TT_Init() {
+    if (ttLoaded) return;
     ttLoaded = true;
     let dropSem = document.getElementById("ttSemDrop"); 
     let optionsHtml = "";
@@ -1063,14 +1089,12 @@ function TT_Init() {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
             label += " (Active)";
-            // 🚨 GUARANTEED FIX: Save the exact number the moment we find the first active semester!
             if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
         optionsHtml += `<option value="${i}">${label}</option>`; 
     }
     dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
     
-    // 🚨 Force the value using our saved variable!
     ttCurrentSem = activeValue;
     dropSem.value = ttCurrentSem;
     
@@ -1254,7 +1278,7 @@ function TT_UpdateTimelineVisuals() {
 }
 
 // ==========================================
-// 🚨 NEW: ASSIGN MANAGER (GENERAL DEPT)
+// ASSIGN MANAGER (GENERAL DEPT)
 // ==========================================
 let asnCurrentSem = "1"; let asnSelectedDay = "Monday";
 let asnGeneralSubjects = []; let asnStudentsByYear = {}; let asnActiveRows = []; 
@@ -1271,14 +1295,12 @@ function ASN_Init(startSem, startDay) {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
             label += " (Active)";
-            // 🚨 GUARANTEED FIX
             if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
         optionsHtml += `<option value="${i}">${label}</option>`; 
     }
     dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
     
-    // 🚨 Force the value (Use startSem if we came from Timetable, otherwise use Active)
     asnCurrentSem = startSem || activeValue;
     dropSem.value = asnCurrentSem;
     
@@ -1311,7 +1333,6 @@ function ASN_Init(startSem, startDay) {
 async function ASN_LoadData() {
     document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">Loading Assign Panel...</div>`;
     
-    // 🚨 PERFORMANCE FIX: Only fetch subjects ONCE
     if (asnGeneralSubjects.length === 0) {
         const subSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subjects"), where("department", "==", "General")));
         asnGeneralSubjects = []; subSnap.forEach(doc => { let d = doc.data(); asnGeneralSubjects.push({ id: doc.id, name: d.Name || d.name || "", type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "").toString() }); });
@@ -1349,7 +1370,6 @@ async function ASN_LoadData() {
         }
     });
 
-    // 🚨 PERFORMANCE FIX: Only fetch students ONCE per year
     let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
     if (!asnStudentsByYear[yearStr]) {
         const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
@@ -1362,7 +1382,6 @@ async function ASN_LoadData() {
 function ASN_RenderLayout() {
     let container = document.getElementById("asnListContainer");
     
-    // Group rows by period
     let groupedRows = {};
     asnActiveRows.forEach(r => {
         if (!groupedRows[r.period]) groupedRows[r.period] = [];
@@ -1370,12 +1389,9 @@ function ASN_RenderLayout() {
     });
 
     let html = "";
-    
-    // Build the UI grouped by Period Box
     Object.keys(groupedRows).sort((a,b) => a - b).forEach(p => {
         let rows = groupedRows[p].sort((a,b) => a.splitIndex - b.splitIndex);
         
-        // 🚨 Start Period Wrapper
         html += `<div class="asn-period-wrapper">`;
         html += `<div class="asn-period-header">Period ${p}</div>`;
         
@@ -1396,7 +1412,6 @@ function ASN_RenderLayout() {
             let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : '<i class="fas fa-cut"></i> Split';
             let cardClass = isDel ? "asn-card split" : "asn-card";
             
-            // Add Batch Badges if split
             let badgeHtml = "";
             if (rows.length > 1) {
                 badgeHtml = `<div class="asn-batch-badge">Batch ${idx + 1}</div>`;
@@ -1414,8 +1429,6 @@ function ASN_RenderLayout() {
                 <button class="${btnClass}" onclick="ASN_RequestSplit('${row.id}')">${btnIcon}</button>
             </div>`;
         });
-        
-        // 🚨 End Period Wrapper
         html += `</div>`;
     });
     
@@ -1425,7 +1438,7 @@ function ASN_RenderLayout() {
 window.ASN_OnSubjectChange = (rowId, newSub) => {
     let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
     row.subject = newSub; row.teacher = ""; row.teacherID = ""; row.room = "";
-    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); // Delete old splits
+    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); 
     
     if (newSub) {
         let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${row.period}_0_${newSub.replace(/\s+/g, '').replace(/\//g, '')}`;
@@ -1433,7 +1446,6 @@ window.ASN_OnSubjectChange = (rowId, newSub) => {
             if (snap.exists()) {
                 row.teacher = snap.data().teacherName || ""; row.teacherID = snap.data().teacherID || ""; row.room = snap.data().room || "";
                 
-                // Fetch splits
                 getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", newSub))).then(bSnap => {
                     if (bSnap.size > 1) {
                         let bDocs = []; bSnap.forEach(d => bDocs.push(d.data())); bDocs.sort((a,b) => a.batchName.localeCompare(b.batchName));
@@ -1454,7 +1466,6 @@ window.ASN_RequestSplit = (rowId) => {
     let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
     let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
 
-    // 🚨 FIX: Now uses the dedicated 'asnConfirmOverlay' to prevent PIN bugs!
     if (row.isSplit) {
         let title = document.getElementById("asnConfirmTitle"); 
         title.innerHTML = '<i class="fas fa-trash"></i> Delete Batch'; title.style.color = "#ef4444";
@@ -1560,7 +1571,6 @@ async function ASN_ConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
     let totalBatches = parseInt(document.getElementById("dsBatchCount").value); 
     let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, '');
     
-    // 🚨 NEW VALIDATION BLOCK: Prevents splitting if a batch is left empty!
     if (totalBatches > 1) {
         let selectedBatches = new Set();
         document.querySelectorAll(".ds-dept-select").forEach(s => {
@@ -1570,7 +1580,7 @@ async function ASN_ConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
         for (let i = 1; i <= totalBatches; i++) {
             if (!selectedBatches.has(`Batch ${i}`)) {
                 showRcToast(`⚠️ Please assign at least one department to Batch ${i}!`);
-                return; // Stop the split completely!
+                return;
             }
         }
     }
@@ -1625,14 +1635,12 @@ async function ASN_SaveAll() {
     });
     await wb.commit(); showRcToast("Successfully Saved General Timetable!"); btn.innerText = "Save Timetable"; btn.disabled = false;
     switchView(views.timetable); 
-    TT_LoadTimetableForDay(); // 🚨 FIX: Safely refreshes without triggering the memory leak!
+    TT_LoadTimetableForDay();
 }
 
 // ==========================================
-// 🚨 DATA UPLOAD MANAGER & PARSER
+// DATA UPLOAD MANAGER & PARSER
 // ==========================================
-
-// 1. DEFINE THE PARSER FIRST (No 'export' keyword needed!)
 const csvSplitter = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
 
 const DataParser = {
@@ -1738,7 +1746,6 @@ function generateDeptName(raw, courseType, spellFixer) {
     return `${finalPrefix} ${core}`;
 }
 
-// 2. NOW SET UP THE BUTTON LISTENERS
 let pendingUploadType = ""; 
 let pendingUploadData = null;
 
@@ -1756,7 +1763,6 @@ function handleFileSelect(event, type) {
         let header = lines[0];
         let isValid = false;
         
-        // Since DataParser is defined above, this will now work perfectly!
         if (type === "STUDENTS") isValid = DataParser.isValidStudentFormat(header);
         else if (type === "SUBJECTS") isValid = DataParser.isValidSubjectFormat(header);
         else if (type === "CALENDAR") isValid = DataParser.isValidCalendarFormat(header);
@@ -1787,7 +1793,6 @@ document.getElementById('fileStudents').addEventListener('change', (e) => handle
 document.getElementById('fileSubjects').addEventListener('change', (e) => handleFileSelect(e, 'SUBJECTS'));
 document.getElementById('fileCalendar').addEventListener('change', (e) => handleFileSelect(e, 'CALENDAR'));
 
-// 3. EXECUTE THE UPLOAD
 async function ExecuteDataUpload() {
     showRcToast(`🚀 Uploading ${pendingUploadType}... Please wait.`);
     
@@ -1837,6 +1842,7 @@ async function ExecuteDataUpload() {
                 wb = writeBatch(db); batchCount = 0;
             }
         }
+        sessionStorage.removeItem(`adhyora_subjects_${currentCollegeID}`); // 🚀 Clear local cache to force refresh
         showRcToast(`✅ Success! ${total} Subjects Synced.`);
     }
     else if (pendingUploadType === "CALENDAR") {
@@ -1864,7 +1870,7 @@ async function ExecuteDataUpload() {
 }
 
 // ==========================================
-// 🚨 YEAR UPDATER & PROMOTION ENGINE
+// YEAR UPDATER & PROMOTION ENGINE
 // ==========================================
 document.getElementById("btnOpenPromote").addEventListener("click", () => {
     document.getElementById("promoteWarningOverlay").classList.add("active");
@@ -1872,7 +1878,6 @@ document.getElementById("btnOpenPromote").addEventListener("click", () => {
 
 document.getElementById("btnPromoteProceed").addEventListener("click", () => {
     document.getElementById("promoteWarningOverlay").classList.remove("active");
-    // Open Security PIN Panel
     document.getElementById("pinInput").value = "";
     document.getElementById("pinOverlay").classList.add("active");
     rcCurrentAction = "PROMOTE_STUDENTS"; 
@@ -1881,7 +1886,6 @@ document.getElementById("btnPromoteProceed").addEventListener("click", () => {
 async function ExecuteSemesterPromotion() {
     showRcToast("Analyzing Departments...");
     
-    // 1. Fetch Department Max Years
     let deptMaxYears = {};
     const deptSnap = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
     deptSnap.forEach(d => {
@@ -1889,7 +1893,6 @@ async function ExecuteSemesterPromotion() {
         deptMaxYears[name] = d.data().maxYears ? parseInt(d.data().maxYears) : 3;
     });
 
-    // 2. Fetch All Students
     const stuSnap = await getDocs(collection(db, "colleges", currentCollegeID, "students"));
     if (stuSnap.empty) { showRcToast("No students found."); return; }
 
@@ -1900,7 +1903,6 @@ async function ExecuteSemesterPromotion() {
     let currentRealYear = new Date().getFullYear();
     let alumniBatchName = "Alumni_" + currentRealYear;
 
-    // 3. Process Logic
     for (let i = 0; i < stuSnap.docs.length; i++) {
         let docSnap = stuSnap.docs[i];
         let data = docSnap.data();
@@ -1938,7 +1940,6 @@ async function ExecuteSemesterPromotion() {
         wb.update(docSnap.ref, updates);
         batchCount++;
 
-        // Batch commit safely at 450 limit
         if (batchCount >= 450 || i === stuSnap.docs.length - 1) {
             await wb.commit();
             wb = writeBatch(db);
@@ -1950,14 +1951,13 @@ async function ExecuteSemesterPromotion() {
 }
 
 // ==========================================
-// 🚨 EXPORT DATA ENGINE
+// EXPORT DATA ENGINE
 // ==========================================
 let expAllDepts = [];
 
 document.getElementById("btnOpenExport").addEventListener("click", async () => {
     document.getElementById("exportOverlay").classList.add("active");
     
-    // Fetch departments for dropdown
     const snap = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
     expAllDepts = [];
     snap.forEach(d => {
@@ -1990,7 +1990,6 @@ function ExpFilterDepts(selectedYear) {
     document.getElementById("btnExecuteExport").disabled = (validDepts.length === 0);
 }
 
-// Export Trigger
 document.getElementById("btnExecuteExport").addEventListener("click", async () => {
     let btn = document.getElementById("btnExecuteExport");
     btn.innerText = "Processing..."; btn.disabled = true;
@@ -2025,14 +2024,13 @@ document.getElementById("btnExecuteExport").addEventListener("click", async () =
             DownloadCSV(masterCSV, `${pfx}_${ftype}_Year${year}.csv`);
         } 
         else if (type === 2) {
-            // Logs
             showRcToast("Fetching Attendance Logs...");
             let logsRef = collection(db, "colleges", currentCollegeID, "attendance");
             let logsData = [];
             for (let sem of targetSems) {
-                let snap = await getDocs(query(logsRef, where("semester", "==", `Semester ${sem}`))); // C# format
+                let snap = await getDocs(query(logsRef, where("semester", "==", `Semester ${sem}`))); 
                 snap.forEach(d => logsData.push({ id: d.id, ...d.data() }));
-                let snap2 = await getDocs(query(logsRef, where("semester", "==", `Semester_${sem}`))); // Alternate format
+                let snap2 = await getDocs(query(logsRef, where("semester", "==", `Semester_${sem}`))); 
                 snap2.forEach(d => logsData.push({ id: d.id, ...d.data() }));
             }
 
@@ -2059,10 +2057,9 @@ document.getElementById("btnExecuteExport").addEventListener("click", async () =
     btn.innerText = "Download CSV"; btn.disabled = false;
 });
 
-// CSV Generator Logic
 async function GenerateMarksCSV(students, sem) {
     let semKey = `Semester ${sem}`;
-    let globalData = {}; // Exam -> Subject -> Roll -> Stats
+    let globalData = {}; 
     
     for (let docSnap of students) {
         let markSnap = await getDoc(doc(db, "colleges", currentCollegeID, "students", docSnap.id, "nep_marks", semKey));
@@ -2127,7 +2124,6 @@ async function GenerateStatsCSV(students, sem) {
 
 function GenerateLogsCSV(students, logsData) {
     let csv = "";
-    // Group logs by Date_Semester
     let groupedLogs = {};
     logsData.forEach(l => {
         let parts = l.id.split('_'); 
@@ -2156,7 +2152,7 @@ function GenerateLogsCSV(students, logsData) {
             let status = (p1==="P"||p2==="P"||p3==="P"||p4==="P"||p5==="P"||p6==="P") ? "Present" : "Absent";
             csv += `${dateStr},${semStr},${r},${stu.data().Name || ""},${p1},${p2},${p3},${p4},${p5},${p6},${status}\n`;
         }
-        csv += ",,,,,,,,,,\n"; // Blank spacer row
+        csv += ",,,,,,,,,,\n"; 
     }
     return csv;
 }
@@ -2174,7 +2170,7 @@ function DownloadCSV(csvContent, fileName) {
 }
 
 // ==========================================
-// 🚨 SUBJECT LIST MANAGER
+// SUBJECT LIST MANAGER
 // ==========================================
 let subLoaded = false;
 let subCachedData = [];
@@ -2182,8 +2178,9 @@ let subTargetId = "";
 let subListener = null;
 
 function SUB_Init() {
+    if (subLoaded) return;
     subLoaded = true;
-    if (subListener) subListener(); // Kill old listener
+    if (subListener) subListener(); 
 
     subListener = onSnapshot(collection(db, "colleges", currentCollegeID, "subjects"), (snap) => {
         subCachedData = [];
@@ -2198,7 +2195,6 @@ function SUB_Init() {
             });
         });
         
-        // Sort by Department, then Semester (Matching C# logic)
         subCachedData.sort((a,b) => {
             let dCmp = a.department.localeCompare(b.department);
             if (dCmp !== 0) return dCmp;
@@ -2226,7 +2222,6 @@ function SUB_RenderList(searchTerm = "") {
 
     let html = "";
     filtered.forEach(s => {
-        // C# Color mapping logic
         let tUp = s.type.toUpperCase();
         let badgeClass = "sub-other";
         if (tUp === "CORE") badgeClass = "sub-core";
@@ -2250,9 +2245,9 @@ function SUB_RenderList(searchTerm = "") {
     container.innerHTML = html;
 }
 
-document.getElementById("subSearchInput").addEventListener("input", (e) => SUB_RenderList(e.target.value));
+// 🚀 OPTIMIZATION 7: Debounce Subject Search
+document.getElementById("subSearchInput").addEventListener("input", debounce((e) => SUB_RenderList(e.target.value.trim()), 250));
 
-// --- EDIT SUBJECT ---
 window.SUB_OpenEdit = (code) => {
     let data = subCachedData.find(s => s.code === code);
     if(!data) return;
@@ -2269,7 +2264,6 @@ window.SUB_OpenEdit = (code) => {
 
 document.getElementById("btnSaveSubjectEdit").addEventListener("click", () => {
     document.getElementById("subjectEditOverlay").classList.remove("active");
-    // Trigger Security Check
     document.getElementById("pinInput").value = "";
     document.getElementById("pinOverlay").classList.add("active");
     rcCurrentAction = "EDIT_SUBJECT"; 
@@ -2303,11 +2297,11 @@ async function SUB_ExecuteEdit() {
         } else {
             await updateDoc(doc(subRef, oldCode), data);
         }
+        sessionStorage.removeItem(`adhyora_subjects_${currentCollegeID}`); // 🚀 Clear Local Cache
         showRcToast("✅ Subject Updated Successfully!");
     } catch(e) { showRcToast("❌ Error updating subject."); }
 }
 
-// --- DELETE SUBJECT ---
 window.SUB_RequestDelete = (code) => {
     let data = subCachedData.find(s => s.code === code);
     if(!data) return;
@@ -2333,12 +2327,13 @@ async function SUB_ExecuteDelete() {
     showRcToast("Deleting Subject...");
     try {
         await deleteDoc(doc(db, "colleges", currentCollegeID, "subjects", subTargetId));
+        sessionStorage.removeItem(`adhyora_subjects_${currentCollegeID}`); // 🚀 Clear Local Cache
         showRcToast("✅ Subject Deleted.");
     } catch(e) { showRcToast("❌ Error deleting subject."); }
 }
 
 // ==========================================
-// 🚨 STUDENTS SUBJECTS REASSIGNMENT MANAGER
+// STUDENTS SUBJECTS REASSIGNMENT MANAGER
 // ==========================================
 let ssLoaded = false; 
 let ssCurrentSem = "1"; 
@@ -2347,6 +2342,7 @@ let ssActiveSubjects = [];
 let ssSelectedStudents = new Set();
 
 function SS_Init() {
+    if (ssLoaded) return;
     ssLoaded = true;
     let dropSem = document.getElementById("ssSemDrop"); 
     let optionsHtml = "";
@@ -2356,14 +2352,12 @@ function SS_Init() {
         let isOdd = (i % 2 !== 0); let label = `Semester ${i}`;
         if ((collegeSemesterType === "Odd" && isOdd) || (collegeSemesterType === "Even" && !isOdd)) {
             label += " (Active)";
-            // 🚨 GUARANTEED FIX
             if (activeValue === "1" || i === 1) activeValue = i.toString(); 
         }
         optionsHtml += `<option value="${i}">${label}</option>`; 
     }
     dropSem.innerHTML = optionsHtml || `<option value="1">Semester 1</option>`; 
     
-    // 🚨 Force the value!
     ssCurrentSem = activeValue;
     dropSem.value = ssCurrentSem;
     
@@ -2419,8 +2413,6 @@ async function SS_FetchStudents() {
     ssSelectedStudents.clear();
 
     let cleanSubFilter = sub.replace(/\s+/g, '').toLowerCase();
-
-    // Determine the year to fetch students efficiently
     let targetYear = Math.ceil(parseInt(ssCurrentSem) / 2).toString();
 
     try {
@@ -2469,18 +2461,14 @@ window.SS_ToggleStudentCard = (sid) => {
     let chk = document.getElementById(`chk_${sid}`);
     if (!chk) return;
 
-    // Flip the checkbox state manually
     chk.checked = !chk.checked; 
 
-    // Update Set and Visuals
     if (chk.checked) {
         ssSelectedStudents.add(sid);
-        // Add a nice green highlight to the card!
         document.getElementById(`card_${sid}`).style.borderColor = "var(--brand-green)";
         document.getElementById(`card_${sid}`).style.backgroundColor = "rgba(74, 222, 128, 0.05)";
     } else {
         ssSelectedStudents.delete(sid);
-        // Reset the card back to normal white
         document.getElementById(`card_${sid}`).style.borderColor = "#e2e8f0";
         document.getElementById(`card_${sid}`).style.backgroundColor = "white";
     }
@@ -2513,7 +2501,6 @@ function SS_OpenMoveModal() {
 
 function SS_ConfirmMovePrep() {
     document.getElementById("stuSubMoveOverlay").classList.remove("active");
-    // Trigger Security Check
     document.getElementById("pinInput").value = "";
     document.getElementById("pinOverlay").classList.add("active");
     rcCurrentAction = "MOVE_STU_SUB"; 
@@ -2530,25 +2517,21 @@ async function SS_ExecuteMove() {
     let semNum = ssCurrentSem;
 
     try {
-        // 1. Fetch Target Batches
         let newBatchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", newSub)));
         let newBatches = [];
         newBatchSnap.forEach(d => { newBatches.push({ ref: d.ref, count: (d.data().studentIDs || []).length, incoming: [] }); });
 
-        // 2. Fetch Old Batches to erase from
         let oldBatchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", oldSub)));
         let sidsArr = Array.from(ssSelectedStudents);
 
         let wb = writeBatch(db);
         let ops = 0;
 
-        // A. Remove from old
         oldBatchSnap.forEach(d => {
             wb.update(d.ref, { studentIDs: arrayRemove(...sidsArr) });
             ops++;
         });
 
-        // B. Load Balance into new
         if (newBatches.length > 0) {
             sidsArr.forEach(sid => {
                 newBatches.sort((a,b) => a.count - b.count);
@@ -2564,7 +2547,6 @@ async function SS_ExecuteMove() {
             });
         }
 
-        // C. Update Profiles & Drop old attendance
         for (let i = 0; i < sidsArr.length; i++) {
             let sid = sidsArr[i];
             let stuRef = doc(db, "colleges", currentCollegeID, "students", sid);
@@ -2574,7 +2556,6 @@ async function SS_ExecuteMove() {
             updates[`assigned_by.Semester_${ssCurrentSem}.${cat}`] = "Principal";
             updates[`assignment_timestamps.Semester_${ssCurrentSem}.${cat}`] = serverTimestamp();
 
-            // Fetch to drop attendance
             let sDoc = await getDoc(stuRef);
             if (sDoc.exists()) {
                 let stats = sDoc.data().attendance_stats;
@@ -2587,7 +2568,6 @@ async function SS_ExecuteMove() {
                         updates[`attendance_stats.${semKey}.${oldKey}`] = deleteField();
                     }
 
-                    // Restore logic
                     let restKey = Object.keys(semMap).find(k => k.toLowerCase().endsWith("_dropped") && k.substring(0, k.length - 8).replace(/\s+/g,'').toLowerCase() === newSub.replace(/\s+/g,'').replace(/\//g,'-').replace(/\./g,'').toLowerCase());
                     if (restKey) {
                         updates[`attendance_stats.${semKey}.${restKey.substring(0, restKey.length - 8)}`] = semMap[restKey];
@@ -2607,19 +2587,20 @@ async function SS_ExecuteMove() {
         await wb.commit();
         
         showRcToast("✅ Move Successful!");
-        SS_FetchStudents(); // Refresh the list!
+        SS_FetchStudents(); 
 
     } catch(e) { showRcToast("❌ Error moving students."); console.error(e); }
 }
 
 // ==========================================
-// 🚨 EVENT REQUESTS & APPROVAL ENGINE
+// EVENT REQUESTS & APPROVAL ENGINE
 // ==========================================
 let evtLoaded = false;
 let evtCachedData = [];
 let evtListener = null;
 
 function EVT_Init() {
+    if (evtLoaded) return;
     evtLoaded = true;
     if (evtListener) evtListener(); 
 
@@ -2675,7 +2656,8 @@ function EVT_RenderList(searchTerm = "") {
     container.innerHTML = html; container.appendChild(noData);
 }
 
-document.getElementById("evtSearchInput").addEventListener("input", (e) => EVT_RenderList(e.target.value));
+// 🚀 OPTIMIZATION 8: Debounce Event Search
+document.getElementById("evtSearchInput").addEventListener("input", debounce((e) => EVT_RenderList(e.target.value.trim()), 250));
 
 window.EVT_ToggleBody = async (id, sids) => {
     let body = document.getElementById(`evt_body_${id}`);
@@ -2687,7 +2669,6 @@ window.EVT_ToggleBody = async (id, sids) => {
     if (isOpening && stuContainer.innerHTML.includes("Loading")) {
         if (sids.length === 0) { stuContainer.innerHTML = "No students attached."; return; }
         
-        // 🚨 CHUNKING ENGINE: Fetch students in batches of 30 to bypass Firestore limits
         let fetchedStudents = [];
         for (let i = 0; i < sids.length; i += 30) {
             let chunk = sids.slice(i, i + 30);
@@ -2716,7 +2697,6 @@ window.EVT_Accept = async (id) => {
     if (sids.length === 0) return;
 
     try {
-        // 1. Chunk Fetch Students to Group by Semester
         let studentsBySem = {};
         for (let i = 0; i < sids.length; i += 30) {
             let chunk = sids.slice(i, i + 30);
@@ -2730,7 +2710,6 @@ window.EVT_Accept = async (id) => {
             });
         }
 
-        // 2. RETROACTIVE REFUND SCANNER
         let dateStr = evt.date; let periodIndex = evt.period || "1"; let pKey = `period_${periodIndex}`;
         let todaySnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", dateStr)));
         
@@ -2750,14 +2729,12 @@ window.EVT_Accept = async (id) => {
                     if (attMap[uid] !== undefined) {
                         let wasPresent = attMap[uid];
                         
-                        // Refund the period record
                         wb.update(docSnap.ref, {
                             [`${pKey}.attendance.${uid}`]: deleteField(),
                             [`${pKey}.stats.totalStudents`]: increment(-1),
                             [`${pKey}.stats.${wasPresent ? 'presentCount' : 'absentCount'}`]: increment(-1)
                         }); ops++;
 
-                        // Refund the student profile
                         let sRef = doc(db, "colleges", currentCollegeID, "students", uid);
                         let rUpdates = {};
                         rUpdates[`attendance_stats.${semKey}.${cleanSub}.total`] = increment(-1);
@@ -2768,7 +2745,6 @@ window.EVT_Accept = async (id) => {
             }
         });
 
-        // 3. EVENT SAVE ENGINE
         for (let sem in studentsBySem) {
             let semDocKey = `Semester ${sem}`; let semKey = `Semester_${sem}`; let semName = `Semester${sem}`;
             let eventDocID = `${dateStr}_${semName}_EVENTS`; let globalDocID = `${dateStr}_${semName}_GLOBAL`;
@@ -2792,7 +2768,6 @@ window.EVT_Accept = async (id) => {
                 myPeriods[`p${periodIndex}`] = true;
                 allStudentPeriods[uid] = myPeriods;
 
-                // Strict Math
                 let morningLost = false; let eveningLost = false;
                 [1,2,3].forEach(p => { if (myPeriods[`p${p}`] === false) morningLost = true; });
                 [4,5,6].forEach(p => { if (myPeriods[`p${p}`] === false) eveningLost = true; });
@@ -2809,7 +2784,6 @@ window.EVT_Accept = async (id) => {
                 wb.update(sRef, ups); ops++;
             });
 
-            // Save Period Block
             let eRef = doc(db, "colleges", currentCollegeID, "attendance", eventDocID);
             let periodPayload = { subject: "Special Events", category: "EVENT", markedByTeacherID: evt.teacherID, markedByTeacherName: evt.teacherName, timestamp: serverTimestamp(), stats: { totalStudents: pCount, presentCount: pCount, absentCount: 0 }, attendance: attMap, event_details: eventDetailsMap };
             let dayData = { [`period_${periodIndex}`]: periodPayload, date: dateStr, semester: semDocKey };
@@ -2824,7 +2798,6 @@ window.EVT_Accept = async (id) => {
 
         showRcToast("✅ Event Approved & Attendance Saved!");
 
-        // 4. Send Push Notification to Teacher
         let tSnap = await getDoc(doc(db, "colleges", currentCollegeID, "teachers", evt.teacherID));
         if (tSnap.exists()) {
             let tokens = [];
@@ -2843,13 +2816,13 @@ window.EVT_Accept = async (id) => {
                 });
             }
         }
-        EVT_Init(); // Refresh UI
+        EVT_Init(); 
 
     } catch (e) { btn.innerText = "Accept Request"; btn.disabled = false; showRcToast("❌ Save Failed!"); console.error(e); }
 };
 
 // ==========================================
-// 🚨 ATTENDANCE RECORDS (GOD-MODE) ENGINE
+// ATTENDANCE RECORDS (GOD-MODE) ENGINE
 // ==========================================
 let attdLoaded = false;
 let attdAllTeachers = [];
@@ -2864,13 +2837,12 @@ let attdSelectedDayName = "Monday";
 let attdAllocListener = null;
 let attdAttListener = null;
 
-// Exact College Bell Times (Format: Hours.Decimal -> 10:30 AM = 10.5)
 const attdPeriodEndTimes = [10.5, 11.5, 12.5, 14.0, 15.0, 16.0];
 
 function ATTD_Init() {
+    if (attdLoaded) return;
     attdLoaded = true;
 
-    // Fetch Teachers Once
     if (attdAllTeachers.length === 0) {
         getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
             snap.forEach(doc => {
@@ -2884,10 +2856,9 @@ function ATTD_Init() {
         ATTD_SelectToday();
     }
 
-    // Setup Search
-    document.getElementById("attdSearchInput").addEventListener("input", () => ATTD_RenderGrid());
+    // 🚀 OPTIMIZATION 9: Debounce Attendance Search
+    document.getElementById("attdSearchInput").addEventListener("input", debounce(() => ATTD_RenderGrid(), 250));
 
-    // Setup Day Buttons
     let dBtns = document.querySelectorAll("#attdDaysContainer .asn-day-btn");
     dBtns.forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -2899,15 +2870,15 @@ function ATTD_Init() {
 
 function ATTD_SelectToday() {
     let now = new Date();
-    let day = now.getDay(); // 0 = Sun, 1 = Mon...
-    let index = (day >= 1 && day <= 5) ? day - 1 : 0; // Default to Monday if Weekend
+    let day = now.getDay(); 
+    let index = (day >= 1 && day <= 5) ? day - 1 : 0; 
     ATTD_CalculateDateFromDayIndex(index);
 }
 
 function ATTD_CalculateDateFromDayIndex(targetIndex) {
     let now = new Date();
     let currentDayOfWeek = now.getDay();
-    if (currentDayOfWeek === 0) currentDayOfWeek = 7; // Treat Sunday as 7
+    if (currentDayOfWeek === 0) currentDayOfWeek = 7; 
 
     let diff = (targetIndex + 1) - currentDayOfWeek;
     attdSelectedDate = new Date(now);
@@ -2916,7 +2887,6 @@ function ATTD_CalculateDateFromDayIndex(targetIndex) {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     attdSelectedDayName = days[attdSelectedDate.getDay()];
 
-    // UI Updates for Buttons
     document.querySelectorAll("#attdDaysContainer .asn-day-btn").forEach((btn, idx) => {
         if (idx === targetIndex) btn.classList.add("active");
         else btn.classList.remove("active");
@@ -2926,12 +2896,11 @@ function ATTD_CalculateDateFromDayIndex(targetIndex) {
 }
 
 function ATTD_LoadDataForSelectedDay() {
-    let dateStr = attdSelectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    let dateStr = attdSelectedDate.toISOString().split('T')[0]; 
     
     if (attdAllocListener) attdAllocListener();
     if (attdAttListener) attdAttListener();
 
-    // 🚨 RAM CACHE HIT
     if (attdCachedAllocations[attdSelectedDayName] && attdCachedAttendance[dateStr]) {
         attdDailyAllocations = attdCachedAllocations[attdSelectedDayName];
         attdTodayAttendance = attdCachedAttendance[dateStr];
@@ -2942,7 +2911,6 @@ function ATTD_LoadDataForSelectedDay() {
         attdTodayAttendance = {};
     }
 
-    // 🚨 LIVE LISTENER 1: Timetable Allocations
     attdAllocListener = onSnapshot(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("day", "==", attdSelectedDayName)), (snap) => {
         let tempAllocs = {};
         snap.forEach(doc => {
@@ -2952,18 +2920,16 @@ function ATTD_LoadDataForSelectedDay() {
             let pIndex = parseInt(d.period) - 1;
             
             if (!tempAllocs[tID]) tempAllocs[tID] = [];
-            // Prevent duplicates in splits
             if (!tempAllocs[tID].some(a => a.periodIndex === pIndex)) {
                 tempAllocs[tID].push({ periodIndex: pIndex, subject: d.subjectName });
             }
         });
         
         attdDailyAllocations = tempAllocs;
-        attdCachedAllocations[attdSelectedDayName] = tempAllocs; // Save to Cache
+        attdCachedAllocations[attdSelectedDayName] = tempAllocs; 
         ATTD_RenderGrid();
     });
 
-    // 🚨 LIVE LISTENER 2: Attendance Records
     attdAttListener = onSnapshot(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", dateStr)), (snap) => {
         let tempAttd = {};
         snap.forEach(doc => {
@@ -2978,7 +2944,7 @@ function ATTD_LoadDataForSelectedDay() {
         });
 
         attdTodayAttendance = tempAttd;
-        attdCachedAttendance[dateStr] = tempAttd; // Save to Cache
+        attdCachedAttendance[dateStr] = tempAttd; 
         ATTD_RenderGrid();
     });
 }
@@ -2993,7 +2959,6 @@ function ATTD_RenderGrid() {
     attdAllTeachers.forEach(teacher => {
         let myAllocs = attdDailyAllocations[teacher.id] || [];
 
-        // SEARCH FILTER
         if (searchFilter) {
             let matchesName = teacher.name.toLowerCase().includes(searchFilter);
             let matchesDept = teacher.dept.toLowerCase().includes(searchFilter);
@@ -3016,7 +2981,6 @@ function ATTD_RenderGrid() {
                 let colorClass = ATTD_GetStatusColorClass(p, teacher.id, markedByID);
                 let shortName = alloc.subject.length <= 3 ? alloc.subject.toUpperCase() : alloc.subject.substring(0, 3).toUpperCase();
                 
-                // Tooltip Hover Engine
                 let cleanSub = alloc.subject.replace(/'/g, "\\'");
                 rowHtml += `<div class="attd-slot ${colorClass}" onmouseenter="ATTD_ShowTooltip(event, '${cleanSub}')" onmouseleave="ATTD_HideTooltip()"><u>${shortName}</u></div>`;
             }
@@ -3032,42 +2996,34 @@ function ATTD_RenderGrid() {
     }
 }
 
-// 🚨 TIME AND COLOR MATHEMATICS (Matches C# Exactly)
 function ATTD_GetStatusColorClass(periodIndex, assignedTeacherID, markedByTeacherID) {
-    // 1. Marked Already?
     if (markedByTeacherID) {
-        if (markedByTeacherID === assignedTeacherID) return "attd-green"; // ✅ Green (Normal)
-        else return "attd-yellow"; // ⚠️ Yellow (Substitute)
+        if (markedByTeacherID === assignedTeacherID) return "attd-green"; 
+        else return "attd-yellow"; 
     }
 
     let now = new Date();
     
-    // Normalize to Midnight to compare days easily
     let tDateOnly = new Date(attdSelectedDate.getFullYear(), attdSelectedDate.getMonth(), attdSelectedDate.getDate()).getTime();
     let nDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    // 2. Past Day?
-    if (tDateOnly < nDateOnly) return "attd-red"; // 🚨 Red (Missed completely)
+    if (tDateOnly < nDateOnly) return "attd-red"; 
 
-    // 3. Future Day?
-    if (tDateOnly > nDateOnly) return "attd-black"; // ⚪ Black (Upcoming)
+    if (tDateOnly > nDateOnly) return "attd-black"; 
 
-    // 4. TODAY: Check the exact clock time!
     let currentHour = now.getHours() + (now.getMinutes() / 60.0);
     let endTime = attdPeriodEndTimes[periodIndex];
 
-    if (currentHour > endTime) return "attd-red"; // 🚨 Red (Time is up, forgotten!)
+    if (currentHour > endTime) return "attd-red"; 
     
-    return "attd-black"; // ⚪ Black (Class is ongoing or upcoming later today)
+    return "attd-black"; 
 }
 
-// 🚨 TOOLTIP ENGINE
 window.ATTD_ShowTooltip = (event, text) => {
     let tooltip = document.getElementById("attdTooltip");
     tooltip.innerText = text;
     tooltip.style.display = "block";
     
-    // Position it slightly above the mouse
     tooltip.style.left = (event.clientX + 10) + 'px';
     tooltip.style.top = (event.clientY - 30) + 'px';
 };
