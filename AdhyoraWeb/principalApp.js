@@ -3736,11 +3736,16 @@ const elLock = {
     btnBio: document.getElementById("btnLockBiometrics"), toggleBio: document.getElementById("bioToggleSwitch"), btnToggleWrap: document.getElementById("btnToggleBiometrics")
 };
 
+// 🚨 Changed to store the HASH, not the plain text!
+let cachedAdminPinHash = ""; 
+let lockMode = "LOGIN"; 
+let setupTempPin = "";
+let failedPinAttempts = 0;
+
 let securityListener = null;
 let isFirstSecurityLoad = true;
 
 function CheckSecurityPin() {
-    // 🚨 GHOST UI: Erase Dashboard from DOM while locked
     document.querySelector(".main-content").style.display = "none";
     document.getElementById("mainSidebar").style.display = "none";
     document.getElementById("initialAppLoader").style.display = "none"; 
@@ -3748,13 +3753,13 @@ function CheckSecurityPin() {
 
     if (securityListener) securityListener(); 
 
-    // 🚨 REAL-TIME LISTENER (Now Async for Hashing)
     securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "metadata", "security"), async (snap) => {
         if (snap.exists() && snap.data().adminPin) {
             const livePin = snap.data().adminPin;
+            const hashedLivePin = await hashText(livePin); // 🚨 Hash it immediately!
             
-            // REMOTE HACK PREVENTION
-            if (!isFirstSecurityLoad && cachedAdminPin && cachedAdminPin !== livePin) {
+            // REMOTE HACK PREVENTION (Comparing Hashes)
+            if (!isFirstSecurityLoad && cachedAdminPinHash && cachedAdminPinHash !== hashedLivePin) {
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
                 localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
@@ -3769,13 +3774,11 @@ function CheckSecurityPin() {
                 SetLockMode("LOGIN");
             }
 
-            cachedAdminPin = livePin;
-            const hashedLivePin = await hashText(livePin); // 🚨 HASH THE LIVE PIN!
+            // 🚨 Store ONLY the hash in active memory!
+            cachedAdminPinHash = hashedLivePin;
 
-            // STANDARD BOOT SEQUENCE
             if (isFirstSecurityLoad) {
                 const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
-                // 🚨 COMPARE SECURE HASHES INSTEAD OF PLAIN TEXT!
                 if (isBioEnabledLocally && linkedPin && linkedPin !== hashedLivePin) {
                     isBioEnabledLocally = false;
                     localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
@@ -3795,7 +3798,7 @@ function CheckSecurityPin() {
             }
         }
     }, (error) => {
-        console.error("Security Sync Error", error);
+        console.error("Security Sync Error");
         elLock.status.innerText = "Network error syncing security.";
         elLock.status.style.color = "#ef4444";
     });
@@ -3986,7 +3989,10 @@ elLock.btnSubmit.addEventListener("click", async () => {
     }
 
     if (lockMode === "LOGIN") {
-        if (val === cachedAdminPin) {
+        // 🚨 Hash what the user typed, and compare it to the memory hash!
+        let hashedInput = await hashText(val);
+        
+        if (hashedInput === cachedAdminPinHash) {
             UnlockSecurityWall();
         } else {
             failedPinAttempts++;
@@ -4005,8 +4011,11 @@ elLock.btnSubmit.addEventListener("click", async () => {
             elLock.btnSubmit.innerText = "Saving...";
             elLock.btnSubmit.disabled = true;
             try {
+                // Save the plaintext to the secure database
                 await setDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"), { adminPin: val, updatedAt: serverTimestamp() }, { merge: true });
-                cachedAdminPin = val;
+                
+                // 🚨 Immediately convert to hash for local memory
+                cachedAdminPinHash = await hashText(val);
                 
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
@@ -4053,9 +4062,8 @@ elLock.btnSubmit.addEventListener("click", async () => {
             const credIdBase64 = bufferToBase64(credential.rawId);
             localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
             
-            // 🚨 SAVE THE SECURE HASH TO BROWSER INSTEAD OF PLAIN TEXT!
-            const secureHash = await hashText(cachedAdminPin);
-            localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, secureHash); 
+            // 🚨 Use the hash in memory!
+            localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPinHash); 
             
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
             isBioEnabledLocally = true;
@@ -4066,7 +4074,6 @@ elLock.btnSubmit.addEventListener("click", async () => {
             setTimeout(() => { UnlockSecurityWall(); }, 800);
 
         } catch (err) {
-            console.error(err);
             elLock.status.innerText = "Scan failed or cancelled. You can enable it later in settings.";
             elLock.status.style.color = "#ef4444";
             elLock.btnSubmit.innerText = "Try Again";
