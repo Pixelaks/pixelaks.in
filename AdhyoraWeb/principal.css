@@ -735,26 +735,50 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         gap: 12px;
     }
 
-    /* 4. Fix Attendance Grid Alignment (Horizontal Scroll Mode) */
+    /* 4. 🚨 THE UNIFIED SPREADSHEET SCROLL FIX */
+    
+    /* Revert the main view to stop the whole page from swiping */
+    .dashboard-view {
+        overflow-x: hidden !important; 
+    }
+
+    /* Make ONLY the table scroll sideways */
+    .attd-mobile-scroll {
+        width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 10px;
+        /* Hides the ugly scrollbar but keeps the swipe functionality */
+        scrollbar-width: none; 
+    }
+    .attd-mobile-scroll::-webkit-scrollbar { 
+        display: none; 
+    }
+
+    /* Force BOTH the Header and the Rows to have the exact same width and columns! */
+    .attd-header-row,
     .attd-row {
-        min-width: 550px !important; /* 🚨 NEW: Forces the row to be wide enough, triggering the swipe scroll! */
-        grid-template-columns: 1.8fr repeat(6, 1fr) !important;
+        min-width: 550px !important;
+        grid-template-columns: 1.8fr repeat(6, 1fr) !important; 
+    }
+    
+    .attd-row {
         padding: 12px 10px !important;
         gap: 5px !important;
     }
     
     .attd-teacher-col { 
-        overflow: visible !important; /* Removes the harsh cutoff */
+        overflow: visible !important; 
     }
     
     .attd-teacher-name {
-        font-size: 13px !important; /* Restores the readable font size! */
+        font-size: 13px !important; 
         white-space: normal !important;
         display: block;
     }
     
     .attd-slot {
-        font-size: 12px !important; /* Restores the readable subject text! */
+        font-size: 12px !important; 
         padding: 4px !important;
     }
 }
