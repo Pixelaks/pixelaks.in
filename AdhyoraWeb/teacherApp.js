@@ -536,6 +536,7 @@ async function loadSessionData() {
 
     showAttCenterMessage("Loading Database...");
     
+    // YYYY-MM-DD format strictly matching C# backend
     const dateStr = `${attCurrentDate.getFullYear()}-${String(attCurrentDate.getMonth()+1).padStart(2,'0')}-${String(attCurrentDate.getDate()).padStart(2,'0')}`;
 
     if(!attLastMedicalFetchDate || attLastMedicalFetchDate !== dateStr) {
@@ -543,8 +544,11 @@ async function loadSessionData() {
         try {
             const medSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "medical_leaves"), where("endDate", ">=", dateStr)));
             medSnap.forEach(doc => {
-                let start = new Date(doc.data().startDate);
-                if(start <= attCurrentDate) attMedicalLeavesCache.add(doc.data().studentID);
+                let data = doc.data();
+                // 🚨 TIMEZONE FIX: Compare strings directly to avoid JS Date shifting to the previous day!
+                if(data.startDate && data.startDate <= dateStr) {
+                    attMedicalLeavesCache.add(data.studentID);
+                }
             });
             attLastMedicalFetchDate = dateStr;
         } catch(e) { console.error("Medical Fetch Error", e); }
@@ -1029,7 +1033,6 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
 }
 
 function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
-    // 🚨 THE FIX: Always fetch the LIVE container currently in the DOM!
     let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attDirectArea");
     if (!targetContainer) targetContainer = document.getElementById("attListContainer");
 
@@ -1079,7 +1082,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
     let targetArray = attIsSubstitutePanelOpen ? attSubActiveRows : attMainActiveRows;
     let prefix = attIsSubstitutePanelOpen ? "sub_" : "main_";
     
-    targetArray.length = 0; // Clear the array cleanly
+    targetArray.length = 0;
 
     students.forEach(docSnap => {
         let d = docSnap.data();
@@ -1099,24 +1102,34 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         let isClaimed = attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject;
 
         let rowLocked = isThisBatchLocked || isAtEvent || isClaimed || isMedical;
-        if(isAtEvent || isMedical) isPresent = true; 
-        if(isClaimed) isPresent = false; 
+        
+        // 🚨 OVERRIDE LOGIC EXACTLY MATCHING C#
+        if(isAtEvent) isPresent = true; 
+        else if(isClaimed) isPresent = false; 
+        else if(isMedical) isPresent = true;
 
-        let uiText = `${name} (${roll})`;
-        if(isAtEvent) uiText += ` - <span style="color:#10b981; font-weight:bold;">${attCurrentPeriodEvents.get(id).toUpperCase()}</span>`;
-        else if(isClaimed) uiText += ` - <span style="color:#f59e0b; font-weight:bold;">IN ${attCurrentPeriodClaims.get(id)}</span>`;
-        else if(isMedical) uiText += ` - <span style="color:#3b82f6; font-weight:bold;">MEDICAL</span>`;
+        let uiText = `<b>${name}</b> (${roll})`;
+        
+        // 🚨 EXACT C# TEXT FORMATTING & COLORS
+        if(isAtEvent) {
+            uiText += ` - <span style="color:#10b981; font-weight:bold;">${attCurrentPeriodEvents.get(id).toUpperCase()}</span>`;
+        } else if(isClaimed) {
+            uiText += ` - <span style="color:#f59e0b; font-weight:bold;">IN ${attCurrentPeriodClaims.get(id).toUpperCase()}</span>`;
+        } else if(isMedical) {
+            uiText += ` - <span style="color:#3b82f6; font-weight:bold;">MEDICAL</span>`;
+        }
 
         uiText += `<br><span style="font-size:11px; color:#94a3b8;">${sDept}</span>`;
 
         let toggleClass = `attd-toggle ${isPresent ? 'active' : ''} ${rowLocked ? 'locked' : ''}`;
         let padding = attIsSubstitutePanelOpen ? "10px" : "15px";
-        let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
-        let cursorStyle = rowLocked ? "default" : "pointer";
+        let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base, #ffffff)";
+        let cursorStyle = rowLocked ? "not-allowed" : "pointer";
+        let opacityStyle = rowLocked ? "0.6" : "1.0"; // 🚨 VISUAL LOCK (Gray out row)
         
         fullHTML += `
-        <div id="row_${prefix}${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
-            <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none;">${uiText}</div>
+        <div id="row_${prefix}${id}" style="background:${bgCol}; opacity:${opacityStyle}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
+            <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none; line-height:1.4;">${uiText}</div>
             <div id="tog_${prefix}${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}" style="pointer-events:none;"></div>
         </div>`;
 
@@ -1125,19 +1138,17 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
 
     targetContainer.innerHTML = fullHTML;
 
-    // Attach click events to the entire row using the unique prefix
     targetArray.forEach(id => {
         let rowEl = document.getElementById(`row_${prefix}${id}`);
         let togEl = document.getElementById(`tog_${prefix}${id}`);
         
         rowEl.addEventListener("click", () => {
-            if(togEl.dataset.locked === "true") return;
+            if(togEl.dataset.locked === "true") return; // 🚨 Blocks click if locked
             
             let currentState = togEl.dataset.state === "true";
             let newState = !currentState;
             
             togEl.dataset.state = newState.toString();
-            
             if(newState) togEl.classList.add("active"); 
             else togEl.classList.remove("active");
         });
@@ -1215,7 +1226,9 @@ async function saveAttendance() {
         activeRows.forEach(id => {
             let el = document.getElementById(`tog_${prefix}${id}`);
             if(attCurrentPeriodEvents.has(id)) {
-                delete attendanceMap[id]; 
+                // 🚨 FIRESTORE MERGE FIX: Deleting from a JS object doesn't delete it from the database during a merge. 
+                // We MUST use deleteField() to match C#'s FieldValue.Delete!
+                attendanceMap[id] = deleteField(); 
             } else {
                 let isPresent = el.dataset.state === "true";
                 attendanceMap[id] = isPresent;
