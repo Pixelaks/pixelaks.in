@@ -247,11 +247,6 @@ body {
     border-left: 5px solid var(--brand-green); box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-/* 🚨 NEW: Forces the clickable text area to stretch across the empty middle space on PC */
-.data-card > div:first-child {
-    flex: 1; 
-}
-
 .data-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.06); transform: translateY(-2px); }
 .data-card .card-title { font-weight: bold; color: var(--text-green); font-size: 16px; margin-bottom: 5px; }
 .data-card .card-body { color: #475569; font-size: 13px; line-height: 1.5; margin-bottom: 10px; }
@@ -265,6 +260,9 @@ body {
 .status-approved { background-color: #f0fdf4; border-color: #86efac; color: #166534; }
 .status-declined { background-color: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
 .hod-badge { background-color: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; margin-left: 8px; vertical-align: middle; border: 1px solid #bfdbfe; }
+
+.compose-modal { transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-overlay.active .compose-modal { transform: translateY(0); }
 
 .action-icon-btn {
     background: #f1f5f9; border: none; width: 34px; height: 34px; border-radius: 8px;
@@ -304,6 +302,24 @@ body {
 .stat-label { width: 120px; font-weight: 600; }
 .stat-value { font-weight: bold; color: #334155; }
 
+@media (max-width: 900px) {
+    .dashboard-wrapper { flex-direction: column; }
+    .main-content { display: none; padding: 15px; padding-bottom: 90px; height: 100%; overflow: hidden; flex: 1; }
+    .main-content.mobile-active { display: flex; } 
+    .sidebar { width: 100%; flex: 1; border-right: none; padding: 20px; justify-content: center; padding-bottom: 100px; transition: all 0.3s ease; }
+    .sidebar.mobile-hidden { display: none !important; } 
+    .logo-container { margin-bottom: 15px; }
+    .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
+    .menu-btn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; }
+    .icon-nav-container { position: fixed; top: auto; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); z-index: 10; display: flex; justify-content: center; }
+    .icon-nav { width: 100%; max-width: 400px; justify-content: space-between; border: 2px solid var(--border-color); background-color: var(--card-bg); background-image: linear-gradient(var(--bg-grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid-color) 1px, transparent 1px); background-size: 15px 15px; }
+    .calendar-container { padding: 15px !important; margin: 0 auto !important; }
+    .calendar-grid { gap: 4px !important; }
+    .cal-cell { font-size: 12px; border-radius: 8px; }
+    .calendar-header h3 { font-size: 16px !important; }
+    #calendarView { padding: 10px !important; }
+}
+
 /* 🚨 TIMETABLE DASHBOARD */
 .tt-select-pill { background: #bbf7d0; color: #166534; border: 1px solid #86efac; padding: 8px 20px; border-radius: 20px; font-weight: 700; font-size: 14px; outline: none; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 2px 10px rgba(74, 222, 128, 0.2); }
 .tt-days-container { display: flex; gap: 8px; }
@@ -335,9 +351,10 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px;
     width: 100%;
-    align-items: start; 
+    align-items: start; /* 🚨 FIX: This prevents tall columns from stretching the others! */
 }
 
+/* The new outer box grouping a Period together */
 .asn-period-wrapper {
     background: #f8fafc;
     border: 2px solid #e2e8f0;
@@ -366,7 +383,7 @@ body {
 .asn-card.split { 
     border-color: #fbbf24; 
     background: #fffbeb; 
-    margin-top: 5px; 
+    margin-top: 5px; /* Creates spacing for the badge */
 }
 
 .asn-batch-badge {
@@ -474,7 +491,7 @@ body.dark-mode .calendar-container,
 body.dark-mode .data-upload-card {
     background-color: #1e293b !important;
     border-color: #334155 !important;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important; /* Adds depth so cards don't look boring */
 }
 
 /* 3. Fix the "Assign Classes" Outer Wrapper */
@@ -619,19 +636,20 @@ body.dark-mode .up-icon {
 
 /* 1. Fix the Success Panel Transparency */
 #subSuccessPanel .compose-modal {
-    background-color: #ffffff !important; 
+    background-color: #ffffff !important; /* Solid white in Light Mode */
     border: 2px solid var(--brand-green) !important;
 }
 #successPlanName { color: #334155 !important; } 
 #successExpiryDate { color: #64748b !important; }
 
 body.dark-mode #subSuccessPanel .compose-modal {
-    background-color: #1e293b !important; 
+    background-color: #1e293b !important; /* Solid navy in Dark Mode */
 }
 body.dark-mode #successPlanName { color: #f8fafc !important; }
 body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 
-/* 2. Fix Mobile Layout */
+
+/* 2. Fix Mobile Layout (Targeting the correct Website classes) */
 #subBlockPanel {
     align-items: flex-start !important; 
     overflow-y: auto !important; 
@@ -657,12 +675,12 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
     }
 
     .pricing-card:nth-child(2) {
-        transform: scale(1) !important; 
-        margin-top: 20px !important; 
+        transform: scale(1) !important; /* Removes the zoom so it fits */
+        margin-top: 20px !important; /* Space for the MOST POPULAR badge */
     }
     
     .pricing-card:hover {
-        transform: translateY(-8px) scale(1) !important; 
+        transform: translateY(-8px) scale(1) !important; /* Softer hover on phones */
     }
 
     #subBlockHeading {
@@ -671,7 +689,7 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 }
 
 /* =========================================
-   📱 MOBILE POLISH & SCROLL FIXES (PERFECT FIT)
+   📱 MOBILE POLISH & GRID CUT-OFF FIX
    ========================================= */
 @media (max-width: 900px) {
     
@@ -680,28 +698,33 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         overflow: hidden !important;
     }
 
+    /* 1. 🚨 THE FIX: Margin pushes the physical box up. Grid will NOT go behind the nav! */
     .main-content {
         flex: 1 !important; 
-        height: calc(100dvh - 85px) !important; 
+        height: auto !important;
+        margin-bottom: 85px !important; /* Stops the background exactly 85px from the bottom */
         padding: 15px !important; 
         box-sizing: border-box !important;
         overflow: hidden !important;
     }
 
+    /* 2. Normal scroll settings inside the shorter box */
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
-        overflow-x: hidden !important; 
+        overflow-x: auto !important; /* 🚨 CHANGED: Allows horizontal scrolling! */
         -webkit-overflow-scrolling: touch !important;
         padding-bottom: 10px !important; 
     }
 
-    /* Fix Teacher/Student Cards Cut-off */
+    /* 3. Fix Teacher/Student Cards Cut-off */
     .data-card {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 15px !important;
     }
+
+   /* 🚨 NEW: Forces the touch target to span the whole screen width on mobile */
     .data-card > div:first-child {
         width: 100% !important;
     }
@@ -712,42 +735,26 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         gap: 12px;
     }
 
-    /* 4. 🚨 THE UNIFIED SPREADSHEET SCROLL FIX */
-    .attd-mobile-scroll {
-        width: 100%;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 10px;
-        scrollbar-width: none; 
-    }
-    .attd-mobile-scroll::-webkit-scrollbar { 
-        display: none; 
-    }
-
-    .attd-header-row,
+    /* 4. Fix Attendance Grid Alignment (Horizontal Scroll Mode) */
     .attd-row {
-        min-width: 550px !important;
-        grid-template-columns: 1.8fr repeat(6, 1fr) !important; 
-    }
-    
-    .attd-row {
+        min-width: 550px !important; /* 🚨 NEW: Forces the row to be wide enough, triggering the swipe scroll! */
+        grid-template-columns: 1.8fr repeat(6, 1fr) !important;
         padding: 12px 10px !important;
         gap: 5px !important;
     }
     
     .attd-teacher-col { 
-        overflow: visible !important; 
+        overflow: visible !important; /* Removes the harsh cutoff */
     }
     
     .attd-teacher-name {
-        font-size: 13px !important; 
+        font-size: 13px !important; /* Restores the readable font size! */
         white-space: normal !important;
         display: block;
     }
     
     .attd-slot {
-        font-size: 12px !important; 
+        font-size: 12px !important; /* Restores the readable subject text! */
         padding: 4px !important;
     }
 }
-
