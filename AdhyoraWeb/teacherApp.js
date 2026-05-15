@@ -23,7 +23,8 @@ let currentCollegeID = "";
 let currentUserID = "";
 let isHOD = false;
 let profileListener = null;
-let teacherDeptRaw = ""; // 🚨 Needed to figure out which notifications to download!
+let teacherDeptRaw = ""; // Needed to figure out which notifications to download!
+let hasStartedInbox = false;
 
 // Get College ID from URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -43,10 +44,97 @@ if (!currentCollegeID) {
 }
 
 // ==========================================
+// 🚨 UI NAVIGATION ROUTER (EXACTLY LIKE PRINCIPAL)
+// ==========================================
+const views = {
+    welcome: document.getElementById("welcomeView"),
+    attendance: document.getElementById("attendanceView"),
+    timetable: document.getElementById("timetableView"),
+    internalMarks: document.getElementById("internalMarksView"),
+    subjects: document.getElementById("subjectsView"),
+    calendar: document.getElementById("calendarView"),
+    assignments: document.getElementById("assignmentsView"),
+    studentList: document.getElementById("studentListView"),
+    subjectAssign: document.getElementById("subjectAssignView"),
+    batch: document.getElementById("batchView"),
+    eventAttendance: document.getElementById("eventAttendanceView"),
+    notifications: document.getElementById("notificationsView"),
+    messages: document.getElementById("messagesView")
+};
+
+const sidebar = document.getElementById("mainSidebar");
+const mainContent = document.querySelector(".main-content");
+const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
+
+function switchView(targetView, clickedBtn) {
+    // 1. Clear active classes from all buttons
+    navButtons.forEach(btn => btn.classList.remove("active-nav"));
+    
+    // 2. Add active class to the clicked button
+    if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) {
+        clickedBtn.classList.add("active-nav");
+    }
+
+    // 3. Hide all views
+    Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
+
+    // 4. Handle Mobile/PC Layout Shifts
+    if (targetView === "HOME") {
+        sidebar.classList.remove("mobile-hidden"); 
+        mainContent.classList.remove("mobile-active");
+        if (window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
+    } else {
+        sidebar.classList.add("mobile-hidden"); 
+        mainContent.classList.add("mobile-active");
+        if (targetView) { 
+            targetView.classList.remove("hidden-view"); 
+            targetView.style.opacity = 0; 
+            setTimeout(() => targetView.style.opacity = 1, 50); 
+        } else {
+            showRcToast("This module is under construction.");
+        }
+    }
+}
+
+// 🚨 Map Bottom Nav Icons
+document.getElementById("btnHome").addEventListener("click", (e) => switchView("HOME", e.currentTarget));
+document.getElementById("btnMessages").addEventListener("click", (e) => switchView(views.messages, e.currentTarget));
+
+// 🚨 NOTIFICATION BUTTON LOGIC
+document.getElementById("btnNotifications").addEventListener("click", (e) => {
+    switchView(views.notifications, e.currentTarget);
+    // Hide all red dots when the inbox is opened!
+    document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
+});
+
+// 🚨 Map PC Sidebar Buttons
+document.getElementById("btnNavAttendance").addEventListener("click", (e) => switchView(views.attendance, e.currentTarget));
+document.getElementById("btnNavTimetable").addEventListener("click", (e) => switchView(views.timetable, e.currentTarget));
+document.getElementById("btnNavInternalMarks").addEventListener("click", (e) => switchView(views.internalMarks, e.currentTarget));
+document.getElementById("btnNavSubjects").addEventListener("click", (e) => switchView(views.subjects, e.currentTarget));
+document.getElementById("btnNavCalendar").addEventListener("click", (e) => switchView(views.calendar, e.currentTarget));
+document.getElementById("btnNavAssignments").addEventListener("click", (e) => switchView(views.assignments, e.currentTarget));
+document.getElementById("btnNavStudentList").addEventListener("click", (e) => switchView(views.studentList, e.currentTarget));
+document.getElementById("btnNavSubjectAssign").addEventListener("click", (e) => switchView(views.subjectAssign, e.currentTarget));
+document.getElementById("btnNavBatch").addEventListener("click", (e) => switchView(views.batch, e.currentTarget));
+document.getElementById("btnNavEventAttendance").addEventListener("click", (e) => switchView(views.eventAttendance, e.currentTarget));
+
+// 🚨 Map the 10 Home Grid Buttons
+document.getElementById("gridBtnAttendance").addEventListener("click", () => switchView(views.attendance, document.getElementById("btnNavAttendance")));
+document.getElementById("gridBtnTimetable").addEventListener("click", () => switchView(views.timetable, document.getElementById("btnNavTimetable")));
+document.getElementById("gridBtnInternalMarks").addEventListener("click", () => switchView(views.internalMarks, document.getElementById("btnNavInternalMarks")));
+document.getElementById("gridBtnSubjects").addEventListener("click", () => switchView(views.subjects, document.getElementById("btnNavSubjects")));
+document.getElementById("gridBtnCalendar").addEventListener("click", () => switchView(views.calendar, document.getElementById("btnNavCalendar")));
+document.getElementById("gridBtnAssignments").addEventListener("click", () => switchView(views.assignments, document.getElementById("btnNavAssignments")));
+document.getElementById("gridBtnStudentList").addEventListener("click", () => switchView(views.studentList, document.getElementById("btnNavStudentList")));
+document.getElementById("gridBtnSubjectAssign").addEventListener("click", () => switchView(views.subjectAssign, document.getElementById("btnNavSubjectAssign")));
+document.getElementById("gridBtnBatch").addEventListener("click", () => switchView(views.batch, document.getElementById("btnNavBatch")));
+document.getElementById("gridBtnEventAttendance").addEventListener("click", () => switchView(views.eventAttendance, document.getElementById("btnNavEventAttendance")));
+
+
+// ==========================================
 // 🚨 PROFILE DATA ENGINE
 // ==========================================
-let hasStartedInbox = false;
-
 function ListenToProfile() {
     if (profileListener) profileListener(); // Stop old listener
 
@@ -135,7 +223,7 @@ function startInboxListener() {
         renderNotifications(); 
     };
 
-    // 2. Listen to College-Level Messages (🚨 Firebase Index Fix: Removed orderBy to prevent crash)
+    // 2. Listen to College-Level Messages
     if (inboxListenerUnsub) inboxListenerUnsub();
     inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics)), (snap) => {
         inboxCache = []; 
@@ -200,58 +288,6 @@ function renderNotifications() {
     }).join('');
 }
 
-// ==========================================
-// 🚨 UI NAVIGATION ROUTER
-// ==========================================
-const views = {
-    welcome: document.getElementById("welcomeView"),
-    notifications: document.getElementById("notificationsView")
-};
-
-const sidebar = document.getElementById("mainSidebar");
-const mainContent = document.querySelector(".main-content");
-const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
-
-function switchView(targetViewId, clickedBtnId) {
-    // 1. Remove active state from all buttons
-    navButtons.forEach(btn => btn.classList.remove("active-nav"));
-    
-    // 2. Add active state to clicked button
-    if (clickedBtnId) {
-        let btn = document.getElementById(clickedBtnId);
-        if (btn) btn.classList.add("active-nav");
-    }
-
-    // 3. Hide all views
-    Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
-
-    // 4. Handle Mobile/PC Layout Shifts
-    if (targetViewId === "welcomeView") {
-        sidebar.classList.remove("mobile-hidden"); 
-        mainContent.classList.remove("mobile-active");
-        if (window.innerWidth > 1024) views.welcome.classList.remove("hidden-view");
-    } else {
-        sidebar.classList.add("mobile-hidden"); 
-        mainContent.classList.add("mobile-active");
-        
-        let targetEl = document.getElementById(targetViewId);
-        if (targetEl) { 
-            targetEl.classList.remove("hidden-view"); 
-            targetEl.style.opacity = 0; 
-            setTimeout(() => targetEl.style.opacity = 1, 50); 
-        }
-    }
-}
-
-// Map the specific Nav Buttons
-document.getElementById("btnHome").addEventListener("click", (e) => switchView("welcomeView", "btnHome"));
-
-document.getElementById("btnNotifications").addEventListener("click", (e) => {
-    switchView("notificationsView", "btnNotifications");
-    
-    // 🚨 Hide the red dot when they open the inbox!
-    document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
-});
 
 // ==========================================
 // 🚨 SETTINGS DRAWER ACTIONS
@@ -259,12 +295,14 @@ document.getElementById("btnNotifications").addEventListener("click", (e) => {
 const SUPPORT_EMAIL = "pixelaks.technologies@gmail.com";
 const EMAIL_SUBJECT = "Support Request - Teacher App";
 
-document.getElementById("btnSettings").addEventListener("click", () => document.getElementById("settingsOverlay").classList.add("active"));
-document.getElementById("closeSettingsBtn").addEventListener("click", () => document.getElementById("settingsOverlay").classList.remove("active"));
-document.getElementById("settingsOverlay").addEventListener("click", (e) => { if (e.target === document.getElementById("settingsOverlay")) document.getElementById("settingsOverlay").classList.remove("active"); });
-
 document.getElementById("btnContactUs").addEventListener("click", () => {
     let osName = "Web Browser";
+    if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
+    if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
+    if (navigator.userAgent.indexOf("Linux") != -1) osName = "Linux PC";
+    if (/Android/i.test(navigator.userAgent)) osName = "Android Browser";
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) osName = "iOS Browser";
+
     let role = isHOD ? "Teacher (HOD)" : "Teacher";
     let deviceInfo = `\n========================\nDiagnostic Information\n========================\nDevice Model: ${osName}\nOperating System: ${navigator.platform}\nApp Version: 1.0.0 (Web)\nCollege ID: ${currentCollegeID}\nRole: ${role}\n========================`;
     
@@ -302,11 +340,17 @@ function applyTheme(isDark) {
     localStorage.setItem("adhyora_teacher_theme", isDark ? "dark" : "light");
 }
 
-document.getElementById("btnThemes").addEventListener("click", () => {
-    document.getElementById("settingsOverlay").classList.remove("active");
-    document.getElementById("themesModal").classList.add("active");
-});
-
 document.getElementById("btnDarkMode").addEventListener("click", () => applyTheme(true));
 document.getElementById("btnLightMode").addEventListener("click", () => applyTheme(false));
 applyTheme(localStorage.getItem("adhyora_teacher_theme") === "dark");
+
+// Settings Modals Toggles
+const elSettings = document.getElementById("settingsOverlay");
+document.getElementById("btnSettings").addEventListener("click", () => elSettings.classList.add("active"));
+document.getElementById("closeSettingsBtn").addEventListener("click", () => elSettings.classList.remove("active"));
+elSettings.addEventListener("click", (e) => { if (e.target === elSettings) elSettings.classList.remove("active"); });
+
+document.getElementById("btnThemes").addEventListener("click", () => {
+    elSettings.classList.remove("active");
+    document.getElementById("themesModal").classList.add("active");
+});
