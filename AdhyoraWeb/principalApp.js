@@ -5,6 +5,23 @@ import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, 
 // Add getMessaging, getToken, deleteToken to your imports
 import { getMessaging, getToken, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
+// ==========================================
+// 🚨 SILENCE CONSOLE IN PRODUCTION
+// ==========================================
+if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    console.log = function() {};
+    console.warn = function() {};
+    console.error = function() {};
+}
+
+// 🚨 SECURE HASHING ALGORITHM (SHA-256)
+async function hashText(text) {
+    const msgBuffer = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const firebaseConfig = {
     apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
     authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -3729,28 +3746,21 @@ function CheckSecurityPin() {
     document.getElementById("initialAppLoader").style.display = "none"; 
     elLock.screen.style.display = "flex"; 
 
-    // Prevent duplicate listeners if this function is called twice
     if (securityListener) securityListener(); 
 
-    // 🚨 REAL-TIME LISTENER: This watches the database 24/7!
-    securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "metadata", "security"), (snap) => {
+    // 🚨 REAL-TIME LISTENER (Now Async for Hashing)
+    securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "metadata", "security"), async (snap) => {
         if (snap.exists() && snap.data().adminPin) {
             const livePin = snap.data().adminPin;
             
-            // ========================================================
-            // 🚨 REMOTE HACK PREVENTION (Fires if PIN changes while app is open)
-            // ========================================================
+            // REMOTE HACK PREVENTION
             if (!isFirstSecurityLoad && cachedAdminPin && cachedAdminPin !== livePin) {
-                console.warn("SECURITY ALERT: PIN changed remotely!");
-                
-                // 1. Wipe local biometrics instantly so they can't use the old fingerprint!
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
                 localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
                 localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
                 if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
                 
-                // 2. Force the lock screen back up instantly!
                 document.querySelector(".main-content").style.display = "none";
                 document.getElementById("mainSidebar").style.display = "none";
                 elLock.screen.style.display = "flex";
@@ -3760,14 +3770,13 @@ function CheckSecurityPin() {
             }
 
             cachedAdminPin = livePin;
+            const hashedLivePin = await hashText(livePin); // 🚨 HASH THE LIVE PIN!
 
-            // ========================================================
-            // 🚨 STANDARD BOOT SEQUENCE
-            // ========================================================
+            // STANDARD BOOT SEQUENCE
             if (isFirstSecurityLoad) {
-                // Verify local biometrics match the database on boot
                 const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
-                if (isBioEnabledLocally && linkedPin && linkedPin !== cachedAdminPin) {
+                // 🚨 COMPARE SECURE HASHES INSTEAD OF PLAIN TEXT!
+                if (isBioEnabledLocally && linkedPin && linkedPin !== hashedLivePin) {
                     isBioEnabledLocally = false;
                     localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
                     localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
@@ -3780,7 +3789,6 @@ function CheckSecurityPin() {
             }
 
         } else {
-            // No PIN exists in database
             if (isFirstSecurityLoad) {
                 SetLockMode("SETUP_1");
                 isFirstSecurityLoad = false;
@@ -3830,7 +3838,6 @@ if(elLock.btnToggleWrap) {
         if (!isBiometricSupported) return;
 
         if (isBioEnabledLocally) {
-            // Turn it off and wipe the saved credential ID
             isBioEnabledLocally = false;
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
             localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); 
@@ -3838,7 +3845,6 @@ if(elLock.btnToggleWrap) {
             elLock.toggleBio.classList.remove("active");
             showRcToast("Biometrics disabled for this device.");
         } else {
-            // Turn it on and SAVE the credential ID + Linked PIN
             try {
                 const challenge = window.crypto.getRandomValues(new Uint8Array(32));
                 const userIDBuffer = new TextEncoder().encode(currentUserID);
@@ -3854,10 +3860,12 @@ if(elLock.btnToggleWrap) {
                     }
                 });
 
-                // Extract and save the exact Credential ID & Link the PIN
                 const credIdBase64 = bufferToBase64(credential.rawId);
                 localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
-                localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPin); // 🚨 LINKED HERE
+                
+                // 🚨 SAVE THE SECURE HASH TO BROWSER INSTEAD OF PLAIN TEXT!
+                const secureHash = await hashText(cachedAdminPin);
+                localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, secureHash); 
 
                 isBioEnabledLocally = true;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
@@ -3971,7 +3979,6 @@ function SetLockMode(mode) {
 elLock.btnSubmit.addEventListener("click", async () => {
     let val = elLock.input.value.trim();
     
-    // Only enforce the 4-digit rule if we are NOT on the Biometric screen
     if (lockMode !== "SETUP_BIO" && val.length !== 4) {
         elLock.status.innerText = "PIN must be exactly 4 digits.";
         elLock.status.style.color = "#ef4444";
@@ -4001,7 +4008,6 @@ elLock.btnSubmit.addEventListener("click", async () => {
                 await setDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"), { adminPin: val, updatedAt: serverTimestamp() }, { merge: true });
                 cachedAdminPin = val;
                 
-                // Wipe old biometrics because the PIN just changed
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
                 localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
@@ -4010,7 +4016,6 @@ elLock.btnSubmit.addEventListener("click", async () => {
                 
                 elLock.btnSubmit.disabled = false;
                 
-                // Prompt to register new Fingerprint for the new PIN
                 if (isBiometricSupported && !isBioEnabledLocally) {
                     SetLockMode("SETUP_BIO");
                 } else {
@@ -4045,10 +4050,13 @@ elLock.btnSubmit.addEventListener("click", async () => {
                 }
             });
 
-            // Save the Credential ID and Link it to the PIN!
             const credIdBase64 = bufferToBase64(credential.rawId);
             localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
-            localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPin); // 🚨 LINKED HERE
+            
+            // 🚨 SAVE THE SECURE HASH TO BROWSER INSTEAD OF PLAIN TEXT!
+            const secureHash = await hashText(cachedAdminPin);
+            localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, secureHash); 
+            
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
             isBioEnabledLocally = true;
             
@@ -4161,3 +4169,19 @@ document.addEventListener("visibilitychange", () => {
         }
     }
 });
+
+// ==========================================
+// 🚨 BANK-GRADE ANTI-SNOOPING SHIELD 
+// ==========================================
+// 1. Block Right-Click Context Menu
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+// 2. Block DevTools Keyboard Shortcuts
+document.onkeydown = function(e) {
+    // Prevent F12
+    if (e.keyCode === 123) return false;
+    // Prevent Ctrl+Shift+I / J / C (DevTools)
+    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) return false;
+    // Prevent Ctrl+U (View Source)
+    if (e.ctrlKey && e.keyCode === 85) return false;
+};
