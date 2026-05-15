@@ -1,0 +1,457 @@
+/* ==========================================
+   1. CSS VARIABLES (CRIMSON THEME)
+   ========================================== */
+:root {
+    /* Primary Crimson/Rose Brand Colors */
+    --brand-red: #cc202e; /* Exact match to your screenshot logo */
+    --brand-red-hover: #a31824;
+    --light-red-bg: #fff1f2; /* Soft pink button background */
+    --border-red: #fecdd3; /* Light pink border */
+    
+    /* Backgrounds & Surfaces */
+    --bg-base: #fcfcfc;
+    --card-bg: #ffffff;
+    --bg-grid-color: #f1f5f9;
+    --border-color: #e2e8f0;
+    
+    /* Typography */
+    --text-dark: #0f172a;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+}
+
+/* Dark Mode Overrides */
+body.dark-mode {
+    --brand-red: #fb7185; 
+    --brand-red-hover: #f43f5e;
+    --light-red-bg: #4c0519; 
+    --border-red: #881337; 
+    
+    --bg-base: #0f172a;
+    --card-bg: #1e293b;
+    --bg-grid-color: #0b1120;
+    --border-color: #334155;
+    
+    --text-dark: #f8fafc;
+    --text-muted: #cbd5e1;
+    --text-light: #64748b;
+}
+
+/* ==========================================
+   2. RESET & BASE STYLES
+   ========================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-dark);
+    overflow-x: hidden;
+    transition: background-color 0.3s, color 0.3s;
+    /* Optional: If you want that subtle grid notebook background from the image */
+    background-image: linear-gradient(rgba(204, 32, 46, 0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(204, 32, 46, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+
+/* Hide elements dynamically */
+.hidden-view { display: none !important; }
+
+/* ==========================================
+   3. MOBILE TOP HEADER (Logo)
+   ========================================== */
+.top-header {
+    text-align: center;
+    padding: 20px 0 10px 0;
+    background: transparent;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.logo-text {
+    font-family: 'Yatra One', cursive;
+    color: var(--brand-red);
+    font-size: 38px;
+    letter-spacing: 4px;
+    text-shadow: 0 2px 10px rgba(204, 32, 46, 0.15);
+}
+
+/* ==========================================
+   4. TEACHER HOME GRID (The 10 Buttons)
+   ========================================== */
+.teacher-grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px 25px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding-bottom: 120px; /* Space for bottom nav */
+}
+
+.t-grid-btn {
+    background: var(--light-red-bg);
+    border: 1px solid var(--border-red);
+    border-radius: 16px;
+    padding: 22px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-dark);
+    box-shadow: 0 4px 15px rgba(204, 32, 46, 0.05);
+}
+
+.t-grid-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(204, 32, 46, 0.08);
+}
+
+.t-grid-btn .btn-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.t-grid-btn .btn-icon {
+    font-size: 26px;
+    color: var(--text-dark);
+    transition: 0.3s;
+}
+
+.t-grid-btn:hover .btn-icon {
+    transform: translateY(-3px);
+}
+
+/* ==========================================
+   5. MOBILE BOTTOM NAVIGATION
+   ========================================== */
+.icon-nav-container {
+    position: fixed;
+    bottom: 25px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.icon-nav {
+    background: var(--light-red-bg);
+    border: 2px solid var(--border-red);
+    border-radius: 40px;
+    display: flex;
+    padding: 8px 25px;
+    gap: 20px;
+    box-shadow: 0 10px 25px rgba(204, 32, 46, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.nav-icon-btn, .nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dark);
+    font-size: 18px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.3s;
+    position: relative;
+}
+
+.nav-icon-btn.active-nav, .nav-btn.active-nav {
+    background: var(--card-bg);
+    color: var(--text-dark);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+/* Notification Dot */
+.notification-dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 10px;
+    height: 10px;
+    background: var(--brand-red);
+    border-radius: 50%;
+    border: 2px solid var(--light-red-bg);
+}
+
+/* ==========================================
+   6. PC DESKTOP LAYOUT (Sidebar & Main)
+   ========================================== */
+.dashboard-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: 0.3s;
+    z-index: 500;
+}
+
+.logo-container {
+    padding: 30px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-grid {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: 'Poppins', sans-serif;
+}
+
+.menu-btn:hover {
+    background: var(--bg-grid-color);
+    color: var(--text-dark);
+}
+
+.menu-btn.active-nav {
+    background: var(--light-red-bg);
+    border: 1px solid var(--border-red);
+    color: var(--brand-red);
+}
+
+.menu-btn .btn-icon { font-size: 18px; }
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    background: var(--bg-base);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-card {
+    flex: 1;
+    background: var(--card-bg);
+    margin: 20px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+    overflow: hidden;
+    position: relative;
+}
+
+.dashboard-view {
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* ==========================================
+   7. MODALS & OVERLAYS
+   ========================================== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 30000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Settings Drawer */
+.settings-drawer {
+    position: absolute;
+    right: -400px;
+    top: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 350px;
+    background: var(--card-bg);
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+}
+
+.modal-overlay.active .settings-drawer { right: 0; }
+
+.settings-header {
+    padding: 50px 20px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-grid-color);
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    background: var(--light-red-bg);
+    color: var(--brand-red);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 35px;
+    margin: 0 auto 15px;
+    border: 2px solid var(--border-red);
+}
+
+.settings-menu {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-btn {
+    background: var(--bg-grid-color);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: 12px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.settings-btn i {
+    width: 25px;
+    color: var(--text-muted);
+    transition: 0.2s;
+}
+
+.settings-btn:hover {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+}
+.settings-btn:hover i { color: var(--brand-red); }
+
+.logout-btn {
+    background: var(--light-red-bg);
+    border-color: var(--border-red);
+    color: var(--brand-red);
+    margin-top: 20px;
+}
+.logout-btn i { color: var(--brand-red); }
+
+.close-settings {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: var(--bg-grid-color);
+    border: 1px solid var(--border-color);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+}
+.close-settings:hover {
+    background: var(--brand-red);
+    color: white;
+    border-color: var(--brand-red);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    width: 40px;
+    height: 22px;
+    background: var(--border-color);
+    border-radius: 15px;
+    position: relative;
+    transition: 0.3s;
+}
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.toggle-switch.active { background: var(--brand-red); }
+.toggle-switch.active::after { left: 20px; }
+
+/* ==========================================
+   8. RESPONSIVE DESIGN LOGIC
+   ========================================== */
+/* Desktop Only Setup */
+@media (min-width: 901px) {
+    .icon-nav-container { display: none; }
+    .top-header { display: none; }
+    .teacher-grid-container { display: none; } /* Hide mobile grid on PC */
+}
+
+/* Mobile Only Setup */
+@media (max-width: 900px) {
+    .dashboard-wrapper { display: block; }
+    .welcome-card { margin: 0; border-radius: 0; border: none; box-shadow: none; height: 100vh; }
+    
+    /* Logic to switch between sidebar and main content on mobile */
+    .sidebar.mobile-hidden { display: none; }
+    .main-content { display: none; }
+    .main-content.mobile-active { display: flex; }
+}

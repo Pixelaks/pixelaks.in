@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Teacher Dashboard</title>
+    <link rel="stylesheet" href="teacher.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js" integrity="sha256-W8yB8zR21tXW9x2w8eG+A1/Tq7k0O5M+q6Y1R3w5K8g=" crossorigin="anonymous"></script>
+</head>
+<body class="light-mode">
+    <noscript>
+        <div style="position: fixed; inset: 0; background: #0f172a; z-index: 999999; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; color: white;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: #e11d48; margin-bottom: 20px;"></i>
+            <h1 style="font-family: 'Poppins', sans-serif;">JavaScript is Disabled</h1>
+            <p style="color: #94a3b8; max-width: 400px; line-height: 1.5;">Adhyora requires JavaScript to run its security protocols and connect to the database. Please enable JavaScript in your browser settings to continue.</p>
+        </div>
+    </noscript>
+
+    <div id="initialAppLoader" style="position:fixed; inset:0; background:#0f172a; display:flex; align-items:center; justify-content:center; z-index:20000;">
+        <div style="text-align:center;">
+            <div style="width:50px; height:50px; border:3px solid rgba(225,29,72,0.1); border-top-color:#e11d48; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 15px;"></div>
+            <p style="color:#94a3b8; font-family:'Poppins'; font-size:12px; letter-spacing:1px;">LOADING ADHYORA...</p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="hodNotificationOverlay">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; text-align: center; border: 2px solid var(--brand-red); box-shadow: 0 20px 50px rgba(225, 29, 72, 0.2);">
+            <h3 style="color: var(--brand-red); margin-bottom: 15px;"><i class="fas fa-crown" style="font-size: 30px;"></i><br>HOD Privileges Unlocked</h3>
+            <p style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.5;">You have been assigned as the Head of Department. You now have access to manage Teacher Allocations and Master Timetables.</p>
+            <button onclick="document.getElementById('hodNotificationOverlay').classList.remove('active')" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Acknowledge</button>
+        </div>
+    </div>
+
+    <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
+
+    <div class="icon-nav-container">
+        <div class="icon-nav">
+            <button class="nav-icon-btn active-nav" id="btnHome" title="Overview"><i class="fas fa-th-large"></i></button>
+            <button class="nav-icon-btn" id="btnSettings" title="Settings"><i class="fas fa-cog"></i></button>
+            <button class="nav-icon-btn" id="btnNotifications" title="Notifications">
+                <i class="fas fa-bell"></i><span class="notification-dot"></span>
+            </button>
+            <button class="nav-btn" id="btnMessages" title="Messages" style="background: transparent; border: none; color: #475569; font-size: 20px; cursor: pointer; position: relative;">
+                <i class="fas fa-comment-dots"></i><span class="notification-dot" style="display:none; position:absolute; top:-2px; right:-2px; width:8px; height:8px; background:#e11d48; border-radius:50%;"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        
+        <aside class="sidebar" id="mainSidebar">
+            <div class="logo-container">
+                <h1 class="logo-text" style="color: var(--brand-red);">ADHYORA</h1>
+            </div>
+            
+            <div class="nav-grid">
+                <button class="menu-btn" id="btnNavAttendance"><span class="btn-text">Attendance</span> <i class="fas fa-clipboard-list btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavTimetable"><span class="btn-text">TimeTable</span> <i class="fas fa-calendar-alt btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavInternalMarks"><span class="btn-text">InternalMarks</span> <i class="fas fa-file-signature btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavSubjects"><span class="btn-text">Subjects</span> <i class="fas fa-book-open btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavCalendar"><span class="btn-text">Calendar</span> <i class="fas fa-calendar-day btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavAssignments"><span class="btn-text">Assignments</span> <i class="fas fa-tasks btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavStudentList"><span class="btn-text">Student List</span> <i class="fas fa-users btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavSubjectAssign"><span class="btn-text">Subject Assign</span> <i class="fas fa-user-tag btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavBatch"><span class="btn-text">Batch</span> <i class="fas fa-id-card btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavEventAttendance"><span class="btn-text">Event Attendance</span> <i class="fas fa-users-cog btn-icon"></i></button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="welcome-card" id="mainViewContainer">
+                
+                <div id="welcomeView" class="dashboard-view active" style="width: 100%; height: 100%; overflow-y: auto;">
+                    <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
+                        <h2 style="color: var(--brand-red); font-family: 'Yatra One', cursive; letter-spacing: 1px;">Teacher Dashboard</h2>
+                    </div>
+                    
+                    <div class="teacher-grid-container">
+                        <button class="t-grid-btn" id="gridBtnAttendance"><span class="btn-title">Attendance</span><i class="fas fa-clipboard-list btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnTimetable"><span class="btn-title">TimeTable</span><i class="fas fa-calendar-alt btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnInternalMarks"><span class="btn-title">InternalMarks</span><i class="fas fa-file-signature btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnSubjects"><span class="btn-title">Subjects</span><i class="fas fa-book-open btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnCalendar"><span class="btn-title">Calendar</span><i class="fas fa-calendar-day btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnAssignments"><span class="btn-title">Assignments</span><i class="fas fa-tasks btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnStudentList"><span class="btn-title">Student List</span><i class="fas fa-users btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnSubjectAssign"><span class="btn-title">Subject Assign</span><i class="fas fa-user-tag btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnBatch"><span class="btn-title">Batch</span><i class="fas fa-id-card btn-icon"></i></button>
+                        <button class="t-grid-btn" id="gridBtnEventAttendance"><span class="btn-title">Event Attendance</span><i class="fas fa-users-cog btn-icon"></i></button>
+                    </div>
+                </div>
+
+                <div id="attendanceView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px;"><h3 style="color: var(--brand-red);">Attendance Panel</h3></div>
+                <div id="timetableView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px;"><h3 style="color: var(--brand-red);">Timetable Panel</h3></div>
+                </div> 
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="settingsOverlay">
+        <div class="settings-drawer">
+            <div class="settings-header">
+                <div class="profile-avatar"><i class="fas fa-chalkboard-teacher"></i></div>
+                <h3 id="teacherNameText">Loading...</h3>
+                <p id="teacherDeptText" style="color: var(--brand-red); font-weight: bold; font-size: 13px; margin-top: 5px;">...</p>
+                <p id="teacherEmailText" style="margin-top: 5px;">email@loading.com</p>
+            </div>
+            <div class="settings-menu">
+                <button class="settings-btn" id="btnContactUs"><i class="fas fa-envelope"></i> Contact Support</button>
+                <button class="settings-btn" id="btnWebsite"><i class="fas fa-globe"></i> Pixelaks Technologies</button>
+                <button class="settings-btn" id="btnPrivacy"><i class="fas fa-shield-alt"></i> Privacy Policy</button>
+                <button class="settings-btn" id="btnTerms"><i class="fas fa-file-contract"></i> Terms & Conditions</button>
+                
+                <button class="settings-btn" id="btnToggleNotifications" style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
+                    <span><i class="fas fa-bell"></i> Push Notifications</span>
+                    <div class="toggle-switch" id="notifToggleSwitch"></div>
+                </button>
+                
+                <button class="settings-btn" id="btnThemes"><i class="fas fa-palette"></i> Themes</button>
+                <button class="settings-btn" id="btnDevices"><i class="fas fa-laptop-house"></i> Devices</button>
+                
+                <div class="settings-btn" id="btnToggleBiometrics" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:10px; align-items:center;"><i class="fas fa-fingerprint"></i> Enable Biometrics</div>
+                    <div class="toggle-switch" id="bioToggleSwitch"></div>
+                </div>
+                
+                <button class="settings-btn logout-btn" id="btnSignOut"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+            <div class="settings-footer" id="versionText">Version 1.0.0 (Web)</div>
+            <button class="close-settings" id="closeSettingsBtn"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="themesModal">
+        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+            <button class="close-settings" onclick="document.getElementById('themesModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="margin-bottom:15px; color: var(--brand-red); text-align: center;"><i class="fas fa-adjust"></i> Appearance</h3>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button id="btnLightMode" style="flex:1; padding: 15px; border-radius: 12px; border: 2px solid var(--brand-red); background: white; color: #334155; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-sun" style="color: #f59e0b; margin-right: 5px;"></i> Light</button>
+                <button id="btnDarkMode" style="flex:1; padding: 15px; border-radius: 12px; border: 1px solid #475569; background: #1e293b; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-moon" style="color: #60a5fa; margin-right: 5px;"></i> Dark</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="sessionsModal">
+        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+            <button class="close-settings" onclick="document.getElementById('sessionsModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="margin-bottom:5px; color: var(--brand-red); text-align: center;"><i class="fas fa-laptop-house"></i> Active Sessions</h3>
+            <p style="font-size: 11px; color: #64748b; text-align: center; margin-bottom: 20px;">Manage devices where your account is logged in.</p>
+            <div id="sessionsListContainer" class="scrollable-list" style="max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                <div class="no-data-text">Loading Devices...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rcToast" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: bottom 0.3s; z-index: 9999;">Notification</div>
+
+    <script type="module" src="teacherApp.js"></script>
+</body>
+</html>
