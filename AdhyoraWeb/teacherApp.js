@@ -112,9 +112,6 @@ function ListenToProfile() {
 // 🚨 NOTIFICATIONS & MESSAGES ENGINE
 // ==========================================
 let cachedMessages = [];
-let cachedNotifs = [];
-let inboxListenerUnsub = null;
-let globalListenerUnsub = null;
 
 function startInboxListener() {
     const getSafeTopic = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
