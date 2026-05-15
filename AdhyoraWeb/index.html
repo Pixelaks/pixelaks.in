@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adhyora - Student Portal</title>
+    <title>Adhyora - Portal</title>
     <link rel="stylesheet" href="style.css">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +23,6 @@
     if (window.location.hash === "#assignments") {
         localStorage.setItem("pendingAssignOpen", "true");
     }
-    // 🚨 ADD THESE TWO FOR THE PRINCIPAL DASHBOARD 🚨
     if (window.location.hash === "#teacher_requests") {
         localStorage.setItem("pendingTeacherReqOpen", "true");
     }
@@ -57,7 +56,8 @@
             <select id="roleDropdown" class="input-field">
                 <option value="" disabled selected>Select Role</option>
                 <option value="Student">Student</option>
-                <option value="Teacher" disabled>Teacher (App Only)</option>
+                <!-- 🚨 UNLOCKED TEACHER OPTION -->
+                <option value="Teacher">Teacher</option>
                 <option value="Principal">Principal</option>
             </select>
 
@@ -65,10 +65,12 @@
         </div>
 
         <div id="signInPanel" class="panel">
-            <!-- 🚨 ADDED ID -->
-            <h2 class="panel-title" id="signInTitle">Student SignIn</h2>
+            <h2 class="panel-title" id="signInTitle">SignIn</h2>
             
             <input type="email" id="loginEmail" class="input-field" placeholder="Email...">
+            
+            <!-- 🚨 ADDED: Room Code for Teacher Login -->
+            <input type="text" id="loginRoomCode" class="input-field" placeholder="Room Code..." style="display: none;">
             
             <div class="password-container">
                 <input type="password" id="loginPassword" class="input-field" placeholder="Password...">
@@ -86,10 +88,8 @@
                 <label for="rememberMe">Always remember me</label>
             </div>
 
-            <!-- Inside the signInPanel -->
             <p class="switch-panel-text">
                 Don't have an account?<br>
-                <!-- 🚨 CHANGED href -->
                 <a href="javascript:void(0);" onclick="switchPanel('registerPanel')" class="text-link">Create One</a>
             </p>
         </div>
@@ -98,8 +98,11 @@
             <h2 class="panel-title" id="registerTitle">Register</h2> 
             
             <input type="text" id="regName" class="input-field" placeholder="Name...">
-            <!-- This is the Roll Number field we will hide via JS -->
-            <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber...">
+            <!-- Security Inputs Hidden by Default -->
+            <input type="text" id="regRollNo" class="input-field" placeholder="RollNumber..." style="display: none;">
+            <!-- 🚨 ADDED: Room Code for Teacher Registration -->
+            <input type="text" id="regRoomCode" class="input-field" placeholder="Room Code..." style="display: none;">
+            
             <input type="email" id="regEmail" class="input-field" placeholder="Email...">
             
             <div class="password-container">
@@ -122,7 +125,6 @@
 
             <p class="switch-panel-text">
                 Already have an account?<br>
-                <!-- 🚨 CHANGED href -->
                 <a href="javascript:void(0);" onclick="switchPanel('signInPanel')" class="text-link">SignIn</a>
             </p>
         </div>
