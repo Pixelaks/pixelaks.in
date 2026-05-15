@@ -580,3 +580,68 @@ body.dark-mode .asn-select-pill {
 body.dark-mode .up-icon {
     background-color: #0f172a !important;
 }
+
+/* =========================================
+   💎 PREMIUM SUBSCRIPTION UI ANIMATIONS
+   ========================================= */
+
+/* Float up animation when the blocker appears */
+@keyframes subFloatUp {
+    0% { opacity: 0; transform: translateY(50px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulseOp {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Base card styling */
+.sub-card-premium {
+    z-index: 1;
+}
+
+/* Hover effect for the standard Monthly card */
+.sub-card-premium:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5) !important;
+    border-color: #475569 !important;
+}
+
+/* Hover effect for the highlighted Yearly card */
+.sub-card-premium.highlight {
+    z-index: 2; /* Keeps it overlapping the monthly card */
+}
+.sub-card-premium.highlight:hover {
+    transform: scale(1.05) translateY(-10px) !important;
+    box-shadow: 0 30px 60px rgba(74, 222, 128, 0.25) !important;
+}
+
+/* Monthly Button Hover */
+.btn-sub-monthly:hover {
+    background-color: #334155 !important;
+    border-color: #64748b !important;
+    color: #fff !important;
+}
+
+/* Yearly Button Hover */
+.btn-sub-yearly:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(74, 222, 128, 0.5) !important;
+    background-color: #22c55e !important;
+}
+
+/* Mobile Responsiveness for Pricing Grid */
+@media (max-width: 768px) {
+    .pricing-grid {
+        flex-direction: column;
+        align-items: center;
+        gap: 40px !important;
+    }
+    .sub-card-premium.highlight {
+        transform: scale(1) !important; /* Remove scaling on mobile to fit screen */
+    }
+    .sub-card-premium.highlight:hover {
+        transform: translateY(-10px) !important;
+    }
+}
