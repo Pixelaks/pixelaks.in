@@ -109,8 +109,13 @@ function ListenToProfile() {
 }
 
 // ==========================================
-// 🚨 NOTIFICATION INBOX ENGINE
+// 🚨 NOTIFICATIONS & MESSAGES ENGINE
 // ==========================================
+let cachedMessages = [];
+let cachedNotifs = [];
+let inboxListenerUnsub = null;
+let globalListenerUnsub = null;
+
 function startInboxListener() {
     const getSafeTopic = (str) => (!str || str === "All") ? "ALL" : str.replace(/[^a-zA-Z0-9]/g, '');
     let safeColID = getSafeTopic(currentCollegeID);
@@ -122,39 +127,38 @@ function startInboxListener() {
         `${safeColID}_TEACHERS_${safeDept}`
     ];
 
-    let inboxCache = []; 
-    let globalCache = [];
-    
-    const updateNotifUI = () => { 
-        cachedNotifs = [...inboxCache, ...globalCache].sort((a,b) => b.time - a.time); 
-        renderNotifications(); 
-    };
-
+    // 1. Listen to College-Level INBOX MESSAGES
     if (inboxListenerUnsub) inboxListenerUnsub();
     inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics)), (snap) => {
-        inboxCache = []; 
+        cachedMessages = []; 
         snap.forEach(doc => { 
             let d = doc.data(); 
-            inboxCache.push({ 
-                title: d.title || "Notice", 
+            cachedMessages.push({ 
+                title: d.title || "Message", 
                 body: d.body || "", 
                 time: d.timestamp ? d.timestamp.toDate() : new Date(), 
-                sender: d.senderName || "Principal" 
+                sender: d.senderName || "Unknown",
+                role: (d.senderRole || "").toLowerCase() // 🚨 Store role for color logic
             }); 
         });
         
+        cachedMessages.sort((a, b) => b.time - a.time); // Sort newest first
+        
+        // Show Red Dot for Messages
         if (snap.docs.length > 0) {
-            document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "block");
+            let dot = document.querySelector("#btnMessages .notification-dot");
+            if (dot) dot.style.display = "block";
         }
-        updateNotifUI();
+        renderMessages();
     });
 
+    // 2. Listen to Global Developer NOTIFICATIONS
     if (globalListenerUnsub) globalListenerUnsub();
     globalListenerUnsub = onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
-        globalCache = []; 
+        cachedNotifs = []; 
         snap.forEach(doc => { 
             let d = doc.data(); 
-            globalCache.push({ 
+            cachedNotifs.push({ 
                 title: d.title || "System Update", 
                 body: d.body || "", 
                 time: d.timestamp ? d.timestamp.toDate() : new Date(), 
@@ -162,11 +166,47 @@ function startInboxListener() {
             }); 
         });
         
+        // Show Red Dot for Notifications
         if (snap.docs.length > 0) {
-            document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "block");
+            let dot = document.querySelector("#btnNotifications .notification-dot");
+            if (dot) dot.style.display = "block";
         }
-        updateNotifUI();
+        renderNotifications();
     });
+}
+
+function renderMessages() {
+    const listEl = document.getElementById("messagesList");
+    if (!listEl) return;
+
+    if (cachedMessages.length === 0) { 
+        listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; 
+        return; 
+    }
+    
+    listEl.innerHTML = cachedMessages.map(m => {
+        // 🚨 COLOR LOGIC BASED ON ROLE
+        let borderColor = "var(--brand-red)"; // Default Teacher Red
+        let roleLabel = "Teacher";
+        
+        if (m.role.includes("principal") || m.role.includes("admin")) {
+            borderColor = "#10b981"; // Principal Green
+            roleLabel = "Principal";
+        } else if (m.role.includes("student")) {
+            borderColor = "#3b82f6"; // Student Blue
+            roleLabel = "Student";
+        }
+        
+        return `
+        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid ${borderColor};">
+            <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${m.title}</div>
+            <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${m.body}</div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
+                <span><i class="fas fa-user-circle" style="margin-right:4px; color:${borderColor};"></i> ${m.sender} <span style="font-weight:normal; opacity:0.7;">(${roleLabel})</span></span>
+                <span>${m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function renderNotifications() {
@@ -174,17 +214,18 @@ function renderNotifications() {
     if (!listEl) return;
 
     if (cachedNotifs.length === 0) { 
-        listEl.innerHTML = `<div class="no-data-text">Inbox is empty</div>`; 
+        listEl.innerHTML = `<div class="no-data-text">No system updates.</div>`; 
         return; 
     }
     
+    // Developer Notifications get a distinct Purple/System look
     listEl.innerHTML = cachedNotifs.map(n => {
         return `
-        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid var(--brand-red);">
+        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid #8b5cf6;">
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${n.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${n.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
-                <span><i class="fas fa-bullhorn" style="margin-right:4px;"></i> ${n.sender}</span>
+                <span><i class="fas fa-satellite-dish" style="margin-right:4px; color:#8b5cf6;"></i> ${n.sender}</span>
                 <span>${n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
             </div>
         </div>`;
