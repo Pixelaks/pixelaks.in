@@ -669,55 +669,35 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 }
 
 /* =========================================
-   📱 BULLETPROOF MOBILE SCROLL & ALIGNMENT FIXES
+   📱 MOBILE POLISH & SCROLL FIXES (REVERTED & FIXED)
    ========================================= */
 @media (max-width: 900px) {
     
-    /* 1. Lock the body to the TRUE mobile viewport (fixes URL bar height bugs) */
+    /* 1. Fix the viewport height so the URL bar doesn't break scrolling */
     body {
         height: 100dvh !important;
         overflow: hidden !important;
     }
 
-    /* 2. Stop the main content strictly ABOVE the bottom navigation bar */
+    /* 2. Restore your original padded look, but lock the height properly */
     .main-content {
         height: 100dvh !important; 
-        padding: 0 !important;
-        padding-bottom: 100px !important; /* Reserves exact space for the nav bar */
+        padding: 15px !important; /* RESTORED: Your original breathing room! */
+        padding-bottom: 100px !important; /* Keeps it strictly above the nav bar */
         box-sizing: border-box !important;
         overflow: hidden !important;
     }
 
-   /* 🚨 NEW: Remove the boxy borders & corners to make it flush with the phone screen */
-    .welcome-card, 
-    .main-content > div {
-        border: none !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-    }
-
-    /* 🚨 NEW: Give the inside content just a tiny bit of breathing room so cards don't touch the glass */
-    .dashboard-view {
-        padding: 15px 10px !important;
-    }
-
-    /* 3. Make every single panel perfectly scrollable within that safe zone */
+    /* 3. 🚨 THE SCROLL FIX: Adds deep internal padding so the last card can be scrolled fully into view! */
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important; /* Smooth momentum scrolling on iOS */
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 80px !important; /* Forces the last card to scroll past the cut-off line */
     }
 
-    /* 4. A hidden "Ghost" block that pushes the very last item up so it never touches the bottom edge */
-    .dashboard-view::after {
-        content: '';
-        display: block;
-        height: 40px;
-        width: 100%;
-        flex-shrink: 0;
-    }
-
-    /* 5. Fix Teacher/Student Cards Cut-off */
+    /* 4. Fix Teacher/Student Cards from squishing the Action Buttons */
     .data-card {
         flex-direction: column !important;
         align-items: flex-start !important;
@@ -726,20 +706,18 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
     .data-card > div:nth-child(2) {
         width: 100%;
         justify-content: flex-start !important;
-        flex-wrap: wrap; /* Allows buttons to wrap safely */
+        flex-wrap: wrap; 
         gap: 12px;
     }
 
-    /* 6. Fix Attendance Grid Alignment */
+    /* 5. Fix Attendance Grid Alignment */
     .attd-row {
         grid-template-columns: 1.4fr repeat(6, 1fr) !important;
         padding: 10px 5px !important;
         gap: 2px !important;
     }
     
-    .attd-teacher-col {
-        overflow: hidden;
-    }
+    .attd-teacher-col { overflow: hidden; }
     .attd-teacher-name {
         font-size: 11px !important;
         white-space: nowrap;
