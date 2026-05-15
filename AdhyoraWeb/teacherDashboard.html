@@ -24,24 +24,24 @@
 
     <div id="initialAppLoader" style="position:fixed; inset:0; background:#0f172a; display:flex; align-items:center; justify-content:center; z-index:20000;">
         <div style="text-align:center;">
-            <div style="width:50px; height:50px; border:3px solid rgba(74,222,128,0.1); border-top-color:#4ade80; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 15px;"></div>
+            <div style="width:50px; height:50px; border:3px solid rgba(211, 47, 47, 0.1); border-top-color:var(--brand-red); border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 15px;"></div>
             <p style="color:#94a3b8; font-family:'Poppins'; font-size:12px; letter-spacing:1px;">LOADING ADHYORA...</p>
         </div>
     </div>
 
     <div id="appLockScreen" style="position:fixed; inset:0; background:#0f172a; z-index:25000; display:none; flex-direction:column; align-items:center; justify-content:center;">
         <div style="background:#1e293b; padding:40px; border-radius:20px; border:1px solid #334155; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5); width:90%; max-width:400px;">
-            <i class="fas fa-lock" style="color:var(--brand-green); font-size:40px; margin-bottom:20px;"></i>
+            <i class="fas fa-lock" style="color:var(--brand-red); font-size:40px; margin-bottom:20px;"></i>
             <h2 id="lockTitle" style="color:white; font-family:'Rajdhani', sans-serif; margin-bottom:10px; font-size:24px; letter-spacing:1px;">ENTER SECURE PIN</h2>
             <p id="lockStatus" style="color:#94a3b8; font-size:13px; margin-bottom:25px; line-height:1.5;">Please enter your 4-digit PIN.</p>
             
             <input type="password" id="lockPinInput" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" maxlength="4" style="text-align:center; font-size:28px; letter-spacing:15px; padding:15px; width:200px; border-radius:12px; border:2px solid #475569; background:#0f172a; color:white; outline:none; margin-bottom:25px; transition:0.3s;" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
             
-            <button id="btnLockBiometrics" style="width:100%; background:transparent; border:2px solid var(--brand-green); color:var(--brand-green); font-weight:bold; padding:15px; border-radius:12px; cursor:pointer; font-size:16px; margin-bottom:15px; display:none; transition:0.3s; box-shadow: 0 0 15px rgba(74,222,128,0.1);">
+            <button id="btnLockBiometrics" style="width:100%; background:transparent; border:2px solid var(--brand-red); color:var(--brand-red); font-weight:bold; padding:15px; border-radius:12px; cursor:pointer; font-size:16px; margin-bottom:15px; display:none; transition:0.3s; box-shadow: 0 0 15px rgba(211, 47, 47, 0.1);">
                 <i class="fas fa-fingerprint" style="margin-right:8px; font-size:20px; vertical-align:middle;"></i> Use Biometrics
             </button>
             
-            <button id="btnLockSubmit" style="width:100%; background:var(--brand-green); color:#000; font-weight:bold; padding:15px; border-radius:12px; border:none; cursor:pointer; font-size:16px; transition:0.2s;">Unlock Dashboard</button>
+            <button id="btnLockSubmit" style="width:100%; background:var(--brand-red); color:#fff; font-weight:bold; padding:15px; border-radius:12px; border:none; cursor:pointer; font-size:16px; transition:0.2s;">Unlock Dashboard</button>
             <button id="btnLockForgot" style="background:transparent; color:#94a3b8; border:none; margin-top:20px; font-size:13px; cursor:pointer; text-decoration:underline; display:none; transition:0.2s;">Forgot PIN?</button>
         </div>
     </div>
@@ -65,12 +65,11 @@
 
     <div class="icon-nav-container">
         <div class="icon-nav">
-            <button class="nav-icon-btn active-nav" id="btnHome" title="Overview"><i class="fas fa-th-large"></i></button>
             <button class="nav-icon-btn" id="btnSettings" title="Settings"><i class="fas fa-cog"></i></button>
             <button class="nav-icon-btn" id="btnNotifications" title="Notifications">
                 <i class="fas fa-bell"></i><span class="notification-dot"></span>
             </button>
-            <button class="nav-icon-btn" id="btnCalendar" title="Calendar"><i class="fas fa-calendar-alt"></i></button>
+            <button class="nav-icon-btn" id="btnOpenCompose" title="Add"><i class="fas fa-plus"></i></button>
             <button class="nav-icon-btn" id="btnMessages" title="Messages">
                 <i class="fas fa-comment-dots"></i><span class="notification-dot"></span>
             </button>
@@ -80,16 +79,40 @@
     <div class="dashboard-wrapper">
         <aside class="sidebar" id="mainSidebar">
             <div class="logo-container">
-                <h1 class="logo-text">ADHYORA</h1>
+                <h1 class="logo-text" id="btnHome" style="cursor: pointer;">ADHYORA</h1>
             </div>
             
             <div class="nav-grid">
-                <button class="menu-btn" id="btnNavProfile"><span class="btn-text">My Profile</span> <i class="fas fa-user-circle btn-icon"></i></button>
-                <button class="menu-btn" id="btnNavTimetable"><span class="btn-text">My Timetable</span> <i class="fas fa-calendar-week btn-icon"></i></button>
-                <button class="menu-btn" id="btnNavAttendance"><span class="btn-text">Mark Attendance</span> <i class="fas fa-user-check btn-icon"></i></button>
-                <button class="menu-btn" id="btnNavMarks"><span class="btn-text">Internal Marks</span> <i class="fas fa-edit btn-icon"></i></button>
-                <button class="menu-btn" id="btnNavStudents"><span class="btn-text">My Students</span> <i class="fas fa-users btn-icon"></i></button>
-                <button class="menu-btn" id="btnNavEvents"><span class="btn-text">Events & Leaves</span> <i class="fas fa-envelope-open-text btn-icon"></i></button>
+                <button class="menu-btn" id="btnNavAttendance">
+                    <span class="btn-text">Attendance</span> <i class="fas fa-clipboard-check btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavTimetable">
+                    <span class="btn-text">TimeTable</span> <i class="fas fa-calendar-week btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavInternalMarks">
+                    <span class="btn-text">InternalMarks</span> <i class="fas fa-award btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavSubjects">
+                    <span class="btn-text">Subjects</span> <i class="fas fa-book-open btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavCalendar">
+                    <span class="btn-text">Calendar</span> <i class="fas fa-calendar-alt btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavAssignments">
+                    <span class="btn-text">Assignments</span> <i class="fas fa-tasks btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavStudentList">
+                    <span class="btn-text">Student List</span> <i class="fas fa-users btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavSubjectAssign">
+                    <span class="btn-text">Subject Assign</span> <i class="fas fa-book-medical btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavBatch">
+                    <span class="btn-text">Batch</span> <i class="fas fa-id-badge btn-icon"></i>
+                </button>
+                <button class="menu-btn" id="btnNavEventAttendance">
+                    <span class="btn-text">Event Attendance</span> <i class="fas fa-chalkboard-teacher btn-icon"></i>
+                </button>
             </div>
         </aside>
 
@@ -100,25 +123,16 @@
                     <h2 class="welcome-text">Welcome To ADHYORA</h2>
                 </div>
 
-                <div id="profileView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
-                <div id="timetableView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
                 <div id="attendanceView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
-                <div id="marksView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
-                <div id="studentsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
-                <div id="eventsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="timetableView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="internalMarksView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="subjectsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
                 
-                <div id="notificationsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
-                    <h3 style="margin-bottom: 20px; flex-shrink: 0; color: var(--text-green); font-size: 24px; text-align: center; font-family: 'Yatra One', cursive; letter-spacing: 1px;">System Inbox</h3>
-                    <div id="notificationsList" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
-                        <div class="no-data-text">Loading Notifications...</div>
-                    </div>
-                </div>
-
                 <div id="calendarView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     <div class="calendar-container" style="width: 100%; max-width: 460px; background: white; padding: 20px 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin: auto;">
                         <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <button class="nav-icon-btn" id="calPrevMonth" style="background: var(--bg-grid-color); padding: 8px 15px; border-radius: 12px; font-weight: bold;">&lt;</button>
-                            <h3 id="calMonthYearText" style="color: var(--text-green); font-size: 18px; font-weight: 700;">Loading...</h3>
+                            <h3 id="calMonthYearText" style="color: var(--text-red); font-size: 18px; font-weight: 700;">Loading...</h3>
                             <button class="nav-icon-btn" id="calNextMonth" style="background: var(--bg-grid-color); padding: 8px 15px; border-radius: 12px; font-weight: bold;">&gt;</button>
                         </div>
                         <div class="calendar-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 700; color: #94a3b8; font-size: 12px; margin-bottom: 10px;">
@@ -126,15 +140,27 @@
                         </div>
                         <div class="calendar-grid" id="calendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;"></div>
                         <div style="margin-top: 15px; padding: 12px; border-radius: 12px; background: var(--bg-grid-color); text-align: center; border: 1px solid var(--border-color);">
-                            <p id="upcomingEventText" style="font-size: 13px; font-weight: 600; color: var(--text-green);">Loading...</p>
+                            <p id="upcomingEventText" style="font-size: 13px; font-weight: 600; color: var(--text-red);">Loading...</p>
                         </div>
+                    </div>
+                </div>
+
+                <div id="assignmentsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="studentListView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="subjectAssignView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="batchView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column; overflow-y: auto;"></div>
+
+                <div id="notificationsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
+                    <h3 style="margin-bottom: 20px; flex-shrink: 0; color: var(--text-red); font-size: 24px; text-align: center; font-family: 'Yatra One', cursive; letter-spacing: 1px;">System Inbox</h3>
+                    <div id="notificationsList" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                        <div class="no-data-text">Loading Notifications...</div>
                     </div>
                 </div>
 
                 <div id="messagesView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
                     <div style="display: flex; flex-shrink: 0; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="color: var(--text-green); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px;">Messages</h3>
-                        <button id="btnOpenCompose" class="nav-icon-btn" style="background: var(--brand-green); color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.4);"><i class="fas fa-paper-plane" style="margin-right: 8px;"></i> Compose</button>
+                        <h3 style="color: var(--text-red); font-size: 24px; font-family: 'Yatra One', cursive; letter-spacing: 1px;">Messages</h3>
                     </div>
                     <div id="messagesList" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 10px;">
                         <div class="no-data-text">Loading Messages...</div>
@@ -151,7 +177,7 @@
                 <div class="profile-avatar"><i class="fas fa-chalkboard-teacher"></i></div>
                 <h3 id="teacherNameText">Loading...</h3>
                 <p id="teacherEmailText">email@loading.com</p>
-                <div class="role-badge" id="teacherDeptText">Department</div>
+                <div class="role-badge" id="teacherDeptBadge" style="background: var(--brand-red);">Department</div>
             </div>
             <div class="settings-menu">
                 <button class="settings-btn" id="btnContactUs"><i class="fas fa-envelope"></i> Contact Admin</button>
@@ -180,9 +206,9 @@
     <div class="modal-overlay" id="themesModal">
         <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <button class="close-settings" onclick="document.getElementById('themesModal').classList.remove('active')"><i class="fas fa-times"></i></button>
-            <h3 style="margin-bottom:15px; color: var(--brand-green); text-align: center;"><i class="fas fa-adjust"></i> Appearance</h3>
+            <h3 style="margin-bottom:15px; color: var(--brand-red); text-align: center;"><i class="fas fa-adjust"></i> Appearance</h3>
             <div style="display: flex; gap: 15px; margin-top: 25px;">
-                <button id="btnLightMode" style="flex:1; padding: 15px; border-radius: 12px; border: 2px solid var(--brand-green); background: white; color: #334155; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-sun" style="color: #f59e0b; margin-right: 5px;"></i> Light</button>
+                <button id="btnLightMode" style="flex:1; padding: 15px; border-radius: 12px; border: 2px solid var(--brand-red); background: white; color: #334155; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-sun" style="color: #f59e0b; margin-right: 5px;"></i> Light</button>
                 <button id="btnDarkMode" style="flex:1; padding: 15px; border-radius: 12px; border: 1px solid #475569; background: #1e293b; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-moon" style="color: #60a5fa; margin-right: 5px;"></i> Dark</button>
             </div>
         </div>
@@ -191,7 +217,7 @@
     <div class="modal-overlay" id="sessionsModal">
         <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <button class="close-settings" onclick="document.getElementById('sessionsModal').classList.remove('active')"><i class="fas fa-times"></i></button>
-            <h3 style="margin-bottom:5px; color: var(--brand-green); text-align: center;"><i class="fas fa-laptop-house"></i> Active Sessions</h3>
+            <h3 style="margin-bottom:5px; color: var(--brand-red); text-align: center;"><i class="fas fa-laptop-house"></i> Active Sessions</h3>
             <p style="font-size: 11px; color: #64748b; text-align: center; margin-bottom: 20px;">Manage devices where your account is logged in.</p>
             <div id="sessionsListContainer" class="scrollable-list" style="max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
                 <div class="no-data-text">Loading Devices...</div>
@@ -202,16 +228,16 @@
     <div class="modal-overlay" id="composeOverlay">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; margin-top: 5vh; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color);">
             <button class="close-settings" id="closeComposeBtn"><i class="fas fa-times"></i></button>
-            <h3 id="composeModalTitle" style="color: var(--text-green); margin-bottom: 20px; font-size: 20px;"><i class="fas fa-bullhorn"></i> Send Message</h3>
+            <h3 id="composeModalTitle" style="color: var(--text-red); margin-bottom: 20px; font-size: 20px;"><i class="fas fa-bullhorn"></i> Send Message</h3>
             
             <div id="composeGroupFilters" style="display: flex; gap: 20px; margin-bottom: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer;"><input type="checkbox" id="togglePrincipal" style="accent-color: var(--brand-green); width: 18px; height: 18px;"> Send to Principal</label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer;"><input type="checkbox" id="toggleStudents" style="accent-color: var(--brand-green); width: 18px; height: 18px;"> Send to My Students</label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer;"><input type="checkbox" id="togglePrincipal" style="accent-color: var(--brand-red); width: 18px; height: 18px;"> Send to Principal</label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer;"><input type="checkbox" id="toggleStudents" style="accent-color: var(--brand-red); width: 18px; height: 18px;"> Send to My Students</label>
             </div>
             
             <input type="text" id="composeTitle" placeholder="Message Title" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-weight: bold; margin-bottom: 15px;">
             <textarea id="composeBody" placeholder="Type your message here..." rows="5" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; resize: none; margin-bottom: 20px;"></textarea>
-            <button id="btnSendMessage" style="width: 100%; background: var(--text-light-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);">Send Broadcast</button>
+            <button id="btnSendMessage" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3);">Send Broadcast</button>
             <p id="composeStatusText" style="text-align: center; color: #ef4444; font-size: 12px; margin-top: 10px; font-weight: bold;"></p>
         </div>
     </div>
