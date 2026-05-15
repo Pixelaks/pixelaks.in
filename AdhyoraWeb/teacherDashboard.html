@@ -22,10 +22,10 @@
 
     <div class="icon-nav-container">
         <div class="icon-nav">
-            <button class="nav-icon-btn" id="btnSettings"><i class="fas fa-cog"></i></button>
-            <button class="nav-icon-btn" id="btnNotifications"><i class="fas fa-bell"></i><span class="notification-dot"></span></button>
-            <button class="nav-icon-btn" id="btnOpenCompose"><i class="fas fa-plus"></i></button>
-            <button class="nav-icon-btn" id="btnMessages"><i class="fas fa-comment-dots"></i><span class="notification-dot"></span></button>
+            <button class="nav-icon-btn" id="btnSettings" title="Settings"><i class="fas fa-cog"></i></button>
+            <button class="nav-icon-btn" id="btnNotifications" title="Notifications"><i class="fas fa-bell"></i><span class="notification-dot" style="display:none;"></span></button>
+            <button class="nav-icon-btn" id="btnOpenCompose" title="Add"><i class="fas fa-plus"></i></button>
+            <button class="nav-icon-btn" id="btnMessages" title="Messages"><i class="fas fa-comment-dots"></i><span class="notification-dot" style="display:none;"></span></button>
         </div>
     </div>
 
@@ -76,17 +76,16 @@
                     <h2 class="welcome-text">Welcome To ADHYORA</h2>
                 </div>
 
-                <div id="attendanceView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="internalMarksView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="subjectsView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="calendarView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="subjectAssignView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="batchView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="padding: 25px;"></div>
-                
+                <div id="attendanceView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Attendance Dashboard</h3></div>
+                <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Timetable</h3></div>
+                <div id="internalMarksView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Internal Marks</h3></div>
+                <div id="subjectsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Subjects</h3></div>
+                <div id="calendarView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Academic Calendar</h3></div>
+                <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Assignments</h3></div>
+                <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Students</h3></div>
+                <div id="subjectAssignView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Subject Assign</h3></div>
+                <div id="batchView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Batch Management</h3></div>
+                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Event Attendance</h3></div>
                 <div id="notificationsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">System Inbox</h3></div>
                 <div id="messagesView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Messages</h3></div>
 
@@ -100,11 +99,39 @@
             <div class="settings-header">
                 <div class="profile-avatar"><i class="fas fa-chalkboard-teacher"></i></div>
                 <h3 id="teacherNameText">Loading...</h3>
-                <p id="teacherEmailText">email@loading.com</p>
-                <div class="role-badge" style="background: var(--brand-red); color:white; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; display:inline-block;">Teacher</div>
+                <p id="teacherEmailText">Loading...</p>
+                <div class="role-badge" id="teacherDeptBadge" style="background: var(--brand-red); color:white; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; display:inline-block; margin-top:5px;">Department</div>
             </div>
+            
             <div class="settings-menu">
-                <button class="settings-btn logout-btn" id="btnSignOut" style="background:#fff5f5; border:1px solid #fecaca; color:#ef4444; width:100%; padding:15px; border-radius:12px; font-weight:bold; cursor:pointer;"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+                <button class="settings-btn" id="btnContactUs"><i class="fas fa-envelope"></i> Contact Support</button>
+                <button class="settings-btn" id="btnWebsite"><i class="fas fa-globe"></i> Pixelaks Technologies</button>
+                <button class="settings-btn" id="btnPrivacy"><i class="fas fa-shield-alt"></i> Privacy Policy</button>
+                <button class="settings-btn" id="btnTerms"><i class="fas fa-file-contract"></i> Terms & Conditions</button>
+                
+                <button class="settings-btn" id="btnThemes"><i class="fas fa-palette"></i> Themes</button>
+                <button class="settings-btn" id="btnToggleNotifications" style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
+                    <span><i class="fas fa-bell"></i> Push Notifications</span>
+                    <div class="toggle-switch" id="notifToggleSwitch"></div>
+                </button>
+                <div class="settings-btn" id="btnToggleBiometrics" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:10px; align-items:center;"><i class="fas fa-fingerprint"></i> App Lock</div>
+                    <div class="toggle-switch" id="bioToggleSwitch"></div>
+                </div>
+                
+                <button class="settings-btn logout-btn" id="btnSignOut" style="background:#fff5f5; border:1px solid #fecaca; color:#ef4444; width:100%; padding:15px; border-radius:12px; font-weight:bold; cursor:pointer; margin-top: auto;"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+            <div class="settings-footer" id="versionText">Version 1.0.0 (Web)</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="themesModal">
+        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+            <button class="close-settings" onclick="document.getElementById('themesModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="margin-bottom:15px; color: var(--brand-red); text-align: center;"><i class="fas fa-adjust"></i> Appearance</h3>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button id="btnLightMode" style="flex:1; padding: 15px; border-radius: 12px; border: 2px solid var(--brand-red); background: white; color: #334155; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-sun" style="color: #f59e0b; margin-right: 5px;"></i> Light</button>
+                <button id="btnDarkMode" style="flex:1; padding: 15px; border-radius: 12px; border: 1px solid #475569; background: #1e293b; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-moon" style="color: #60a5fa; margin-right: 5px;"></i> Dark</button>
             </div>
         </div>
     </div>
@@ -112,4 +139,3 @@
     <script type="module" src="teacherApp.js"></script>
 </body>
 </html>
-
