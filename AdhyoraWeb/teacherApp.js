@@ -123,33 +123,39 @@ function finalizeProfileUI(rawName, email, deptName) {
 // ==========================================
 // 🚨 NOTIFICATIONS & UNIVERSAL MESSAGES ENGINE
 // ==========================================
+let allMessagesMap = new Map(); // For Messages Tab
+let allNotifsMap = new Map();   // For Notifications Tab (Inbox + Global)
+let globalListenerUnsub = null;
+let inboxListenerUnsub = null;
+
+function getSafeTopic(str) {
+    if (!str || str === "All") return "ALL";
+    return str.replace(/[^a-zA-Z0-9]/g, '');
+}
+
 function startInboxListener() {
-    // 1. Listen to Broadcasts (sent_messages)
+    // ==========================================
+    // 📩 1. MESSAGES TAB (Universal Inbox: Broadcasts & Chats)
+    // ==========================================
     const sentMessagesRef = collection(db, "colleges", currentCollegeID, "sent_messages");
     const qBroadcast = query(sentMessagesRef, orderBy("timestamp", "desc"), limit(30));
 
     onSnapshot(qBroadcast, (snap) => {
         snap.docChanges().forEach((change) => {
             const doc = change.doc;
-            if (change.type === "removed") {
-                allMessagesMap.delete(doc.id);
-                return;
-            }
+            if (change.type === "removed") { allMessagesMap.delete(doc.id); return; }
+            
             const d = doc.data();
             const targetText = d.targetSummary || "";
             const senderID = d.senderID || "";
 
             if (IsMessageForMe(targetText, senderID)) {
                 allMessagesMap.set(doc.id, {
-                    id: doc.id,
-                    title: d.title || "Notice",
-                    body: d.body || "",
+                    id: doc.id, title: d.title || "Notice", body: d.body || "",
                     time: d.timestamp ? d.timestamp.toDate() : new Date(),
                     sender: d.senderName || d.senderRole || "Principal",
-                    role: d.senderRole || "Principal",
-                    type: d.type || "broadcast",
-                    source: targetText,
-                    isMe: senderID === currentUserID
+                    role: d.senderRole || "Principal", type: d.type || "broadcast",
+                    source: targetText, isMe: senderID === currentUserID
                 });
             }
         });
@@ -159,7 +165,6 @@ function startInboxListener() {
         renderMessages();
     });
 
-    // 2. Listen to Personal Chats (chats subcollection)
     const chatsRef = collection(db, "colleges", currentCollegeID, "chats");
     const qChats = query(chatsRef, where("participants", "array-contains", currentUserID), orderBy("lastUpdated", "desc"), limit(10));
 
@@ -172,24 +177,16 @@ function startInboxListener() {
             onSnapshot(qMessages, (msgSnap) => {
                 msgSnap.docChanges().forEach(change => {
                     const msgDoc = change.doc;
-                    if (change.type === "removed") {
-                        allMessagesMap.delete(msgDoc.id);
-                        return;
-                    }
+                    if (change.type === "removed") { allMessagesMap.delete(msgDoc.id); return; }
+                    
                     const md = msgDoc.data();
-                    const msgSenderID = md.senderID || "";
-
-                    if (msgSenderID === currentUserID) return; // Skip my own messages
+                    if ((md.senderID || "") === currentUserID) return; // Skip my own messages
 
                     allMessagesMap.set(msgDoc.id, {
-                        id: msgDoc.id,
-                        title: md.title || "Private Message",
-                        body: md.body || "",
+                        id: msgDoc.id, title: md.title || "Private Message", body: md.body || "",
                         time: md.timestamp ? md.timestamp.toDate() : new Date(),
-                        sender: md.senderName || "User",
-                        role: md.senderRole || "Student",
-                        type: "incoming",
-                        isMe: false
+                        sender: md.senderName || "User", role: md.senderRole || "Student",
+                        type: "incoming", isMe: false
                     });
                 });
                 renderMessages();
@@ -197,27 +194,56 @@ function startInboxListener() {
         });
     });
 
-    // 3. Listen to Global Developer NOTIFICATIONS
+    // ==========================================
+    // 🔔 2. NOTIFICATIONS TAB (College Inbox + Global Updates)
+    // ==========================================
+    let safeColID = getSafeTopic(currentCollegeID);
+    let safeDept = getSafeTopic(teacherDeptRaw);
+    let myTopics = [ `${safeColID}_ALL`, `${safeColID}_TEACHERS_ALL`, `${safeColID}_TEACHERS_${safeDept}` ];
+
+    // A. College Level Notifications (inbox_messages)
+    const inboxRef = collection(db, "colleges", currentCollegeID, "inbox_messages");
+    const qInbox = query(inboxRef, where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30));
+
+    if (inboxListenerUnsub) inboxListenerUnsub();
+    inboxListenerUnsub = onSnapshot(qInbox, (snap) => {
+        snap.docChanges().forEach(change => {
+            const doc = change.doc;
+            if (change.type === "removed") { allNotifsMap.delete(doc.id); return; }
+            let d = doc.data();
+            allNotifsMap.set(doc.id, {
+                id: doc.id, title: d.title || "Message", body: d.body || "",
+                time: d.timestamp ? d.timestamp.toDate() : new Date(),
+                sender: d.senderName || "Unknown", role: (d.senderRole || "").toLowerCase(),
+                isGlobal: false
+            });
+        });
+        
+        let dot = document.querySelector("#btnNotifications .notification-dot");
+        if (dot && snap.docs.length > 0) dot.style.display = "block";
+        renderNotifications();
+    });
+
+    // B. Global Developer Updates
     const globalRef = collection(db, "adhyora_global_updates");
-    const qGlobal = query(globalRef, orderBy("timestamp", "desc"), limit(30));
+    const qGlobal = query(globalRef, orderBy("timestamp", "desc"), limit(10));
     
     if (globalListenerUnsub) globalListenerUnsub();
     globalListenerUnsub = onSnapshot(qGlobal, (snap) => {
-        cachedNotifs = []; 
-        snap.forEach(doc => { 
-            let d = doc.data(); 
-            cachedNotifs.push({ 
-                title: d.title || "System Update", 
-                body: d.body || "", 
-                time: d.timestamp ? d.timestamp.toDate() : new Date(), 
-                sender: "Adhyora Team" 
-            }); 
+        snap.docChanges().forEach(change => {
+            const doc = change.doc;
+            if (change.type === "removed") { allNotifsMap.delete(doc.id); return; }
+            let d = doc.data();
+            allNotifsMap.set(doc.id, {
+                id: doc.id, title: d.title || "System Update", body: d.body || "",
+                time: d.timestamp ? d.timestamp.toDate() : new Date(),
+                sender: "Adhyora Team", role: "system",
+                isGlobal: true
+            });
         });
         
-        if (snap.docs.length > 0) {
-            let dot = document.querySelector("#btnNotifications .notification-dot");
-            if (dot) dot.style.display = "block";
-        }
+        let dot = document.querySelector("#btnNotifications .notification-dot");
+        if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
     });
 }
@@ -227,10 +253,8 @@ function IsMessageForMe(targetText, senderID) {
     if (senderID === currentUserID) return true;
     if (!targetText) return false;
     if (targetText.includes("Everyone")) return true;
-
     if (targetText.includes("Teachers (All)")) return true;
     if (teacherDeptRaw && targetText.includes(`Teachers (${teacherDeptRaw})`)) return true;
-
     return false;
 }
 
@@ -238,7 +262,6 @@ function renderMessages() {
     const listEl = document.getElementById("messagesList");
     if (!listEl) return;
 
-    // Sort Map directly into a date-sorted array
     let sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => b.time - a.time);
 
     if (sortedMessages.length === 0) { 
@@ -251,9 +274,9 @@ function renderMessages() {
         let roleLabel = m.role;
         
         if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) {
-            borderColor = "#10b981"; // Principal Green
+            borderColor = "#10b981"; 
         } else if (m.role.toLowerCase().includes("student")) {
-            borderColor = "#3b82f6"; // Student Blue
+            borderColor = "#3b82f6"; 
         }
         
         let headerTxt = m.isMe ? `Sent to: ${m.source}` : `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">(${roleLabel})</span>`;
@@ -275,19 +298,33 @@ function renderNotifications() {
     const listEl = document.getElementById("notificationsList");
     if (!listEl) return;
 
-    if (cachedNotifs.length === 0) { 
-        listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">No system updates.</div>`; 
+    let sortedNotifs = Array.from(allNotifsMap.values()).sort((a, b) => b.time - a.time);
+
+    if (sortedNotifs.length === 0) { 
+        listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">No new notifications.</div>`; 
         return; 
     }
     
-    // Developer Notifications get a distinct Purple/System look
-    listEl.innerHTML = cachedNotifs.map(n => {
+    listEl.innerHTML = sortedNotifs.map(n => {
+        // C# Logic: Give Developer updates a purple border, standard notifications get colors based on role
+        let borderColor = "var(--brand-red)"; 
+        let icon = "fa-bell";
+        
+        if (n.isGlobal) {
+            borderColor = "#8b5cf6"; // Developer Purple
+            icon = "fa-satellite-dish";
+        } else if (n.role.includes("principal") || n.role.includes("admin")) {
+            borderColor = "#10b981"; // Principal Green
+        } else if (n.role.includes("student")) {
+            borderColor = "#3b82f6"; // Student Blue
+        }
+
         return `
-        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid #8b5cf6;">
+        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid ${borderColor};">
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${n.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${n.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
-                <span><i class="fas fa-satellite-dish" style="margin-right:4px; color:#8b5cf6;"></i> ${n.sender}</span>
+                <span><i class="fas ${icon}" style="margin-right:4px; color:${borderColor};"></i> ${n.sender}</span>
                 <span>${n.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
             </div>
         </div>`;
