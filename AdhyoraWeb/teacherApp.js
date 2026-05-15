@@ -12,7 +12,7 @@ let profileListener = null;
 let teacherDeptRaw = ""; 
 let hasStartedInbox = false;
 
-// 🚨 FIXED: Cleaned up duplicate notification variables
+// Notification Variables
 let allMessagesMap = new Map(); // For Messages Tab
 let allNotifsMap = new Map();   // For Notifications Tab (Inbox + Global)
 let globalListenerUnsub = null;
@@ -72,7 +72,6 @@ function ListenToProfile() {
 
         let deptName = "Unknown Dept";
 
-        // 🚨 MATCH C# LOGIC: Resolve the actual readable Department Name
         if (data.department) {
             deptName = data.department;
             teacherDeptRaw = deptName;
@@ -82,7 +81,7 @@ function ListenToProfile() {
                 const deptSnap = await getDoc(doc(db, "colleges", currentCollegeID, "departments", data.departmentID));
                 if (deptSnap.exists()) {
                     deptName = deptSnap.data().name || data.departmentID;
-                    teacherDeptRaw = deptName; // Need exact name for Inbox matching!
+                    teacherDeptRaw = deptName; 
                 } else {
                     teacherDeptRaw = data.departmentID;
                     deptName = data.departmentID.replace("DEPT_", "").replace(/_/g, " ");
@@ -110,11 +109,9 @@ function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    // Unlock UI once data is fully loaded
     let loader = document.getElementById("initialAppLoader");
     if(loader) loader.style.display = "none";
 
-    // 🚨 TRIGGER THE INBOX NOW THAT WE HAVE THE DEPT!
     if (!hasStartedInbox && teacherDeptRaw !== "") {
         startInboxListener();
         hasStartedInbox = true;
@@ -150,8 +147,10 @@ function startInboxListener() {
                 allMessagesMap.set(doc.id, {
                     id: doc.id, title: d.title || "Notice", body: d.body || "",
                     time: d.timestamp ? d.timestamp.toDate() : new Date(),
-                    sender: d.senderName || d.senderRole || "Principal",
-                    role: d.senderRole || "Principal", type: d.type || "broadcast",
+                    // 🚨 Default missing sender details to Adhyora Team / System
+                    sender: d.senderName || "Adhyora Team",
+                    role: d.senderRole || "system", 
+                    type: d.type || "broadcast",
                     source: targetText, isMe: senderID === currentUserID
                 });
             }
@@ -211,7 +210,9 @@ function startInboxListener() {
             allNotifsMap.set(doc.id, {
                 id: doc.id, title: d.title || "Message", body: d.body || "",
                 time: d.timestamp ? d.timestamp.toDate() : new Date(),
-                sender: d.senderName || "Unknown", role: (d.senderRole || "").toLowerCase(),
+                // 🚨 Default missing sender details to Adhyora Team / System
+                sender: d.senderName || "Adhyora Team", 
+                role: (d.senderRole || "system").toLowerCase(),
                 isGlobal: false
             });
         });
@@ -245,7 +246,6 @@ function startInboxListener() {
     });
 }
 
-// Helper: Check if message is for this teacher
 function IsMessageForMe(targetText, senderID) {
     if (senderID === currentUserID) return true;
     if (!targetText) return false;
@@ -269,8 +269,14 @@ function renderMessages() {
     listEl.innerHTML = sortedMessages.map(m => {
         let borderColor = "var(--brand-red)"; 
         let roleLabel = m.role;
+        let icon = m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn';
         
-        if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) {
+        // 🚨 Adhyora Team / System messages get the Developer Purple look
+        if (m.role.toLowerCase().includes("system") || m.sender === "Adhyora Team") {
+            borderColor = "#8b5cf6"; 
+            icon = "fa-satellite-dish";
+            roleLabel = "Developer";
+        } else if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) {
             borderColor = "#10b981"; 
         } else if (m.role.toLowerCase().includes("student")) {
             borderColor = "#3b82f6"; 
@@ -284,7 +290,7 @@ function renderMessages() {
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${m.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${m.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
-                <span><i class="fas ${m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn'}" style="margin-right:4px; color:${borderColor};"></i> ${headerTxt}</span>
+                <span><i class="fas ${icon}" style="margin-right:4px; color:${borderColor};"></i> ${headerTxt}</span>
                 <span>${m.time.toLocaleString('en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
             </div>
         </div>`;
@@ -303,17 +309,17 @@ function renderNotifications() {
     }
     
     listEl.innerHTML = sortedNotifs.map(n => {
-        // C# Logic: Give Developer updates a purple border, standard notifications get colors based on role
         let borderColor = "var(--brand-red)"; 
         let icon = "fa-bell";
         
-        if (n.isGlobal) {
-            borderColor = "#8b5cf6"; // Developer Purple
+        // 🚨 Adhyora Team / System messages get the Developer Purple look
+        if (n.isGlobal || n.role.includes("system") || n.sender === "Adhyora Team") {
+            borderColor = "#8b5cf6"; 
             icon = "fa-satellite-dish";
         } else if (n.role.includes("principal") || n.role.includes("admin")) {
-            borderColor = "#10b981"; // Principal Green
+            borderColor = "#10b981"; 
         } else if (n.role.includes("student")) {
-            borderColor = "#3b82f6"; // Student Blue
+            borderColor = "#3b82f6"; 
         }
 
         return `
@@ -377,13 +383,11 @@ function switchView(targetView, clickedBtn) {
     }
 }
 
-// 🚨 BULLETPROOF EVENT ATTACHER
 function attachSafeClick(elementId, action) {
     let el = document.getElementById(elementId);
     if (el) el.addEventListener("click", action);
 }
 
-// Map Bottom Nav Icons
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
 attachSafeClick("btnMessages", (e) => {
     switchView(views.messages, e.currentTarget);
@@ -394,7 +398,6 @@ attachSafeClick("btnNotifications", (e) => {
     document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none");
 });
 
-// Map PC Sidebar Buttons
 attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
 attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
 attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
