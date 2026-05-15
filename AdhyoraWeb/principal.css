@@ -614,3 +614,63 @@ body.dark-mode .up-icon {
     width: 100%; padding: 15px; background: #2ecc71; color: #000; border: none; border-radius: 12px; font-weight: bold; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); cursor: pointer; transition: 0.3s;
 }
 .btn-yearly:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(46, 204, 113, 0.7); background: #27ae60; color: #fff; }
+
+/* =========================================
+   📱 SUBSCRIPTION UI: MOBILE & LIGHT MODE FIXES
+   ========================================= */
+
+/* 1. Fix the Success Panel Transparency & Colors */
+#subSuccessPanel .compose-modal {
+    background-color: #ffffff !important; /* Solid white for Light Mode */
+}
+#successPlanName { color: #334155 !important; } /* Dark text for Light Mode */
+#successExpiryDate { color: #64748b !important; }
+
+/* Adapt Success Panel for Dark Mode */
+body.dark-mode #subSuccessPanel .compose-modal {
+    background-color: #1e293b !important; /* Solid navy for Dark Mode */
+}
+body.dark-mode #successPlanName { color: #f8fafc !important; }
+body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
+
+/* 2. Fix Mobile Layout for Pricing Cards */
+@media (max-width: 800px) {
+    #subBlockPanel .pricing-container {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 35px !important;
+        padding: 10px 20px !important;
+        /* Enables scrolling on very small phones so buttons don't get cut off */
+        max-height: 65vh; 
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    
+    #subBlockPanel .pricing-card {
+        width: 100% !important;
+        min-width: 250px !important; /* Allows it to shrink on small screens */
+        max-width: 100% !important;
+        padding: 30px 20px !important;
+        transform: scale(1) !important; /* Removes the zoom so it fits */
+    }
+
+    #subBlockPanel .pricing-card:hover {
+        transform: translateY(-5px) scale(1) !important; /* Softer hover on mobile */
+    }
+
+    /* Shrink the headers slightly to fit mobile */
+    #subBlockHeading {
+        font-size: 1.8rem !important;
+        margin-top: 20px !important;
+    }
+    
+    #subBlockText {
+        font-size: 0.95rem !important;
+        margin-bottom: 25px !important;
+    }
+
+    /* Hide the scrollbar for a cleaner look but keep scroll functionality */
+    #subBlockPanel .pricing-container::-webkit-scrollbar {
+        display: none;
+    }
+}
