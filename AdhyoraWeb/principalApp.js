@@ -4190,3 +4190,82 @@ document.onkeydown = function(e) {
     // Prevent Ctrl+U (View Source)
     if (e.ctrlKey && e.keyCode === 85) return false;
 };
+
+// ==========================================
+// 🚨 HARDWARE BACK BUTTON / ROUTING MANAGER
+// ==========================================
+// Push an initial state to trap the back button the moment the app loads
+history.pushState(null, null, location.href);
+
+window.addEventListener('popstate', () => {
+    // 1. Immediately push another state to stay trapped inside the app
+    history.pushState(null, null, location.href);
+
+    // 2. Security Check (Block back button if locked or paywalled)
+    if (elLock.screen && elLock.screen.style.display === "flex") return;
+    const subBlock = document.getElementById("subBlockPanel");
+    if (subBlock && subBlock.style.display === "flex") return;
+
+    // 3. Modals & Overlays (Close the top-most active popup)
+    const closableOverlays = [
+        "pinOverlay", "confirmOverlay", "durationOverlay", "addDeptOverlay", "combineOverlay",
+        "moveBatchOverlay", "deptSplitOverlay", "promoteWarningOverlay", "exportOverlay",
+        "subjectEditOverlay", "studentAdminOverlay", "composeOverlay", "settingsOverlay",
+        "themesModal", "sessionsModal", "reAuthOverlay", "subSuccessPanel"
+    ];
+    
+    for (let id of closableOverlays) {
+        let el = document.getElementById(id);
+        if (el && el.classList.contains("active")) {
+            el.classList.remove("active");
+            
+            // Clean up specific inputs if they used back button to cancel
+            if(id === "pinOverlay" && document.getElementById("pinInput")) {
+                document.getElementById("pinInput").value = "";
+            }
+            if(id === "reAuthOverlay") {
+                elLock.reAuthPass.value = "";
+                elLock.reAuthStatus.innerText = "";
+            }
+            return; // Stop here! We only want to close one layer at a time.
+        }
+    }
+
+    // 4. Deep Sub-Views (e.g., looking at a specific teacher/student profile)
+    if (views.teacherDashboard && !views.teacherDashboard.classList.contains("hidden-view")) {
+        switchView(views.teacherList);
+        return;
+    }
+    if (views.studentDashboard && !views.studentDashboard.classList.contains("hidden-view")) {
+        switchView(views.studentList);
+        return;
+    }
+
+    // 5. Are we on the Home Screen?
+    let isHome = false;
+    if (window.innerWidth > 900) {
+        isHome = views.welcome && !views.welcome.classList.contains("hidden-view");
+    } else {
+        isHome = sidebar && !sidebar.classList.contains("mobile-hidden") && !mainContent.classList.contains("mobile-active");
+    }
+
+    if (!isHome) {
+        // We are inside a sidebar menu item. Go back to HOME.
+        switchView("HOME");
+        return;
+    }
+
+    // 6. We are on the Home Screen with zero popups open. Prompt Sign Out!
+    if (confirm("Are you sure you want to sign out?")) {
+        if (myCurrentPushToken && currentCollegeID && currentUserID) {
+            // Clean up push tokens before signing out securely
+            updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }).finally(() => {
+                signOut(auth).then(() => window.location.href = "index.html");
+            });
+        } else {
+            signOut(auth).then(() => window.location.href = "index.html");
+        }
+    }
+});
