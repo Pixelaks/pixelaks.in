@@ -126,7 +126,7 @@ body {
     color: var(--primary-green);
     letter-spacing: 1px;
     text-transform: uppercase;
-    text-align: left; /* Snapped perfectly to the left */
+    text-align: left;
 }
 
 /* Modern Dark Inputs */
@@ -188,7 +188,7 @@ body {
     color: #888;
     transition: 0.2s;
     user-select: none;
-    font-size: 15px; /* Clean icon sizing */
+    font-size: 15px; 
 }
 .toggle-password:hover { color: var(--primary-green); }
 
