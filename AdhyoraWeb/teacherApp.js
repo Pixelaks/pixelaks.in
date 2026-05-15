@@ -1529,7 +1529,7 @@ document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
 });
 
 function openHistoryPanel() {
-    // 🚨 Swap screens instantly inside the panel!
+    // Swap screens instantly inside the panel!
     document.getElementById("attMainScreen").style.display = "none";
     document.getElementById("attHistoryScreen").style.display = "flex";
     
@@ -1541,13 +1541,22 @@ function openHistoryPanel() {
     }
 
     histCurrentDate = new Date();
+    
+    // 🚨 WEEKEND FALLBACK FIX: If today is Saturday (6) or Sunday (0), shift to Friday!
+    if (histCurrentDate.getDay() === 6) {
+        histCurrentDate.setDate(histCurrentDate.getDate() - 1);
+    } else if (histCurrentDate.getDay() === 0) {
+        histCurrentDate.setDate(histCurrentDate.getDate() - 2);
+    }
+
     histUpdateDateUI();
     onHistSemesterChanged();
 }
 
 function histUpdateDateUI() {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let dStr = `${days[histCurrentDate.getDay()]}<br>${histCurrentDate.getFullYear()}-${String(histCurrentDate.getMonth()+1).padStart(2,'0')}-${String(histCurrentDate.getDate()).padStart(2,'0')}`;
+    // 🚨 STYLING FIX: Formats the date neatly to match the dropdown height
+    let dStr = `<span style="font-size:14px;">${days[histCurrentDate.getDay()]}</span><span style="font-size:11px; opacity:0.8; margin-top:2px;">${histCurrentDate.getFullYear()}-${String(histCurrentDate.getMonth()+1).padStart(2,'0')}-${String(histCurrentDate.getDate()).padStart(2,'0')}</span>`;
     document.getElementById("histDateJumpBtn").innerHTML = dStr;
     histUpdateQuickDays();
 }
@@ -1560,20 +1569,18 @@ function histUpdateQuickDays() {
     const labels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     for(let i=0; i<5; i++) {
         let isSelected = i === dayIndex;
-        let bg = isSelected ? "var(--brand-red)" : "var(--bg-surface)"; 
-        let col = isSelected ? "white" : "var(--text-muted)";
-        let border = isSelected ? "none" : "1px solid var(--border-color)";
-        // 🚨 Removed inline onclick, added ID
-        html += `<button id="quickDayBtn_${i}" style="flex:1; padding:10px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s;">${labels[i]}</button>`;
+        // 🚨 STYLING FIX: Enforces the clean White/Red aesthetics for the unselected buttons
+        let bg = isSelected ? "var(--brand-red)" : "white"; 
+        let col = isSelected ? "white" : "var(--brand-red)";
+        let border = isSelected ? "none" : "1px solid rgba(220, 38, 38, 0.3)";
+        html += `<button id="quickDayBtn_${i}" style="flex:1; padding:12px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">${labels[i]}</button>`;
     }
     container.innerHTML = html;
 
-    // 🚨 Securely bind the event listeners after HTML generation!
     for(let i=0; i<5; i++) {
         document.getElementById(`quickDayBtn_${i}`).addEventListener("click", () => histQuickJumpDay(i));
     }
 }
-
 function histQuickJumpDay(targetDayIndex) {
     let d = new Date(histCurrentDate);
     let day = d.getDay();
