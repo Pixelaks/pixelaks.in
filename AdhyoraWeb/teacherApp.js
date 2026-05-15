@@ -285,7 +285,8 @@ let attLastMedicalFetchDate = null;
 
 let attCurrentPeriodClaims = new Map();
 let attCurrentPeriodEvents = new Map();
-let attActiveRows = [];
+let attMainActiveRows = []; // 🚨 Tracks your direct class
+let attSubActiveRows = [];  // 🚨 Tracks substitute accordion classes
 let attCurrentSessionBatchIndex = -1;
 let attIsMainClassLocked = false;
 let attIsSubstitutePanelOpen = false;
@@ -460,12 +461,14 @@ function showAttCenterMessage(msg) {
         </div>`;
     document.getElementById("attTotalStudentsText").innerText = "";
     document.getElementById("attLockStatusText").innerText = "";
-    attActiveRows = [];
+    attMainActiveRows = []; // 🚨 Clear main rows on reset
+    updateMainButtonState(); 
 }
 
 function updateMainButtonState() {
     let btn = document.getElementById("attSaveBtn");
-    if(attIsSubstitutePanelOpen || attIsMainClassLocked) {
+    // 🚨 Disable if Sub Panel is open, if Main is Locked, or if NO students exist in Main
+    if (attIsSubstitutePanelOpen || attIsMainClassLocked || attMainActiveRows.length === 0) {
         btn.style.opacity = "0.5";
         btn.style.pointerEvents = "none";
     } else {
@@ -1027,16 +1030,15 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
 }
 
 function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
-    attIsMainClassLocked = false;
+    let isThisBatchLocked = false; // 🚨 Localized lock so it doesn't break Main class!
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
-    // 🚨 UI LOCK LOGIC: Detects if anyone else saved it!
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID) {
-            attIsMainClassLocked = true;
+            isThisBatchLocked = true;
             lockerName = bInfo.name || "another teacher";
         }
     }
@@ -1048,7 +1050,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         }
     });
 
-    if(claimedCount > 0) { attIsMainClassLocked = true; lockerName = conflictSubject; }
+    if(claimedCount > 0) { isThisBatchLocked = true; lockerName = conflictSubject; }
     
     let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only (Marked by ${lockerName})`;
     
@@ -1056,7 +1058,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let statusEl = document.getElementById(`subCardStatus_${attPendingSubCardId}`);
         let saveBtn = document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`);
         
-        if (attIsMainClassLocked) {
+        if (isThisBatchLocked) {
             statusEl.innerHTML = `<span style='color:red;'>${lockText}</span>`;
             saveBtn.style.opacity = "0.5";
             saveBtn.style.pointerEvents = "none";
@@ -1066,12 +1068,16 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             saveBtn.style.pointerEvents = "auto";
         }
     } else {
+        attIsMainClassLocked = isThisBatchLocked; // 🚨 Only set global lock if rendering Main Class
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
         updateMainButtonState(); 
     }
 
     let fullHTML = "";
-    attActiveRows = [];
+    let targetArray = attIsSubstitutePanelOpen ? attSubActiveRows : attMainActiveRows;
+    let prefix = attIsSubstitutePanelOpen ? "sub_" : "main_";
+    
+    targetArray.length = 0; // Clear the array cleanly
 
     students.forEach(docSnap => {
         let d = docSnap.data();
@@ -1090,7 +1096,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let isAtEvent = attCurrentPeriodEvents.has(id);
         let isClaimed = attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject;
 
-        let rowLocked = attIsMainClassLocked || isAtEvent || isClaimed || isMedical;
+        let rowLocked = isThisBatchLocked || isAtEvent || isClaimed || isMedical;
         if(isAtEvent || isMedical) isPresent = true; 
         if(isClaimed) isPresent = false; 
 
@@ -1102,27 +1108,26 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         uiText += `<br><span style="font-size:11px; color:#94a3b8;">${sDept}</span>`;
 
         let toggleClass = `attd-toggle ${isPresent ? 'active' : ''} ${rowLocked ? 'locked' : ''}`;
-        
         let padding = attIsSubstitutePanelOpen ? "10px" : "15px";
         let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
-        let cursorStyle = rowLocked ? "default" : "pointer"; // 🚨 Fix Cursor
+        let cursorStyle = rowLocked ? "default" : "pointer";
         
-        // 🚨 ADDED: id="row_${id}", cursor styling, and pointer-events:none to inner elements
+        // 🚨 Appending Prefix to the IDs so DOM doesn't get confused
         fullHTML += `
-        <div id="row_${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
+        <div id="row_${prefix}${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
             <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none;">${uiText}</div>
-            <div id="tog_${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}" style="pointer-events:none;"></div>
+            <div id="tog_${prefix}${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}" style="pointer-events:none;"></div>
         </div>`;
 
-        attActiveRows.push(id);
+        targetArray.push(id);
     });
 
     targetContainer.innerHTML = fullHTML;
 
-    // 🚨 ADDED: Event listener attached to the ROW, tracking the toggle state inside it
-    attActiveRows.forEach(id => {
-        let rowEl = document.getElementById(`row_${id}`);
-        let togEl = document.getElementById(`tog_${id}`);
+    // Attach click events to the entire row using the unique prefix
+    targetArray.forEach(id => {
+        let rowEl = document.getElementById(`row_${prefix}${id}`);
+        let togEl = document.getElementById(`tog_${prefix}${id}`);
         
         rowEl.addEventListener("click", () => {
             if(togEl.dataset.locked === "true") return;
@@ -1132,11 +1137,8 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             
             togEl.dataset.state = newState.toString();
             
-            if(newState) {
-                togEl.classList.add("active");
-            } else {
-                togEl.classList.remove("active");
-            }
+            if(newState) togEl.classList.add("active"); 
+            else togEl.classList.remove("active");
         });
     });
 }
@@ -1145,7 +1147,11 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
 // 🚨 SAVE ATTENDANCE ENGINE
 // ==========================================
 async function saveAttendance() {
-    if(attActiveRows.length === 0) return;
+    let activeRows = attIsSubstitutePanelOpen ? attSubActiveRows : attMainActiveRows;
+    let prefix = attIsSubstitutePanelOpen ? "sub_" : "main_";
+
+    if(activeRows.length === 0) return;
+    
     document.getElementById("updateProgressModal").classList.add("active");
     document.getElementById("updateProgressFill").style.width = "0%";
     document.getElementById("updateStatusText").innerText = "Saving Attendance...";
@@ -1200,8 +1206,9 @@ async function saveAttendance() {
         let attendanceMap = pData.attendance || {};
         let myBatchPresent = 0; let myBatchTotal = 0;
 
-        attActiveRows.forEach(id => {
-            let el = document.getElementById(`tog_${id}`);
+        // 🚨 Using the correct array and prefix to grab toggles
+        activeRows.forEach(id => {
+            let el = document.getElementById(`tog_${prefix}${id}`);
             if(attCurrentPeriodEvents.has(id)) {
                 delete attendanceMap[id]; 
             } else {
@@ -1255,7 +1262,8 @@ async function saveAttendance() {
             opCount++;
         }
 
-        for(let id of attActiveRows) {
+        // 🚨 Using the correct array and prefix to grab toggles
+        for(let id of activeRows) {
             if(attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject) {
                 alert("Save aborted. Students locked by another subject."); document.getElementById("updateProgressModal").classList.remove("active"); updateMainButtonState(); return;
             }
@@ -1263,7 +1271,7 @@ async function saveAttendance() {
 
             studentClaims[`p${pIndex}_${id}`] = selectedSubject;
             
-            let el = document.getElementById(`tog_${id}`);
+            let el = document.getElementById(`tog_${prefix}${id}`);
             let isPresent = el.dataset.state === "true";
             let initPresent = el.dataset.init === "true";
             let isNew = el.dataset.new === "true";
@@ -1322,8 +1330,6 @@ async function saveAttendance() {
         await Promise.all(batchPromises);
         
         document.getElementById("updateProgressFill").style.width = "100%";
-        
-        // 🚨 FIX: Added P and A counts to the success message!
         document.getElementById("updateStatusText").innerHTML = `Attendance Saved!<br><span style="font-size:14px; color:#10b981;">(P: ${myBatchPresent}, A: ${myBatchAbsent})</span>`;
         
         setTimeout(() => {
@@ -1333,12 +1339,12 @@ async function saveAttendance() {
                 document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(0deg)";
                 document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`).style.pointerEvents = "auto";
                 attIsSubstitutePanelOpen = false;
-                updateMainButtonState(); // 🚨 Correctly re-enables main button on close!
+                updateMainButtonState(); // Re-enables the main button automatically!
             } else {
                 document.getElementById("attSaveBtn").style.pointerEvents = "auto";
                 loadSessionData(); 
             }
-        }, 1500); // 🚨 Increased slightly so you can read the count
+        }, 1500);
 
     } catch(e) {
         console.error("Save Crash", e);
