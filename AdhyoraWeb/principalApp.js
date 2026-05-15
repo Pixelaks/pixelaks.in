@@ -3865,7 +3865,10 @@ function SetLockMode(mode) {
     lockMode = mode;
     elLock.input.value = "";
     elLock.btnForgot.style.display = "none";
-    elLock.input.focus();
+    elLock.btnForgot.innerText = "Forgot PIN?"; // Reset the text
+    elLock.input.style.display = "inline-block"; // Ensure input is visible by default
+    
+    if (mode !== "SETUP_BIO") elLock.input.focus();
 
     if (mode === "LOGIN") {
         elLock.title.innerText = "ENTER SECURE PIN";
@@ -3874,26 +3877,38 @@ function SetLockMode(mode) {
         elLock.btnSubmit.innerText = "Unlock Dashboard";
         if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
         
-        // 🚨 NEW: Show Biometrics button if enabled on this device!
         if (isBioEnabledLocally && isBiometricSupported) {
             elLock.btnBio.style.display = "block";
-            // Optional: Auto-trigger it as soon as the screen opens!
             setTimeout(() => elLock.btnBio.click(), 500); 
         } else {
             elLock.btnBio.style.display = "none";
         }
-    }
+    } 
     else if (mode === "SETUP_1" || mode === "RESET_NEW_1") {
         elLock.title.innerText = "CREATE SECURITY PIN";
         elLock.status.innerText = "Set a 4-digit PIN to secure your dashboard.";
         elLock.status.style.color = "#4ade80";
         elLock.btnSubmit.innerText = "Next Step";
+        elLock.btnBio.style.display = "none";
     }
     else if (mode === "SETUP_2" || mode === "RESET_NEW_2") {
         elLock.title.innerText = "CONFIRM NEW PIN";
         elLock.status.innerText = "Please re-enter the PIN to confirm.";
         elLock.status.style.color = "#facc15";
         elLock.btnSubmit.innerText = "Save Security PIN";
+        elLock.btnBio.style.display = "none";
+    }
+    // 🚨 NEW: The Biometric Prompt Mode
+    else if (mode === "SETUP_BIO") {
+        elLock.title.innerHTML = '<i class="fas fa-fingerprint" style="color:#4ade80; font-size:40px; margin-bottom:10px;"></i><br>ENABLE BIOMETRICS';
+        elLock.status.innerText = "Unlock your dashboard instantly with your Fingerprint or Face ID.";
+        elLock.status.style.color = "#4ade80";
+        elLock.input.style.display = "none"; // Hide the PIN box
+        elLock.btnSubmit.innerText = "Enable Fingerprint";
+        
+        // Repurpose the "Forgot" button into a "Skip" button!
+        elLock.btnForgot.innerText = "Skip for now";
+        elLock.btnForgot.style.display = "block";
     }
 }
 
@@ -3927,7 +3942,15 @@ elLock.btnSubmit.addEventListener("click", async () => {
             try {
                 await setDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"), { adminPin: val, updatedAt: serverTimestamp() }, { merge: true });
                 cachedAdminPin = val;
-                UnlockSecurityWall();
+                
+                // 🚨 NEW: Check if device supports Biometrics. If yes, prompt them. If no, unlock immediately!
+                elLock.btnSubmit.disabled = false;
+                if (isBiometricSupported && !isBioEnabledLocally) {
+                    SetLockMode("SETUP_BIO");
+                } else {
+                    UnlockSecurityWall();
+                }
+                
             } catch(e) {
                 elLock.status.innerText = "Failed to save PIN.";
                 elLock.btnSubmit.innerText = "Try Again";
@@ -3937,6 +3960,43 @@ elLock.btnSubmit.addEventListener("click", async () => {
             elLock.status.innerText = "PINs do not match. Try again.";
             elLock.status.style.color = "#ef4444";
             setTimeout(() => SetLockMode(lockMode === "SETUP_2" ? "SETUP_1" : "RESET_NEW_1"), 1500);
+        }
+    }
+    // 🚨 NEW: Handle the Biometric Setup Button click!
+    else if (lockMode === "SETUP_BIO") {
+        elLock.btnSubmit.innerText = "Scanning...";
+        try {
+            const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+            const userIDBuffer = new TextEncoder().encode(currentUserID);
+
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "Adhyora AMS", id: window.location.hostname },
+                    user: { id: userIDBuffer, name: myRealName, displayName: myRealName },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000
+                }
+            });
+
+            // Save the exact Credential ID for fast login later
+            const credIdBase64 = bufferToBase64(credential.rawId);
+            localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
+            localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
+            isBioEnabledLocally = true;
+            
+            // Sync settings menu toggle so it's accurate!
+            if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
+
+            elLock.btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Linked!';
+            setTimeout(() => { UnlockSecurityWall(); }, 800);
+
+        } catch (err) {
+            console.error(err);
+            elLock.status.innerText = "Scan failed or cancelled. You can enable it later in settings.";
+            elLock.status.style.color = "#ef4444";
+            elLock.btnSubmit.innerText = "Try Again";
         }
     }
 });
@@ -3956,6 +4016,13 @@ function UnlockSecurityWall() {
 
 // --- FORGOT PIN / RE-AUTH LOGIC ---
 elLock.btnForgot.addEventListener("click", () => {
+
+    // 🚨 NEW: If they are on the Bio setup screen and click "Skip for now", just unlock!
+    if (lockMode === "SETUP_BIO") {
+        UnlockSecurityWall();
+        return;
+    }
+    
     elLock.reAuthPass.value = "";
     elLock.reAuthStatus.innerText = "";
     elLock.reAuthOverlay.classList.add("active");
