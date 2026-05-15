@@ -582,13 +582,11 @@ body.dark-mode .up-icon {
 }
 
 /* =========================================
-   💎 PREMIUM SUBSCRIPTION UI ANIMATIONS
+   💎 PREMIUM SUBSCRIPTION UI (WEBSITE STYLE)
    ========================================= */
-
-/* Float up animation when the blocker appears */
 @keyframes subFloatUp {
-    0% { opacity: 0; transform: translateY(50px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulseOp {
@@ -596,52 +594,23 @@ body.dark-mode .up-icon {
     50% { opacity: 0.5; }
 }
 
-/* Base card styling */
-.sub-card-premium {
-    z-index: 1;
+.pricing-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 
-/* Hover effect for the standard Monthly card */
-.sub-card-premium:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.5) !important;
-    border-color: #475569 !important;
+.pricing-card:hover {
+    transform: translateY(-15px) scale(1.03) !important;
+    box-shadow: 0 20px 50px rgba(46, 204, 113, 0.3) !important;
+    border-color: #2ecc71 !important;
+    z-index: 10;
 }
 
-/* Hover effect for the highlighted Yearly card */
-.sub-card-premium.highlight {
-    z-index: 2; /* Keeps it overlapping the monthly card */
+.btn-monthly {
+    width: 100%; padding: 15px; background: transparent; border: 1px solid #777; color: #fff; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s;
 }
-.sub-card-premium.highlight:hover {
-    transform: scale(1.05) translateY(-10px) !important;
-    box-shadow: 0 30px 60px rgba(74, 222, 128, 0.25) !important;
-}
+.btn-monthly:hover { background: #333; border-color: #aaa; }
 
-/* Monthly Button Hover */
-.btn-sub-monthly:hover {
-    background-color: #334155 !important;
-    border-color: #64748b !important;
-    color: #fff !important;
+.btn-yearly {
+    width: 100%; padding: 15px; background: #2ecc71; color: #000; border: none; border-radius: 12px; font-weight: bold; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); cursor: pointer; transition: 0.3s;
 }
-
-/* Yearly Button Hover */
-.btn-sub-yearly:hover {
-    transform: scale(1.03);
-    box-shadow: 0 8px 25px rgba(74, 222, 128, 0.5) !important;
-    background-color: #22c55e !important;
-}
-
-/* Mobile Responsiveness for Pricing Grid */
-@media (max-width: 768px) {
-    .pricing-grid {
-        flex-direction: column;
-        align-items: center;
-        gap: 40px !important;
-    }
-    .sub-card-premium.highlight {
-        transform: scale(1) !important; /* Remove scaling on mobile to fit screen */
-    }
-    .sub-card-premium.highlight:hover {
-        transform: translateY(-10px) !important;
-    }
-}
+.btn-yearly:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(46, 204, 113, 0.7); background: #27ae60; color: #fff; }
