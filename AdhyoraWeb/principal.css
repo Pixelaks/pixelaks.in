@@ -669,7 +669,7 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 }
 
 /* =========================================
-   📱 MOBILE POLISH & SCROLL FIXES (PERFECT FIT)
+   📱 MOBILE POLISH & GRID CUT-OFF FIX
    ========================================= */
 @media (max-width: 900px) {
     
@@ -678,21 +678,23 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         overflow: hidden !important;
     }
 
-    /* 1. 🚨 SHRINKS THE BOX: Stops the container's bottom border exactly above the nav bar */
+    /* 1. 🚨 THE FIX: Margin pushes the physical box up. Grid will NOT go behind the nav! */
     .main-content {
-        height: calc(100dvh - 85px) !important; /* Automatically calculates the exact height needed */
+        flex: 1 !important; 
+        height: auto !important;
+        margin-bottom: 85px !important; /* Stops the background exactly 85px from the bottom */
         padding: 15px !important; 
         box-sizing: border-box !important;
         overflow: hidden !important;
     }
 
-    /* 2. 🚨 REMOVES THE MASSIVE GAP: Normal padding inside the scroll view */
+    /* 2. Normal scroll settings inside the shorter box */
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 10px !important; /* Removes that huge empty grid space! */
+        padding-bottom: 20px !important; /* Just a tiny bit of breathing room at the bottom of the list */
     }
 
     /* 3. Fix Teacher/Student Cards Cut-off */
