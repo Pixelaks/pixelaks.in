@@ -515,7 +515,8 @@ async function loadSessionData() {
 async function checkTimetableAllocation(ticket, dateStr) {
     if(ticket !== attCurrentLoadTicket) return;
 
-    const selectedSem = document.getElementById("attSemDropdown").value;
+    // This extracts just the number (e.g., "2"), matching your C# logic
+    const selectedSem = document.getElementById("attSemDropdown").value; 
     const selectedSubject = document.getElementById("attSubjDropdown").value;
     const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][attCurrentDate.getDay()];
     const pIndex = parseInt(document.getElementById("attPeriodDropdown").value) + 1;
@@ -560,7 +561,8 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex)));
+        // 🚨 FIX 1: Now querying Firebase perfectly with just "selectedSem" instead of "Semester X"
+        const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", selectedSem), where("day", "==", dayName), where("period", "==", String(pIndex)));
         const allocSnap = await getDocs(allocQuery);
 
         if(ticket !== attCurrentLoadTicket) return;
@@ -593,6 +595,7 @@ async function checkTimetableAllocation(ticket, dateStr) {
                     if(myAllocations.length === 0) showAttCenterMessage("Not assigned to you.<br>(Substitute options available)");
                     else showAttCenterMessage("Select a batch to mark attendance:");
                     
+                    // This triggers the accordion UI!
                     spawnSubstituteCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
                 } else {
                     showAttCenterMessage("This period is assigned to another teacher.");
@@ -603,12 +606,15 @@ async function checkTimetableAllocation(ticket, dateStr) {
         } else {
             let isFreeRoam = targetSubCategory.includes("MJD") || targetSubCategory.includes("MID") || targetSubCategory.includes("SEC") || targetSubCategory.includes("TUTORIAL") || targetSubCategory.includes("CORE");
             if(isFreeRoam) {
-                const batchQuery = query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", `Semester ${selectedSem}`), where("subjectName", "==", selectedSubject));
+                // 🚨 FIX 2: Correct query here as well!
+                const batchQuery = query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", selectedSem), where("subjectName", "==", selectedSubject));
                 const bSnap = await getDocs(batchQuery);
                 if(ticket !== attCurrentLoadTicket) return;
                 
-                if(!bSnap.empty) spawnManualBatchCards(bSnap.docs, selectedSem, selectedSubject);
-                else {
+                if(!bSnap.empty) {
+                    // This triggers the accordion UI!
+                    spawnManualBatchCards(bSnap.docs, selectedSem, selectedSubject);
+                } else {
                     attCurrentSessionBatchIndex = -1;
                     loadAttendanceRegister(null, ticket, targetSubCategory, dateStr);
                 }
@@ -616,7 +622,10 @@ async function checkTimetableAllocation(ticket, dateStr) {
                 showAttCenterMessage("No class scheduled for this subject.");
             }
         }
-    } catch(e) { console.error("Timetable Engine Error", e); showAttCenterMessage("Connection Error."); }
+    } catch(e) { 
+        console.error("Timetable Engine Error", e); 
+        showAttCenterMessage("Connection Error."); 
+    }
 }
 
 // 🚨 UPDATED: The Pink Accordion Cards matching your image perfectly
