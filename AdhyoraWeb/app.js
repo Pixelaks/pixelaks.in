@@ -1,9 +1,10 @@
-// Import Firebase functions directly from CDN (No Node.js needed!)
+// Import Firebase functions directly from CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// 🚨 ADDED: setDoc and serverTimestamp for Teacher registration
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 🚨 REPLACE THIS WITH YOUR FIREBASE WEB CONFIG 🚨
+// REPLACE THIS WITH YOUR FIREBASE WEB CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
   authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -34,29 +35,23 @@ window.switchPanel = function(panelId, pushToHistory = true) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById(panelId).classList.add('active');
     
-    // Tell the browser history that we moved to a new "page"
     if (pushToHistory) {
         history.pushState({ panel: panelId }, "", `#${panelId}`);
     }
 }
 
-// Set the initial history state when the app loads
 window.addEventListener('load', () => {
     history.replaceState({ panel: 'roleSelectionPanel' }, "", "#roleSelectionPanel");
 });
 
-// Listen for the Android/Browser Native Back Button
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.panel) {
-        // Go back to the previous panel without adding a new history state
         window.switchPanel(e.state.panel, false);
     } else {
-        // Fallback safety
         window.switchPanel('roleSelectionPanel', false);
     }
 });
 
-// 🚨 UPDATED: Now smoothly toggles FontAwesome classes!
 window.toggleVisibility = function(inputId, iconWrapper) {
     const input = document.getElementById(inputId);
     const icon = iconWrapper.querySelector('i');
@@ -104,7 +99,6 @@ fetchColleges();
 
 // --- 2. ROLE SELECTION LOGIC ---
 function checkSelection() {
-    // 🚨 ALLOW CONTINUATION IF ANY VALID ROLE IS SELECTED
     if (collegeDropdown.value !== "" && roleDropdown.value !== "") {
         continueBtn.disabled = false;
     } else {
@@ -115,20 +109,32 @@ function checkSelection() {
 collegeDropdown.addEventListener("change", checkSelection);
 roleDropdown.addEventListener("change", checkSelection);
 
-// --- DYNAMIC UI VISIBILITY (Replicating C# UpdateSecurityInputsVisibility) ---
+// --- DYNAMIC UI VISIBILITY ---
 function updateSecurityInputsVisibility() {
     const role = roleDropdown.value;
     const regRollNoInput = document.getElementById("regRollNo");
+    const regRoomCodeInput = document.getElementById("regRoomCode");
+    const loginRoomCodeInput = document.getElementById("loginRoomCode");
     
+    // Reset inputs
+    if (regRollNoInput) regRollNoInput.style.display = "none";
+    if (regRoomCodeInput) regRoomCodeInput.style.display = "none";
+    if (loginRoomCodeInput) loginRoomCodeInput.style.display = "none";
+
     if (role === "Principal") {
         document.getElementById("signInTitle").innerText = "Principal SignIn";
         document.getElementById("registerTitle").innerText = "Principal Registration";
-        // Hide Roll Number for Principals
-        if (regRollNoInput) regRollNoInput.style.display = "none"; 
-    } else {
+    } 
+    // 🚨 ADDED: Teacher Layout Logic
+    else if (role === "Teacher") {
+        document.getElementById("signInTitle").innerText = "Teacher SignIn";
+        document.getElementById("registerTitle").innerText = "Teacher Registration";
+        if (regRoomCodeInput) regRoomCodeInput.style.display = "block";
+        if (loginRoomCodeInput) loginRoomCodeInput.style.display = "block";
+    } 
+    else {
         document.getElementById("signInTitle").innerText = "Student SignIn";
         document.getElementById("registerTitle").innerText = "Student Registration";
-        // Show Roll Number for Students
         if (regRollNoInput) regRollNoInput.style.display = "block"; 
     }
 }
@@ -139,13 +145,11 @@ continueBtn.addEventListener("click", (e) => {
     selectedCollegeID = collegeDropdown.value;
     selectedCollegeName = collegeDropdown.options[collegeDropdown.selectedIndex].text;
     
-    // 🚨 Run the visibility check right before switching panels!
     updateSecurityInputsVisibility();
-
     window.switchPanel('signInPanel');
 });
 
-// --- 3. LOGIN LOGIC (STUDENT & PRINCIPAL) ---
+// --- 3. LOGIN LOGIC ---
 signInBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -158,10 +162,33 @@ signInBtn.addEventListener("click", async (e) => {
         return;
     }
 
+    // 🚨 TEACHER ROOM CODE CHECK PRE-LOGIN
+    let roomCode = "";
+    if (role === "Teacher") {
+        roomCode = document.getElementById("loginRoomCode").value.trim().toUpperCase();
+        if (!roomCode) {
+            showToast("Enter Room Code");
+            return;
+        }
+    }
+
     signInBtn.disabled = true;
     signInBtn.innerText = "Processing...";
 
     try {
+        // Teacher Room Code DB Validation (matches C# PerformRoomCodeValidation)
+        if (role === "Teacher") {
+            const secureID = "TEACHER_" + roomCode;
+            const lookupRef = doc(db, "colleges", selectedCollegeID, "public_lookup", secureID);
+            const lookupSnap = await getDoc(lookupRef);
+
+            if (!lookupSnap.exists()) {
+                showToast("Invalid Room Code.");
+                resetSignInBtn();
+                return;
+            }
+        }
+
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -178,13 +205,34 @@ signInBtn.addEventListener("click", async (e) => {
             const rollNo = email.split('@')[0]; 
             window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
         } 
+        // 🚨 ADDED: TEACHER LOGIN VERIFICATION
+        else if (role === "Teacher") {
+            showToast("Verifying Teacher Access...");
+            const teacherRef = doc(db, "colleges", selectedCollegeID, "teachers", user.uid);
+            const teacherSnap = await getDoc(teacherRef);
+
+            if (teacherSnap.exists()) {
+                const status = teacherSnap.data().status || "Pending";
+                if (status === "Approved" || status === "Pending") {
+                    showToast("Teacher Login Successful!");
+                    window.location.href = `teacherDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
+                } else {
+                    showToast("Access Denied. Account Status: " + status);
+                    await signOut(auth);
+                    resetSignInBtn();
+                }
+            } else {
+                showToast("Teacher record not found in this college.");
+                await signOut(auth);
+                resetSignInBtn();
+            }
+        }
         else if (role === "Principal") {
             showToast("Verifying Principal Access...");
             const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
             const principalSnap = await getDoc(principalRef);
 
             if (principalSnap.exists()) {
-                // Prevent 'Staff' from logging into the web dashboard directly
                 if (principalSnap.data().subRole === "Staff") {
                     showToast("Staff must request a 1-time access code to log in via App.");
                     await signOut(auth);
@@ -212,7 +260,7 @@ function resetSignInBtn() {
     signInBtn.innerText = "SignIn";
 }
 
-// --- 4. REGISTRATION LOGIC (STUDENT & PRINCIPAL) ---
+// --- 4. REGISTRATION LOGIC ---
 registerBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -222,6 +270,7 @@ registerBtn.addEventListener("click", async (e) => {
     const password = document.getElementById("regPassword").value;
     const confirm = document.getElementById("regConfirmPassword").value;
     const rollNo = document.getElementById("regRollNo").value.trim().toUpperCase();
+    const roomCode = document.getElementById("regRoomCode").value.trim().toUpperCase(); // 🚨 Added
 
     // Basic Validation
     if (!name || !email || !password) {
@@ -230,6 +279,10 @@ registerBtn.addEventListener("click", async (e) => {
     }
     if (role === "Student" && !rollNo) {
         showToast("Roll Number is required for students");
+        return;
+    }
+    if (role === "Teacher" && !roomCode) {
+        showToast("Room Code is required for teachers");
         return;
     }
     if (password !== confirm) {
@@ -245,7 +298,6 @@ registerBtn.addEventListener("click", async (e) => {
         // PRINCIPAL REGISTRATION FLOW
         // ==========================================
         if (role === "Principal") {
-            // 1. Check the Principal Lock
             const lockRef = doc(db, "colleges", selectedCollegeID, "public_lookup", "PRINCIPAL_LOCK");
             const lockSnap = await getDoc(lockRef);
 
@@ -255,7 +307,6 @@ registerBtn.addEventListener("click", async (e) => {
                 return;
             }
 
-            // 2. Create Auth Account
             registerBtn.innerText = "Creating Account...";
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
@@ -263,7 +314,6 @@ registerBtn.addEventListener("click", async (e) => {
             registerBtn.innerText = "Sending Verification...";
             await sendEmailVerification(user);
 
-            // 3. Save Principal Profile
             const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
             await setDoc(principalRef, {
                 name: name,
@@ -273,10 +323,9 @@ registerBtn.addEventListener("click", async (e) => {
                 userID: user.uid,
                 createdAt: serverTimestamp(),
                 hasAgreedToDisclaimer: false,
-                webFcmTokens: [] // Array ready for dashboard push notifications
+                webFcmTokens: []
             });
 
-            // 4. Secure the Lock
             await setDoc(lockRef, {
                 claimed: true,
                 claimedByUID: user.uid,
@@ -288,6 +337,55 @@ registerBtn.addEventListener("click", async (e) => {
             window.switchPanel('signInPanel');
         } 
         
+        // ==========================================
+        // 🚨 TEACHER REGISTRATION FLOW (ADDED)
+        // ==========================================
+        else if (role === "Teacher") {
+            const secureID = "TEACHER_" + roomCode;
+            const lookupRef = doc(db, "colleges", selectedCollegeID, "public_lookup", secureID);
+            const lookupSnap = await getDoc(lookupRef);
+
+            if (!lookupSnap.exists()) {
+                showToast("Verification Failed. Invalid Room Code.");
+                resetRegBtn();
+                return;
+            }
+
+            const data = lookupSnap.data();
+            const deptID = data.deptID || data.departmentID || "";
+
+            if (!deptID) {
+                showToast("Error: Room Code has no Department assigned.");
+                resetRegBtn();
+                return;
+            }
+
+            registerBtn.innerText = "Creating Account...";
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            registerBtn.innerText = "Sending Verification...";
+            await sendEmailVerification(user);
+
+            const teacherRef = doc(db, "colleges", selectedCollegeID, "teachers", user.uid);
+            await setDoc(teacherRef, {
+                name: name,
+                email: email,
+                role: "Teacher",
+                authID: user.uid,
+                userID: user.uid,
+                hasAgreedToDisclaimer: false,
+                webFcmTokens: [],
+                createdAt: serverTimestamp(),
+                departmentID: deptID,
+                status: "Pending"
+            });
+
+            await signOut(auth);
+            showToast("Success! A verification link has been sent to your email.");
+            window.switchPanel('signInPanel');
+        }
+
         // ==========================================
         // STUDENT REGISTRATION FLOW
         // ==========================================
@@ -357,7 +455,6 @@ function getErrorMessage(code) {
 // BACKGROUND PARTICLES & GLITCH EFFECTS
 // ==========================================
 
-// Initialize Particles
 tsParticles.load("tsparticles", {
     particles: {
         number: { value: 80, density: { enable: true, area: 800 } },
@@ -374,7 +471,6 @@ tsParticles.load("tsparticles", {
     background: { color: "transparent" } 
 });
 
-// Glitch Logic
 const TARGET_TEXT = "ADHYORA";
 const DECODE_SPEED = 6; 
 const CHAOS_CHARS = "अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहABCDEFGHIJKLMNOPQRSTUVWXYZ01010101#@%&*";
@@ -448,7 +544,6 @@ function subtleGlitch() {
     }, 100);
 }
 
-// Start glitch 500ms after load
 setTimeout(updateText, 500);
 
 // ==========================================
@@ -506,5 +601,4 @@ document.addEventListener('click', () => {
     document.querySelectorAll('.custom-select-wrapper').forEach(el => el.classList.remove('open'));
 });
 
-// Build Role dropdown on load
 buildCustomDropdown('roleDropdown');
