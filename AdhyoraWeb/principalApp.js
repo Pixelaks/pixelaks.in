@@ -3748,9 +3748,20 @@ async function CheckSecurityPin() {
 const isBiometricSupported = window.PublicKeyCredential !== undefined;
 let isBioEnabledLocally = false; 
 
-// 1. Initialization (Fired by onAuthStateChanged)
+// --- HELPER FUNCTIONS FOR CREDENTIAL IDs ---
+// WebAuthn requires binary ArrayBuffers. These convert them to strings to save in localStorage.
+function bufferToBase64(buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+function base64ToBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+// 1. Initialization
 window.InitBiometricUI = function() {
-    // Looks for the specific User ID so multiple principals on one device don't clash
     isBioEnabledLocally = localStorage.getItem(`adhyora_bio_${currentUserID}`) === "true";
 
     if (!isBiometricSupported) {
@@ -3766,18 +3777,19 @@ elLock.btnToggleWrap.addEventListener("click", async () => {
     if (!isBiometricSupported) return;
 
     if (isBioEnabledLocally) {
-        // Turn it off
+        // Turn it off and wipe the saved credential ID
         isBioEnabledLocally = false;
         localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+        localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); 
         elLock.toggleBio.classList.remove("active");
         showRcToast("Biometrics disabled for this device.");
     } else {
-        // Turn it on: Require them to scan their face/finger to register!
+        // Turn it on and SAVE the credential ID
         try {
             const challenge = window.crypto.getRandomValues(new Uint8Array(32));
             const userIDBuffer = new TextEncoder().encode(currentUserID);
 
-            await navigator.credentials.create({
+            const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
                     rp: { name: "Adhyora AMS", id: window.location.hostname },
@@ -3787,6 +3799,10 @@ elLock.btnToggleWrap.addEventListener("click", async () => {
                     timeout: 60000
                 }
             });
+
+            // 🚨 NEW: Extract and save the exact Credential ID
+            const credIdBase64 = bufferToBase64(credential.rawId);
+            localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
 
             isBioEnabledLocally = true;
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
@@ -3802,18 +3818,35 @@ elLock.btnToggleWrap.addEventListener("click", async () => {
 // 3. Lock Screen Verification Logic
 elLock.btnBio.addEventListener("click", async () => {
     elLock.btnBio.innerText = "Scanning...";
+    
+    // 🚨 NEW: Retrieve the exact Credential ID we saved earlier
+    const savedCredIdBase64 = localStorage.getItem(`adhyora_bio_id_${currentUserID}`);
+    
+    if (!savedCredIdBase64) {
+        elLock.status.innerText = "Biometric data lost. Please set up again.";
+        elLock.status.style.color = "#ef4444";
+        return;
+    }
+
     try {
         const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+        const credIdBuffer = base64ToBuffer(savedCredIdBase64);
+
         await navigator.credentials.get({
             publicKey: {
                 challenge: challenge,
                 rpId: window.location.hostname,
+                // 🚨 NEW: By passing the ID here, Android skips the Passkey menu and goes straight to the Fingerprint!
+                allowCredentials: [{
+                    type: "public-key",
+                    id: credIdBuffer
+                }],
                 userVerification: "required",
                 timeout: 60000
             }
         });
 
-        // 🚨 SUCCESS! If we reach here, their Face/Fingerprint matched!
+        // 🚨 SUCCESS!
         elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
         setTimeout(() => {
             UnlockSecurityWall(); // Bypass the PIN!
