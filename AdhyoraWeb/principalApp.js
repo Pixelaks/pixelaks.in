@@ -3841,6 +3841,7 @@ if(elLock.btnToggleWrap) {
         if (!isBiometricSupported) return;
 
         if (isBioEnabledLocally) {
+            // Turn it off and wipe the saved credential ID
             isBioEnabledLocally = false;
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
             localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); 
@@ -3848,6 +3849,7 @@ if(elLock.btnToggleWrap) {
             elLock.toggleBio.classList.remove("active");
             showRcToast("Biometrics disabled for this device.");
         } else {
+            // Turn it on and SAVE the credential ID + Linked PIN Hash
             try {
                 const challenge = window.crypto.getRandomValues(new Uint8Array(32));
                 const userIDBuffer = new TextEncoder().encode(currentUserID);
@@ -3863,12 +3865,12 @@ if(elLock.btnToggleWrap) {
                     }
                 });
 
+                // Extract and save the exact Credential ID
                 const credIdBase64 = bufferToBase64(credential.rawId);
                 localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
                 
-                // 🚨 SAVE THE SECURE HASH TO BROWSER INSTEAD OF PLAIN TEXT!
-                const secureHash = await hashText(cachedAdminPin);
-                localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, secureHash); 
+                // 🚨 THE FIX IS HERE: We save the secure hash that is already in memory!
+                localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPinHash); 
 
                 isBioEnabledLocally = true;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
