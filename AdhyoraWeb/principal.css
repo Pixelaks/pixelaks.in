@@ -616,61 +616,46 @@ body.dark-mode .up-icon {
 .btn-yearly:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(46, 204, 113, 0.7); background: #27ae60; color: #fff; }
 
 /* =========================================
-   📱 SUBSCRIPTION UI: MOBILE & LIGHT MODE FIXES
+   📱 PREMIUM SUBSCRIPTION: MOBILE OVERFLOW FIX
    ========================================= */
 
-/* 1. Fix the Success Panel Transparency & Colors */
-#subSuccessPanel .compose-modal {
-    background-color: #ffffff !important; /* Solid white for Light Mode */
+/* 1. Fix the main blackout panel so it allows scrolling */
+#subBlockPanel {
+    align-items: flex-start !important; /* Prevents the top from getting cut off */
+    overflow-y: auto !important; /* Enables scrolling for the entire screen */
+    padding: 40px 15px !important; /* Adds breathing room on mobile */
 }
-#successPlanName { color: #334155 !important; } /* Dark text for Light Mode */
-#successExpiryDate { color: #64748b !important; }
 
-/* Adapt Success Panel for Dark Mode */
-body.dark-mode #subSuccessPanel .compose-modal {
-    background-color: #1e293b !important; /* Solid navy for Dark Mode */
+/* 2. Keeps the content centered gracefully */
+.premium-sub-container {
+    margin: auto !important; 
+    width: 100% !important;
 }
-body.dark-mode #successPlanName { color: #f8fafc !important; }
-body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 
-/* 2. Fix Mobile Layout for Pricing Cards */
+/* 3. Stack the cards beautifully on phones and tablets */
 @media (max-width: 800px) {
-    #subBlockPanel .pricing-container {
+    .pricing-grid {
         flex-direction: column !important;
         align-items: center !important;
-        gap: 35px !important;
-        padding: 10px 20px !important;
-        /* Enables scrolling on very small phones so buttons don't get cut off */
-        max-height: 65vh; 
-        overflow-y: auto;
-        overflow-x: hidden;
+        gap: 45px !important; /* Adds space between stacked cards */
     }
     
-    #subBlockPanel .pricing-card {
+    .sub-card-premium {
         width: 100% !important;
-        min-width: 250px !important; /* Allows it to shrink on small screens */
-        max-width: 100% !important;
-        padding: 30px 20px !important;
-        transform: scale(1) !important; /* Removes the zoom so it fits */
+        max-width: 360px !important; /* Keeps it looking like a card, not stretched */
+        padding: 30px 25px !important;
     }
 
-    #subBlockPanel .pricing-card:hover {
-        transform: translateY(-5px) scale(1) !important; /* Softer hover on mobile */
-    }
-
-    /* Shrink the headers slightly to fit mobile */
-    #subBlockHeading {
-        font-size: 1.8rem !important;
-        margin-top: 20px !important;
+    .sub-card-premium.highlight {
+        transform: scale(1) !important; /* Removes the zoom so it fits on screen */
+        margin-top: 15px !important; /* Gives room for the "Most Popular" badge */
     }
     
-    #subBlockText {
-        font-size: 0.95rem !important;
-        margin-bottom: 25px !important;
+    .sub-card-premium.highlight:hover {
+        transform: translateY(-8px) scale(1) !important; /* Softer hover for mobile */
     }
 
-    /* Hide the scrollbar for a cleaner look but keep scroll functionality */
-    #subBlockPanel .pricing-container::-webkit-scrollbar {
-        display: none;
+    #subBlockHeading {
+        font-size: 2.2rem !important;
     }
 }
