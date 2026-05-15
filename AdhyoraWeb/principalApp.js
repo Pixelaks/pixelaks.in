@@ -3914,7 +3914,8 @@ function SetLockMode(mode) {
 
 elLock.btnSubmit.addEventListener("click", async () => {
     let val = elLock.input.value.trim();
-    if (val.length !== 4) {
+    // 🚨 THE FIX: Only enforce the 4-digit rule if we are NOT on the Biometric screen!
+    if (lockMode !== "SETUP_BIO" && val.length !== 4) {
         elLock.status.innerText = "PIN must be exactly 4 digits.";
         elLock.status.style.color = "#ef4444";
         return;
