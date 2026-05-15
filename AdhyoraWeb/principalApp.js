@@ -3719,38 +3719,78 @@ const elLock = {
     btnBio: document.getElementById("btnLockBiometrics"), toggleBio: document.getElementById("bioToggleSwitch"), btnToggleWrap: document.getElementById("btnToggleBiometrics")
 };
 
-async function CheckSecurityPin() {
+let securityListener = null;
+let isFirstSecurityLoad = true;
+
+function CheckSecurityPin() {
+    // 🚨 GHOST UI: Erase Dashboard from DOM while locked
     document.querySelector(".main-content").style.display = "none";
     document.getElementById("mainSidebar").style.display = "none";
+    document.getElementById("initialAppLoader").style.display = "none"; 
+    elLock.screen.style.display = "flex"; 
 
-    try {
-        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
-        document.getElementById("initialAppLoader").style.display = "none"; 
-        elLock.screen.style.display = "flex"; 
+    // Prevent duplicate listeners if this function is called twice
+    if (securityListener) securityListener(); 
 
+    // 🚨 REAL-TIME LISTENER: This watches the database 24/7!
+    securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "metadata", "security"), (snap) => {
         if (snap.exists() && snap.data().adminPin) {
-            cachedAdminPin = snap.data().adminPin;
+            const livePin = snap.data().adminPin;
             
-            // 🚨 NEW: BIOMETRIC INVALIDATION CHECK
-            const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
-            if (isBioEnabledLocally && linkedPin && linkedPin !== cachedAdminPin) {
-                // The PIN was changed somewhere else! Wipe local biometrics.
+            // ========================================================
+            // 🚨 REMOTE HACK PREVENTION (Fires if PIN changes while app is open)
+            // ========================================================
+            if (!isFirstSecurityLoad && cachedAdminPin && cachedAdminPin !== livePin) {
+                console.warn("SECURITY ALERT: PIN changed remotely!");
+                
+                // 1. Wipe local biometrics instantly so they can't use the old fingerprint!
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
                 localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
                 localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
                 if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
-                showRcToast("Main PIN was changed. Biometrics have been reset for security.");
+                
+                // 2. Force the lock screen back up instantly!
+                document.querySelector(".main-content").style.display = "none";
+                document.getElementById("mainSidebar").style.display = "none";
+                elLock.screen.style.display = "flex";
+                
+                showRcToast("Security PIN was changed remotely. Biometrics reset.");
+                SetLockMode("LOGIN");
             }
-            
-            SetLockMode("LOGIN");
+
+            cachedAdminPin = livePin;
+
+            // ========================================================
+            // 🚨 STANDARD BOOT SEQUENCE
+            // ========================================================
+            if (isFirstSecurityLoad) {
+                // Verify local biometrics match the database on boot
+                const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                if (isBioEnabledLocally && linkedPin && linkedPin !== cachedAdminPin) {
+                    isBioEnabledLocally = false;
+                    localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+                    localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
+                    localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                    if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
+                }
+                
+                SetLockMode("LOGIN");
+                isFirstSecurityLoad = false;
+            }
+
         } else {
-            SetLockMode("SETUP_1");
+            // No PIN exists in database
+            if (isFirstSecurityLoad) {
+                SetLockMode("SETUP_1");
+                isFirstSecurityLoad = false;
+            }
         }
-    } catch(e) {
-        elLock.status.innerText = "Network error. Please refresh.";
+    }, (error) => {
+        console.error("Security Sync Error", error);
+        elLock.status.innerText = "Network error syncing security.";
         elLock.status.style.color = "#ef4444";
-    }
+    });
 }
 // ==========================================
 // 🚨 BIOMETRIC (WEBAUTHN) ENGINE
