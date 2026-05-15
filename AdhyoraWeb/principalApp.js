@@ -3720,17 +3720,29 @@ const elLock = {
 };
 
 async function CheckSecurityPin() {
-    // 🚨 GHOST UI: Erase Dashboard from DOM while locked
     document.querySelector(".main-content").style.display = "none";
     document.getElementById("mainSidebar").style.display = "none";
 
     try {
         const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
-        document.getElementById("initialAppLoader").style.display = "none"; // Hide loader
-        elLock.screen.style.display = "flex"; // Show Lock Screen
+        document.getElementById("initialAppLoader").style.display = "none"; 
+        elLock.screen.style.display = "flex"; 
 
         if (snap.exists() && snap.data().adminPin) {
             cachedAdminPin = snap.data().adminPin;
+            
+            // 🚨 NEW: BIOMETRIC INVALIDATION CHECK
+            const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
+            if (isBioEnabledLocally && linkedPin && linkedPin !== cachedAdminPin) {
+                // The PIN was changed somewhere else! Wipe local biometrics.
+                isBioEnabledLocally = false;
+                localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+                localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
+                localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
+                showRcToast("Main PIN was changed. Biometrics have been reset for security.");
+            }
+            
             SetLockMode("LOGIN");
         } else {
             SetLockMode("SETUP_1");
@@ -3740,7 +3752,6 @@ async function CheckSecurityPin() {
         elLock.status.style.color = "#ef4444";
     }
 }
-
 // ==========================================
 // 🚨 BIOMETRIC (WEBAUTHN) ENGINE
 // ==========================================
@@ -3748,8 +3759,7 @@ async function CheckSecurityPin() {
 const isBiometricSupported = window.PublicKeyCredential !== undefined;
 let isBioEnabledLocally = false; 
 
-// --- HELPER FUNCTIONS FOR CREDENTIAL IDs ---
-// WebAuthn requires binary ArrayBuffers. These convert them to strings to save in localStorage.
+// Helper Functions
 function bufferToBase64(buffer) {
     return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
@@ -3765,100 +3775,106 @@ window.InitBiometricUI = function() {
     isBioEnabledLocally = localStorage.getItem(`adhyora_bio_${currentUserID}`) === "true";
 
     if (!isBiometricSupported) {
-        elLock.btnToggleWrap.style.opacity = "0.5";
-        elLock.btnToggleWrap.title = "Not supported on this device/browser.";
+        if(elLock.btnToggleWrap) {
+            elLock.btnToggleWrap.style.opacity = "0.5";
+            elLock.btnToggleWrap.title = "Not supported on this device/browser.";
+        }
     } else if (isBioEnabledLocally) {
-        elLock.toggleBio.classList.add("active");
+        if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
     }
 };
 
 // 2. Settings Menu Toggle Logic
-elLock.btnToggleWrap.addEventListener("click", async () => {
-    if (!isBiometricSupported) return;
+if(elLock.btnToggleWrap) {
+    elLock.btnToggleWrap.addEventListener("click", async () => {
+        if (!isBiometricSupported) return;
 
-    if (isBioEnabledLocally) {
-        // Turn it off and wipe the saved credential ID
-        isBioEnabledLocally = false;
-        localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
-        localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); 
-        elLock.toggleBio.classList.remove("active");
-        showRcToast("Biometrics disabled for this device.");
-    } else {
-        // Turn it on and SAVE the credential ID
+        if (isBioEnabledLocally) {
+            // Turn it off and wipe the saved credential ID
+            isBioEnabledLocally = false;
+            localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+            localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); 
+            localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+            elLock.toggleBio.classList.remove("active");
+            showRcToast("Biometrics disabled for this device.");
+        } else {
+            // Turn it on and SAVE the credential ID + Linked PIN
+            try {
+                const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+                const userIDBuffer = new TextEncoder().encode(currentUserID);
+
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challenge,
+                        rp: { name: "Adhyora AMS", id: window.location.hostname },
+                        user: { id: userIDBuffer, name: myRealName, displayName: myRealName },
+                        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                        timeout: 60000
+                    }
+                });
+
+                // Extract and save the exact Credential ID & Link the PIN
+                const credIdBase64 = bufferToBase64(credential.rawId);
+                localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
+                localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPin); // 🚨 LINKED HERE
+
+                isBioEnabledLocally = true;
+                localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
+                elLock.toggleBio.classList.add("active");
+                showRcToast("✅ Biometrics Linked Successfully!");
+            } catch (err) {
+                console.error(err);
+                showRcToast("❌ Failed to link Biometrics.");
+            }
+        }
+    });
+}
+
+// 3. Lock Screen Verification Logic
+if(elLock.btnBio) {
+    elLock.btnBio.addEventListener("click", async () => {
+        elLock.btnBio.innerText = "Scanning...";
+        
+        // Tell the visibility listener a native popup is open!
+        if (typeof isBiometricPromptActive !== 'undefined') isBiometricPromptActive = true; 
+        
+        const savedCredIdBase64 = localStorage.getItem(`adhyora_bio_id_${currentUserID}`);
+        if (!savedCredIdBase64) {
+            elLock.status.innerText = "Biometric data lost. Please set up again.";
+            elLock.status.style.color = "#ef4444";
+            if (typeof isBiometricPromptActive !== 'undefined') isBiometricPromptActive = false;
+            return;
+        }
+
         try {
             const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-            const userIDBuffer = new TextEncoder().encode(currentUserID);
+            const credIdBuffer = base64ToBuffer(savedCredIdBase64);
 
-            const credential = await navigator.credentials.create({
+            await navigator.credentials.get({
                 publicKey: {
                     challenge: challenge,
-                    rp: { name: "Adhyora AMS", id: window.location.hostname },
-                    user: { id: userIDBuffer, name: myRealName, displayName: myRealName },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    rpId: window.location.hostname,
+                    allowCredentials: [{ type: "public-key", id: credIdBuffer }],
+                    userVerification: "required",
                     timeout: 60000
                 }
             });
 
-            // 🚨 NEW: Extract and save the exact Credential ID
-            const credIdBase64 = bufferToBase64(credential.rawId);
-            localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
+            // SUCCESS!
+            if (typeof isBiometricPromptActive !== 'undefined') isBiometricPromptActive = false;
+            elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
+            setTimeout(() => { UnlockSecurityWall(); }, 500);
 
-            isBioEnabledLocally = true;
-            localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
-            elLock.toggleBio.classList.add("active");
-            showRcToast("✅ Biometrics Linked Successfully!");
         } catch (err) {
             console.error(err);
-            showRcToast("❌ Failed to link Biometrics.");
+            if (typeof isBiometricPromptActive !== 'undefined') isBiometricPromptActive = false;
+            elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again';
+            elLock.status.innerText = "Biometric scan failed or cancelled.";
+            elLock.status.style.color = "#ef4444";
         }
-    }
-});
-
-// 3. Lock Screen Verification Logic
-elLock.btnBio.addEventListener("click", async () => {
-    elLock.btnBio.innerText = "Scanning...";
-    
-    // 🚨 NEW: Retrieve the exact Credential ID we saved earlier
-    const savedCredIdBase64 = localStorage.getItem(`adhyora_bio_id_${currentUserID}`);
-    
-    if (!savedCredIdBase64) {
-        elLock.status.innerText = "Biometric data lost. Please set up again.";
-        elLock.status.style.color = "#ef4444";
-        return;
-    }
-
-    try {
-        const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-        const credIdBuffer = base64ToBuffer(savedCredIdBase64);
-
-        await navigator.credentials.get({
-            publicKey: {
-                challenge: challenge,
-                rpId: window.location.hostname,
-                // 🚨 NEW: By passing the ID here, Android skips the Passkey menu and goes straight to the Fingerprint!
-                allowCredentials: [{
-                    type: "public-key",
-                    id: credIdBuffer
-                }],
-                userVerification: "required",
-                timeout: 60000
-            }
-        });
-
-        // 🚨 SUCCESS!
-        elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
-        setTimeout(() => {
-            UnlockSecurityWall(); // Bypass the PIN!
-        }, 500);
-
-    } catch (err) {
-        console.error(err);
-        elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again';
-        elLock.status.innerText = "Biometric scan failed or cancelled.";
-        elLock.status.style.color = "#ef4444";
-    }
-});
+    });
+}
 
 
 function SetLockMode(mode) {
@@ -3914,7 +3930,8 @@ function SetLockMode(mode) {
 
 elLock.btnSubmit.addEventListener("click", async () => {
     let val = elLock.input.value.trim();
-    // 🚨 THE FIX: Only enforce the 4-digit rule if we are NOT on the Biometric screen!
+    
+    // Only enforce the 4-digit rule if we are NOT on the Biometric screen
     if (lockMode !== "SETUP_BIO" && val.length !== 4) {
         elLock.status.innerText = "PIN must be exactly 4 digits.";
         elLock.status.style.color = "#ef4444";
@@ -3944,8 +3961,16 @@ elLock.btnSubmit.addEventListener("click", async () => {
                 await setDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"), { adminPin: val, updatedAt: serverTimestamp() }, { merge: true });
                 cachedAdminPin = val;
                 
-                // 🚨 NEW: Check if device supports Biometrics. If yes, prompt them. If no, unlock immediately!
+                // Wipe old biometrics because the PIN just changed
+                isBioEnabledLocally = false;
+                localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+                localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
+                localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
+                
                 elLock.btnSubmit.disabled = false;
+                
+                // Prompt to register new Fingerprint for the new PIN
                 if (isBiometricSupported && !isBioEnabledLocally) {
                     SetLockMode("SETUP_BIO");
                 } else {
@@ -3963,7 +3988,6 @@ elLock.btnSubmit.addEventListener("click", async () => {
             setTimeout(() => SetLockMode(lockMode === "SETUP_2" ? "SETUP_1" : "RESET_NEW_1"), 1500);
         }
     }
-    // 🚨 NEW: Handle the Biometric Setup Button click!
     else if (lockMode === "SETUP_BIO") {
         elLock.btnSubmit.innerText = "Scanning...";
         try {
@@ -3981,13 +4005,13 @@ elLock.btnSubmit.addEventListener("click", async () => {
                 }
             });
 
-            // Save the exact Credential ID for fast login later
+            // Save the Credential ID and Link it to the PIN!
             const credIdBase64 = bufferToBase64(credential.rawId);
             localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64);
+            localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPin); // 🚨 LINKED HERE
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
             isBioEnabledLocally = true;
             
-            // Sync settings menu toggle so it's accurate!
             if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
 
             elLock.btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Linked!';
@@ -4073,6 +4097,27 @@ document.getElementById("btnResetPassSettings").addEventListener("click", async 
             document.getElementById("settingsOverlay").classList.remove("active");
         } catch(e) {
             showRcToast("Failed to send reset link.");
+        }
+    }
+});
+
+// ==========================================
+// 🚨 FOREGROUND / BACKGROUND APP LOCK
+// ==========================================
+let isBiometricPromptActive = false; // Prevents lock loops when OS scanner opens
+
+document.addEventListener("visibilitychange", () => {
+    // When the app comes back to the screen
+    if (document.visibilityState === "visible") {
+        const isLocked = elLock.screen.style.display === "flex";
+        
+        // If we are not already locked, not scanning a fingerprint, and a PIN exists
+        if (!isLocked && !isBiometricPromptActive && cachedAdminPin) {
+            // Lock the DOM instantly!
+            document.querySelector(".main-content").style.display = "none";
+            document.getElementById("mainSidebar").style.display = "none";
+            elLock.screen.style.display = "flex";
+            SetLockMode("LOGIN");
         }
     }
 });
