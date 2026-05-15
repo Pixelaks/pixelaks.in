@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
 // 🚨 FIREBASE CONFIGURATION
@@ -16,12 +15,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
 let currentCollegeID = "";
-let currentUserID = "";
-
-// Ensure user accessed via valid URL
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
@@ -30,81 +25,49 @@ if (!currentCollegeID) {
 } else {
     onAuthStateChanged(auth, (user) => {
         if (user) { 
-            currentUserID = user.uid; 
-            
-            // For now, immediately unlock the UI (We will add the DB check later)
+            // Unlock UI immediately for testing
             document.getElementById("initialAppLoader").style.display = "none";
-            document.getElementById("teacherNameText").innerText = "Teacher Profile";
             document.getElementById("teacherEmailText").innerText = user.email;
-        } 
-        else { 
+        } else { 
             window.location.href = "index.html"; 
         }
     });
 }
 
 // ==========================================
-// 🚨 THEME MANAGER
-// ==========================================
-function applyTheme(isDark) {
-    if (isDark) {
-        document.body.classList.add("dark-mode");
-        document.getElementById("btnDarkMode").style.border = "2px solid var(--brand-green)";
-        document.getElementById("btnLightMode").style.border = "1px solid #475569";
-    } else {
-        document.body.classList.remove("dark-mode");
-        document.getElementById("btnLightMode").style.border = "2px solid var(--brand-green)";
-        document.getElementById("btnDarkMode").style.border = "1px solid #cbd5e1";
-    }
-    localStorage.setItem("adhyora_teacher_theme", isDark ? "dark" : "light");
-}
-
-document.getElementById("btnDarkMode").addEventListener("click", () => applyTheme(true));
-document.getElementById("btnLightMode").addEventListener("click", () => applyTheme(false));
-
-// Load saved theme immediately on boot
-applyTheme(localStorage.getItem("adhyora_teacher_theme") === "dark");
-
-// ==========================================
-// 🚨 UI NAVIGATION ROUTER
+// 🚨 UI NAVIGATION ROUTER (MOBILE SAFE)
 // ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"),
-    profile: document.getElementById("profileView"),
-    timetable: document.getElementById("timetableView"),
     attendance: document.getElementById("attendanceView"),
-    marks: document.getElementById("marksView"),
-    students: document.getElementById("studentsView"),
-    events: document.getElementById("eventsView"),
-    notifications: document.getElementById("notificationsView"), 
-    calendar: document.getElementById("calendarView"), 
+    timetable: document.getElementById("timetableView"),
+    internalMarks: document.getElementById("internalMarksView"),
+    subjects: document.getElementById("subjectsView"),
+    calendar: document.getElementById("calendarView"),
+    assignments: document.getElementById("assignmentsView"),
+    studentList: document.getElementById("studentListView"),
+    subjectAssign: document.getElementById("subjectAssignView"),
+    batch: document.getElementById("batchView"),
+    eventAttendance: document.getElementById("eventAttendanceView"),
+    notifications: document.getElementById("notificationsView"),
     messages: document.getElementById("messagesView")
 };
 
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
-const navButtons = document.querySelectorAll(".nav-icon-btn");
 
-function switchView(targetView, clickedBtn) {
-    // Reset Top Nav Icons
-    navButtons.forEach(btn => btn.classList.remove("active-nav"));
-    if (clickedBtn && clickedBtn.classList.contains('nav-icon-btn')) {
-        clickedBtn.classList.add("active-nav");
-    }
-
-    // Hide all views
+function switchView(targetView) {
+    // Hide all view containers
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
 
-    // Handle Mobile Sidebar vs Main Content Toggle
     if (targetView === "HOME") {
         sidebar.classList.remove("mobile-hidden"); 
         mainContent.classList.remove("mobile-active");
-        if (window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
+        if (window.innerWidth > 1024) views.welcome.classList.remove("hidden-view");
     } else {
         sidebar.classList.add("mobile-hidden"); 
         mainContent.classList.add("mobile-active");
         
-        // Show Target View with fade in
         if (targetView) { 
             targetView.classList.remove("hidden-view"); 
             targetView.style.opacity = 0; 
@@ -113,59 +76,30 @@ function switchView(targetView, clickedBtn) {
     }
 }
 
-// Top Nav Listeners
-document.getElementById("btnHome").addEventListener("click", (e) => switchView("HOME", e.currentTarget));
-document.getElementById("btnNotifications").addEventListener("click", (e) => switchView(views.notifications, e.currentTarget));
-document.getElementById("btnCalendar").addEventListener("click", (e) => switchView(views.calendar, e.currentTarget));
-document.getElementById("btnMessages").addEventListener("click", (e) => switchView(views.messages, e.currentTarget));
-
-// Sidebar Listeners
-document.getElementById("btnNavProfile").addEventListener("click", () => switchView(views.profile));
-document.getElementById("btnNavTimetable").addEventListener("click", () => switchView(views.timetable));
+// Map the 10 Grid Buttons
+document.getElementById("btnHome").addEventListener("click", () => switchView("HOME"));
 document.getElementById("btnNavAttendance").addEventListener("click", () => switchView(views.attendance));
-document.getElementById("btnNavMarks").addEventListener("click", () => switchView(views.marks));
-document.getElementById("btnNavStudents").addEventListener("click", () => switchView(views.students));
-document.getElementById("btnNavEvents").addEventListener("click", () => switchView(views.events));
+document.getElementById("btnNavTimetable").addEventListener("click", () => switchView(views.timetable));
+document.getElementById("btnNavInternalMarks").addEventListener("click", () => switchView(views.internalMarks));
+document.getElementById("btnNavSubjects").addEventListener("click", () => switchView(views.subjects));
+document.getElementById("btnNavCalendar").addEventListener("click", () => switchView(views.calendar));
+document.getElementById("btnNavAssignments").addEventListener("click", () => switchView(views.assignments));
+document.getElementById("btnNavStudentList").addEventListener("click", () => switchView(views.studentList));
+document.getElementById("btnNavSubjectAssign").addEventListener("click", () => switchView(views.subjectAssign));
+document.getElementById("btnNavBatch").addEventListener("click", () => switchView(views.batch));
+document.getElementById("btnNavEventAttendance").addEventListener("click", () => switchView(views.eventAttendance));
 
-// ==========================================
-// 🚨 MODAL & SETTINGS MANAGER
-// ==========================================
-const elSettings = document.getElementById("settingsOverlay");
+// Map Bottom Pill Icons
+document.getElementById("btnNotifications").addEventListener("click", () => switchView(views.notifications));
+document.getElementById("btnMessages").addEventListener("click", () => switchView(views.messages));
 
 // Settings Drawer
+const elSettings = document.getElementById("settingsOverlay");
 document.getElementById("btnSettings").addEventListener("click", () => elSettings.classList.add("active"));
 document.getElementById("closeSettingsBtn").addEventListener("click", () => elSettings.classList.remove("active"));
 elSettings.addEventListener("click", (e) => { if (e.target === elSettings) elSettings.classList.remove("active"); });
 
-// Themes Modal
-document.getElementById("btnThemes").addEventListener("click", () => {
-    elSettings.classList.remove("active");
-    document.getElementById("themesModal").classList.add("active");
-});
-
-// Devices Modal
-document.getElementById("btnDevices").addEventListener("click", () => {
-    elSettings.classList.remove("active");
-    document.getElementById("sessionsModal").classList.add("active");
-});
-
-// Compose Message Modal
-document.getElementById("btnOpenCompose").addEventListener("click", () => {
-    document.getElementById("composeOverlay").classList.add("active");
-});
-document.getElementById("closeComposeBtn").addEventListener("click", () => {
-    document.getElementById("composeOverlay").classList.remove("active");
-});
-
-// Basic Sign Out
+// Sign Out
 document.getElementById("btnSignOut").addEventListener("click", () => { 
     if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); 
 });
-
-// Generic Toast Function
-window.showRcToast = function(msg) { 
-    let t = document.getElementById("rcToast"); 
-    t.innerText = msg; 
-    t.style.bottom = "30px"; 
-    setTimeout(() => t.style.bottom = "-100px", 3000); 
-};
