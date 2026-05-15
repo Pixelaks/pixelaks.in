@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, documentId } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
 // 🚨 GLOBAL VARIABLES
@@ -1479,3 +1479,301 @@ attachSafeClick("btnThemes", () => { let s = document.getElementById("settingsOv
 attachSafeClick("btnDarkMode", () => applyTheme(true));
 attachSafeClick("btnLightMode", () => applyTheme(false));
 applyTheme(localStorage.getItem("adhyora_teacher_theme") === "dark");
+
+// ==========================================
+// 🚨 ATTENDANCE HISTORY (RECORDS) ENGINE
+// ==========================================
+let histCurrentDate = new Date();
+let histDailyPeriodCache = new Map();
+let histStudentNameCache = new Map();
+let histLastFetchedYearStr = "";
+
+// Bind HTML Buttons
+document.getElementById("btnOpenHistory")?.addEventListener("click", openHistoryPanel);
+document.getElementById("closeHistoryBtn")?.addEventListener("click", () => document.getElementById("historyModal").style.display = "none");
+document.getElementById("closeRecordBtn")?.addEventListener("click", () => document.getElementById("recordViewerModal").style.display = "none");
+document.getElementById("histSemDropdown")?.addEventListener("change", onHistSemesterChanged);
+document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
+    // Reusing your existing Jump Date panel!
+    document.getElementById("jumpDateModal").classList.add("active");
+    // Temporarily override the jump submit button for history
+    let submitBtn = document.getElementById("jumpSubmitBtn");
+    let newSubmit = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
+    newSubmit.addEventListener("click", () => {
+        let d = parseInt(document.getElementById("jumpDayDropdown").value);
+        let m = parseInt(document.getElementById("jumpMonthDropdown").value);
+        let y = parseInt(document.getElementById("jumpYearDropdown").value);
+        histCurrentDate = new Date(y, m, d);
+        document.getElementById("jumpDateModal").classList.remove("active");
+        histUpdateDateUI();
+        histFetchDailyHistory();
+        
+        // Restore standard attendance functionality to the jump button
+        setupJumpDateModals(); 
+    });
+});
+
+function openHistoryPanel() {
+    document.getElementById("historyModal").style.display = "flex";
+    
+    // Setup Semesters
+    let semDrop = document.getElementById("histSemDropdown");
+    if(currentSemesterType === "Odd") {
+        semDrop.innerHTML = `<option value="1">Semester 1</option><option value="3">Semester 3</option><option value="5">Semester 5</option><option value="7">Semester 7</option>`;
+    } else {
+        semDrop.innerHTML = `<option value="2">Semester 2</option><option value="4">Semester 4</option><option value="6">Semester 6</option><option value="8">Semester 8</option>`;
+    }
+
+    histCurrentDate = new Date();
+    histUpdateDateUI();
+    onHistSemesterChanged();
+}
+
+function histUpdateDateUI() {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let dStr = `${days[histCurrentDate.getDay()]}<br>${histCurrentDate.getFullYear()}-${String(histCurrentDate.getMonth()+1).padStart(2,'0')}-${String(histCurrentDate.getDate()).padStart(2,'0')}`;
+    document.getElementById("histDateJumpBtn").innerHTML = dStr;
+    histUpdateQuickDays();
+}
+
+function histUpdateQuickDays() {
+    let container = document.getElementById("histDaysContainer");
+    let dayIndex = histCurrentDate.getDay() === 0 ? 6 : histCurrentDate.getDay() - 1; // Mon=0, Sun=6
+    
+    let html = "";
+    const labels = ["M", "T", "W", "T", "F"];
+    for(let i=0; i<5; i++) {
+        let isSelected = i === dayIndex;
+        let bg = isSelected ? "#3b82f6" : "white"; // Matches Unity selectedDayColor
+        let col = isSelected ? "white" : "var(--text-muted)";
+        let border = isSelected ? "none" : "1px solid var(--border-color)";
+        html += `<button onclick="histQuickJumpDay(${i})" style="flex:1; padding:10px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s;">${labels[i]}</button>`;
+    }
+    container.innerHTML = html;
+}
+
+function histQuickJumpDay(targetDayIndex) {
+    let d = new Date(histCurrentDate);
+    let day = d.getDay();
+    let diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+    let monday = new Date(d.setDate(diff));
+    
+    histCurrentDate = new Date(monday.setDate(monday.getDate() + targetDayIndex));
+    histUpdateDateUI();
+    histFetchDailyHistory();
+}
+
+function onHistSemesterChanged() {
+    let semText = document.getElementById("histSemDropdown").value;
+    histPreloadStudentNames(semText);
+    histFetchDailyHistory();
+}
+
+async function histPreloadStudentNames(semNum) {
+    let semInt = parseInt(semNum);
+    let yearStr = "1";
+    if(semInt <= 2) yearStr = "1"; else if(semInt <= 4) yearStr = "2"; else if(semInt <= 6) yearStr = "3"; else yearStr = "4";
+
+    if (histLastFetchedYearStr === yearStr) return;
+    histLastFetchedYearStr = yearStr;
+
+    try {
+        let snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
+        histStudentNameCache.clear();
+        snap.forEach(doc => {
+            let d = doc.data();
+            let name = d.Name || d.studentName || "Unknown";
+            let roll = d.RollNumber || d.rollNumber || doc.id;
+            histStudentNameCache.set(doc.id, name);
+            histStudentNameCache.set(roll, name);
+        });
+    } catch(e) { console.error("History Name Preload Error:", e); }
+}
+
+async function histFetchDailyHistory() {
+    let centerMsg = document.getElementById("histCenterMsg");
+    document.getElementById("histListContainer").innerHTML = "";
+    document.getElementById("histListContainer").appendChild(centerMsg);
+    
+    centerMsg.style.display = "block";
+    centerMsg.innerHTML = "Fetching Records...";
+
+    let dateStr = `${histCurrentDate.getFullYear()}-${String(histCurrentDate.getMonth()+1).padStart(2,'0')}-${String(histCurrentDate.getDate()).padStart(2,'0')}`;
+    let semDrop = document.getElementById("histSemDropdown");
+    let selectedSem = semDrop.options[semDrop.selectedIndex].text;
+    let semName = selectedSem.replace(/ /g, "");
+    
+    // 🚨 THE CRASH-PROOF PREFIX QUERY
+    let docPrefix = `${dateStr}_${semName}_`;
+
+    try {
+        let snap = await getDocs(query(
+            collection(db, "colleges", currentCollegeID, "attendance"),
+            where(documentId(), ">=", docPrefix),
+            where(documentId(), "<=", docPrefix + "\uf8ff")
+        ));
+
+        if (snap.empty) {
+            centerMsg.innerHTML = "No attendance marked for this day.";
+            histDailyPeriodCache.clear();
+            return;
+        }
+
+        histProcessDailyData(snap, selectedSem);
+    } catch(e) {
+        centerMsg.innerHTML = "Network Error.";
+        console.error("History Fetch Error:", e);
+    }
+}
+
+function histProcessDailyData(snapshot, targetSemester) {
+    histDailyPeriodCache.clear();
+    let validRecordsFound = 0;
+
+    snapshot.forEach(docSnap => {
+        if (docSnap.id.endsWith("_GLOBAL") || docSnap.id.endsWith("_EVENTS")) return;
+
+        let dayData = docSnap.data();
+        for (let i = 1; i <= 6; i++) {
+            let pKey = `period_${i}`;
+            if (dayData[pKey]) {
+                let periodData = dayData[pKey];
+                let deptID = periodData.departmentID || "";
+                let category = (periodData.category || "").toUpperCase();
+                let markedByMe = false;
+
+                // 🚨 C# Logic: Safely check inside batches
+                if (periodData.batch_teachers) {
+                    let allTeacherNames = [];
+                    for (let [bKey, bInfo] of Object.entries(periodData.batch_teachers)) {
+                        if (bInfo.id === currentUserID) markedByMe = true;
+                        if (bInfo.name) {
+                            let tName = bInfo.name;
+                            let batchLabel = "";
+                            if (bKey !== "common" && !isNaN(bKey)) {
+                                batchLabel = ` (Batch ${parseInt(bKey) + 1})`;
+                            }
+                            allTeacherNames.push(tName + batchLabel);
+                        }
+                    }
+                    if (allTeacherNames.length > 0) {
+                        periodData.markedByTeacherName = allTeacherNames.join(", ");
+                    }
+                } else if (periodData.markedByTeacherID === currentUserID) {
+                    markedByMe = true;
+                }
+
+                let isMyDept = (deptID === teacherDeptRaw && teacherDeptRaw !== "");
+                let isCommonSubject = category.includes("AECC") || category.includes("VAC") || category.includes("SEC") || category.includes("MID");
+
+                if (isMyDept || isCommonSubject || markedByMe) {
+                    if (!histDailyPeriodCache.has(i)) histDailyPeriodCache.set(i, []);
+                    periodData.periodNumber = i;
+                    histDailyPeriodCache.get(i).push(periodData);
+                    validRecordsFound++;
+                }
+            }
+        }
+    });
+
+    if (validRecordsFound === 0) {
+        document.getElementById("histCenterMsg").innerHTML = `No records found for ${targetSemester}<br>in your department.`;
+    } else {
+        document.getElementById("histCenterMsg").style.display = "none";
+        histBuildPeriodUI();
+    }
+}
+
+function histBuildPeriodUI() {
+    let container = document.getElementById("histListContainer");
+    
+    let sortedPeriods = Array.from(histDailyPeriodCache.keys()).sort((a,b) => a - b);
+    
+    sortedPeriods.forEach(pNum => {
+        let pDataList = histDailyPeriodCache.get(pNum);
+        
+        let periodCard = document.createElement("div");
+        periodCard.style.cssText = "background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden;";
+        
+        // Header
+        let headerBtn = document.createElement("button");
+        headerBtn.style.cssText = "width:100%; padding:20px; background:transparent; border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;";
+        headerBtn.innerHTML = `<span style="font-weight:bold; font-size:16px;">Period ${pNum}</span> <i class="fas fa-chevron-down" style="color:var(--text-muted); transition:0.3s;"></i>`;
+        
+        // Body (Hidden initially)
+        let bodyDiv = document.createElement("div");
+        bodyDiv.style.cssText = "display:none; padding:15px; border-top:1px solid var(--border-color); background:var(--bg-surface);";
+        
+        // Spawn Subjects (Like NepHistorySubjectRow)
+        pDataList.forEach(data => {
+            let sName = data.subject || "Unknown Subject";
+            let tName = data.markedByTeacherName || "Unknown";
+            
+            let subBtn = document.createElement("button");
+            subBtn.style.cssText = "width:100%; background:white; border:1px solid var(--border-color); border-radius:8px; padding:15px; margin-bottom:10px; text-align:left; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02); transition:0.2s;";
+            subBtn.innerHTML = `<div style="font-weight:bold; font-size:15px; color:var(--text-dark); margin-bottom:5px;">${sName}</div>
+                                <div style="font-size:12px; color:var(--text-muted);">Marked by: ${tName}</div>`;
+                                
+            subBtn.addEventListener("click", () => histOpenRecordViewer(data));
+            bodyDiv.appendChild(subBtn);
+        });
+
+        // Toggle Logic (NepHistoryPeriodRow logic)
+        headerBtn.addEventListener("click", () => {
+            let isExpanded = bodyDiv.style.display === "block";
+            bodyDiv.style.display = isExpanded ? "none" : "block";
+            headerBtn.querySelector("i").style.transform = isExpanded ? "rotate(0deg)" : "rotate(180deg)";
+        });
+
+        periodCard.appendChild(headerBtn);
+        periodCard.appendChild(bodyDiv);
+        container.appendChild(periodCard);
+    });
+}
+
+function histOpenRecordViewer(data) {
+    document.getElementById("recordViewerModal").style.display = "flex";
+    
+    let subjectName = data.subject || "Unknown Subject";
+    let teacherName = data.markedByTeacherName || "Unknown";
+    
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let prettyDate = `${histCurrentDate.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][histCurrentDate.getMonth()]} ${histCurrentDate.getFullYear()}`;
+    
+    document.getElementById("recordTitleText").innerHTML = `<b>${subjectName}</b><br><span style="font-size:12px; color:var(--text-muted); font-weight:normal;">${prettyDate} | Marked by: ${teacherName}</span>`;
+
+    if (data.stats) {
+        let tot = data.stats.totalStudents || "0";
+        let pres = data.stats.presentCount || "0";
+        let abs = data.stats.absentCount || "0";
+        document.getElementById("recordStatsText").innerHTML = `Total: ${tot} | Present: <span style="color:#10b981;">${pres}</span> | Absent: <span style="color:var(--brand-red);">${abs}</span>`;
+    }
+
+    let container = document.getElementById("recordListContainer");
+    container.innerHTML = "";
+
+    if (data.attendance) {
+        // Sort IDs to ensure neat layout
+        let sortedIDs = Object.keys(data.attendance).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+        
+        sortedIDs.forEach(key => {
+            let isPresent = data.attendance[key];
+            if (typeof isPresent === "boolean") {
+                let sName = histStudentNameCache.get(key) || "Unknown Student";
+                
+                let row = document.createElement("div");
+                row.style.cssText = "background:white; border:1px solid var(--border-color); border-radius:10px; margin-bottom:10px; padding:15px; display:flex; justify-content:space-between; align-items:center;";
+                
+                let statusBadge = isPresent 
+                    ? `<div style="background:#d1fae5; color:#047857; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold;">P</div>`
+                    : `<div style="background:#fee2e2; color:#b91c1c; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold;">A</div>`;
+
+                row.innerHTML = `<div style="font-size:14px; font-weight:600; color:var(--text-dark);">${sName} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${key})</span></div>
+                                 ${statusBadge}`;
+                
+                container.appendChild(row);
+            }
+        });
+    }
+}
