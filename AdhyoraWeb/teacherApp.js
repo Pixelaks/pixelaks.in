@@ -108,7 +108,7 @@ function finalizeProfileUI(rawName, email, deptName) {
     if (!hasStartedInbox && teacherDeptRaw !== "") {
         startInboxListener();
         hasStartedInbox = true;
-        initAttendanceEngine(); // 🚨 START ATTENDANCE ENGINE ONCE PROFILE LOADED
+        initAttendanceEngine(); 
     }
 }
 
@@ -255,7 +255,7 @@ function renderNotifications() {
 }
 
 // ==========================================
-// 🚨 SEMESTER MANAGER (C# PORT)
+// 🚨 SEMESTER MANAGER
 // ==========================================
 let currentSemesterType = "Odd";
 let isSemesterInitialized = false;
@@ -274,7 +274,7 @@ async function syncSemesterWithDatabase() {
 }
 
 // ==========================================
-// 🚨 NEP ATTENDANCE ENGINE (C# PORT)
+// 🚨 NEP ATTENDANCE ENGINE (C# PORT WITH ACCORDION)
 // ==========================================
 let attCurrentDate = new Date();
 let attTeacherSubjects = [];
@@ -294,6 +294,7 @@ let attPendingSubBatchIndex = 0;
 let attPendingSubBatchName = "";
 let attPendingSubTeacherID = "";
 let attPendingSubTeacherName = "";
+let attPendingSubCardId = ""; // 🚨 Tracks which accordion card is currently open
 
 // Firebase Listeners for Attendance
 let attSubjectListenerUnsub = null;
@@ -304,7 +305,6 @@ let attActiveRosterYear = "";
 let attCurrentLoadTicket = 0;
 
 async function initAttendanceEngine() {
-    // 🚨 FIX: Await the Semester Manager before building the UI!
     await syncSemesterWithDatabase();
 
     setupJumpDateModals();
@@ -313,6 +313,8 @@ async function initAttendanceEngine() {
     document.getElementById("attSemDropdown").addEventListener("change", filterSubjectsBySemester);
     document.getElementById("attPeriodDropdown").addEventListener("change", loadSessionData);
     document.getElementById("attSubjDropdown").addEventListener("change", loadSessionData);
+    
+    // Main save button at bottom
     document.getElementById("attSaveBtn").addEventListener("click", saveAttendance);
 
     document.getElementById("subConfirmNoBtn").addEventListener("click", () => document.getElementById("subConfirmModal").classList.remove("active"));
@@ -368,7 +370,6 @@ function setupJumpDateModals() {
         loadSessionData();
     });
 
-    // Initialize to today
     yDrop.value = curYear; mDrop.value = new Date().getMonth(); updateDays(); dDrop.value = new Date().getDate();
 }
 
@@ -376,7 +377,6 @@ function fetchTeacherSubjects() {
     if (attSubjectListenerUnsub) attSubjectListenerUnsub();
     document.getElementById("attSubjDropdown").innerHTML = `<option>Loading...</option>`;
     
-    // Auto-Heal & Cache Logic Ported
     attSubjectListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID)), async (snap) => {
         attTeacherSubjects = [{ name: "Tutorial", category: "TUTORIAL", semester: "1,2,3,4,5,6,7,8" }];
         
@@ -403,7 +403,6 @@ function fetchTeacherSubjects() {
                         let trueCat = mData.type || mData.category || "UNKNOWN";
                         if(trueCat !== "UNKNOWN") {
                             subObj.category = trueCat;
-                            // 🚨 Silent background heal (no await needed)
                         }
                     }
                 }));
@@ -412,7 +411,6 @@ function fetchTeacherSubjects() {
         
         await Promise.all(autoHealPromises);
         
-        // 🚨 NEW: Setup Semesters dynamically via SemesterManager
         let semDrop = document.getElementById("attSemDropdown");
         if(currentSemesterType === "Odd") {
             semDrop.innerHTML = `<option value="1">Semester 1</option><option value="3">Semester 3</option><option value="5">Semester 5</option><option value="7">Semester 7</option>`;
@@ -463,10 +461,16 @@ function showAttCenterMessage(msg) {
 
 function updateMainButtonState() {
     let btn = document.getElementById("attSaveBtn");
-    if(attIsSubstitutePanelOpen) btn.style.opacity = "0.5";
-    else if(attIsMainClassLocked) btn.style.opacity = "0.5";
-    else btn.style.opacity = "1";
-    btn.style.pointerEvents = (attIsSubstitutePanelOpen || attIsMainClassLocked) ? "none" : "auto";
+    if(attIsSubstitutePanelOpen) {
+        btn.style.opacity = "0.5";
+        btn.style.pointerEvents = "none";
+    } else if(attIsMainClassLocked) {
+        btn.style.opacity = "0.5";
+        btn.style.pointerEvents = "none";
+    } else {
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+    }
 }
 
 // ==========================================
@@ -492,7 +496,6 @@ async function loadSessionData() {
     
     const dateStr = `${attCurrentDate.getFullYear()}-${String(attCurrentDate.getMonth()+1).padStart(2,'0')}-${String(attCurrentDate.getDate()).padStart(2,'0')}`;
 
-    // 1. Fetch Medical Leaves (Daily RAM Cache)
     if(!attLastMedicalFetchDate || attLastMedicalFetchDate !== dateStr) {
         attMedicalLeavesCache.clear();
         try {
@@ -520,18 +523,15 @@ async function checkTimetableAllocation(ticket, dateStr) {
     const globalDocID = `${dateStr}_Semester${selectedSem}_GLOBAL`;
 
     try {
-        // 1. GLOBAL LOCKS CHECK
         const globalSnap = await getDoc(doc(db, "colleges", currentCollegeID, "attendance", globalDocID));
         if(globalSnap.exists()) {
             const data = globalSnap.data();
-            // A. Teacher Double Booking
             if(data.teacher_locks) {
                 let lockedSubj = data.teacher_locks[`p${pIndex}_${currentUserID}`];
                 if(lockedSubj && lockedSubj !== selectedSubject) {
                     showAttCenterMessage(`Double Booking Prevented:<br>You already marked '${lockedSubj}' for Period ${pIndex}.`); return;
                 }
             }
-            // B. Dept Lock
             if(data.dept_locks) {
                 let dLock = data.dept_locks[`p${pIndex}_DEPT_${teacherDeptRaw.replace(/ /g, '')}`];
                 if(dLock && dLock.subject !== selectedSubject) {
@@ -542,7 +542,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        // 2. TIMETABLE STRUCTURE CHECK
         const structSnap = await getDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", `${semKey}_${dayName}`));
         let isStructurallyStrict = false;
         let structuralCategoryName = "";
@@ -561,7 +560,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        // 3. ALLOCATIONS CHECK
         const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex)));
         const allocSnap = await getDocs(allocQuery);
 
@@ -588,7 +586,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
             showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
         }
 
-        // --- DECISION ENGINE ---
         if(isTargetSubjectScheduled) {
             if(myAllocations.length > 0 || substituteAllocations.length > 0) {
                 let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
@@ -622,8 +619,9 @@ async function checkTimetableAllocation(ticket, dateStr) {
     } catch(e) { console.error("Timetable Engine Error", e); showAttCenterMessage("Connection Error."); }
 }
 
+// 🚨 UPDATED: Generates Interactive Accordion Cards!
 function spawnSubstituteCards(myDocs, subDocs) {
-    document.getElementById("attListContainer").innerHTML = ""; // Clear list
+    document.getElementById("attListContainer").innerHTML = ""; 
     document.getElementById("attTotalStudentsText").innerText = "Select Batch";
 
     const createCardHTML = (docSnap, isMine) => {
@@ -631,17 +629,22 @@ function spawnSubstituteCards(myDocs, subDocs) {
         let bIndex = parseInt(d.splitIndex || "0");
         let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
         if(isMine) bName += " (My Class)";
+        let id = docSnap.id;
         
-        let subBtnId = `subCard_${docSnap.id}`;
         return `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden;">
-            <button id="${subBtnId}" style="width:100%; padding:15px; background:transparent; border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:0.3s;">
+            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--card-bg); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-weight:bold; color:var(--text-dark); font-size:15px;">${bName}</div>
                     <div style="font-size:12px; color:var(--text-muted);">Assigned: ${d.teacherName || "Unknown"}</div>
                 </div>
-                <i class="fas fa-chevron-right" style="color:#cbd5e1;"></i>
+                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="color:#cbd5e1; transition: 0.3s;"></i>
             </button>
+            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px;"></div>
+                <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Save Batch Attendance</button>
+            </div>
         </div>`;
     };
 
@@ -655,6 +658,7 @@ function spawnSubstituteCards(myDocs, subDocs) {
     subDocs.forEach(d => attachSubCardListener(d, false));
 }
 
+// 🚨 UPDATED: Generates Interactive Accordion Cards!
 function spawnManualBatchCards(docs, sem, subj) {
     document.getElementById("attListContainer").innerHTML = "";
     document.getElementById("attTotalStudentsText").innerText = "Select Batch";
@@ -673,32 +677,51 @@ function spawnManualBatchCards(docs, sem, subj) {
         let bIndex = d.id.lastIndexOf("Batch") !== -1 ? parseInt(d.id.substring(d.id.lastIndexOf("Batch")+5))-1 : 0;
         let bName = `Batch ${bIndex + 1}`;
         if(d.data().teacherID === currentUserID) bName += " (My Class)";
-        
+        let id = d.id;
+
         fullHTML += `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden;">
-            <button id="subCard_${d.id}" style="width:100%; padding:15px; background:transparent; border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:0.3s;">
+            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--card-bg); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-weight:bold; color:var(--text-dark); font-size:15px;">${bName}</div>
                     <div style="font-size:12px; color:var(--text-muted);">Assigned: ${d.data().teacherName}</div>
                 </div>
-                <i class="fas fa-chevron-right" style="color:#cbd5e1;"></i>
+                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="color:#cbd5e1; transition: 0.3s;"></i>
             </button>
+            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px;"></div>
+                <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Save Batch Attendance</button>
+            </div>
         </div>`;
     });
     
     document.getElementById("attListContainer").innerHTML = fullHTML;
+    
     validBatches.forEach(d => {
         let bIndex = d.id.lastIndexOf("Batch") !== -1 ? parseInt(d.id.substring(d.id.lastIndexOf("Batch")+5))-1 : 0;
         let bName = `Batch ${bIndex + 1}`;
         if(d.data().teacherID === currentUserID) bName += " (My Class)";
-        
-        document.getElementById(`subCard_${d.id}`).addEventListener("click", () => {
-            attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
-            attPendingSubBatchIndex = bIndex;
-            attPendingSubTeacherID = d.data().teacherID;
-            attPendingSubTeacherName = d.data().teacherName;
-            showSubstituteConfirmModal(bName);
+        let id = d.id;
+
+        document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
+            let body = document.getElementById(`subCardBody_${id}`);
+            if (body.style.display === "block") {
+                body.style.display = "none";
+                document.getElementById(`subCardIcon_${id}`).style.transform = "rotate(0deg)";
+                attIsSubstitutePanelOpen = false;
+                updateMainButtonState();
+            } else {
+                attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
+                attPendingSubBatchIndex = bIndex;
+                attPendingSubTeacherID = d.data().teacherID;
+                attPendingSubTeacherName = d.data().teacherName;
+                attPendingSubCardId = id; // 🚨 Store which card we are opening
+                showSubstituteConfirmModal(bName);
+            }
         });
+
+        document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
     });
 }
 
@@ -707,14 +730,26 @@ function attachSubCardListener(docSnap, isMine) {
     let bIndex = parseInt(d.splitIndex || "0");
     let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
     if(isMine) bName += " (My Class)";
+    let id = docSnap.id;
 
-    document.getElementById(`subCard_${docSnap.id}`).addEventListener("click", () => {
-        attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
-        attPendingSubBatchIndex = bIndex;
-        attPendingSubTeacherID = d.teacherID || "";
-        attPendingSubTeacherName = d.teacherName || "Unknown";
-        showSubstituteConfirmModal(bName);
+    document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
+        let body = document.getElementById(`subCardBody_${id}`);
+        if (body.style.display === "block") {
+            body.style.display = "none";
+            document.getElementById(`subCardIcon_${id}`).style.transform = "rotate(0deg)";
+            attIsSubstitutePanelOpen = false;
+            updateMainButtonState();
+        } else {
+            attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
+            attPendingSubBatchIndex = bIndex;
+            attPendingSubTeacherID = d.teacherID || "";
+            attPendingSubTeacherName = d.teacherName || "Unknown";
+            attPendingSubCardId = id; // 🚨 Store which card we are opening
+            showSubstituteConfirmModal(bName);
+        }
     });
+
+    document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
 }
 
 function showSubstituteConfirmModal(displayName) {
@@ -726,12 +761,19 @@ function showSubstituteConfirmModal(displayName) {
 
 function confirmSubstituteLoad() {
     document.getElementById("subConfirmModal").classList.remove("active");
+    
+    // 🚨 Expand the accordion UI instantly
+    document.getElementById(`subCardBody_${attPendingSubCardId}`).style.display = "block";
+    document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(180deg)";
+    document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:#64748b;'>Loading Register...</span>";
+    document.getElementById(`subCardStudents_${attPendingSubCardId}`).innerHTML = `<div style="text-align:center; padding:20px;"><div style="width:30px; height:30px; border:2px solid rgba(220,38,38,0.2); border-top-color:var(--brand-red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div></div>`;
+    
+    attIsSubstitutePanelOpen = true; 
+    updateMainButtonState();
+
     const dateStr = `${attCurrentDate.getFullYear()}-${String(attCurrentDate.getMonth()+1).padStart(2,'0')}-${String(attCurrentDate.getDate()).padStart(2,'0')}`;
     const selectedSem = document.getElementById("attSemDropdown").value;
     const selectedSubject = document.getElementById("attSubjDropdown").value;
-
-    showAttCenterMessage("Loading Register...");
-    attIsSubstitutePanelOpen = true; // Signals we are modifying someone else's batch
 
     if(attPendingSubBatchName === "Entire Class") {
         attCurrentSessionBatchIndex = -1;
@@ -745,7 +787,8 @@ function confirmSubstituteLoad() {
                 attCurrentSessionBatchIndex = attPendingSubBatchIndex;
                 loadAttendanceRegister(snap.data().studentIDs, attCurrentLoadTicket, attSubjectCategories.get(selectedSubject), dateStr);
             } else {
-                showAttCenterMessage("Batch Error. Ask Principal to resplit.");
+                document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:red;'>Batch Error. Ask Principal to resplit.</span>";
+                document.getElementById(`subCardStudents_${attPendingSubCardId}`).innerHTML = "";
             }
         });
     }
@@ -774,7 +817,6 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
     attCurrentPeriodEvents.clear();
 
     try {
-        // 1. Fetch Global Claims
         const gSnap = await getDoc(doc(db, "colleges", currentCollegeID, "attendance", globalDocID));
         if(gSnap.exists() && gSnap.data().student_claims) {
             let claims = gSnap.data().student_claims;
@@ -784,7 +826,6 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
             }
         }
 
-        // 2. Realtime Event Listener
         attMainEventListenerUnsub = onSnapshot(doc(db, "colleges", currentCollegeID, "attendance", eventDocID), (eSnap) => {
             if(ticket !== attCurrentLoadTicket) return;
             attCurrentPeriodEvents.clear();
@@ -792,10 +833,9 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
                 let evts = eSnap.data()[periodKey].event_details;
                 for(let key in evts) attCurrentPeriodEvents.set(key, String(evts[key]));
             }
-            if(attActiveRows.length > 0) renderStudentRows(filterStudentIDs, ticket, trueCategory, dateStr); // Re-render if open
+            if(attActiveRows.length > 0) renderStudentRows(filterStudentIDs, ticket, trueCategory, dateStr); 
         });
 
-        // 3. Realtime Register Listener
         attSessionListenerUnsub = onSnapshot(doc(db, "colleges", currentCollegeID, "attendance", dailyDocID), (snap) => {
             if(ticket !== attCurrentLoadTicket) return;
             let existingRegister = null;
@@ -860,27 +900,33 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
         else { if(inPastRegister || isCurrentlyEnrolled) matchingStudents.push(docSnap); }
     });
 
-    if(matchingStudents.length === 0) { showAttCenterMessage(`No students found for<br>'${subjName}'`); return; }
+    // 🚨 Target correct container!
+    let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attListContainer");
 
-    document.getElementById("attTotalStudentsText").innerText = `${matchingStudents.length} Students`;
+    if(matchingStudents.length === 0) { 
+        targetContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">No students found for '${subjName}'</div>`;
+        return; 
+    }
+
+    if (!attIsSubstitutePanelOpen) {
+        document.getElementById("attTotalStudentsText").innerText = `${matchingStudents.length} Students`;
+    }
     
-    // Sort
     matchingStudents.sort((a,b) => {
         let r1 = a.data().RollNumber || a.data().rollNumber || "0";
         let r2 = b.data().RollNumber || b.data().rollNumber || "0";
         return r1.localeCompare(r2, undefined, {numeric:true});
     });
 
-    renderStudentRows(matchingStudents, existingData, batchTeachersMap, ticket);
+    renderStudentRows(matchingStudents, existingData, batchTeachersMap, ticket, targetContainer);
 }
 
-function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
+function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
     attIsMainClassLocked = false;
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
-    // 1. Dept Lock Check (Who saved it first?)
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID && !attIsSubstitutePanelOpen) {
@@ -889,7 +935,6 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         }
     }
 
-    // 2. Claim Check
     let claimedCount = 0; let conflictSubject = "";
     students.forEach(s => {
         if(attCurrentPeriodClaims.has(s.id) && attCurrentPeriodClaims.get(s.id) !== selectedSubject) {
@@ -898,12 +943,26 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
     });
 
     if(claimedCount > 0) { attIsMainClassLocked = true; lockerName = conflictSubject; }
-    updateMainButtonState();
-
-    if(attIsMainClassLocked && !attIsSubstitutePanelOpen) {
-        document.getElementById("attLockStatusText").innerText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only`;
+    
+    // 🚨 ACCORDION UI LOGIC
+    let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only`;
+    
+    if (attIsSubstitutePanelOpen) {
+        let statusEl = document.getElementById(`subCardStatus_${attPendingSubCardId}`);
+        let saveBtn = document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`);
+        
+        if (attIsMainClassLocked) {
+            statusEl.innerHTML = `<span style='color:red;'>${lockText}</span>`;
+            saveBtn.style.opacity = "0.5";
+            saveBtn.style.pointerEvents = "none";
+        } else {
+            statusEl.innerHTML = `<span style='color:#10b981;'>Ready to Mark (${students.length} Students)</span>`;
+            saveBtn.style.opacity = "1";
+            saveBtn.style.pointerEvents = "auto";
+        }
     } else {
-        document.getElementById("attLockStatusText").innerText = "";
+        document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
+        updateMainButtonState();
     }
 
     let fullHTML = "";
@@ -927,8 +986,8 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         let isClaimed = attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject;
 
         let rowLocked = attIsMainClassLocked || isAtEvent || isClaimed || isMedical;
-        if(isAtEvent || isMedical) isPresent = true; // Auto Present
-        if(isClaimed) isPresent = false; // Auto Absent to avoid collision
+        if(isAtEvent || isMedical) isPresent = true; 
+        if(isClaimed) isPresent = false; 
 
         let uiText = `${name} (${roll})`;
         if(isAtEvent) uiText += ` - <span style="color:#10b981; font-weight:bold;">${attCurrentPeriodEvents.get(id).toUpperCase()}</span>`;
@@ -939,8 +998,12 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
 
         let toggleClass = `attd-toggle ${isPresent ? 'active' : ''} ${rowLocked ? 'locked' : ''}`;
         
+        // 🚨 Compact UI for accordion
+        let padding = attIsSubstitutePanelOpen ? "10px" : "15px";
+        let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
+        
         fullHTML += `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center;">
             <div style="font-size:14px; font-weight:600; color:var(--text-dark);">${uiText}</div>
             <div id="tog_${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}"></div>
         </div>`;
@@ -948,9 +1011,8 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         attActiveRows.push(id);
     });
 
-    document.getElementById("attListContainer").innerHTML = fullHTML;
+    targetContainer.innerHTML = fullHTML;
 
-    // Attach Toggle Listeners
     attActiveRows.forEach(id => {
         let el = document.getElementById(`tog_${id}`);
         el.addEventListener("click", () => {
@@ -970,7 +1032,12 @@ async function saveAttendance() {
     document.getElementById("updateProgressModal").classList.add("active");
     document.getElementById("updateProgressFill").style.width = "0%";
     document.getElementById("updateStatusText").innerText = "Saving Attendance...";
-    document.getElementById("attSaveBtn").style.pointerEvents = "none";
+    
+    if (attIsSubstitutePanelOpen) {
+        document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`).style.pointerEvents = "none";
+    } else {
+        document.getElementById("attSaveBtn").style.pointerEvents = "none";
+    }
 
     const dateStr = `${attCurrentDate.getFullYear()}-${String(attCurrentDate.getMonth()+1).padStart(2,'0')}-${String(attCurrentDate.getDate()).padStart(2,'0')}`;
     const selectedSem = document.getElementById("attSemDropdown").value;
@@ -983,7 +1050,6 @@ async function saveAttendance() {
     const pIndex = parseInt(document.getElementById("attPeriodDropdown").value) + 1;
     const periodKey = `period_${pIndex}`;
 
-    // Target Teacher Logic
     const targetTeacherID = attIsSubstitutePanelOpen ? attPendingSubTeacherID : currentUserID;
     const targetTeacherName = attIsSubstitutePanelOpen ? attPendingSubTeacherName : currentTeacherName;
     const myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
@@ -999,7 +1065,6 @@ async function saveAttendance() {
         let gData = gSnap.exists() ? gSnap.data() : {};
         let sData = sSnap.exists() ? sSnap.data() : {};
 
-        // 0. Backend Collision Check
         if(gData.teacher_locks) {
             let tLock = gData.teacher_locks[`p${pIndex}_${currentUserID}`];
             if(tLock && tLock !== selectedSubject) {
@@ -1021,7 +1086,7 @@ async function saveAttendance() {
         attActiveRows.forEach(id => {
             let el = document.getElementById(`tog_${id}`);
             if(attCurrentPeriodEvents.has(id)) {
-                delete attendanceMap[id]; // Server will wipe it
+                delete attendanceMap[id]; 
             } else {
                 let isPresent = el.dataset.state === "true";
                 attendanceMap[id] = isPresent;
@@ -1063,7 +1128,6 @@ async function saveAttendance() {
         let batchPromises = [];
         let opCount = 0;
 
-        // Teacher Scorecard
         if(isFirstTimeMarking) {
             const tRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
             batch.update(tRef, { 
@@ -1145,9 +1209,14 @@ async function saveAttendance() {
         setTimeout(() => {
             document.getElementById("updateProgressModal").classList.remove("active");
             if(attIsSubstitutePanelOpen) {
-                loadSessionData(); // Returns to batch list
+                // 🚨 Shrink the Accordion and Go Back to Batches Menu!
+                document.getElementById(`subCardBody_${attPendingSubCardId}`).style.display = "none";
+                document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(0deg)";
+                document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`).style.pointerEvents = "auto";
+                attIsSubstitutePanelOpen = false;
+                updateMainButtonState();
             } else {
-                // UI Refresh to reset initial states to green/locked
+                document.getElementById("attSaveBtn").style.pointerEvents = "auto";
                 loadSessionData(); 
             }
         }, 1000);
@@ -1155,7 +1224,12 @@ async function saveAttendance() {
     } catch(e) {
         console.error("Save Crash", e);
         document.getElementById("updateStatusText").innerText = "Save Failed!";
-        setTimeout(() => { document.getElementById("updateProgressModal").classList.remove("active"); updateMainButtonState(); }, 1500);
+        setTimeout(() => { 
+            document.getElementById("updateProgressModal").classList.remove("active");
+            if(attIsSubstitutePanelOpen) document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`).style.pointerEvents = "auto";
+            else document.getElementById("attSaveBtn").style.pointerEvents = "auto";
+            updateMainButtonState(); 
+        }, 1500);
     }
 }
 
