@@ -462,8 +462,11 @@
 
                     <input type="text" id="attdSearchInput" placeholder="Search teacher, department, or subject..." class="asn-input" style="margin-bottom: 15px; font-size: 14px; padding: 12px 15px;">
                     
-                    <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                        <div style="display: grid; grid-template-columns: 2fr repeat(6, 1fr); background: var(--bg-grid-color); padding: 12px 15px; font-weight: bold; color: var(--text-green); font-size: 13px; text-align: center; border-bottom: 1px solid var(--border-color);">
+                <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    
+                    <div class="attd-mobile-scroll">
+                
+                        <div class="attd-header-row" style="display: grid; grid-template-columns: 2fr repeat(6, 1fr); background: var(--bg-grid-color); padding: 12px 15px; font-weight: bold; color: var(--text-green); font-size: 13px; text-align: center; border-bottom: 1px solid var(--border-color);">
                             <div style="text-align: left;">TEACHER</div>
                             <div>P1</div><div>P2</div><div>P3</div><div>P4</div><div>P5</div><div>P6</div>
                         </div>
@@ -471,6 +474,7 @@
                         <div id="attdListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 10px 0;">
                             <div class="no-data-text">Loading Attendance...</div>
                         </div>
+                
                     </div>
                 </div>
 
