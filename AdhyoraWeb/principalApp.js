@@ -3526,7 +3526,9 @@ function HandleBlockState(msg) {
     document.getElementById("subBlockText").innerText = msg;
     
     // Hide the initial loader and show the blocker
-    document.getElementById("initialAppLoader").style.display = "none";
+    const loader = document.getElementById("initialAppLoader");
+    if (loader) loader.style.display = "none";
+    
     let blockPanel = document.getElementById("subBlockPanel");
     
     document.body.appendChild(blockPanel); 
@@ -3539,6 +3541,25 @@ function HandleBlockState(msg) {
     let sidebar = document.getElementById("mainSidebar");
     if (mainContent) mainContent.style.setProperty("display", "none", "important");
     if (sidebar) sidebar.style.setProperty("display", "none", "important");
+
+    // 🚨 TURN ON THE WEBSITE NODES BACKGROUND!
+    if (typeof tsParticles !== 'undefined') {
+        tsParticles.load("subParticles", {
+            particles: {
+                number: { value: 80, density: { enable: true, area: 800 } },
+                color: { value: "#2ecc71" }, 
+                links: { enable: true, distance: 150, color: "#2ecc71", opacity: 0.4, width: 1 },
+                move: { enable: true, speed: 1.5, outModes: { default: "out" } },
+                opacity: { value: 0.5 },
+                size: { value: { min: 1, max: 3 } }
+            },
+            interactivity: {
+                events: { onHover: { enable: true, mode: "grab" }, onClick: { enable: true, mode: "push" } },
+                modes: { grab: { distance: 200, links: { opacity: 0.8 } }, push: { quantity: 4 } }
+            },
+            background: { color: "transparent" } // Must be transparent so the #0a0a0a HTML background shows through
+        });
+    }
 }
 
 function UnlockAccess() {
