@@ -3582,21 +3582,27 @@ function UnlockAccess() {
 
     // 2. Hide the block panel
     let blockPanel = document.getElementById("subBlockPanel");
-    blockPanel.style.display = "none";
-    blockPanel.style.opacity = "0";
+    if (blockPanel) {
+        blockPanel.style.display = "none";
+        blockPanel.style.opacity = "0";
+        blockPanel.style.visibility = "hidden";
+        blockPanel.classList.remove("active");
+    }
 
-    // 3. 🚨 THE REVEAL: Physically force the dashboard to appear
+    // 3. 🚨 THE FIX: Hand control back to the CSS!
     let mainContent = document.querySelector(".main-content");
     let sidebar = document.getElementById("mainSidebar");
     
     if (mainContent) {
-        mainContent.style.setProperty("display", "block", "important");
-        // Trigger a tiny fade-in for polish
+        // Remove the inline lock so your @media (max-width: 900px) can hide it on mobile!
+        mainContent.style.removeProperty("display"); 
+        
         mainContent.style.opacity = "0";
         setTimeout(() => mainContent.style.opacity = "1", 50);
     }
     if (sidebar) {
-        sidebar.style.setProperty("display", "flex", "important");
+        // Remove the inline lock
+        sidebar.style.removeProperty("display");
     }
 }
 
