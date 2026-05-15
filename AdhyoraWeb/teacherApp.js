@@ -1396,12 +1396,19 @@ function cleanupAttendanceView() {
     if (attSessionListenerUnsub) { attSessionListenerUnsub(); attSessionListenerUnsub = null; }
     if (attMainEventListenerUnsub) { attMainEventListenerUnsub(); attMainEventListenerUnsub = null; }
     
-    // Safely clear out UI data so it's fresh next time they click Attendance
     if (typeof showAttCenterMessage === "function") {
         showAttCenterMessage("Please select a subject<br>to mark attendance.");
         let subDrop = document.getElementById("attSubjDropdown");
         if(subDrop) subDrop.value = "Select Subject";
     }
+
+    // 🚨 Always reset the view back to Main when clicking out of Attendance
+    let mainScr = document.getElementById("attMainScreen");
+    let histScr = document.getElementById("attHistoryScreen");
+    let recScr = document.getElementById("attRecordScreen");
+    if (mainScr) mainScr.style.display = "flex";
+    if (histScr) histScr.style.display = "none";
+    if (recScr) recScr.style.display = "none";
 }
 
 function switchView(targetView, clickedBtn) {
@@ -1490,13 +1497,22 @@ let histLastFetchedYearStr = "";
 
 // Bind HTML Buttons
 document.getElementById("btnOpenHistory")?.addEventListener("click", openHistoryPanel);
-document.getElementById("closeHistoryBtn")?.addEventListener("click", () => document.getElementById("historyModal").classList.remove("active"));
-document.getElementById("closeRecordBtn")?.addEventListener("click", () => document.getElementById("recordViewerModal").classList.remove("active"));
+
+// 🚨 Navigate back to Main Screen
+document.getElementById("backFromHistoryBtn")?.addEventListener("click", () => {
+    document.getElementById("attHistoryScreen").style.display = "none";
+    document.getElementById("attMainScreen").style.display = "flex";
+});
+
+// 🚨 Navigate back to History Screen
+document.getElementById("backFromRecordBtn")?.addEventListener("click", () => {
+    document.getElementById("attRecordScreen").style.display = "none";
+    document.getElementById("attHistoryScreen").style.display = "flex";
+});
+
 document.getElementById("histSemDropdown")?.addEventListener("change", onHistSemesterChanged);
 document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
-    // Reusing your existing Jump Date panel!
     document.getElementById("jumpDateModal").classList.add("active");
-    // Temporarily override the jump submit button for history
     let submitBtn = document.getElementById("jumpSubmitBtn");
     let newSubmit = submitBtn.cloneNode(true);
     submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
@@ -1508,16 +1524,15 @@ document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
         document.getElementById("jumpDateModal").classList.remove("active");
         histUpdateDateUI();
         histFetchDailyHistory();
-        
-        // Restore standard attendance functionality to the jump button
         setupJumpDateModals(); 
     });
 });
 
 function openHistoryPanel() {
-    document.getElementById("historyModal").classList.add("active");
+    // 🚨 Swap screens instantly inside the panel!
+    document.getElementById("attMainScreen").style.display = "none";
+    document.getElementById("attHistoryScreen").style.display = "flex";
     
-    // Setup Semesters
     let semDrop = document.getElementById("histSemDropdown");
     if(currentSemesterType === "Odd") {
         semDrop.innerHTML = `<option value="1">Semester 1</option><option value="3">Semester 3</option><option value="5">Semester 5</option><option value="7">Semester 7</option>`;
@@ -1537,20 +1552,26 @@ function histUpdateDateUI() {
     histUpdateQuickDays();
 }
 
-function histUpdateQuickDays() {
+ffunction histUpdateQuickDays() {
     let container = document.getElementById("histDaysContainer");
     let dayIndex = histCurrentDate.getDay() === 0 ? 6 : histCurrentDate.getDay() - 1; // Mon=0, Sun=6
     
     let html = "";
-    const labels = ["M", "T", "W", "T", "F"];
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     for(let i=0; i<5; i++) {
         let isSelected = i === dayIndex;
-        let bg = isSelected ? "#3b82f6" : "white"; // Matches Unity selectedDayColor
+        let bg = isSelected ? "var(--brand-red)" : "var(--bg-surface)"; 
         let col = isSelected ? "white" : "var(--text-muted)";
         let border = isSelected ? "none" : "1px solid var(--border-color)";
-        html += `<button onclick="histQuickJumpDay(${i})" style="flex:1; padding:10px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s;">${labels[i]}</button>`;
+        // 🚨 Removed inline onclick, added ID
+        html += `<button id="quickDayBtn_${i}" style="flex:1; padding:10px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s;">${labels[i]}</button>`;
     }
     container.innerHTML = html;
+
+    // 🚨 Securely bind the event listeners after HTML generation!
+    for(let i=0; i<5; i++) {
+        document.getElementById(`quickDayBtn_${i}`).addEventListener("click", () => histQuickJumpDay(i));
+    }
 }
 
 function histQuickJumpDay(targetDayIndex) {
@@ -1733,6 +1754,10 @@ function histBuildPeriodUI() {
 }
 
 function histOpenRecordViewer(data) {
+    // 🚨 Swap to Record Viewer Panel!
+    document.getElementById("attHistoryScreen").style.display = "none";
+    document.getElementById("attRecordScreen").style.display = "flex";
+    
     document.getElementById("recordViewerModal").classList.add("active");
     
     let subjectName = data.subject || "Unknown Subject";
