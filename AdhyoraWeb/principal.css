@@ -682,10 +682,23 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
     /* 2. Stop the main content strictly ABOVE the bottom navigation bar */
     .main-content {
         height: 100dvh !important; 
-        padding: 15px !important;
+        padding: 0 !important;
         padding-bottom: 100px !important; /* Reserves exact space for the nav bar */
         box-sizing: border-box !important;
         overflow: hidden !important;
+    }
+
+   /* 🚨 NEW: Remove the boxy borders & corners to make it flush with the phone screen */
+    .welcome-card, 
+    .main-content > div {
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* 🚨 NEW: Give the inside content just a tiny bit of breathing room so cards don't touch the glass */
+    .dashboard-view {
+        padding: 15px 10px !important;
     }
 
     /* 3. Make every single panel perfectly scrollable within that safe zone */
