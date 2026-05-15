@@ -4,6 +4,7 @@ import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, 
 // 🚀 OPTIMIZATION 1: Imported enableIndexedDbPersistence to cut refresh costs to ZERO
 // Add getMessaging, getToken, deleteToken to your imports
 import { getMessaging, getToken, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -76,7 +77,8 @@ async function fetchPrincipalProfile() {
             
             registerWebSession();
             startSessionListener();
-            startSubscriptionListener(); // 🚨 START THE MASTER WATCHER
+            // 🚨 Replaced Subscription with PIN check. Pin check will trigger Subscription upon success.
+            CheckSecurityPin(); 
         } else {
             el.principalName.innerText = "Profile Not Found"; el.principalEmail.innerText = "";
         }
@@ -3686,3 +3688,179 @@ window.ProcessSubscription = async function(planType) {
     
     setTimeout(() => { loadingTxt.style.display = "none"; }, 3000);
 };
+
+// ==========================================
+// 🚨 MASTER SECURITY PIN ENGINE
+// ==========================================
+let cachedAdminPin = "";
+let lockMode = "LOGIN"; // Modes: LOGIN, SETUP_1, SETUP_2, RESET_NEW_1, RESET_NEW_2
+let setupTempPin = "";
+let failedPinAttempts = 0;
+
+const elLock = {
+    screen: document.getElementById("appLockScreen"), title: document.getElementById("lockTitle"), status: document.getElementById("lockStatus"),
+    input: document.getElementById("lockPinInput"), btnSubmit: document.getElementById("btnLockSubmit"), btnForgot: document.getElementById("btnLockForgot"),
+    reAuthOverlay: document.getElementById("reAuthOverlay"), reAuthPass: document.getElementById("reAuthPasswordInput"), 
+    reAuthStatus: document.getElementById("reAuthStatus"), btnReAuth: document.getElementById("btnReAuthSubmit")
+};
+
+async function CheckSecurityPin() {
+    // 🚨 GHOST UI: Erase Dashboard from DOM while locked
+    document.querySelector(".main-content").style.display = "none";
+    document.getElementById("mainSidebar").style.display = "none";
+
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"));
+        document.getElementById("initialAppLoader").style.display = "none"; // Hide loader
+        elLock.screen.style.display = "flex"; // Show Lock Screen
+
+        if (snap.exists() && snap.data().adminPin) {
+            cachedAdminPin = snap.data().adminPin;
+            SetLockMode("LOGIN");
+        } else {
+            SetLockMode("SETUP_1");
+        }
+    } catch(e) {
+        elLock.status.innerText = "Network error. Please refresh.";
+        elLock.status.style.color = "#ef4444";
+    }
+}
+
+function SetLockMode(mode) {
+    lockMode = mode;
+    elLock.input.value = "";
+    elLock.btnForgot.style.display = "none";
+    elLock.input.focus();
+
+    if (mode === "LOGIN") {
+        elLock.title.innerText = "ENTER SECURE PIN";
+        elLock.status.innerText = "Enter 4-digit PIN to unlock.";
+        elLock.status.style.color = "#94a3b8";
+        elLock.btnSubmit.innerText = "Unlock Dashboard";
+        if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
+    } 
+    else if (mode === "SETUP_1" || mode === "RESET_NEW_1") {
+        elLock.title.innerText = "CREATE SECURITY PIN";
+        elLock.status.innerText = "Set a 4-digit PIN to secure your dashboard.";
+        elLock.status.style.color = "#4ade80";
+        elLock.btnSubmit.innerText = "Next Step";
+    }
+    else if (mode === "SETUP_2" || mode === "RESET_NEW_2") {
+        elLock.title.innerText = "CONFIRM NEW PIN";
+        elLock.status.innerText = "Please re-enter the PIN to confirm.";
+        elLock.status.style.color = "#facc15";
+        elLock.btnSubmit.innerText = "Save Security PIN";
+    }
+}
+
+elLock.btnSubmit.addEventListener("click", async () => {
+    let val = elLock.input.value.trim();
+    if (val.length !== 4) {
+        elLock.status.innerText = "PIN must be exactly 4 digits.";
+        elLock.status.style.color = "#ef4444";
+        return;
+    }
+
+    if (lockMode === "LOGIN") {
+        if (val === cachedAdminPin) {
+            UnlockSecurityWall();
+        } else {
+            failedPinAttempts++;
+            elLock.status.innerText = "Incorrect PIN.";
+            elLock.status.style.color = "#ef4444";
+            elLock.input.value = "";
+            if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
+        }
+    } 
+    else if (lockMode === "SETUP_1" || lockMode === "RESET_NEW_1") {
+        setupTempPin = val;
+        SetLockMode(lockMode === "SETUP_1" ? "SETUP_2" : "RESET_NEW_2");
+    }
+    else if (lockMode === "SETUP_2" || lockMode === "RESET_NEW_2") {
+        if (val === setupTempPin) {
+            elLock.btnSubmit.innerText = "Saving...";
+            elLock.btnSubmit.disabled = true;
+            try {
+                await setDoc(doc(db, "colleges", currentCollegeID, "metadata", "security"), { adminPin: val, updatedAt: serverTimestamp() }, { merge: true });
+                cachedAdminPin = val;
+                UnlockSecurityWall();
+            } catch(e) {
+                elLock.status.innerText = "Failed to save PIN.";
+                elLock.btnSubmit.innerText = "Try Again";
+                elLock.btnSubmit.disabled = false;
+            }
+        } else {
+            elLock.status.innerText = "PINs do not match. Try again.";
+            elLock.status.style.color = "#ef4444";
+            setTimeout(() => SetLockMode(lockMode === "SETUP_2" ? "SETUP_1" : "RESET_NEW_1"), 1500);
+        }
+    }
+});
+
+function UnlockSecurityWall() {
+    elLock.screen.style.display = "none";
+    
+    // Restore the DOM layout physically
+    document.querySelector(".main-content").style.display = "";
+    document.getElementById("mainSidebar").style.display = "";
+    
+    failedPinAttempts = 0;
+    
+    // 🚨 CHAIN REACTION: Now that PIN is verified, check Subscription!
+    startSubscriptionListener(); 
+}
+
+// --- FORGOT PIN / RE-AUTH LOGIC ---
+elLock.btnForgot.addEventListener("click", () => {
+    elLock.reAuthPass.value = "";
+    elLock.reAuthStatus.innerText = "";
+    elLock.reAuthOverlay.classList.add("active");
+});
+
+document.getElementById("btnResetPinSettings").addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("active");
+    elLock.reAuthPass.value = "";
+    elLock.reAuthStatus.innerText = "";
+    elLock.reAuthOverlay.classList.add("active");
+});
+
+elLock.btnReAuth.addEventListener("click", async () => {
+    let pass = elLock.reAuthPass.value.trim();
+    if (!pass) return;
+    
+    elLock.btnReAuth.innerText = "Verifying...";
+    elLock.btnReAuth.disabled = true;
+    
+    try {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, pass);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        
+        elLock.reAuthOverlay.classList.remove("active");
+        elLock.reAuthPass.value = "";
+        
+        // Push them back to the lock screen to create a new PIN
+        document.querySelector(".main-content").style.display = "none";
+        document.getElementById("mainSidebar").style.display = "none";
+        elLock.screen.style.display = "flex";
+        SetLockMode("RESET_NEW_1");
+        
+    } catch(e) {
+        elLock.reAuthStatus.innerText = "Incorrect Password.";
+    }
+    
+    elLock.btnReAuth.innerText = "Verify";
+    elLock.btnReAuth.disabled = false;
+});
+
+// --- PASSWORD RESET LOGIC ---
+document.getElementById("btnResetPassSettings").addEventListener("click", async () => {
+    if (confirm("Send a password reset link to your email?")) {
+        try {
+            await sendPasswordResetEmail(auth, auth.currentUser.email);
+            showRcToast("Password reset link sent to your email!");
+            document.getElementById("settingsOverlay").classList.remove("active");
+        } catch(e) {
+            showRcToast("Failed to send reset link.");
+        }
+    }
+});
