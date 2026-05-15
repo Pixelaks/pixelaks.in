@@ -669,35 +669,35 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 }
 
 /* =========================================
-   📱 MOBILE POLISH & SCROLL FIXES (REVERTED & FIXED)
+   📱 MOBILE POLISH & SCROLL FIXES (THE REAL FIX)
    ========================================= */
 @media (max-width: 900px) {
     
-    /* 1. Fix the viewport height so the URL bar doesn't break scrolling */
+    /* 1. Lock body to prevent URL bar jumping */
     body {
         height: 100dvh !important;
         overflow: hidden !important;
     }
 
-    /* 2. Restore your original padded look, but lock the height properly */
+    /* 2. 🚨 THE FIX: Uniform padding. No more invisible masking wall! */
     .main-content {
         height: 100dvh !important; 
-        padding: 15px !important; /* RESTORED: Your original breathing room! */
-        padding-bottom: 100px !important; /* Keeps it strictly above the nav bar */
+        padding: 15px !important; /* Uniform 15px all around */
         box-sizing: border-box !important;
         overflow: hidden !important;
     }
 
-    /* 3. 🚨 THE SCROLL FIX: Adds deep internal padding so the last card can be scrolled fully into view! */
+    /* 3. The scrollable area now goes all the way to the bottom border */
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 80px !important; /* Forces the last card to scroll past the cut-off line */
+        /* The spacer goes IN the scroll view, so you can scroll the last card up past the nav bar */
+        padding-bottom: 120px !important; 
     }
 
-    /* 4. Fix Teacher/Student Cards from squishing the Action Buttons */
+    /* 4. Fix Teacher/Student Cards Cut-off */
     .data-card {
         flex-direction: column !important;
         align-items: flex-start !important;
