@@ -12,10 +12,11 @@ let profileListener = null;
 let teacherDeptRaw = ""; 
 let hasStartedInbox = false;
 
-// Notification Variables
-let cachedNotifs = [];
-let allMessagesMap = new Map(); // Replaces cachedMessages for Universal Mapping
+// 🚨 FIXED: Cleaned up duplicate notification variables
+let allMessagesMap = new Map(); // For Messages Tab
+let allNotifsMap = new Map();   // For Notifications Tab (Inbox + Global)
 let globalListenerUnsub = null;
+let inboxListenerUnsub = null;
 
 // ==========================================
 // 🚨 FIREBASE CONFIGURATION
@@ -123,10 +124,6 @@ function finalizeProfileUI(rawName, email, deptName) {
 // ==========================================
 // 🚨 NOTIFICATIONS & UNIVERSAL MESSAGES ENGINE
 // ==========================================
-let allMessagesMap = new Map(); // For Messages Tab
-let allNotifsMap = new Map();   // For Notifications Tab (Inbox + Global)
-let globalListenerUnsub = null;
-let inboxListenerUnsub = null;
 
 function getSafeTopic(str) {
     if (!str || str === "All") return "ALL";
