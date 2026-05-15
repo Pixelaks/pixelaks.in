@@ -931,8 +931,8 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
                 for(let key in evts) attCurrentPeriodEvents.set(key, String(evts[key]));
             }
             
-            // 🚨 THE FIX: Use the cached DocumentSnapshots instead of raw String IDs!
-            if(attActiveRows.length > 0 && attCurrentStudentsCache.length > 0) {
+            // 🚨 THE FIX: Check both the Main and Sub arrays instead of the deleted 'attActiveRows' variable!
+            if((attMainActiveRows.length > 0 || attSubActiveRows.length > 0) && attCurrentStudentsCache.length > 0) {
                 renderStudentRows(attCurrentStudentsCache, attCurrentExistingData, attCurrentBatchMap, ticket, attCurrentContainer);
             }
         });
