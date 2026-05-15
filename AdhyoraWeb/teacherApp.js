@@ -255,6 +255,25 @@ function renderNotifications() {
 }
 
 // ==========================================
+// 🚨 SEMESTER MANAGER (C# PORT)
+// ==========================================
+let currentSemesterType = "Odd";
+let isSemesterInitialized = false;
+
+async function syncSemesterWithDatabase() {
+    if (isSemesterInitialized) return;
+    try {
+        const collegeSnap = await getDoc(doc(db, "colleges", currentCollegeID));
+        if (collegeSnap.exists() && collegeSnap.data().currentSemesterType) {
+            currentSemesterType = collegeSnap.data().currentSemesterType;
+        }
+        isSemesterInitialized = true;
+    } catch (e) {
+        console.error("Semester Sync Error:", e);
+    }
+}
+
+// ==========================================
 // 🚨 NEP ATTENDANCE ENGINE (C# PORT)
 // ==========================================
 let attCurrentDate = new Date();
@@ -284,7 +303,10 @@ let attMainEventListenerUnsub = null;
 let attActiveRosterYear = "";
 let attCurrentLoadTicket = 0;
 
-function initAttendanceEngine() {
+async function initAttendanceEngine() {
+    // 🚨 FIX: Await the Semester Manager before building the UI!
+    await syncSemesterWithDatabase();
+
     setupJumpDateModals();
     document.getElementById("attDateBtn").addEventListener("click", () => document.getElementById("jumpDateModal").classList.add("active"));
     
@@ -390,10 +412,12 @@ function fetchTeacherSubjects() {
         
         await Promise.all(autoHealPromises);
         
-        // Setup Semesters (Assume Odd right now for default Web)
+        // 🚨 NEW: Setup Semesters dynamically via SemesterManager
         let semDrop = document.getElementById("attSemDropdown");
-        if(semDrop.options.length === 0) {
+        if(currentSemesterType === "Odd") {
             semDrop.innerHTML = `<option value="1">Semester 1</option><option value="3">Semester 3</option><option value="5">Semester 5</option><option value="7">Semester 7</option>`;
+        } else {
+            semDrop.innerHTML = `<option value="2">Semester 2</option><option value="4">Semester 4</option><option value="6">Semester 6</option><option value="8">Semester 8</option>`;
         }
         
         filterSubjectsBySemester();
@@ -627,7 +651,6 @@ function spawnSubstituteCards(myDocs, subDocs) {
     
     document.getElementById("attListContainer").innerHTML = fullHTML;
 
-    // Attach Listeners
     myDocs.forEach(d => attachSubCardListener(d, true));
     subDocs.forEach(d => attachSubCardListener(d, false));
 }
