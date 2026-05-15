@@ -177,7 +177,27 @@
 
                 <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Timetable</h3></div>
                 <div id="internalMarksView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Internal Marks</h3></div>
-                <div id="subjectsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Subjects</h3></div>
+                <div id="subjectsView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">My Subjects</h3>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <select id="subjSemDropdown" class="filter-select" style="flex: 1;"></select>
+                            <select id="subjMasterDropdown" class="filter-select" style="flex: 2;"><option>Loading Subjects...</option></select>
+                        </div>
+                    </div>
+
+                    <div id="subjListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
+                        <div id="subjEmptyMessage" style="text-align:center; padding:30px; color:var(--text-muted); font-weight:bold;">No subjects assigned for this semester.</div>
+                        <div id="subjActiveItemsArea"></div>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: var(--card-bg); border-top: 1px solid var(--border-color);">
+                        <button id="subjSaveBtn" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Save Selections</button>
+                    </div>
+                </div>
                 <div id="calendarView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Academic Calendar</h3></div>
                 <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Assignments</h3></div>
                 <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Students</h3></div>
@@ -304,6 +324,17 @@
     </div>
 
     <div id="rcToast" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: bottom 0.3s; z-index: 9999;">Notification</div>
+
+    <div class="modal-overlay" id="subjConfirmDeleteModal">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+            <i class="fas fa-trash-alt" style="font-size: 40px; color: var(--brand-red); margin-bottom: 15px;"></i>
+            <h4 id="subjConfirmDeleteText" style="color: var(--text-dark); margin-bottom: 20px; line-height: 1.5; font-size:15px;">Are you sure you want to remove this subject?</h4>
+            <div style="display:flex; gap:10px;">
+                <button id="subjConfirmNoBtn" style="flex:1; padding:12px; border-radius:10px; border:1px solid #cbd5e1; background:white; color:#64748b; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button id="subjConfirmYesBtn" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--brand-red); color:white; font-weight:bold; cursor:pointer;">Remove</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="teacherApp.js"></script>
 </body>
