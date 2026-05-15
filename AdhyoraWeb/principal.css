@@ -616,43 +616,56 @@ body.dark-mode .up-icon {
 .btn-yearly:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(46, 204, 113, 0.7); background: #27ae60; color: #fff; }
 
 /* =========================================
-   📱 PREMIUM SUBSCRIPTION: MOBILE OVERFLOW FIX
+   📱 PREMIUM SUBSCRIPTION: MOBILE & SUCCESS FIXES
    ========================================= */
 
-/* 1. Fix the main blackout panel so it allows scrolling */
+/* 1. Fix the Success Panel Transparency */
+#subSuccessPanel .compose-modal {
+    background-color: #ffffff !important; /* Solid white in Light Mode */
+    border: 2px solid var(--brand-green) !important;
+}
+#successPlanName { color: #334155 !important; } 
+#successExpiryDate { color: #64748b !important; }
+
+body.dark-mode #subSuccessPanel .compose-modal {
+    background-color: #1e293b !important; /* Solid navy in Dark Mode */
+}
+body.dark-mode #successPlanName { color: #f8fafc !important; }
+body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
+
+
+/* 2. Fix Mobile Layout (Targeting the correct Website classes) */
 #subBlockPanel {
-    align-items: flex-start !important; /* Prevents the top from getting cut off */
-    overflow-y: auto !important; /* Enables scrolling for the entire screen */
-    padding: 40px 15px !important; /* Adds breathing room on mobile */
+    align-items: flex-start !important; 
+    overflow-y: auto !important; 
+    padding: 40px 15px !important; 
 }
 
-/* 2. Keeps the content centered gracefully */
-.premium-sub-container {
+#subBlockPanel > div:nth-child(2) {
     margin: auto !important; 
     width: 100% !important;
 }
 
-/* 3. Stack the cards beautifully on phones and tablets */
 @media (max-width: 800px) {
-    .pricing-grid {
+    .pricing-container {
         flex-direction: column !important;
         align-items: center !important;
-        gap: 45px !important; /* Adds space between stacked cards */
+        gap: 40px !important; 
     }
     
-    .sub-card-premium {
+    .pricing-card {
         width: 100% !important;
-        max-width: 360px !important; /* Keeps it looking like a card, not stretched */
-        padding: 30px 25px !important;
+        max-width: 360px !important; 
+        padding: 30px 20px !important;
     }
 
-    .sub-card-premium.highlight {
-        transform: scale(1) !important; /* Removes the zoom so it fits on screen */
-        margin-top: 15px !important; /* Gives room for the "Most Popular" badge */
+    .pricing-card:nth-child(2) {
+        transform: scale(1) !important; /* Removes the zoom so it fits */
+        margin-top: 20px !important; /* Space for the MOST POPULAR badge */
     }
     
-    .sub-card-premium.highlight:hover {
-        transform: translateY(-8px) scale(1) !important; /* Softer hover for mobile */
+    .pricing-card:hover {
+        transform: translateY(-8px) scale(1) !important; /* Softer hover on phones */
     }
 
     #subBlockHeading {
