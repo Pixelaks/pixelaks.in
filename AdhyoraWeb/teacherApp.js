@@ -1552,7 +1552,7 @@ function histUpdateDateUI() {
     histUpdateQuickDays();
 }
 
-ffunction histUpdateQuickDays() {
+function histUpdateQuickDays() {
     let container = document.getElementById("histDaysContainer");
     let dayIndex = histCurrentDate.getDay() === 0 ? 6 : histCurrentDate.getDay() - 1; // Mon=0, Sun=6
     
@@ -1757,8 +1757,6 @@ function histOpenRecordViewer(data) {
     // 🚨 Swap to Record Viewer Panel!
     document.getElementById("attHistoryScreen").style.display = "none";
     document.getElementById("attRecordScreen").style.display = "flex";
-    
-    document.getElementById("recordViewerModal").classList.add("active");
     
     let subjectName = data.subject || "Unknown Subject";
     let teacherName = data.markedByTeacherName || "Unknown";
