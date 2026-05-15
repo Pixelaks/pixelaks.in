@@ -1030,11 +1030,12 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
 }
 
 function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
-    let isThisBatchLocked = false; // 🚨 Localized lock so it doesn't break Main class!
+    let isThisBatchLocked = false; // Localized lock so it doesn't break Main class!
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
+    // 🚨 UI LOCK LOGIC: Detects if anyone else saved it!
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID) {
@@ -1068,9 +1069,9 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             saveBtn.style.pointerEvents = "auto";
         }
     } else {
-        attIsMainClassLocked = isThisBatchLocked; // 🚨 Only set global lock if rendering Main Class
+        attIsMainClassLocked = isThisBatchLocked; // Only set global lock if rendering Main Class
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
-        updateMainButtonState(); 
+        // 🚨 REMOVED updateMainButtonState() from here! It was firing too early.
     }
 
     let fullHTML = "";
@@ -1112,7 +1113,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
         let cursorStyle = rowLocked ? "default" : "pointer";
         
-        // 🚨 Appending Prefix to the IDs so DOM doesn't get confused
+        // Appending Prefix to the IDs so DOM doesn't get confused
         fullHTML += `
         <div id="row_${prefix}${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
             <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none;">${uiText}</div>
@@ -1141,6 +1142,11 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             else togEl.classList.remove("active");
         });
     });
+
+    // 🚨 MOVED HERE: Now the array is full of students, so the button will light up correctly!
+    if (!attIsSubstitutePanelOpen) {
+        updateMainButtonState();
+    }
 }
 
 // ==========================================
