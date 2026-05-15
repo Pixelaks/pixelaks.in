@@ -72,13 +72,15 @@ function ListenToProfile() {
 
         if (data.department) {
             deptName = data.department;
-            teacherDeptRaw = deptName;
+            // 🚨 Standardize the raw ID right here!
+            teacherDeptRaw = "DEPT_" + deptName.replace(/ /g, ""); 
         } else if (data.departmentID) {
             try {
                 const deptSnap = await getDoc(doc(db, "colleges", currentCollegeID, "departments", data.departmentID));
                 if (deptSnap.exists()) {
                     deptName = deptSnap.data().name || data.departmentID;
-                    teacherDeptRaw = deptName; 
+                    // 🚨 Keep the raw ID exactly as it is in the database
+                    teacherDeptRaw = data.departmentID; 
                 } else {
                     teacherDeptRaw = data.departmentID;
                     deptName = data.departmentID.replace("DEPT_", "").replace(/_/g, " ");
@@ -579,7 +581,7 @@ async function checkTimetableAllocation(ticket, dateStr) {
                 }
             }
             if(data.dept_locks) {
-                let dLock = data.dept_locks[`p${pIndex}_DEPT_${teacherDeptRaw.replace(/ /g, '')}`];
+                let dLock = data.dept_locks[`p${pIndex}_${teacherDeptRaw}`];
                 if(dLock && dLock.subject !== selectedSubject) {
                     if(dLock.teacherID !== currentUserID) {
                         showAttCenterMessage(`Period ${pIndex} is locked for your department.<br>Already marked for '${dLock.subject}' by ${dLock.teacherName || "another teacher"}.`); return;
@@ -1337,7 +1339,7 @@ async function saveAttendance() {
 
         if(attCurrentSessionBatchIndex === -1 && !attIsSubstitutePanelOpen) {
             let dLocks = gData.dept_locks || {};
-            dLocks[`p${pIndex}_DEPT_${teacherDeptRaw.replace(/ /g, '')}`] = { subject: selectedSubject, teacherName: currentTeacherName, teacherID: currentUserID };
+            dLocks[`p${pIndex}_${teacherDeptRaw}`] = { subject: selectedSubject, teacherName: currentTeacherName, teacherID: currentUserID };
             gUpdateObj.dept_locks = dLocks;
         }
 
@@ -1390,10 +1392,28 @@ const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
 
+function cleanupAttendanceView() {
+    if (attSessionListenerUnsub) { attSessionListenerUnsub(); attSessionListenerUnsub = null; }
+    if (attMainEventListenerUnsub) { attMainEventListenerUnsub(); attMainEventListenerUnsub = null; }
+    
+    // Safely clear out UI data so it's fresh next time they click Attendance
+    if (typeof showAttCenterMessage === "function") {
+        showAttCenterMessage("Please select a subject<br>to mark attendance.");
+        let subDrop = document.getElementById("attSubjDropdown");
+        if(subDrop) subDrop.value = "Select Subject";
+    }
+}
+
 function switchView(targetView, clickedBtn) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
+    
+    // 🚨 Clean up the heavy attendance listeners if we navigate away
+    if (targetView !== views.attendance) {
+        cleanupAttendanceView();
+    }
+
     if (targetView === "HOME") {
         if(sidebar) sidebar.classList.remove("mobile-hidden"); 
         if(mainContent) mainContent.classList.remove("mobile-active");
