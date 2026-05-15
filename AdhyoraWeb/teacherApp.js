@@ -931,9 +931,9 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
                 for(let key in evts) attCurrentPeriodEvents.set(key, String(evts[key]));
             }
             
-            // 🚨 THE FIX: Check both the Main and Sub arrays instead of the deleted 'attActiveRows' variable!
+            // 🚨 THE FIX: We removed the cached container variable at the end
             if((attMainActiveRows.length > 0 || attSubActiveRows.length > 0) && attCurrentStudentsCache.length > 0) {
-                renderStudentRows(attCurrentStudentsCache, attCurrentExistingData, attCurrentBatchMap, ticket, attCurrentContainer);
+                renderStudentRows(attCurrentStudentsCache, attCurrentExistingData, attCurrentBatchMap, ticket);
             }
         });
 
@@ -1020,22 +1020,24 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
         return r1.localeCompare(r2, undefined, {numeric:true});
     });
 
-    // 🚨 THE FIX: Cache the data so the Event Listener can safely trigger UI updates!
+    // 🚨 THE FIX: We cache the data, but let renderStudentRows fetch the live container!
     attCurrentStudentsCache = matchingStudents;
     attCurrentExistingData = existingData;
     attCurrentBatchMap = batchTeachersMap;
-    attCurrentContainer = targetContainer;
 
-    renderStudentRows(matchingStudents, existingData, batchTeachersMap, ticket, targetContainer);
+    renderStudentRows(matchingStudents, existingData, batchTeachersMap, ticket);
 }
 
-function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
-    let isThisBatchLocked = false; // Localized lock so it doesn't break Main class!
+function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
+    // 🚨 THE FIX: Always fetch the LIVE container currently in the DOM!
+    let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attDirectArea");
+    if (!targetContainer) targetContainer = document.getElementById("attListContainer");
+
+    let isThisBatchLocked = false; 
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
-    // 🚨 UI LOCK LOGIC: Detects if anyone else saved it!
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID) {
@@ -1069,9 +1071,8 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             saveBtn.style.pointerEvents = "auto";
         }
     } else {
-        attIsMainClassLocked = isThisBatchLocked; // Only set global lock if rendering Main Class
+        attIsMainClassLocked = isThisBatchLocked; 
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
-        // 🚨 REMOVED updateMainButtonState() from here! It was firing too early.
     }
 
     let fullHTML = "";
@@ -1113,7 +1114,6 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
         let cursorStyle = rowLocked ? "default" : "pointer";
         
-        // Appending Prefix to the IDs so DOM doesn't get confused
         fullHTML += `
         <div id="row_${prefix}${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
             <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none;">${uiText}</div>
@@ -1143,7 +1143,6 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         });
     });
 
-    // 🚨 MOVED HERE: Now the array is full of students, so the button will light up correctly!
     if (!attIsSubstitutePanelOpen) {
         updateMainButtonState();
     }
