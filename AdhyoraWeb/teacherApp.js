@@ -111,6 +111,7 @@ function finalizeProfileUI(rawName, email, deptName) {
         startInboxListener();
         hasStartedInbox = true;
         initAttendanceEngine(); 
+        initSubjectDeclarationEngine(); // 🚨 Added this line!
     }
 }
 
@@ -1416,10 +1417,9 @@ function switchView(targetView, clickedBtn) {
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
     
-    // 🚨 Clean up the heavy attendance listeners if we navigate away
-    if (targetView !== views.attendance) {
-        cleanupAttendanceView();
-    }
+    // 🚨 Clean up the heavy listeners and unsaved data if we navigate away
+    if (targetView !== views.attendance) cleanupAttendanceView();
+    if (targetView !== views.subjects) subjPurgeUnsavedPending();
 
     if (targetView === "HOME") {
         if(sidebar) sidebar.classList.remove("mobile-hidden"); 
@@ -1805,5 +1805,353 @@ function histOpenRecordViewer(data) {
                 container.appendChild(row);
             }
         });
+    }
+}
+
+// ==========================================
+// 🚨 TEACHER SUBJECT DECLARATION ENGINE
+// ==========================================
+let subjMasterList = new Map();
+let subjActiveLinks = new Map();
+
+let subjPendingDeleteCode = "";
+let subjPendingDeleteItem = null;
+
+let subjCachedTeacherID = "";
+let subjIsFirstTimeCheckDone = false;
+let subjIsFirstTimeSetupStatic = false;
+let subjIsMasterLoaded = false;
+let subjAllSubjectsCache = [];
+let subjCachedMySubjectsBySem = new Map();
+
+document.getElementById("subjSemDropdown")?.addEventListener("change", () => subjLoadMasterSubjects());
+document.getElementById("subjMasterDropdown")?.addEventListener("change", subjOnDropdownSelected);
+document.getElementById("subjSaveBtn")?.addEventListener("click", subjSaveNewSelections);
+document.getElementById("subjConfirmNoBtn")?.addEventListener("click", subjCancelDelete);
+document.getElementById("subjConfirmYesBtn")?.addEventListener("click", subjExecuteDelete);
+
+async function initSubjectDeclarationEngine() {
+    // 🚨 SECURITY WIPE: If a different teacher logs in, clear the RAM!
+    if (currentUserID !== subjCachedTeacherID) {
+        subjIsFirstTimeCheckDone = false;
+        subjIsFirstTimeSetupStatic = false;
+        subjIsMasterLoaded = false;
+        subjAllSubjectsCache = [];
+        subjCachedMySubjectsBySem.clear();
+        subjCachedTeacherID = currentUserID;
+    }
+
+    subjSetupSemesterDropdown();
+    subjUpdateNoSubjectsText();
+    subjCheckIfFirstTimeSetup();
+}
+
+function subjSetupSemesterDropdown() {
+    let semDrop = document.getElementById("subjSemDropdown");
+    semDrop.innerHTML = "";
+    if(currentSemesterType === "Odd") {
+        semDrop.innerHTML = `<option value="1">Semester 1</option><option value="3">Semester 3</option><option value="5">Semester 5</option><option value="7">Semester 7</option>`;
+    } else {
+        semDrop.innerHTML = `<option value="2">Semester 2</option><option value="4">Semester 4</option><option value="6">Semester 6</option><option value="8">Semester 8</option>`;
+    }
+}
+
+async function subjCheckIfFirstTimeSetup() {
+    // ZERO COST TRAP
+    if (subjIsFirstTimeCheckDone) {
+        if (subjIsFirstTimeSetupStatic) forceOpenSubjectPanel();
+        subjLoadMasterSubjects();
+        return;
+    }
+
+    try {
+        let snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), 
+            where("teacherID", "==", currentUserID), 
+            where("isActive", "==", true), 
+            limit(1)
+        ));
+        
+        subjIsFirstTimeSetupStatic = snap.empty;
+        subjIsFirstTimeCheckDone = true;
+
+        if (subjIsFirstTimeSetupStatic) {
+            forceOpenSubjectPanel();
+        }
+        subjLoadMasterSubjects();
+    } catch(e) { console.error("First time setup check failed:", e); }
+}
+
+function forceOpenSubjectPanel() {
+    // Force the router to open the Subjects view securely
+    switchView(views.subjects, document.getElementById('btnNavSubjects'));
+    showRcToast("Please declare your subjects to continue.");
+}
+
+async function subjLoadMasterSubjects() {
+    let semDrop = document.getElementById("subjSemDropdown");
+    let sem = semDrop.options[semDrop.selectedIndex].text.replace("Semester ", "").trim();
+    let masterDrop = document.getElementById("subjMasterDropdown");
+    masterDrop.innerHTML = "<option>Loading Subjects...</option>";
+
+    if (subjIsMasterLoaded) {
+        subjBuildDropdownForSemester(sem);
+        return;
+    }
+
+    try {
+        let snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
+        subjAllSubjectsCache = [];
+        snap.forEach(doc => {
+            let d = doc.data();
+            let code = d.code || doc.id;
+            let name = d.Name || d.name || "Unknown";
+            let sems = d.semester !== undefined ? String(d.semester) : (d.Semester !== undefined ? String(d.Semester) : "");
+            subjAllSubjectsCache.push({ code: code, name: name, semesters: sems });
+        });
+
+        subjIsMasterLoaded = true;
+        subjBuildDropdownForSemester(sem);
+    } catch(e) { console.error("Master subjects load failed:", e); }
+}
+
+function subjBuildDropdownForSemester(sem) {
+    let freshSubjects = new Map();
+
+    subjAllSubjectsCache.forEach(sub => {
+        let match = false;
+        let semArray = sub.semesters.split(',');
+        semArray.forEach(s => { if (s.trim() === sem) match = true; });
+
+        if (match && !freshSubjects.has(sub.code)) {
+            freshSubjects.set(sub.code, sub.name);
+        }
+    });
+
+    subjMasterList = freshSubjects;
+    subjLoadMyExistingLinks(sem);
+}
+
+async function subjLoadMyExistingLinks(sem) {
+    // 🚨 ZERO COST TRAP: If they already clicked this semester today, use RAM!
+    if (subjCachedMySubjectsBySem.has(sem)) {
+        subjRenderMyLinksFromCache(sem);
+        return;
+    }
+
+    try {
+        let snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"),
+            where("teacherID", "==", currentUserID),
+            where("semester", "==", sem),
+            where("isActive", "==", true)
+        ));
+
+        let fetchedLinks = new Map();
+        snap.forEach(doc => {
+            fetchedLinks.set(doc.data().subjectCode, doc.id);
+        });
+
+        // Save to RAM for free switching!
+        subjCachedMySubjectsBySem.set(sem, fetchedLinks);
+        subjRenderMyLinksFromCache(sem);
+    } catch(e) { console.error("Failed to load existing links:", e); }
+}
+
+function subjRenderMyLinksFromCache(sem) {
+    subjActiveLinks.clear();
+    document.getElementById("subjActiveItemsArea").innerHTML = "";
+
+    let cachedMap = subjCachedMySubjectsBySem.get(sem);
+    cachedMap.forEach((docId, code) => {
+        subjActiveLinks.set(code, docId);
+        let name = subjMasterList.has(code) ? subjMasterList.get(code) : "Unknown";
+        subjSpawnSubjectHTML(code, name);
+    });
+
+    subjRefreshDropdown();
+    subjUpdateNoSubjectsText();
+}
+
+function subjRefreshDropdown() {
+    let masterDrop = document.getElementById("subjMasterDropdown");
+    let optionsHTML = `<option value="NONE">Select Subject to Add...</option>`;
+
+    subjMasterList.forEach((name, code) => {
+        if (!subjActiveLinks.has(code)) {
+            optionsHTML += `<option value="${code}">${name} (${code})</option>`;
+        }
+    });
+
+    masterDrop.innerHTML = optionsHTML;
+    masterDrop.value = "NONE";
+}
+
+function subjOnDropdownSelected(e) {
+    let code = e.target.value;
+    if (code === "NONE") return;
+
+    let name = subjMasterList.get(code);
+    subjActiveLinks.set(code, "PENDING");
+    subjSpawnSubjectHTML(code, name);
+    
+    subjRefreshDropdown();
+    subjUpdateNoSubjectsText();
+}
+
+function subjSpawnSubjectHTML(code, name) {
+    let container = document.getElementById("subjActiveItemsArea");
+    let isPending = subjActiveLinks.get(code) === "PENDING";
+    let statusBadge = isPending ? `<span style="font-size:10px; background:#fef3c7; color:#d97706; padding:3px 8px; border-radius:8px; font-weight:bold; margin-left:10px;">UNSAVED</span>` : "";
+
+    let div = document.createElement("div");
+    div.id = `subjItem_${code}`;
+    div.style.cssText = "background:white; border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.02);";
+    
+    div.innerHTML = `
+        <div style="font-weight:600; font-size:14px; color:var(--text-dark); flex:1;">${name} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${code})</span>${statusBadge}</div>
+        <button id="subjDelBtn_${code}" style="background:#fee2e2; border:none; color:var(--brand-red); width:35px; height:35px; border-radius:8px; cursor:pointer; transition:0.2s;"><i class="fas fa-trash-alt"></i></button>
+    `;
+
+    container.appendChild(div);
+    document.getElementById(`subjDelBtn_${code}`).addEventListener("click", () => subjPromptDeleteSubject(code, div));
+}
+
+function subjUpdateNoSubjectsText() {
+    let msgObj = document.getElementById("subjEmptyMessage");
+    if(msgObj) msgObj.style.display = subjActiveLinks.size === 0 ? "block" : "none";
+}
+
+// ==========================================
+// 🚨 DELETE & GARBAGE COLLECTION
+// ==========================================
+function subjPromptDeleteSubject(code, itemDiv) {
+    subjPendingDeleteCode = code;
+    subjPendingDeleteItem = itemDiv;
+
+    // UX FIX: If PENDING (not saved yet), delete instantly!
+    if (subjActiveLinks.get(code) === "PENDING") {
+        subjExecuteDelete();
+        return;
+    }
+
+    let name = subjMasterList.has(code) ? subjMasterList.get(code) : code;
+    document.getElementById("subjConfirmDeleteText").innerHTML = `Are you sure you want to remove<br><b>${name}</b>?`;
+    document.getElementById("subjConfirmDeleteModal").classList.add("active");
+}
+
+function subjCancelDelete() {
+    subjPendingDeleteCode = "";
+    subjPendingDeleteItem = null;
+    document.getElementById("subjConfirmDeleteModal").classList.remove("active");
+}
+
+async function subjExecuteDelete() {
+    if (!subjPendingDeleteCode) return;
+
+    let stateOrDocID = subjActiveLinks.get(subjPendingDeleteCode);
+
+    // 1. If it's real, delete from Firebase
+    if (stateOrDocID !== "PENDING") {
+        showRcToast("Removing subject...");
+        try {
+            await doc(db, "colleges", currentCollegeID, "faculty_subjects", stateOrDocID).update({ isActive: false });
+            showRcToast("Subject Removed!");
+        } catch(e) {
+            console.error("Failed to remove subject", e);
+            showRcToast("Database Error. Try again.");
+            subjCancelDelete();
+            return;
+        }
+    }
+
+    // 2. Remove locally
+    subjActiveLinks.delete(subjPendingDeleteCode);
+
+    // 🚨 RAM CACHE FIX
+    let semDrop = document.getElementById("subjSemDropdown");
+    let sem = semDrop.options[semDrop.selectedIndex].text.replace("Semester ", "").trim();
+    if (subjCachedMySubjectsBySem.has(sem)) {
+        subjCachedMySubjectsBySem.get(sem).delete(subjPendingDeleteCode);
+    }
+
+    if (subjPendingDeleteItem) {
+        subjPendingDeleteItem.remove();
+    }
+
+    subjRefreshDropdown();
+    subjUpdateNoSubjectsText();
+    subjCancelDelete();
+}
+
+// 🚨 UX FIX: Instantly wipes unsaved subjects from the screen when closing panel
+function subjPurgeUnsavedPending() {
+    let hasPending = false;
+    for (let [code, status] of subjActiveLinks.entries()) {
+        if (status === "PENDING") {
+            subjActiveLinks.delete(code);
+            hasPending = true;
+        }
+    }
+
+    if (hasPending) {
+        let semDrop = document.getElementById("subjSemDropdown");
+        if(semDrop && semDrop.options.length > 0) {
+            let sem = semDrop.options[semDrop.selectedIndex].text.replace("Semester ", "").trim();
+            subjRenderMyLinksFromCache(sem); // Automatically rebuilds UI clean
+        }
+    }
+}
+
+// ==========================================
+// 🚨 SAVE ENGINE
+// ==========================================
+async function subjSaveNewSelections() {
+    let semDrop = document.getElementById("subjSemDropdown");
+    let sem = semDrop.options[semDrop.selectedIndex].text.replace("Semester ", "").trim();
+    
+    let batch = writeBatch(db);
+    let changes = 0;
+
+    subjActiveLinks.forEach((status, code) => {
+        if (status === "PENDING") {
+            let docID = `Link_${currentUserID}_${code}_S${sem}`;
+            let docRef = doc(db, "colleges", currentCollegeID, "faculty_subjects", docID);
+            
+            batch.set(docRef, {
+                teacherID: currentUserID,
+                teacherName: currentTeacherName,
+                subjectCode: code,
+                subjectName: subjMasterList.get(code),
+                semester: sem,
+                isActive: true,
+                timestamp: serverTimestamp()
+            });
+            changes++;
+        }
+    });
+
+    if (changes === 0) {
+        showRcToast("No new subjects to save.");
+        return;
+    }
+
+    let saveBtn = document.getElementById("subjSaveBtn");
+    saveBtn.innerText = "Saving...";
+    saveBtn.style.pointerEvents = "none";
+
+    try {
+        await batch.commit();
+        subjIsFirstTimeSetupStatic = false; // Turn off forced-open flag
+        showRcToast("Subjects saved successfully!");
+        
+        // 🚨 RAM CACHE FIX: Wipe cache for this sem to force 1 fresh read
+        subjCachedMySubjectsBySem.delete(sem);
+        await subjLoadMyExistingLinks(sem); // Refresh to turn "PENDING" into real IDs
+
+    } catch(e) {
+        console.error("Save Subjects Error", e);
+        showRcToast("Error saving subjects.");
+    } finally {
+        saveBtn.innerText = "Save Selections";
+        saveBtn.style.pointerEvents = "auto";
     }
 }
