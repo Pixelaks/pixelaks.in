@@ -45,6 +45,8 @@ if (!currentCollegeID) {
 // ==========================================
 // 🚨 PROFILE DATA ENGINE
 // ==========================================
+let hasStartedInbox = false;
+
 function ListenToProfile() {
     if (profileListener) profileListener(); // Stop old listener
 
@@ -105,12 +107,11 @@ function ListenToProfile() {
 }
 
 // ==========================================
-// 🚨 NOTIFICATION INBOX ENGINE (Step 1)
+// 🚨 NOTIFICATION INBOX ENGINE
 // ==========================================
 let cachedNotifs = [];
 let inboxListenerUnsub = null;
 let globalListenerUnsub = null;
-let hasStartedInbox = false;
 
 function startInboxListener() {
     // 1. Format the topics exactly like the Unity C# code
@@ -134,9 +135,9 @@ function startInboxListener() {
         renderNotifications(); 
     };
 
-    // 2. Listen to College-Level Messages
+    // 2. Listen to College-Level Messages (🚨 Firebase Index Fix: Removed orderBy to prevent crash)
     if (inboxListenerUnsub) inboxListenerUnsub();
-    inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
+    inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics)), (snap) => {
         inboxCache = []; 
         snap.forEach(doc => { 
             let d = doc.data(); 
@@ -144,7 +145,7 @@ function startInboxListener() {
                 title: d.title || "Notice", 
                 body: d.body || "", 
                 time: d.timestamp ? d.timestamp.toDate() : new Date(), 
-                sender: d.senderName || "System" 
+                sender: d.senderName || "Principal" 
             }); 
         });
         
@@ -247,6 +248,7 @@ document.getElementById("btnHome").addEventListener("click", (e) => switchView("
 
 document.getElementById("btnNotifications").addEventListener("click", (e) => {
     switchView("notificationsView", "btnNotifications");
+    
     // 🚨 Hide the red dot when they open the inbox!
     document.querySelectorAll(".notification-dot").forEach(dot => dot.style.display = "none");
 });
