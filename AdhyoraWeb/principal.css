@@ -667,3 +667,59 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         font-size: 2.2rem !important;
     }
 }
+
+/* =========================================
+   📱 MOBILE POLISH & ALIGNMENT FIXES
+   ========================================= */
+@media (max-width: 900px) {
+    
+    /* 1. Fix Bottom Nav Overlap 
+       Adds invisible padding to the bottom of all scrollable lists 
+       so the last item rests comfortably above the green nav bar */
+    #teacherListContainer, #studentListContainer, #bchListContainer, 
+    #evtListContainer, #attdListContainer, #notificationsList, #messagesList {
+        padding-bottom: 130px !important; 
+    }
+
+    /* 2. Fix Teacher/Student Cards Cut-off 
+       Forces the Action Buttons (Dropdown, Message) to drop down 
+       to a second row below the user's name on small screens */
+    .data-card {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+    }
+    .data-card > div:nth-child(2) {
+        width: 100%;
+        justify-content: flex-start !important;
+        flex-wrap: wrap; /* Allows buttons to wrap safely */
+        gap: 12px;
+    }
+
+    /* 3. Fix Attendance Grid Alignment
+       Adjusts the column ratios so the Teacher name takes slightly less space,
+       giving P1-P6 more room to breathe. Shrinks the font to fit perfectly. */
+    .attd-row {
+        grid-template-columns: 1.4fr repeat(6, 1fr) !important;
+        padding: 10px 5px !important;
+        gap: 2px !important;
+    }
+    
+    /* Truncates extra-long teacher names with an ellipsis (...) so they don't break the grid */
+    .attd-teacher-col {
+        overflow: hidden;
+    }
+    .attd-teacher-name {
+        font-size: 11px !important;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        display: block;
+    }
+    
+    /* Shrinks the subject text (INT, BRY) to fit precisely under the P1-P6 columns */
+    .attd-slot {
+        font-size: 10px !important;
+        padding: 2px !important;
+    }
+}
