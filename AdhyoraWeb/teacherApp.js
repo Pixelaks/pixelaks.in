@@ -33,7 +33,7 @@ if (!currentCollegeID) {
     onAuthStateChanged(auth, (user) => {
         if (user) { 
             currentUserID = user.uid; 
-            ListenToProfile(); // 🚨 Replicates your C# Coroutine wait
+            ListenToProfile(); // Connects to the DB immediately
         } else { 
             window.location.href = "index.html"; 
         }
@@ -41,27 +41,29 @@ if (!currentCollegeID) {
 }
 
 // ==========================================
-// 🚨 PROFILE DATA ENGINE (Replicating C# logic)
+// 🚨 PROFILE DATA ENGINE
 // ==========================================
 function ListenToProfile() {
-    if (profileListener) profileListener(); // Unsubscribe if existing
+    if (profileListener) profileListener(); // Stop old listener
 
     const teacherDocRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
 
     profileListener = onSnapshot(teacherDocRef, (snapshot) => {
         if (!snapshot.exists()) {
-            document.getElementById("teacherNameText").innerText = "Profile Data Not Found";
+            document.getElementById("teacherInfoName").innerText = "Profile Not Found";
             return;
         }
 
         const data = snapshot.data();
         
-        // 1. Get Core Data
+        // 1. Check HOD Flag
         isHOD = data.isHOD || false;
+        
+        // 2. Get Raw Data
         const rawName = data.name || "Unknown";
         const email = auth.currentUser.email || data.email;
 
-        // 2. Format Department
+        // 3. Format Department
         let deptName = "Unknown Dept";
         if (data.department) {
             deptName = data.department;
@@ -69,21 +71,28 @@ function ListenToProfile() {
             deptName = data.departmentID.replace("DEPT_", "").replace(/_/g, " ");
         }
 
-        // 3. Update UI Elements (Replicating your Rich Text logic)
+        // 4. Update UI Elements 
         let hodBadgeText = isHOD ? " <span style='color:#f59e0b; font-size:14px;'>(HOD)</span>" : "";
-        
-        document.getElementById("teacherNameText").innerHTML = `${rawName}${hodBadgeText}`;
-        document.getElementById("teacherEmailText").innerText = email;
-        document.getElementById("teacherDeptBadge").innerText = deptName;
+        document.getElementById("teacherInfoName").innerHTML = `${rawName}${hodBadgeText}`;
+        document.getElementById("teacherInfoEmail").innerText = email;
+        document.getElementById("teacherInfoDept").innerText = deptName;
 
-        // 4. Unlock UI once data is loaded
+        // HOD Notification Logic (Matches Unity exactly)
+        if (isHOD) {
+            const seenKey = `HOD_Seen_${currentUserID}`;
+            if (localStorage.getItem(seenKey) !== "1") {
+                document.getElementById("hodNotificationPanel").classList.add("active");
+                localStorage.setItem(seenKey, "1");
+            }
+        }
+
+        // Unlock UI once data is fully loaded
         document.getElementById("initialAppLoader").style.display = "none";
     }, (error) => {
         console.error("Error listening to profile:", error);
-        document.getElementById("teacherNameText").innerText = "Network Error";
+        document.getElementById("teacherInfoName").innerText = "Network Error";
     });
 }
-
 
 // ==========================================
 // 🚨 SETTINGS DRAWER ACTIONS
@@ -91,10 +100,7 @@ function ListenToProfile() {
 const SUPPORT_EMAIL = "pixelaks.technologies@gmail.com";
 const EMAIL_SUBJECT = "Support Request - Teacher App";
 
-// Replicates your OnContactUsClicked() logic
 document.getElementById("btnContactUs").addEventListener("click", () => {
-    
-    // Get OS for diagnostic string
     let osName = "Web Browser";
     if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
     if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
@@ -103,13 +109,9 @@ document.getElementById("btnContactUs").addEventListener("click", () => {
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) osName = "iOS Browser";
 
     let role = isHOD ? "Teacher (HOD)" : "Teacher";
-    
     let deviceInfo = `\n========================\nDiagnostic Information\n========================\nDevice Model: ${osName}\nOperating System: ${navigator.platform}\nApp Version: 1.0.0 (Web)\nCollege ID: ${currentCollegeID}\nRole: ${role}\n========================`;
     
-    let userPrompt = "Please describe your issue here:\n\n\n";
-    let fullMessage = userPrompt + deviceInfo;
-
-    window.open(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent(fullMessage)}`, "_blank");
+    window.open(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent("Please describe your issue here:\n\n\n" + deviceInfo)}`, "_blank");
 });
 
 document.getElementById("btnWebsite").addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
@@ -120,6 +122,12 @@ document.getElementById("btnSignOut").addEventListener("click", () => {
     if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); 
 });
 
+// Generic Toast Function
+window.showRcToast = function(msg) { 
+    let t = document.getElementById("rcToast"); 
+    t.innerText = msg; t.style.bottom = "30px"; 
+    setTimeout(() => t.style.bottom = "-100px", 3000); 
+};
 
 // ==========================================
 // 🚨 THEME MANAGER
@@ -139,9 +147,7 @@ function applyTheme(isDark) {
 
 document.getElementById("btnDarkMode").addEventListener("click", () => applyTheme(true));
 document.getElementById("btnLightMode").addEventListener("click", () => applyTheme(false));
-
 applyTheme(localStorage.getItem("adhyora_teacher_theme") === "dark");
-
 
 // ==========================================
 // 🚨 UI NAVIGATION ROUTER (Desktop & Mobile)
@@ -164,9 +170,14 @@ const views = {
 
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
+const navButtons = document.querySelectorAll(".nav-icon-btn");
 
-function switchView(targetView) {
-    // Hide all view containers
+function switchView(targetView, clickedBtn) {
+    navButtons.forEach(btn => btn.classList.remove("active-nav"));
+    if (clickedBtn && clickedBtn.classList.contains('nav-icon-btn')) {
+        clickedBtn.classList.add("active-nav");
+    }
+
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
 
     if (targetView === "HOME") {
@@ -176,7 +187,6 @@ function switchView(targetView) {
     } else {
         sidebar.classList.add("mobile-hidden"); 
         mainContent.classList.add("mobile-active");
-        
         if (targetView) { 
             targetView.classList.remove("hidden-view"); 
             targetView.style.opacity = 0; 
@@ -186,7 +196,6 @@ function switchView(targetView) {
 }
 
 // Map Sidebar Grid Buttons
-document.getElementById("btnHome").addEventListener("click", () => switchView("HOME"));
 document.getElementById("btnNavAttendance").addEventListener("click", () => switchView(views.attendance));
 document.getElementById("btnNavTimetable").addEventListener("click", () => switchView(views.timetable));
 document.getElementById("btnNavInternalMarks").addEventListener("click", () => switchView(views.internalMarks));
@@ -198,11 +207,12 @@ document.getElementById("btnNavSubjectAssign").addEventListener("click", () => s
 document.getElementById("btnNavBatch").addEventListener("click", () => switchView(views.batch));
 document.getElementById("btnNavEventAttendance").addEventListener("click", () => switchView(views.eventAttendance));
 
-// Map Bottom Pill Icons
-document.getElementById("btnNotifications").addEventListener("click", () => switchView(views.notifications));
-document.getElementById("btnMessages").addEventListener("click", () => switchView(views.messages));
+// Map Pill Nav Icons
+document.getElementById("btnHome").addEventListener("click", (e) => switchView("HOME", e.currentTarget));
+document.getElementById("btnNotifications").addEventListener("click", (e) => switchView(views.notifications, e.currentTarget));
+document.getElementById("btnMessages").addEventListener("click", (e) => switchView(views.messages, e.currentTarget));
 
-// Modals Trigger
+// Settings & Modals Drawer
 const elSettings = document.getElementById("settingsOverlay");
 document.getElementById("btnSettings").addEventListener("click", () => elSettings.classList.add("active"));
 document.getElementById("closeSettingsBtn").addEventListener("click", () => elSettings.classList.remove("active"));
