@@ -1490,8 +1490,8 @@ let histLastFetchedYearStr = "";
 
 // Bind HTML Buttons
 document.getElementById("btnOpenHistory")?.addEventListener("click", openHistoryPanel);
-document.getElementById("closeHistoryBtn")?.addEventListener("click", () => document.getElementById("historyModal").style.display = "none");
-document.getElementById("closeRecordBtn")?.addEventListener("click", () => document.getElementById("recordViewerModal").style.display = "none");
+document.getElementById("closeHistoryBtn")?.addEventListener("click", () => document.getElementById("historyModal").classList.remove("active"));
+document.getElementById("closeRecordBtn")?.addEventListener("click", () => document.getElementById("recordViewerModal").classList.remove("active"));
 document.getElementById("histSemDropdown")?.addEventListener("change", onHistSemesterChanged);
 document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
     // Reusing your existing Jump Date panel!
@@ -1515,7 +1515,7 @@ document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
 });
 
 function openHistoryPanel() {
-    document.getElementById("historyModal").style.display = "flex";
+    document.getElementById("historyModal").classList.add("active");
     
     // Setup Semesters
     let semDrop = document.getElementById("histSemDropdown");
@@ -1733,7 +1733,7 @@ function histBuildPeriodUI() {
 }
 
 function histOpenRecordViewer(data) {
-    document.getElementById("recordViewerModal").style.display = "flex";
+    document.getElementById("recordViewerModal").classList.add("active");
     
     let subjectName = data.subject || "Unknown Subject";
     let teacherName = data.markedByTeacherName || "Unknown";
