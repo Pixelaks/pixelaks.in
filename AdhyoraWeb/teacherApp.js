@@ -512,11 +512,41 @@ async function loadSessionData() {
     checkTimetableAllocation(myTicket, dateStr);
 }
 
+// 🚨 NEW HELPER: Bypasses the card UI and loads YOUR class directly into the main view
+function loadMyClassDirectly(docSnap, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject) {
+    let d = docSnap.data();
+    let bIndex = parseInt(d.splitIndex || "0");
+    
+    // Show a loading spinner in the main container
+    document.getElementById("attListContainer").innerHTML = `
+        <div style="text-align:center; padding:40px;">
+            <div style="width:40px; height:40px; border:3px solid rgba(220,38,38,0.2); border-top-color:var(--brand-red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
+            <p style="color:#64748b; margin-top:15px; font-weight:bold;">Loading Your Class...</p>
+        </div>`;
+    
+    if (d.isCommon) {
+        attCurrentSessionBatchIndex = -1;
+        loadAttendanceRegister(null, ticket, targetSubCategory, dateStr);
+    } else {
+        attCurrentSessionBatchIndex = bIndex;
+        let cleanSub = selectedSubject.replace(/ /g, "").replace(/\//g, "");
+        let batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_Batch${bIndex + 1}`;
+        
+        getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID)).then(snap => {
+            if (snap.exists() && snap.data().studentIDs) {
+                loadAttendanceRegister(snap.data().studentIDs, ticket, targetSubCategory, dateStr);
+            } else {
+                showAttCenterMessage("Batch Error. Ask Principal to resplit.");
+            }
+        });
+    }
+}
+
+// 🚨 UPDATED DECISION ENGINE: Intercepts your classes and routes them directly!
 async function checkTimetableAllocation(ticket, dateStr) {
     if(ticket !== attCurrentLoadTicket) return;
 
-    // This extracts just the number (e.g., "2"), matching your C# logic
-    const selectedSem = document.getElementById("attSemDropdown").value; 
+    const selectedSem = document.getElementById("attSemDropdown").value;
     const selectedSubject = document.getElementById("attSubjDropdown").value;
     const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][attCurrentDate.getDay()];
     const pIndex = parseInt(document.getElementById("attPeriodDropdown").value) + 1;
@@ -561,7 +591,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        // 🚨 FIX 1: Now querying Firebase perfectly with just "selectedSem" instead of "Semester X"
         const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", selectedSem), where("day", "==", dayName), where("period", "==", String(pIndex)));
         const allocSnap = await getDocs(allocQuery);
 
@@ -588,32 +617,46 @@ async function checkTimetableAllocation(ticket, dateStr) {
             showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
         }
 
+        // 🚨 NEW BYPASS LOGIC: If it's YOUR class, skip the substitute cards entirely!
         if(isTargetSubjectScheduled) {
-            if(myAllocations.length > 0 || substituteAllocations.length > 0) {
-                let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
-                if(myAllocations.length > 0 || iTeachSubject) {
-                    if(myAllocations.length === 0) showAttCenterMessage("Not assigned to you.<br>(Substitute options available)");
-                    else showAttCenterMessage("Select a batch to mark attendance:");
-                    
-                    // This triggers the accordion UI!
-                    spawnSubstituteCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
-                } else {
-                    showAttCenterMessage("This period is assigned to another teacher.");
-                }
+            if (myAllocations.length > 0) {
+                // Auto-load YOUR class directly into the main container
+                loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+            } else if (substituteAllocations.length > 0) {
+                // Show substitute cards ONLY if you don't have a class assigned
+                showAttCenterMessage("Not assigned to you.<br>(Substitute options available)");
+                spawnSubstituteCards([], substituteAllocations, selectedSem, selectedSubject);
             } else {
                 showAttCenterMessage("This period is assigned to another teacher.");
             }
         } else {
             let isFreeRoam = targetSubCategory.includes("MJD") || targetSubCategory.includes("MID") || targetSubCategory.includes("SEC") || targetSubCategory.includes("TUTORIAL") || targetSubCategory.includes("CORE");
             if(isFreeRoam) {
-                // 🚨 FIX 2: Correct query here as well!
                 const batchQuery = query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", selectedSem), where("subjectName", "==", selectedSubject));
                 const bSnap = await getDocs(batchQuery);
                 if(ticket !== attCurrentLoadTicket) return;
                 
                 if(!bSnap.empty) {
-                    // This triggers the accordion UI!
-                    spawnManualBatchCards(bSnap.docs, selectedSem, selectedSubject);
+                    // Filter your batches vs substitute batches
+                    let myBatch = bSnap.docs.find(d => d.data().teacherID === currentUserID);
+                    let subBatches = bSnap.docs.filter(d => d.data().teacherID !== currentUserID && d.data().teacherID);
+                    
+                    if (myBatch) {
+                        // Bypass cards and load YOUR manual batch directly
+                        let d = myBatch.data();
+                        let bIndex = myBatch.id.lastIndexOf("Batch") !== -1 ? parseInt(myBatch.id.substring(myBatch.id.lastIndexOf("Batch")+5))-1 : 0;
+                        
+                        attCurrentSessionBatchIndex = bIndex;
+                        if(d.studentIDs) {
+                            loadAttendanceRegister(d.studentIDs, ticket, targetSubCategory, dateStr);
+                        } else {
+                            showAttCenterMessage("Batch Error.");
+                        }
+                    } else if (subBatches.length > 0) {
+                        spawnManualBatchCards(subBatches, selectedSem, selectedSubject);
+                    } else {
+                        showAttCenterMessage("No teachers assigned to these batches yet.");
+                    }
                 } else {
                     attCurrentSessionBatchIndex = -1;
                     loadAttendanceRegister(null, ticket, targetSubCategory, dateStr);
