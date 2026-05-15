@@ -23,6 +23,7 @@ let currentUserID = "";
 let isHOD = false;
 let profileListener = null;
 
+// Get College ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
@@ -32,7 +33,7 @@ if (!currentCollegeID) {
     onAuthStateChanged(auth, (user) => {
         if (user) { 
             currentUserID = user.uid; 
-            ListenToProfile();
+            ListenToProfile(); // 🚨 Replicates your C# Coroutine wait
         } else { 
             window.location.href = "index.html"; 
         }
@@ -55,7 +56,7 @@ function ListenToProfile() {
 
         const data = snapshot.data();
         
-        // 1. Get Data
+        // 1. Get Core Data
         isHOD = data.isHOD || false;
         const rawName = data.name || "Unknown";
         const email = auth.currentUser.email || data.email;
@@ -68,14 +69,14 @@ function ListenToProfile() {
             deptName = data.departmentID.replace("DEPT_", "").replace(/_/g, " ");
         }
 
-        // 3. Update UI Elements
-        let hodBadgeText = isHOD ? " (HOD)" : "";
+        // 3. Update UI Elements (Replicating your Rich Text logic)
+        let hodBadgeText = isHOD ? " <span style='color:#f59e0b; font-size:14px;'>(HOD)</span>" : "";
         
-        document.getElementById("teacherNameText").innerHTML = `${rawName} <span style="color:#f59e0b; font-size:14px;">${hodBadgeText}</span>`;
+        document.getElementById("teacherNameText").innerHTML = `${rawName}${hodBadgeText}`;
         document.getElementById("teacherEmailText").innerText = email;
         document.getElementById("teacherDeptBadge").innerText = deptName;
 
-        // Unlock UI once data is loaded
+        // 4. Unlock UI once data is loaded
         document.getElementById("initialAppLoader").style.display = "none";
     }, (error) => {
         console.error("Error listening to profile:", error);
@@ -88,13 +89,27 @@ function ListenToProfile() {
 // 🚨 SETTINGS DRAWER ACTIONS
 // ==========================================
 const SUPPORT_EMAIL = "pixelaks.technologies@gmail.com";
-const EMAIL_SUBJECT = "Support Request - Teacher Web App";
+const EMAIL_SUBJECT = "Support Request - Teacher App";
 
+// Replicates your OnContactUsClicked() logic
 document.getElementById("btnContactUs").addEventListener("click", () => {
-    let role = isHOD ? "Teacher (HOD)" : "Teacher";
-    let deviceInfo = `\n========================\nBrowser/Device: ${navigator.userAgent}\nOS: ${navigator.platform}\nApp Version: 1.0.0 (Web)\nCollege ID: ${currentCollegeID}\nRole: ${role}\n========================`;
     
-    window.open(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent("Please describe your issue here:\n\n\n" + deviceInfo)}`, "_blank");
+    // Get OS for diagnostic string
+    let osName = "Web Browser";
+    if (navigator.userAgent.indexOf("Win") != -1) osName = "Windows PC";
+    if (navigator.userAgent.indexOf("Mac") != -1) osName = "Mac OS";
+    if (navigator.userAgent.indexOf("Linux") != -1) osName = "Linux PC";
+    if (/Android/i.test(navigator.userAgent)) osName = "Android Browser";
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) osName = "iOS Browser";
+
+    let role = isHOD ? "Teacher (HOD)" : "Teacher";
+    
+    let deviceInfo = `\n========================\nDiagnostic Information\n========================\nDevice Model: ${osName}\nOperating System: ${navigator.platform}\nApp Version: 1.0.0 (Web)\nCollege ID: ${currentCollegeID}\nRole: ${role}\n========================`;
+    
+    let userPrompt = "Please describe your issue here:\n\n\n";
+    let fullMessage = userPrompt + deviceInfo;
+
+    window.open(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent(fullMessage)}`, "_blank");
 });
 
 document.getElementById("btnWebsite").addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
@@ -129,7 +144,7 @@ applyTheme(localStorage.getItem("adhyora_teacher_theme") === "dark");
 
 
 // ==========================================
-// 🚨 UI NAVIGATION ROUTER
+// 🚨 UI NAVIGATION ROUTER (Desktop & Mobile)
 // ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"),
@@ -149,15 +164,8 @@ const views = {
 
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
-const navButtons = document.querySelectorAll(".nav-icon-btn");
 
-function switchView(targetView, clickedBtn) {
-    // Reset Top/Bottom Nav Icons
-    navButtons.forEach(btn => btn.classList.remove("active-nav"));
-    if (clickedBtn && clickedBtn.classList.contains('nav-icon-btn')) {
-        clickedBtn.classList.add("active-nav");
-    }
-
+function switchView(targetView) {
     // Hide all view containers
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
 
@@ -177,7 +185,7 @@ function switchView(targetView, clickedBtn) {
     }
 }
 
-// Map the 10 Sidebar Buttons
+// Map Sidebar Grid Buttons
 document.getElementById("btnHome").addEventListener("click", () => switchView("HOME"));
 document.getElementById("btnNavAttendance").addEventListener("click", () => switchView(views.attendance));
 document.getElementById("btnNavTimetable").addEventListener("click", () => switchView(views.timetable));
@@ -190,11 +198,11 @@ document.getElementById("btnNavSubjectAssign").addEventListener("click", () => s
 document.getElementById("btnNavBatch").addEventListener("click", () => switchView(views.batch));
 document.getElementById("btnNavEventAttendance").addEventListener("click", () => switchView(views.eventAttendance));
 
-// Map Top/Bottom Nav Pill Icons
-document.getElementById("btnNotifications").addEventListener("click", (e) => switchView(views.notifications, e.currentTarget));
-document.getElementById("btnMessages").addEventListener("click", (e) => switchView(views.messages, e.currentTarget));
+// Map Bottom Pill Icons
+document.getElementById("btnNotifications").addEventListener("click", () => switchView(views.notifications));
+document.getElementById("btnMessages").addEventListener("click", () => switchView(views.messages));
 
-// Settings & Modals Drawer
+// Modals Trigger
 const elSettings = document.getElementById("settingsOverlay");
 document.getElementById("btnSettings").addEventListener("click", () => elSettings.classList.add("active"));
 document.getElementById("closeSettingsBtn").addEventListener("click", () => elSettings.classList.remove("active"));
@@ -204,18 +212,3 @@ document.getElementById("btnThemes").addEventListener("click", () => {
     elSettings.classList.remove("active");
     document.getElementById("themesModal").classList.add("active");
 });
-
-document.getElementById("btnOpenCompose").addEventListener("click", () => {
-    document.getElementById("composeOverlay").classList.add("active");
-});
-document.getElementById("closeComposeBtn").addEventListener("click", () => {
-    document.getElementById("composeOverlay").classList.remove("active");
-});
-
-// Generic Toast Function
-window.showRcToast = function(msg) { 
-    let t = document.getElementById("rcToast"); 
-    t.innerText = msg; 
-    t.style.bottom = "30px"; 
-    setTimeout(() => t.style.bottom = "-100px", 3000); 
-};
