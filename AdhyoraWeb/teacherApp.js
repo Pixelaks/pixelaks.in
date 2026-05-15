@@ -1011,7 +1011,7 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
 }
 
 function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
-    attIsMainClassLocked = false;
+    let isThisBatchLocked = false; // 🚨 FIX: Local variable so it doesn't break the main UI!
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
@@ -1020,7 +1020,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID) {
-            attIsMainClassLocked = true;
+            isThisBatchLocked = true;
             lockerName = bInfo.name || "another teacher";
         }
     }
@@ -1032,7 +1032,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         }
     });
 
-    if(claimedCount > 0) { attIsMainClassLocked = true; lockerName = conflictSubject; }
+    if(claimedCount > 0) { isThisBatchLocked = true; lockerName = conflictSubject; }
     
     let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only (Marked by ${lockerName})`;
     
@@ -1040,7 +1040,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let statusEl = document.getElementById(`subCardStatus_${attPendingSubCardId}`);
         let saveBtn = document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`);
         
-        if (attIsMainClassLocked) {
+        if (isThisBatchLocked) {
             statusEl.innerHTML = `<span style='color:red;'>${lockText}</span>`;
             saveBtn.style.opacity = "0.5";
             saveBtn.style.pointerEvents = "none";
@@ -1050,6 +1050,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             saveBtn.style.pointerEvents = "auto";
         }
     } else {
+        attIsMainClassLocked = isThisBatchLocked; // 🚨 ONLY update the global lock if it's the main class!
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
         updateMainButtonState(); 
     }
@@ -1074,7 +1075,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let isAtEvent = attCurrentPeriodEvents.has(id);
         let isClaimed = attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject;
 
-        let rowLocked = attIsMainClassLocked || isAtEvent || isClaimed || isMedical;
+        let rowLocked = isThisBatchLocked || isAtEvent || isClaimed || isMedical; // 🚨 Uses local lock
         if(isAtEvent || isMedical) isPresent = true; 
         if(isClaimed) isPresent = false; 
 
@@ -1293,7 +1294,10 @@ async function saveAttendance() {
         await Promise.all(batchPromises);
         
         document.getElementById("updateProgressFill").style.width = "100%";
-        document.getElementById("updateStatusText").innerText = "Attendance Saved!";
+        
+        // 🚨 FIX: Added P and A counts to the success message!
+        document.getElementById("updateStatusText").innerHTML = `Attendance Saved!<br><span style="font-size:14px; color:#10b981;">(P: ${myBatchPresent}, A: ${myBatchAbsent})</span>`;
+        
         setTimeout(() => {
             document.getElementById("updateProgressModal").classList.remove("active");
             if(attIsSubstitutePanelOpen) {
@@ -1301,12 +1305,12 @@ async function saveAttendance() {
                 document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(0deg)";
                 document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`).style.pointerEvents = "auto";
                 attIsSubstitutePanelOpen = false;
-                updateMainButtonState();
+                updateMainButtonState(); // 🚨 Correctly re-enables main button on close!
             } else {
                 document.getElementById("attSaveBtn").style.pointerEvents = "auto";
                 loadSessionData(); 
             }
-        }, 1000);
+        }, 1500); // 🚨 Increased slightly so you can read the count
 
     } catch(e) {
         console.error("Save Crash", e);
