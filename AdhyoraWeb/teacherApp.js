@@ -1262,7 +1262,7 @@ async function saveAttendance() {
             opCount++;
         }
 
-        // 🚨 Using the correct array and prefix to grab toggles
+        // 🚨 THE FIX: Changed 'attActiveRows' to 'activeRows' here!
         for(let id of activeRows) {
             if(attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject) {
                 alert("Save aborted. Students locked by another subject."); document.getElementById("updateProgressModal").classList.remove("active"); updateMainButtonState(); return;
