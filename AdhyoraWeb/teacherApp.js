@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
 // 🚨 GLOBAL VARIABLES
@@ -274,7 +274,7 @@ async function syncSemesterWithDatabase() {
 }
 
 // ==========================================
-// 🚨 NEP ATTENDANCE ENGINE (C# PORT WITH PERFECT ACCORDION)
+// 🚨 NEP ATTENDANCE ENGINE
 // ==========================================
 let attCurrentDate = new Date();
 let attTeacherSubjects = [];
@@ -294,9 +294,8 @@ let attPendingSubBatchIndex = 0;
 let attPendingSubBatchName = "";
 let attPendingSubTeacherID = "";
 let attPendingSubTeacherName = "";
-let attPendingSubCardId = ""; // 🚨 Tracks which accordion card is currently open
+let attPendingSubCardId = ""; 
 
-// Firebase Listeners for Attendance
 let attSubjectListenerUnsub = null;
 let attStudentRosterUnsub = null;
 let attSessionListenerUnsub = null;
@@ -314,7 +313,6 @@ async function initAttendanceEngine() {
     document.getElementById("attPeriodDropdown").addEventListener("change", loadSessionData);
     document.getElementById("attSubjDropdown").addEventListener("change", loadSessionData);
     
-    // Main save button at bottom
     document.getElementById("attSaveBtn").addEventListener("click", saveAttendance);
 
     document.getElementById("subConfirmNoBtn").addEventListener("click", () => document.getElementById("subConfirmModal").classList.remove("active"));
@@ -461,15 +459,44 @@ function showAttCenterMessage(msg) {
 
 function updateMainButtonState() {
     let btn = document.getElementById("attSaveBtn");
-    if(attIsSubstitutePanelOpen) {
-        btn.style.opacity = "0.5";
-        btn.style.pointerEvents = "none";
-    } else if(attIsMainClassLocked) {
+    if(attIsSubstitutePanelOpen || attIsMainClassLocked) {
         btn.style.opacity = "0.5";
         btn.style.pointerEvents = "none";
     } else {
         btn.style.opacity = "1";
         btn.style.pointerEvents = "auto";
+    }
+}
+
+// 🚨 NEW HELPER: Loads YOUR class directly onto the main screen
+function loadMyClassDirectly(docSnap, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject) {
+    let d = docSnap.data();
+    let bIndex = parseInt(d.splitIndex || "0");
+    
+    let container = document.getElementById("attDirectArea");
+    if (container) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px;">
+                <div style="width:40px; height:40px; border:3px solid rgba(220,38,38,0.2); border-top-color:var(--brand-red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
+                <p style="color:#64748b; margin-top:15px; font-weight:bold;">Loading Your Class...</p>
+            </div>`;
+    }
+    
+    if (d.isCommon) {
+        attCurrentSessionBatchIndex = -1;
+        loadAttendanceRegister(null, ticket, targetSubCategory, dateStr);
+    } else {
+        attCurrentSessionBatchIndex = bIndex;
+        let cleanSub = selectedSubject.replace(/ /g, "").replace(/\//g, "");
+        let batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_Batch${bIndex + 1}`;
+        
+        getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID)).then(snap => {
+            if (snap.exists() && snap.data().studentIDs) {
+                loadAttendanceRegister(snap.data().studentIDs, ticket, targetSubCategory, dateStr);
+            } else {
+                if (container) container.innerHTML = "<div style='text-align:center; color:red; padding:20px;'>Batch Error. Ask Principal to resplit.</div>";
+            }
+        });
     }
 }
 
@@ -510,36 +537,6 @@ async function loadSessionData() {
     if(myTicket !== attCurrentLoadTicket) return;
 
     checkTimetableAllocation(myTicket, dateStr);
-}
-
-// 🚨 NEW HELPER: Bypasses the card UI and loads YOUR class directly into the main view
-function loadMyClassDirectly(docSnap, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject) {
-    let d = docSnap.data();
-    let bIndex = parseInt(d.splitIndex || "0");
-    
-    // Show a loading spinner in the main container
-    document.getElementById("attListContainer").innerHTML = `
-        <div style="text-align:center; padding:40px;">
-            <div style="width:40px; height:40px; border:3px solid rgba(220,38,38,0.2); border-top-color:var(--brand-red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
-            <p style="color:#64748b; margin-top:15px; font-weight:bold;">Loading Your Class...</p>
-        </div>`;
-    
-    if (d.isCommon) {
-        attCurrentSessionBatchIndex = -1;
-        loadAttendanceRegister(null, ticket, targetSubCategory, dateStr);
-    } else {
-        attCurrentSessionBatchIndex = bIndex;
-        let cleanSub = selectedSubject.replace(/ /g, "").replace(/\//g, "");
-        let batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_Batch${bIndex + 1}`;
-        
-        getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID)).then(snap => {
-            if (snap.exists() && snap.data().studentIDs) {
-                loadAttendanceRegister(snap.data().studentIDs, ticket, targetSubCategory, dateStr);
-            } else {
-                showAttCenterMessage("Batch Error. Ask Principal to resplit.");
-            }
-        });
-    }
 }
 
 // 🚨 UPDATED DECISION ENGINE: Intercepts your classes and routes them directly!
@@ -591,7 +588,7 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", selectedSem), where("day", "==", dayName), where("period", "==", String(pIndex)));
+        const allocQuery = query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex)));
         const allocSnap = await getDocs(allocQuery);
 
         if(ticket !== attCurrentLoadTicket) return;
@@ -617,45 +614,45 @@ async function checkTimetableAllocation(ticket, dateStr) {
             showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
         }
 
-        // 🚨 NEW BYPASS LOGIC: If it's YOUR class, skip the substitute cards entirely!
+        // 🚨 NEW LAYOUT PREPARATION: Create separate zones for Cards and Direct Rows
+        const listContainer = document.getElementById("attListContainer");
+        listContainer.innerHTML = `
+            <div id="attSubCardsArea"></div>
+            <div id="attDirectArea"></div>
+        `;
+
+        // 🚨 NEW BYPASS LOGIC: If it's YOUR class, load directly. Others go to cards!
         if(isTargetSubjectScheduled) {
+            if (substituteAllocations.length > 0) {
+                // If there are other batches, spawn them as cards at the top
+                spawnSubstituteCards(substituteAllocations, selectedSem, selectedSubject);
+            }
             if (myAllocations.length > 0) {
-                // Auto-load YOUR class directly into the main container
+                // Auto-load YOUR class directly into the main container below the cards
                 loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
-            } else if (substituteAllocations.length > 0) {
-                // Show substitute cards ONLY if you don't have a class assigned
-                showAttCenterMessage("Not assigned to you.<br>(Substitute options available)");
-                spawnSubstituteCards([], substituteAllocations, selectedSem, selectedSubject);
             } else {
-                showAttCenterMessage("This period is assigned to another teacher.");
+                document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
             }
         } else {
             let isFreeRoam = targetSubCategory.includes("MJD") || targetSubCategory.includes("MID") || targetSubCategory.includes("SEC") || targetSubCategory.includes("TUTORIAL") || targetSubCategory.includes("CORE");
             if(isFreeRoam) {
-                const batchQuery = query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", selectedSem), where("subjectName", "==", selectedSubject));
+                const batchQuery = query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", `Semester ${selectedSem}`), where("subjectName", "==", selectedSubject));
                 const bSnap = await getDocs(batchQuery);
                 if(ticket !== attCurrentLoadTicket) return;
                 
                 if(!bSnap.empty) {
-                    // Filter your batches vs substitute batches
                     let myBatch = bSnap.docs.find(d => d.data().teacherID === currentUserID);
                     let subBatches = bSnap.docs.filter(d => d.data().teacherID !== currentUserID && d.data().teacherID);
                     
-                    if (myBatch) {
-                        // Bypass cards and load YOUR manual batch directly
-                        let d = myBatch.data();
-                        let bIndex = myBatch.id.lastIndexOf("Batch") !== -1 ? parseInt(myBatch.id.substring(myBatch.id.lastIndexOf("Batch")+5))-1 : 0;
-                        
-                        attCurrentSessionBatchIndex = bIndex;
-                        if(d.studentIDs) {
-                            loadAttendanceRegister(d.studentIDs, ticket, targetSubCategory, dateStr);
-                        } else {
-                            showAttCenterMessage("Batch Error.");
-                        }
-                    } else if (subBatches.length > 0) {
+                    if (subBatches.length > 0) {
                         spawnManualBatchCards(subBatches, selectedSem, selectedSubject);
+                    }
+                    if (myBatch) {
+                        loadMyClassDirectly(myBatch, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+                    } else if (subBatches.length > 0) {
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
                     } else {
-                        showAttCenterMessage("No teachers assigned to these batches yet.");
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">No teachers assigned to these batches yet.</div>`;
                     }
                 } else {
                     attCurrentSessionBatchIndex = -1;
@@ -671,16 +668,15 @@ async function checkTimetableAllocation(ticket, dateStr) {
     }
 }
 
-// 🚨 UPDATED: The Pink Accordion Cards matching your image perfectly
-function spawnSubstituteCards(myDocs, subDocs, sem, subj) {
-    document.getElementById("attListContainer").innerHTML = ""; 
-    document.getElementById("attTotalStudentsText").innerText = "Select Batch";
+// 🚨 TARGETS "attSubCardsArea" now
+function spawnSubstituteCards(subDocs, sem, subj) {
+    const targetArea = document.getElementById("attSubCardsArea");
+    if (!targetArea) return;
 
-    const createCardHTML = (docSnap, isMine) => {
+    const createCardHTML = (docSnap) => {
         let d = docSnap.data();
         let bIndex = parseInt(d.splitIndex || "0");
         let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-        if(isMine) bName += " (My Class)";
         let id = docSnap.id;
         
         return `
@@ -700,21 +696,19 @@ function spawnSubstituteCards(myDocs, subDocs, sem, subj) {
     };
 
     let fullHTML = "";
-    myDocs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(d => fullHTML += createCardHTML(d, true));
-    subDocs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(d => fullHTML += createCardHTML(d, false));
+    subDocs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(d => fullHTML += createCardHTML(d));
     
-    document.getElementById("attListContainer").innerHTML = fullHTML;
-
-    myDocs.forEach(d => attachSubCardListener(d, true, sem, subj));
-    subDocs.forEach(d => attachSubCardListener(d, false, sem, subj));
+    targetArea.innerHTML = fullHTML;
+    subDocs.forEach(d => attachSubCardListener(d, sem, subj));
 }
 
-function spawnManualBatchCards(docs, sem, subj) {
-    document.getElementById("attListContainer").innerHTML = "";
-    document.getElementById("attTotalStudentsText").innerText = "Select Batch";
-    let validBatches = docs.filter(d => d.data().teacherID && d.data().teacherName);
-    
-    if(validBatches.length === 0) { showAttCenterMessage("No teachers assigned to these batches yet."); return; }
+// 🚨 TARGETS "attSubCardsArea" now
+function spawnManualBatchCards(subDocs, sem, subj) {
+    const targetArea = document.getElementById("attSubCardsArea");
+    if (!targetArea) return;
+
+    let validBatches = subDocs.filter(d => d.data().teacherID && d.data().teacherName);
+    if(validBatches.length === 0) return;
 
     validBatches.sort((a,b) => {
         let ai = a.id.lastIndexOf("Batch") !== -1 ? parseInt(a.id.substring(a.id.lastIndexOf("Batch")+5))-1 : 0;
@@ -726,7 +720,6 @@ function spawnManualBatchCards(docs, sem, subj) {
     validBatches.forEach(d => {
         let bIndex = d.id.lastIndexOf("Batch") !== -1 ? parseInt(d.id.substring(d.id.lastIndexOf("Batch")+5))-1 : 0;
         let bName = `Batch ${bIndex + 1}`;
-        if(d.data().teacherID === currentUserID) bName += " (My Class)";
         let id = d.id;
 
         fullHTML += `
@@ -745,15 +738,13 @@ function spawnManualBatchCards(docs, sem, subj) {
         </div>`;
     });
     
-    document.getElementById("attListContainer").innerHTML = fullHTML;
+    targetArea.innerHTML = fullHTML;
     
     validBatches.forEach(d => {
         let bIndex = d.id.lastIndexOf("Batch") !== -1 ? parseInt(d.id.substring(d.id.lastIndexOf("Batch")+5))-1 : 0;
         let bName = `Batch ${bIndex + 1}`;
-        if(d.data().teacherID === currentUserID) bName += " (My Class)";
         let id = d.id;
 
-        // Fetch counts for manual batches
         fetchAndDisplayBatchCount(id, sem, subj, false, bIndex);
 
         document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
@@ -764,7 +755,7 @@ function spawnManualBatchCards(docs, sem, subj) {
                 attIsSubstitutePanelOpen = false;
                 updateMainButtonState();
             } else {
-                attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
+                attPendingSubBatchName = bName;
                 attPendingSubBatchIndex = bIndex;
                 attPendingSubTeacherID = d.data().teacherID;
                 attPendingSubTeacherName = d.data().teacherName;
@@ -777,14 +768,12 @@ function spawnManualBatchCards(docs, sem, subj) {
     });
 }
 
-function attachSubCardListener(docSnap, isMine, sem, subj) {
+function attachSubCardListener(docSnap, sem, subj) {
     let d = docSnap.data();
     let bIndex = parseInt(d.splitIndex || "0");
     let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-    if(isMine) bName += " (My Class)";
     let id = docSnap.id;
 
-    // Fetch counts for allocation batches
     fetchAndDisplayBatchCount(id, sem, subj, d.isCommon, bIndex);
 
     document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
@@ -795,7 +784,7 @@ function attachSubCardListener(docSnap, isMine, sem, subj) {
             attIsSubstitutePanelOpen = false;
             updateMainButtonState();
         } else {
-            attPendingSubBatchName = bName.replace(" (My Class)", "").trim();
+            attPendingSubBatchName = bName;
             attPendingSubBatchIndex = bIndex;
             attPendingSubTeacherID = d.teacherID || "";
             attPendingSubTeacherName = d.teacherName || "Unknown";
@@ -807,7 +796,6 @@ function attachSubCardListener(docSnap, isMine, sem, subj) {
     document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
 }
 
-// 🚨 NEW: Background fetcher to accurately display "(17 Students)" in the card header!
 async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
     try {
         if (isCommon) {
@@ -852,15 +840,14 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
 
 function showSubstituteConfirmModal(displayName) {
     let t = document.getElementById("subConfirmText");
-    if(displayName.includes("(My Class)")) t.innerHTML = `Open register for<br><b>${attPendingSubBatchName}</b>?`;
-    else t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
+    t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
     document.getElementById("subConfirmModal").classList.add("active");
 }
 
 function confirmSubstituteLoad() {
     document.getElementById("subConfirmModal").classList.remove("active");
     
-    // 🚨 Expand the accordion UI instantly to show loading
+    // 🚨 Expand the accordion UI instantly
     document.getElementById(`subCardBody_${attPendingSubCardId}`).style.display = "block";
     document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(180deg)";
     document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:#64748b;'>Loading Register...</span>";
@@ -999,7 +986,8 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
     });
 
     // 🚨 Target correct container based on panel state!
-    let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attListContainer");
+    let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attDirectArea");
+    if (!targetContainer) targetContainer = document.getElementById("attListContainer"); // safety fallback
 
     if(matchingStudents.length === 0) { 
         targetContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">No students found for '${subjName}'</div>`;
@@ -1008,6 +996,7 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
     }
 
     if (!attIsSubstitutePanelOpen) {
+        // Sets the total count correctly at the top of the screen for the Direct Class
         document.getElementById("attTotalStudentsText").innerText = `${matchingStudents.length} Students`;
     }
     
@@ -1026,9 +1015,10 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
+    // 🚨 LOCK LOGIC FIX: Completely locks the UI if ANY other teacher saved it
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
-        if(bInfo.id && bInfo.id !== currentUserID && !attIsSubstitutePanelOpen) {
+        if(bInfo.id && bInfo.id !== currentUserID) {
             attIsMainClassLocked = true;
             lockerName = bInfo.name || "a Substitute";
         }
@@ -1043,8 +1033,8 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
 
     if(claimedCount > 0) { attIsMainClassLocked = true; lockerName = conflictSubject; }
     
-    // 🚨 ACCORDION UI LOGIC
-    let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only`;
+    // 🚨 APPLY LOCK VISUALLY
+    let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only (Marked by ${lockerName})`;
     
     if (attIsSubstitutePanelOpen) {
         let statusEl = document.getElementById(`subCardStatus_${attPendingSubCardId}`);
@@ -1061,7 +1051,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         }
     } else {
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
-        updateMainButtonState();
+        updateMainButtonState(); // Disables main save btn automatically
     }
 
     let fullHTML = "";
@@ -1175,8 +1165,9 @@ async function saveAttendance() {
         let batchTeachers = pData.batch_teachers || {};
         let isFirstTimeMarking = !batchTeachers[myKey];
 
+        // Ensure nobody else slipped in and saved while you were working
         if(batchTeachers[myKey] && batchTeachers[myKey].id !== currentUserID) {
-            alert(`LOCKED: Batch marked by ${batchTeachers[myKey].name}`); document.getElementById("updateProgressModal").classList.remove("active"); updateMainButtonState(); return;
+            alert(`LOCKED: Batch already marked by ${batchTeachers[myKey].name}`); document.getElementById("updateProgressModal").classList.remove("active"); updateMainButtonState(); return;
         }
 
         let attendanceMap = pData.attendance || {};
@@ -1376,7 +1367,7 @@ attachSafeClick("btnNavAssignments", (e) => switchView(views.assignments, e.curr
 attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.currentTarget));
 attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
 attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
-attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
+attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, ecurrentTarget));
 
 // ==========================================
 // 🚨 SETTINGS DRAWER ACTIONS
