@@ -3722,10 +3722,6 @@ window.ProcessSubscription = async function(planType) {
 // ==========================================
 // 🚨 MASTER SECURITY PIN ENGINE
 // ==========================================
-let cachedAdminPin = "";
-let lockMode = "LOGIN"; // Modes: LOGIN, SETUP_1, SETUP_2, RESET_NEW_1, RESET_NEW_2
-let setupTempPin = "";
-let failedPinAttempts = 0;
 
 const elLock = {
     screen: document.getElementById("appLockScreen"), title: document.getElementById("lockTitle"), status: document.getElementById("lockStatus"),
@@ -4168,8 +4164,8 @@ document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         const isLocked = elLock.screen.style.display === "flex";
         
-        // If we are not already locked, not scanning a fingerprint, and a PIN exists
-        if (!isLocked && !isBiometricPromptActive && cachedAdminPin) {
+        // 🚨 THE FIX: Look for cachedAdminPinHash instead of the old plain text pin!
+        if (!isLocked && !isBiometricPromptActive && cachedAdminPinHash !== "") {
             // Lock the DOM instantly!
             document.querySelector(".main-content").style.display = "none";
             document.getElementById("mainSidebar").style.display = "none";
