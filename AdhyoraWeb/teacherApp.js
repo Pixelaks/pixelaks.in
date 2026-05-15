@@ -93,7 +93,7 @@ function ListenToProfile() {
     });
 }
 
-function finalizeProfileUI(rawName, email, deptName) {
+async function finalizeProfileUI(rawName, email, deptName) {
     let hodBadgeText = isHOD ? " <span style='color:#f59e0b; font-size:14px;'>(HOD)</span>" : "";
     let nameEl = document.getElementById("teacherInfoName");
     if(nameEl) nameEl.innerHTML = `${rawName}${hodBadgeText}`;
@@ -110,8 +110,13 @@ function finalizeProfileUI(rawName, email, deptName) {
     if (!hasStartedInbox && teacherDeptRaw !== "") {
         startInboxListener();
         hasStartedInbox = true;
+
+        // 🚨 THE RACE CONDITION FIX: Force JS to wait for the exact Semester Type 
+        // from the database BEFORE booting up the dropdowns!
+        await syncSemesterWithDatabase();
+
         initAttendanceEngine(); 
-        initSubjectDeclarationEngine(); // 🚨 Added this line!
+        initSubjectDeclarationEngine(); 
     }
 }
 
@@ -1841,9 +1846,11 @@ async function initSubjectDeclarationEngine() {
         subjCachedTeacherID = currentUserID;
     }
 
+    // Because we awaited syncSemesterWithDatabase() in the profile UI, 
+    // currentSemesterType is now guaranteed to be accurate here!
     subjSetupSemesterDropdown();
     subjUpdateNoSubjectsText();
-    subjCheckIfFirstTimeSetup();
+    await subjCheckIfFirstTimeSetup();
 }
 
 function subjSetupSemesterDropdown() {
