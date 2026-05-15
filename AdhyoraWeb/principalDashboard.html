@@ -12,14 +12,12 @@
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 </head>
 <body class="light-mode">
-    <!-- 🚨 INITIAL LOADER: Shown while checking subscription -->
     <div id="initialAppLoader" style="position:fixed; inset:0; background:#0f172a; display:flex; align-items:center; justify-content:center; z-index:20000;">
         <div style="text-align:center;">
             <div style="width:50px; height:50px; border:3px solid rgba(74,222,128,0.1); border-top-color:#4ade80; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 15px;"></div>
             <p style="color:#94a3b8; font-family:'Poppins'; font-size:12px; letter-spacing:1px;">LOADING ADHYORA...</p>
         </div>
     </div>
-
     <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
 
     <div class="icon-nav-container">
@@ -37,25 +35,16 @@
     </div>
 
     <div id="subBlockPanel" class="modal-overlay" style="z-index: 10000; background: #0a0a0a; display: none; align-items: center; justify-content: center; position: fixed; inset: 0;">
-        
         <div id="subParticles" style="position: absolute; width: 100%; height: 100%; z-index: 1; top: 0; left: 0;"></div>
-
         <div class="premium-sub-container" style="position: relative; z-index: 2; width: 100%; max-width: 900px; text-align: center; animation: subFloatUp 0.6s ease-out;">
-            
             <h2 id="subBlockHeading" style="font-family: 'Rajdhani', sans-serif; font-size: 2.5rem; color: #fff; margin-bottom: 10px; letter-spacing: 2px;">CHOOSE A PLAN</h2>
-            
             <p id="subBlockText" style="color: #cbd5e1; font-size: 1.1rem; margin-bottom: 20px; letter-spacing: 0.5px;"></p>
-
             <div id="subBlockLoading" style="margin-bottom: 30px; color: #2ecc71; font-size: 15px; display: none; font-weight: bold; animation: pulseOp 1.5s infinite;"><i class="fas fa-circle-notch fa-spin" style="margin-right: 8px;"></i> Processing Secure Payment...</div>
-
             <div class="pricing-container" style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; padding: 0 5%;">
-                
                 <div class="pricing-card" style="flex: 1; min-width: 320px; max-width: 400px; text-align: center; border-radius: 20px; background: rgba(26, 26, 26, 0.9); padding: 40px; border: 1px solid rgba(255, 255, 255, 0.05); border-top: 5px solid #aaa;">
                     <p style="text-transform: uppercase; letter-spacing: 2px; color: #aaa; font-weight: bold; margin-bottom: 10px;">Monthly Subscription</p>
                     <h3 style="font-size: 3rem; color: #fff; margin-bottom: 5px;">₹2,999<span style="font-size: 1rem; color: #777;">/mo</span></h3>
-                    
                     <p id="monthlyHighlightText" style="color: #2ecc71; font-weight: bold; margin-bottom: 25px;">Flexi Renewal</p>
-                    
                     <ul style="list-style: none; padding: 0; color: #ccc; text-align: left; margin-bottom: 30px; line-height: 2;">
                         <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Full Administrative Control</li>
                         <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Faculty & Student Portals</li>
@@ -65,14 +54,11 @@
                     </ul>
                     <button onclick="ProcessSubscription('monthly')" class="btn-monthly">Subscribe Monthly</button>
                 </div>
-
                 <div class="pricing-card" style="flex: 1; min-width: 320px; max-width: 420px; text-align: center; border-radius: 20px; background: rgba(46, 204, 113, 0.05); padding: 40px; border: 1px solid rgba(46, 204, 113, 0.3); border-top: 5px solid #2ecc71; position: relative; box-shadow: 0 0 40px rgba(46, 204, 113, 0.1);">
                     <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 5px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;">MOST POPULAR</div>
                     <p style="text-transform: uppercase; letter-spacing: 2px; color: #2ecc71; font-weight: bold; margin-bottom: 10px;">Annual Plan</p>
                     <h3 style="font-size: 3rem; color: #fff; margin-bottom: 5px;">₹24,999<span style="font-size: 1rem; color: #777;">/yr</span></h3>
-                    
                     <p id="yearlyHighlightText" style="color: #2ecc71; font-weight: bold; margin-bottom: 25px;">Best Value</p>
-                    
                     <ul style="list-style: none; padding: 0; color: #fff; text-align: left; margin-bottom: 30px; line-height: 2;">
                         <li><i class="fas fa-star" style="color: #2ecc71; margin-right: 10px;"></i> <strong>Save ₹11,000 yearly</strong></li>
                         <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> <strong>Everything in Monthly</strong></li>
@@ -81,7 +67,6 @@
                     </ul>
                     <button onclick="ProcessSubscription('yearly')" class="btn-yearly">Subscribe Yearly</button>
                 </div>
-
             </div>
         </div>
     </div>
@@ -104,7 +89,6 @@
             <div class="logo-container">
                 <h1 class="logo-text">ADHYORA</h1>
             </div>
-            
             <div class="nav-grid">
                 <button class="menu-btn" id="btnNavRoomcode"><span class="btn-text">Roomcode</span> <i class="fas fa-qrcode btn-icon"></i></button>
                 <button class="menu-btn" id="btnNavTeacherList"><span class="btn-text">Teacher List</span> <i class="fas fa-chalkboard-teacher btn-icon"></i></button>
@@ -463,20 +447,23 @@
                     <input type="text" id="attdSearchInput" placeholder="Search teacher, department, or subject..." class="asn-input" style="margin-bottom: 15px; font-size: 14px; padding: 12px 15px;">
                     
                     <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                        <div style="display: grid; grid-template-columns: 2fr repeat(6, 1fr); background: var(--bg-grid-color); padding: 12px 15px; font-weight: bold; color: var(--text-green); font-size: 13px; text-align: center; border-bottom: 1px solid var(--border-color);">
-                            <div style="text-align: left;">TEACHER</div>
-                            <div>P1</div><div>P2</div><div>P3</div><div>P4</div><div>P5</div><div>P6</div>
-                        </div>
-                        
-                        <div id="attdListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 10px 0;">
-                            <div class="no-data-text">Loading Attendance...</div>
+                        <div class="attd-mobile-scroll" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;">
+                            <div class="attd-header-row" style="display: grid; grid-template-columns: 2fr repeat(6, 1fr); background: var(--bg-grid-color); padding: 12px 15px; font-weight: bold; color: var(--text-green); font-size: 13px; text-align: center; border-bottom: 1px solid var(--border-color);">
+                                <div style="text-align: left;">TEACHER</div>
+                                <div>P1</div><div>P2</div><div>P3</div><div>P4</div><div>P5</div><div>P6</div>
+                            </div>
+                            
+                            <div id="attdListContainer" class="scrollable-list" style="flex: 1; padding: 10px 0;">
+                                <div class="no-data-text">Loading Attendance...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="attdTooltip" style="position: fixed; display: none; background: #1e293b; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; pointer-events: none; z-index: 10000; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">Subject Name</div>
 
-            </div> </main>
+            </div> 
+        </main>
     </div>
 
     <div class="modal-overlay" id="settingsOverlay">
@@ -492,7 +479,6 @@
                 <button class="settings-btn" id="btnWebsite"><i class="fas fa-globe"></i> Pixelaks Technologies</button>
                 <button class="settings-btn" id="btnPrivacy"><i class="fas fa-shield-alt"></i> Privacy Policy</button>
                 <button class="settings-btn" id="btnTerms"><i class="fas fa-file-contract"></i> Terms & Conditions</button>
-                <!-- 🚨 ADD THIS BUTTON RIGHT HERE 🚨 -->
                 <button class="settings-btn" id="btnToggleNotifications" style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
                     <span><i class="fas fa-bell"></i> Push Notifications</span>
                     <div class="toggle-switch" id="notifToggleSwitch"></div>
@@ -507,7 +493,7 @@
     </div>
 
     <div class="modal-overlay" id="composeOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; margin-top: 5vh; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color);">
             <button class="close-settings" id="closeComposeBtn"><i class="fas fa-times"></i></button>
             <h3 id="composeModalTitle" style="color: var(--text-green); margin-bottom: 20px; font-size: 20px;"><i class="fas fa-bullhorn"></i> Send Announcement</h3>
             <div id="composeGroupFilters" style="display: flex; gap: 20px; margin-bottom: 15px;">
@@ -525,13 +511,16 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="addDeptOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('addDeptOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-plus-circle"></i> Add Department</h3><input type="text" id="addDeptInput" placeholder="Department Name (e.g., Bsc Physics)" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><button id="btnAddDeptNext" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Next Step</button></div></div>
-    <div class="modal-overlay" id="durationOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('durationOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 id="durationTitle" style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-clock"></i> Set Duration</h3><select id="durationSelect" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3" selected>3 Years</option><option value="4">4 Years</option><option value="5">5 Years</option></select><button id="btnSaveDuration" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Save Duration</button></div></div>
-    <div class="modal-overlay" id="combineOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('combineOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-link"></i> Combine Departments</h3><select id="combineSelect1" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 10px;"></select><div style="text-align: center; color: #94a3b8; font-size: 20px; margin-bottom: 10px;"><i class="fas fa-plus"></i></div><select id="combineSelect2" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"></select><button id="btnSubmitCombine" style="width: 100%; background: var(--text-light-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Link Together</button></div></div>
-    <div class="modal-overlay" id="pinOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); text-align: center;"><button class="close-settings" onclick="document.getElementById('pinOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: #ef4444; margin-bottom: 15px;"><i class="fas fa-lock"></i> Security Check</h3><p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Enter Admin PIN to confirm action.</p><input type="password" id="pinInput" placeholder="****" maxlength="4" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-size: 20px; text-align: center; letter-spacing: 5px; margin-bottom: 20px;"><button id="btnVerifyPin" style="width: 100%; background: #ef4444; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Verify & Execute</button></div></div>
+    <div class="modal-overlay" id="addDeptOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('addDeptOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-plus-circle"></i> Add Department</h3><input type="text" id="addDeptInput" placeholder="Department Name (e.g., Bsc Physics)" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><button id="btnAddDeptNext" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Next Step</button></div></div>
+    
+    <div class="modal-overlay" id="durationOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('durationOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 id="durationTitle" style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-clock"></i> Set Duration</h3><select id="durationSelect" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3" selected>3 Years</option><option value="4">4 Years</option><option value="5">5 Years</option></select><button id="btnSaveDuration" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Save Duration</button></div></div>
+    
+    <div class="modal-overlay" id="combineOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color);"><button class="close-settings" onclick="document.getElementById('combineOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-link"></i> Combine Departments</h3><select id="combineSelect1" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 10px;"></select><div style="text-align: center; color: #94a3b8; font-size: 20px; margin-bottom: 10px;"><i class="fas fa-plus"></i></div><select id="combineSelect2" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px;"></select><button id="btnSubmitCombine" style="width: 100%; background: var(--text-light-green); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Link Together</button></div></div>
+    
+    <div class="modal-overlay" id="pinOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 350px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); text-align: center;"><button class="close-settings" onclick="document.getElementById('pinOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: #ef4444; margin-bottom: 15px;"><i class="fas fa-lock"></i> Security Check</h3><p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Enter Admin PIN to confirm action.</p><input type="password" id="pinInput" placeholder="****" maxlength="4" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; font-size: 20px; text-align: center; letter-spacing: 5px; margin-bottom: 20px;"><button id="btnVerifyPin" style="width: 100%; background: #ef4444; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;">Verify & Execute</button></div></div>
     
     <div class="modal-overlay" id="confirmOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <h3 style="color: var(--text-green); margin-bottom: 15px;" id="confirmIconTitle"><i class="fas fa-question-circle"></i> Are you sure?</h3>
             <p id="confirmText" style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.5;"></p>
             <div style="display: flex; gap: 15px;">
@@ -542,7 +531,7 @@
     </div>
 
     <div class="modal-overlay" id="asnConfirmOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <h3 style="margin-bottom: 15px;" id="asnConfirmTitle"><i class="fas fa-question-circle"></i> Are you sure?</h3>
             <p id="asnConfirmText" style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.5;"></p>
             <div style="display: flex; gap: 15px;">
@@ -552,10 +541,10 @@
         </div>
     </div>
     
-    <div class="modal-overlay" id="studentAdminOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);"><button class="close-settings" onclick="document.getElementById('studentAdminOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-user-shield"></i> Manage Access</h3><p id="saStudentName" style="font-size: 16px; font-weight: bold; color: #334155; margin-bottom: 20px;">Student Name</p><select id="saStatusDrop" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px; text-align: center;"><option value="Approved">Approved</option><option value="Declined">Declined</option></select><button id="btnConfirmSA" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Confirm Change</button></div></div>
+    <div class="modal-overlay" id="studentAdminOverlay"><div class="compose-modal" style="background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2);"><button class="close-settings" onclick="document.getElementById('studentAdminOverlay').classList.remove('active')"><i class="fas fa-times"></i></button><h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-user-shield"></i> Manage Access</h3><p id="saStudentName" style="font-size: 16px; font-weight: bold; color: #334155; margin-bottom: 20px;">Student Name</p><select id="saStatusDrop" class="input-field" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 20px; text-align: center;"><option value="Approved">Approved</option><option value="Declined">Declined</option></select><button id="btnConfirmSA" style="width: 100%; background: var(--brand-green); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">Confirm Change</button></div></div>
 
     <div class="modal-overlay" id="moveBatchOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <button class="close-settings" onclick="document.getElementById('moveBatchOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="color: var(--text-green); margin-bottom: 20px;"><i class="fas fa-exchange-alt"></i> Move Students</h3>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Select the destination batch for the selected students.</p>
@@ -564,7 +553,7 @@
     </div>
 
     <div class="modal-overlay" id="deptSplitOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; margin-top: 10vh; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 2px solid var(--border-color);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 2px solid var(--border-color);">
             <button class="close-settings" onclick="document.getElementById('deptSplitOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="color: var(--text-green); margin-bottom: 15px; font-size: 20px;"><i class="fas fa-layer-group"></i> Split by Department</h3>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Divide students based on their enrolled departments.</p>
@@ -581,7 +570,7 @@
     </div>
 
     <div class="modal-overlay" id="promoteWarningOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 400px; margin: auto; margin-top: 25vh; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(239, 68, 68, 0.2); border: 2px solid #fca5a5;">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 30px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(239, 68, 68, 0.2); border: 2px solid #fca5a5;">
             <h3 style="color: #ef4444; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle"></i> Warning</h3>
             <p style="font-size: 14px; color: #475569; margin-bottom: 25px; line-height: 1.5;">You are about to promote <b>ALL</b> students to the next semester.<br><br>Students exceeding their course duration will be marked as Graduated Alumni.<br><br>Are you sure you want to proceed?</p>
             <div style="display: flex; gap: 15px;">
@@ -592,7 +581,7 @@
     </div>
 
     <div class="modal-overlay" id="exportOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid var(--border-color);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid var(--border-color);">
             <button class="close-settings" onclick="document.getElementById('exportOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="color: #8b5cf6; margin-bottom: 20px; font-size: 20px;"><i class="fas fa-file-export"></i> Export Data</h3>
             
@@ -619,7 +608,7 @@
     </div>
 
     <div class="modal-overlay" id="subjectEditOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 10vh; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 2px solid var(--border-color);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 2px solid var(--border-color);">
             <button class="close-settings" onclick="document.getElementById('subjectEditOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="color: var(--text-green); margin-bottom: 20px; font-size: 20px;"><i class="fas fa-edit"></i> Edit Subject</h3>
             
@@ -636,7 +625,7 @@
     </div>
 
     <div class="modal-overlay" id="stuSubMoveOverlay">
-        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <button class="close-settings" onclick="document.getElementById('stuSubMoveOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="color: var(--text-green); margin-bottom: 15px;"><i class="fas fa-exchange-alt"></i> Reassign Subject</h3>
             <p id="ssMoveTitleText" style="font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5;">Select the new subject for the selected students.</p>
@@ -647,9 +636,8 @@
         </div>
     </div>
 
-    <!-- 🚨 THEMES MODAL -->
     <div class="modal-overlay" id="themesModal">
-        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 350px; margin: auto; margin-top: 20vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 350px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <button class="close-settings" onclick="document.getElementById('themesModal').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="margin-bottom:15px; color: var(--brand-green); text-align: center;"><i class="fas fa-adjust"></i> Appearance</h3>
             <div style="display: flex; gap: 15px; margin-top: 25px;">
@@ -659,9 +647,8 @@
         </div>
     </div>
 
-    <!-- 🚨 DEVICES / SESSIONS MODAL -->
     <div class="modal-overlay" id="sessionsModal">
-        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 450px; margin: auto; margin-top: 15vh; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+        <div class="compose-modal" style="background: var(--bg-base, white); width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
             <button class="close-settings" onclick="document.getElementById('sessionsModal').classList.remove('active')"><i class="fas fa-times"></i></button>
             <h3 style="margin-bottom:5px; color: var(--brand-green); text-align: center;"><i class="fas fa-laptop-house"></i> Active Sessions</h3>
             <p style="font-size: 11px; color: #64748b; text-align: center; margin-bottom: 20px;">Manage devices where your account is logged in.</p>
