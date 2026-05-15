@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 </head>
 <body class="light-mode">
     <!-- 🚨 INITIAL LOADER: Shown while checking subscription -->
@@ -35,50 +36,48 @@
         </div>
     </div>
 
-    <div id="subBlockPanel" class="modal-overlay" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center;">
+    <div id="subBlockPanel" class="modal-overlay" style="z-index: 10000; background: #0a0a0a; display: none; align-items: center; justify-content: center; position: fixed; inset: 0;">
         
-        <div class="premium-sub-container" style="text-align: center; width: 95%; max-width: 800px; animation: subFloatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
-            
-            <h1 style="color: #f8fafc; font-size: 36px; margin-bottom: 10px; font-weight: 800; text-shadow: 0 4px 25px rgba(74, 222, 128, 0.3);">Unlock Adhyora <span style="color: var(--brand-green, #4ade80);">PRO</span></h1>
-            
-            <div id="subBlockText" style="color: #ef4444; font-size: 13px; font-weight: bold; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; display: inline-block; margin-bottom: 30px;">Service Suspended</div>
+        <div id="subParticles" style="position: absolute; width: 100%; height: 100%; z-index: 1; top: 0; left: 0;"></div>
 
-            <div class="pricing-grid" style="display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="position: relative; z-index: 2; width: 100%; max-width: 900px; text-align: center; animation: subFloatUp 0.6s ease-out;">
+            
+            <h2 style="font-family: 'Rajdhani', sans-serif; font-size: 2.5rem; color: #fff; margin-bottom: 10px; letter-spacing: 2px;">ACCOUNT SUSPENDED</h2>
+            <p id="subBlockText" style="color: #ef4444; font-weight: bold; margin-bottom: 40px; letter-spacing: 1px;">Your subscription has expired.</p>
+
+            <div class="pricing-container" style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; padding: 0 5%;">
                 
-                <div class="sub-card-premium" style="background: #1e293b; border: 1px solid #334155; border-radius: 24px; padding: 40px 30px; width: 320px; position: relative; transition: all 0.3s ease;">
-                    <h3 style="color: #cbd5e1; font-size: 18px; margin-bottom: 15px; font-weight: 600;">Flexi Monthly</h3>
-                    <div style="margin-bottom: 25px;">
-                        <span style="font-size: 42px; font-weight: 800; color: #f8fafc;">₹2,999</span><span style="color: #64748b; font-size: 14px; font-weight: 600;">/mo</span>
-                    </div>
-                    <ul style="text-align: left; color: #94a3b8; font-size: 14px; line-height: 2.2; margin-bottom: 35px; list-style: none; padding: 0;">
-                        <li><i class="fas fa-check-circle" style="color: #4ade80; margin-right: 10px;"></i> Full Admin Dashboard</li>
-                        <li><i class="fas fa-check-circle" style="color: #4ade80; margin-right: 10px;"></i> Cloud Data Sync</li>
-                        <li><i class="fas fa-check-circle" style="color: #4ade80; margin-right: 10px;"></i> Smart Timetable Engine</li>
-                        <li><i class="fas fa-check-circle" style="color: #4ade80; margin-right: 10px;"></i> Basic Support</li>
+                <div class="pricing-card" style="flex: 1; min-width: 320px; max-width: 400px; text-align: center; border-radius: 20px; background: rgba(26, 26, 26, 0.9); padding: 40px; border: 1px solid rgba(255, 255, 255, 0.05); border-top: 5px solid #aaa;">
+                    <p style="text-transform: uppercase; letter-spacing: 2px; color: #aaa; font-weight: bold; margin-bottom: 10px;">Monthly Subscription</p>
+                    <h3 style="font-size: 3rem; color: #fff; margin-bottom: 5px;">₹2,999<span style="font-size: 1rem; color: #777;">/mo</span></h3>
+                    <p style="color: #2ecc71; font-weight: bold; margin-bottom: 25px;">Flexi Renewal</p>
+                    <ul style="list-style: none; padding: 0; color: #ccc; text-align: left; margin-bottom: 30px; line-height: 2;">
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Full Administrative Control</li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Faculty & Student Portals</li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Attendance & Marks Tracking</li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Real-time Campus Alerts</li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Cancel Anytime</li>
                     </ul>
-                    <button onclick="ProcessSubscription('monthly')" class="btn-sub-monthly" style="width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #334155; background: transparent; color: #f8fafc; font-weight: bold; font-size: 15px; cursor: pointer; transition: all 0.3s ease;">Subscribe Monthly</button>
+                    <button onclick="ProcessSubscription('monthly')" class="btn-monthly">Subscribe Monthly</button>
                 </div>
 
-                <div class="sub-card-premium highlight" style="background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--brand-green, #4ade80); border-radius: 24px; padding: 40px 30px; width: 340px; position: relative; transform: scale(1.05); box-shadow: 0 20px 50px rgba(74, 222, 128, 0.15); transition: all 0.3s ease;">
-                    
-                    <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--brand-green, #4ade80); color: #0f172a; font-weight: 800; font-size: 12px; padding: 6px 18px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(74, 222, 128, 0.4);">Best Value - Save 30%</div>
-                    
-                    <h3 style="color: var(--brand-green, #4ade80); font-size: 18px; margin-bottom: 15px; font-weight: 600;">Annual Super Saver</h3>
-                    <div style="margin-bottom: 25px;">
-                        <span style="font-size: 42px; font-weight: 800; color: #f8fafc;">₹24,999</span><span style="color: #64748b; font-size: 14px; font-weight: 600;">/yr</span>
-                    </div>
-                    <ul style="text-align: left; color: #cbd5e1; font-size: 14px; line-height: 2.2; margin-bottom: 35px; list-style: none; padding: 0;">
-                        <li><i class="fas fa-check-circle" style="color: #4ade80; margin-right: 10px;"></i> All Monthly Features</li>
-                        <li><i class="fas fa-star" style="color: #eab308; margin-right: 10px;"></i> Priority 24/7 Support</li>
-                        <li><i class="fas fa-cloud-upload-alt" style="color: #4ade80; margin-right: 10px;"></i> Unlimited Cloud Storage</li>
-                        <li><i class="fas fa-shield-alt" style="color: #4ade80; margin-right: 10px;"></i> Advanced Security Logs</li>
+                <div class="pricing-card" style="flex: 1; min-width: 320px; max-width: 420px; text-align: center; border-radius: 20px; background: rgba(46, 204, 113, 0.05); padding: 40px; border: 1px solid rgba(46, 204, 113, 0.3); border-top: 5px solid #2ecc71; position: relative; box-shadow: 0 0 40px rgba(46, 204, 113, 0.1);">
+                    <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 5px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;">MOST POPULAR</div>
+                    <p style="text-transform: uppercase; letter-spacing: 2px; color: #2ecc71; font-weight: bold; margin-bottom: 10px;">Annual Plan</p>
+                    <h3 style="font-size: 3rem; color: #fff; margin-bottom: 5px;">₹24,999<span style="font-size: 1rem; color: #777;">/yr</span></h3>
+                    <p style="color: #2ecc71; font-weight: bold; margin-bottom: 25px;">Best Value</p>
+                    <ul style="list-style: none; padding: 0; color: #fff; text-align: left; margin-bottom: 30px; line-height: 2;">
+                        <li><i class="fas fa-star" style="color: #2ecc71; margin-right: 10px;"></i> <strong>Save ₹11,000 yearly</strong></li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> <strong>Everything in Monthly</strong></li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Priority Technical Support</li>
+                        <li><i class="fas fa-check" style="color: #2ecc71; margin-right: 10px;"></i> Unlimited Cloud Storage</li>
                     </ul>
-                    <button onclick="ProcessSubscription('yearly')" class="btn-sub-yearly" style="width: 100%; padding: 16px; border-radius: 12px; background: var(--brand-green, #4ade80); color: #0f172a; border: none; font-weight: 800; font-size: 15px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3);">Subscribe Yearly</button>
+                    <button onclick="ProcessSubscription('yearly')" class="btn-yearly">Subscribe Yearly</button>
                 </div>
 
             </div>
-            
-            <div id="subBlockLoading" style="margin-top: 30px; color: var(--brand-green, #4ade80); font-size: 15px; display: none; font-weight: bold; animation: pulseOp 1.5s infinite;"><i class="fas fa-circle-notch fa-spin" style="margin-right: 8px;"></i> Processing Secure Payment...</div>
+
+            <div id="subBlockLoading" style="margin-top: 30px; color: #2ecc71; font-size: 15px; display: none; font-weight: bold; animation: pulseOp 1.5s infinite;"><i class="fas fa-circle-notch fa-spin" style="margin-right: 8px;"></i> Processing Secure Payment...</div>
         </div>
     </div>
 
