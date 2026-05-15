@@ -296,6 +296,14 @@ let attPendingSubTeacherID = "";
 let attPendingSubTeacherName = "";
 let attPendingSubCardId = ""; 
 
+// 🚨 ADD THESE 4 CACHE VARIABLES HERE
+let attCurrentStudentsCache = [];
+let attCurrentExistingData = null;
+let attCurrentBatchMap = null;
+let attCurrentContainer = null;
+
+let attSubjectListenerUnsub = null;
+
 let attSubjectListenerUnsub = null;
 let attStudentRosterUnsub = null;
 let attSessionListenerUnsub = null;
@@ -921,7 +929,11 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
                 let evts = eSnap.data()[periodKey].event_details;
                 for(let key in evts) attCurrentPeriodEvents.set(key, String(evts[key]));
             }
-            if(attActiveRows.length > 0) renderStudentRows(filterStudentIDs, ticket, trueCategory, dateStr); 
+            
+            // 🚨 THE FIX: Use the cached DocumentSnapshots instead of raw String IDs!
+            if(attActiveRows.length > 0 && attCurrentStudentsCache.length > 0) {
+                renderStudentRows(attCurrentStudentsCache, attCurrentExistingData, attCurrentBatchMap, ticket, attCurrentContainer);
+            }
         });
 
         attSessionListenerUnsub = onSnapshot(doc(db, "colleges", currentCollegeID, "attendance", dailyDocID), (snap) => {
@@ -1007,11 +1019,17 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
         return r1.localeCompare(r2, undefined, {numeric:true});
     });
 
+    // 🚨 THE FIX: Cache the data so the Event Listener can safely trigger UI updates!
+    attCurrentStudentsCache = matchingStudents;
+    attCurrentExistingData = existingData;
+    attCurrentBatchMap = batchTeachersMap;
+    attCurrentContainer = targetContainer;
+
     renderStudentRows(matchingStudents, existingData, batchTeachersMap, ticket, targetContainer);
 }
 
 function renderStudentRows(students, existingData, batchTeachersMap, ticket, targetContainer) {
-    let isThisBatchLocked = false; // 🚨 FIX: Local variable so it doesn't break the main UI!
+    attIsMainClassLocked = false;
     let lockerName = "";
     let myKey = attCurrentSessionBatchIndex === -1 ? "common" : String(attCurrentSessionBatchIndex);
     const selectedSubject = document.getElementById("attSubjDropdown").value;
@@ -1020,7 +1038,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
     if(batchTeachersMap && batchTeachersMap[myKey]) {
         let bInfo = batchTeachersMap[myKey];
         if(bInfo.id && bInfo.id !== currentUserID) {
-            isThisBatchLocked = true;
+            attIsMainClassLocked = true;
             lockerName = bInfo.name || "another teacher";
         }
     }
@@ -1032,7 +1050,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         }
     });
 
-    if(claimedCount > 0) { isThisBatchLocked = true; lockerName = conflictSubject; }
+    if(claimedCount > 0) { attIsMainClassLocked = true; lockerName = conflictSubject; }
     
     let lockText = claimedCount > 0 ? `Locked by ${conflictSubject}` : `View Only (Marked by ${lockerName})`;
     
@@ -1040,7 +1058,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let statusEl = document.getElementById(`subCardStatus_${attPendingSubCardId}`);
         let saveBtn = document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`);
         
-        if (isThisBatchLocked) {
+        if (attIsMainClassLocked) {
             statusEl.innerHTML = `<span style='color:red;'>${lockText}</span>`;
             saveBtn.style.opacity = "0.5";
             saveBtn.style.pointerEvents = "none";
@@ -1050,7 +1068,6 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
             saveBtn.style.pointerEvents = "auto";
         }
     } else {
-        attIsMainClassLocked = isThisBatchLocked; // 🚨 ONLY update the global lock if it's the main class!
         document.getElementById("attLockStatusText").innerText = attIsMainClassLocked ? lockText : "";
         updateMainButtonState(); 
     }
@@ -1075,7 +1092,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         let isAtEvent = attCurrentPeriodEvents.has(id);
         let isClaimed = attCurrentPeriodClaims.has(id) && attCurrentPeriodClaims.get(id) !== selectedSubject;
 
-        let rowLocked = isThisBatchLocked || isAtEvent || isClaimed || isMedical; // 🚨 Uses local lock
+        let rowLocked = attIsMainClassLocked || isAtEvent || isClaimed || isMedical;
         if(isAtEvent || isMedical) isPresent = true; 
         if(isClaimed) isPresent = false; 
 
@@ -1090,11 +1107,13 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
         
         let padding = attIsSubstitutePanelOpen ? "10px" : "15px";
         let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base)";
+        let cursorStyle = rowLocked ? "default" : "pointer"; // 🚨 Fix Cursor
         
+        // 🚨 ADDED: id="row_${id}", cursor styling, and pointer-events:none to inner elements
         fullHTML += `
-        <div style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:14px; font-weight:600; color:var(--text-dark);">${uiText}</div>
-            <div id="tog_${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}"></div>
+        <div id="row_${id}" style="background:${bgCol}; border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; padding:${padding}; display:flex; justify-content:space-between; align-items:center; cursor:${cursorStyle}; transition: background 0.2s;">
+            <div style="font-size:14px; font-weight:600; color:var(--text-dark); pointer-events:none;">${uiText}</div>
+            <div id="tog_${id}" class="${toggleClass}" data-id="${id}" data-state="${isPresent}" data-locked="${rowLocked}" data-new="${isNewEntry}" data-init="${isPresent}" style="pointer-events:none;"></div>
         </div>`;
 
         attActiveRows.push(id);
@@ -1102,13 +1121,24 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket, tar
 
     targetContainer.innerHTML = fullHTML;
 
+    // 🚨 ADDED: Event listener attached to the ROW, tracking the toggle state inside it
     attActiveRows.forEach(id => {
-        let el = document.getElementById(`tog_${id}`);
-        el.addEventListener("click", () => {
-            if(el.dataset.locked === "true") return;
-            let currentState = el.dataset.state === "true";
-            el.dataset.state = (!currentState).toString();
-            if(!currentState) el.classList.add("active"); else el.classList.remove("active");
+        let rowEl = document.getElementById(`row_${id}`);
+        let togEl = document.getElementById(`tog_${id}`);
+        
+        rowEl.addEventListener("click", () => {
+            if(togEl.dataset.locked === "true") return;
+            
+            let currentState = togEl.dataset.state === "true";
+            let newState = !currentState;
+            
+            togEl.dataset.state = newState.toString();
+            
+            if(newState) {
+                togEl.classList.add("active");
+            } else {
+                togEl.classList.remove("active");
+            }
         });
     });
 }
