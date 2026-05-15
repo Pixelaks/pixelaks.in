@@ -52,11 +52,25 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
-if (!currentCollegeID) { window.location.href = "index.html"; } 
-else {
+// ==========================================
+// 🚨 INITIAL AUTHENTICATION CHECK
+// ==========================================
+if (!currentCollegeID) { 
+    window.location.href = "index.html"; 
+} else {
     onAuthStateChanged(auth, (user) => {
-        if (user) { currentUserID = user.uid; fetchPrincipalProfile(); } 
-        else { window.location.href = "index.html"; }
+        if (user) { 
+            currentUserID = user.uid; 
+            
+            // 🚨 FIRE BIOMETRIC CHECK FIRST: Now that we have the User ID!
+            InitBiometricUI(); 
+            
+            // 🚨 THEN LOAD DASHBOARD
+            fetchPrincipalProfile(); 
+        } 
+        else { 
+            window.location.href = "index.html"; 
+        }
     });
 }
 el.versionText.innerText = "Version 1.0.0 (Web Admin)";
@@ -3731,21 +3745,23 @@ async function CheckSecurityPin() {
 // 🚨 BIOMETRIC (WEBAUTHN) ENGINE
 // ==========================================
 
-// Check if device supports Biometrics
 const isBiometricSupported = window.PublicKeyCredential !== undefined;
+let isBioEnabledLocally = false; 
 
-// Load saved preference for this specific device
-let isBioEnabledLocally = localStorage.getItem(`adhyora_bio_${currentUserID}`) === "true";
+// 1. Initialization (Fired by onAuthStateChanged)
+window.InitBiometricUI = function() {
+    // Looks for the specific User ID so multiple principals on one device don't clash
+    isBioEnabledLocally = localStorage.getItem(`adhyora_bio_${currentUserID}`) === "true";
 
-// Update the toggle UI in Settings
-if (!isBiometricSupported) {
-    elLock.btnToggleWrap.style.opacity = "0.5";
-    elLock.btnToggleWrap.title = "Not supported on this device/browser.";
-} else if (isBioEnabledLocally) {
-    elLock.toggleBio.classList.add("active");
-}
+    if (!isBiometricSupported) {
+        elLock.btnToggleWrap.style.opacity = "0.5";
+        elLock.btnToggleWrap.title = "Not supported on this device/browser.";
+    } else if (isBioEnabledLocally) {
+        elLock.toggleBio.classList.add("active");
+    }
+};
 
-// 1. Settings Menu Toggle Logic
+// 2. Settings Menu Toggle Logic
 elLock.btnToggleWrap.addEventListener("click", async () => {
     if (!isBiometricSupported) return;
 
@@ -3783,7 +3799,7 @@ elLock.btnToggleWrap.addEventListener("click", async () => {
     }
 });
 
-// 2. Lock Screen Verification Logic
+// 3. Lock Screen Verification Logic
 elLock.btnBio.addEventListener("click", async () => {
     elLock.btnBio.innerText = "Scanning...";
     try {
