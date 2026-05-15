@@ -712,9 +712,9 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
-        overflow-x: hidden !important;
+        overflow-x: auto !important; /* 🚨 CHANGED: Allows horizontal scrolling! */
         -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 20px !important; /* Just a tiny bit of breathing room at the bottom of the list */
+        padding-bottom: 10px !important; 
     }
 
     /* 3. Fix Teacher/Student Cards Cut-off */
@@ -735,24 +735,26 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         gap: 12px;
     }
 
-    /* 4. Fix Attendance Grid Alignment */
+    /* 4. Fix Attendance Grid Alignment (Horizontal Scroll Mode) */
     .attd-row {
-        grid-template-columns: 1.4fr repeat(6, 1fr) !important;
-        padding: 10px 5px !important;
-        gap: 2px !important;
+        min-width: 550px !important; /* 🚨 NEW: Forces the row to be wide enough, triggering the swipe scroll! */
+        grid-template-columns: 1.8fr repeat(6, 1fr) !important;
+        padding: 12px 10px !important;
+        gap: 5px !important;
     }
     
-    .attd-teacher-col { overflow: hidden; }
+    .attd-teacher-col { 
+        overflow: visible !important; /* Removes the harsh cutoff */
+    }
+    
     .attd-teacher-name {
-        font-size: 11px !important;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
+        font-size: 13px !important; /* Restores the readable font size! */
+        white-space: normal !important;
         display: block;
     }
     
     .attd-slot {
-        font-size: 10px !important;
-        padding: 2px !important;
+        font-size: 12px !important; /* Restores the readable subject text! */
+        padding: 4px !important;
     }
 }
