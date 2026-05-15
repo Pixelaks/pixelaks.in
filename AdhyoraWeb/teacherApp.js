@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
 // 🚨 GLOBAL VARIABLES
@@ -274,7 +274,7 @@ async function syncSemesterWithDatabase() {
 }
 
 // ==========================================
-// 🚨 NEP ATTENDANCE ENGINE (C# PORT WITH ACCORDION)
+// 🚨 NEP ATTENDANCE ENGINE (C# PORT WITH PERFECT ACCORDION)
 // ==========================================
 let attCurrentDate = new Date();
 let attTeacherSubjects = [];
@@ -593,7 +593,7 @@ async function checkTimetableAllocation(ticket, dateStr) {
                     if(myAllocations.length === 0) showAttCenterMessage("Not assigned to you.<br>(Substitute options available)");
                     else showAttCenterMessage("Select a batch to mark attendance:");
                     
-                    spawnSubstituteCards(myAllocations, substituteAllocations);
+                    spawnSubstituteCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
                 } else {
                     showAttCenterMessage("This period is assigned to another teacher.");
                 }
@@ -619,8 +619,8 @@ async function checkTimetableAllocation(ticket, dateStr) {
     } catch(e) { console.error("Timetable Engine Error", e); showAttCenterMessage("Connection Error."); }
 }
 
-// 🚨 UPDATED: Generates Interactive Accordion Cards!
-function spawnSubstituteCards(myDocs, subDocs) {
+// 🚨 UPDATED: The Pink Accordion Cards matching your image perfectly
+function spawnSubstituteCards(myDocs, subDocs, sem, subj) {
     document.getElementById("attListContainer").innerHTML = ""; 
     document.getElementById("attTotalStudentsText").innerText = "Select Batch";
 
@@ -632,18 +632,17 @@ function spawnSubstituteCards(myDocs, subDocs) {
         let id = docSnap.id;
         
         return `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:0.3s;">
-            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--card-bg); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-weight:bold; color:var(--text-dark); font-size:15px;">${bName}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">Assigned: ${d.teacherName || "Unknown"}</div>
+        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
+            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
+                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
+                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
                 </div>
-                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="color:#cbd5e1; transition: 0.3s;"></i>
+                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
             </button>
-            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid var(--border-color); background: rgba(0,0,0,0.02);">
-                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px;"></div>
+            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
                 <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Save Batch Attendance</button>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
             </div>
         </div>`;
     };
@@ -654,11 +653,10 @@ function spawnSubstituteCards(myDocs, subDocs) {
     
     document.getElementById("attListContainer").innerHTML = fullHTML;
 
-    myDocs.forEach(d => attachSubCardListener(d, true));
-    subDocs.forEach(d => attachSubCardListener(d, false));
+    myDocs.forEach(d => attachSubCardListener(d, true, sem, subj));
+    subDocs.forEach(d => attachSubCardListener(d, false, sem, subj));
 }
 
-// 🚨 UPDATED: Generates Interactive Accordion Cards!
 function spawnManualBatchCards(docs, sem, subj) {
     document.getElementById("attListContainer").innerHTML = "";
     document.getElementById("attTotalStudentsText").innerText = "Select Batch";
@@ -680,18 +678,17 @@ function spawnManualBatchCards(docs, sem, subj) {
         let id = d.id;
 
         fullHTML += `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:0.3s;">
-            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--card-bg); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-weight:bold; color:var(--text-dark); font-size:15px;">${bName}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">Assigned: ${d.data().teacherName}</div>
+        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
+            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
+                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
+                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.data().teacherName})</span>
                 </div>
-                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="color:#cbd5e1; transition: 0.3s;"></i>
+                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
             </button>
-            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid var(--border-color); background: rgba(0,0,0,0.02);">
-                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px;"></div>
+            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
                 <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Save Batch Attendance</button>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
             </div>
         </div>`;
     });
@@ -703,6 +700,9 @@ function spawnManualBatchCards(docs, sem, subj) {
         let bName = `Batch ${bIndex + 1}`;
         if(d.data().teacherID === currentUserID) bName += " (My Class)";
         let id = d.id;
+
+        // Fetch counts for manual batches
+        fetchAndDisplayBatchCount(id, sem, subj, false, bIndex);
 
         document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
             let body = document.getElementById(`subCardBody_${id}`);
@@ -716,7 +716,7 @@ function spawnManualBatchCards(docs, sem, subj) {
                 attPendingSubBatchIndex = bIndex;
                 attPendingSubTeacherID = d.data().teacherID;
                 attPendingSubTeacherName = d.data().teacherName;
-                attPendingSubCardId = id; // 🚨 Store which card we are opening
+                attPendingSubCardId = id; 
                 showSubstituteConfirmModal(bName);
             }
         });
@@ -725,12 +725,15 @@ function spawnManualBatchCards(docs, sem, subj) {
     });
 }
 
-function attachSubCardListener(docSnap, isMine) {
+function attachSubCardListener(docSnap, isMine, sem, subj) {
     let d = docSnap.data();
     let bIndex = parseInt(d.splitIndex || "0");
     let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
     if(isMine) bName += " (My Class)";
     let id = docSnap.id;
+
+    // Fetch counts for allocation batches
+    fetchAndDisplayBatchCount(id, sem, subj, d.isCommon, bIndex);
 
     document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
         let body = document.getElementById(`subCardBody_${id}`);
@@ -744,12 +747,55 @@ function attachSubCardListener(docSnap, isMine) {
             attPendingSubBatchIndex = bIndex;
             attPendingSubTeacherID = d.teacherID || "";
             attPendingSubTeacherName = d.teacherName || "Unknown";
-            attPendingSubCardId = id; // 🚨 Store which card we are opening
+            attPendingSubCardId = id; 
             showSubstituteConfirmModal(bName);
         }
     });
 
     document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
+}
+
+// 🚨 NEW: Background fetcher to accurately display "(17 Students)" in the card header!
+async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
+    try {
+        if (isCommon) {
+            let semInt = parseInt(sem);
+            let yearStr = "1";
+            if(semInt <= 2) yearStr = "1"; else if(semInt <= 4) yearStr = "2"; else if(semInt <= 6) yearStr = "3"; else yearStr = "4";
+            
+            let count = 0;
+            let cUp = (attSubjectCategories.get(subj) || "").toUpperCase();
+            
+            let studentsRef = collection(db, "colleges", currentCollegeID, "students");
+            let q = query(studentsRef, where("Year", "==", yearStr));
+            let snap = await getDocs(q);
+            
+            snap.forEach(docSnap => {
+                let data = docSnap.data();
+                let isEnrolled = false;
+                if(cUp.includes("MJD") || cUp.includes("CORE") || cUp.includes("TUTORIAL")) {
+                    let sDept = "DEPT_" + String(data.Department || data.department || "").replace(/ /g, "");
+                    if(sDept === teacherDeptRaw || (data.Department||data.department) === teacherDeptRaw) isEnrolled = true;
+                } else if(data.enrolledSubjects) {
+                    let es = data.enrolledSubjects;
+                    let sMap = es[`Semester ${sem}`] || es[sem];
+                    if(sMap) { for(let k in sMap) { if(sMap[k] === subj) { isEnrolled = true; break; } } }
+                }
+                if(isEnrolled) count++;
+            });
+            let titleEl = document.getElementById(`subCardTitle_${id}`);
+            if(titleEl) titleEl.innerHTML += ` <span style='font-size:13px; color:#991b1b; font-weight:normal;'>(${count} Students)</span>`;
+        } else {
+            let cleanSub = subj.replace(/ /g, "").replace(/\//g, "");
+            let batchDocID = `BATCH_Sem${sem}_${cleanSub}_Batch${bIndex + 1}`;
+            let docSnap = await getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID));
+            if(docSnap.exists() && docSnap.data().studentIDs) {
+                let count = docSnap.data().studentIDs.length;
+                let titleEl = document.getElementById(`subCardTitle_${id}`);
+                if(titleEl) titleEl.innerHTML += ` <span style='font-size:13px; color:#991b1b; font-weight:normal;'>(${count} Students)</span>`;
+            }
+        }
+    } catch(e) { console.error("Count Error", e); }
 }
 
 function showSubstituteConfirmModal(displayName) {
@@ -762,7 +808,7 @@ function showSubstituteConfirmModal(displayName) {
 function confirmSubstituteLoad() {
     document.getElementById("subConfirmModal").classList.remove("active");
     
-    // 🚨 Expand the accordion UI instantly
+    // 🚨 Expand the accordion UI instantly to show loading
     document.getElementById(`subCardBody_${attPendingSubCardId}`).style.display = "block";
     document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(180deg)";
     document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:#64748b;'>Loading Register...</span>";
@@ -900,11 +946,12 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
         else { if(inPastRegister || isCurrentlyEnrolled) matchingStudents.push(docSnap); }
     });
 
-    // 🚨 Target correct container!
+    // 🚨 Target correct container based on panel state!
     let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attListContainer");
 
     if(matchingStudents.length === 0) { 
         targetContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">No students found for '${subjName}'</div>`;
+        if(attIsSubstitutePanelOpen) document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "";
         return; 
     }
 
