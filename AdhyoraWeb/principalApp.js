@@ -3700,7 +3700,9 @@ const elLock = {
     screen: document.getElementById("appLockScreen"), title: document.getElementById("lockTitle"), status: document.getElementById("lockStatus"),
     input: document.getElementById("lockPinInput"), btnSubmit: document.getElementById("btnLockSubmit"), btnForgot: document.getElementById("btnLockForgot"),
     reAuthOverlay: document.getElementById("reAuthOverlay"), reAuthPass: document.getElementById("reAuthPasswordInput"), 
-    reAuthStatus: document.getElementById("reAuthStatus"), btnReAuth: document.getElementById("btnReAuthSubmit")
+    reAuthStatus: document.getElementById("reAuthStatus"), btnReAuth: document.getElementById("btnReAuthSubmit"),
+    // 🚨 NEW BIOMETRIC HOOKS
+    btnBio: document.getElementById("btnLockBiometrics"), toggleBio: document.getElementById("bioToggleSwitch"), btnToggleWrap: document.getElementById("btnToggleBiometrics")
 };
 
 async function CheckSecurityPin() {
@@ -3725,6 +3727,91 @@ async function CheckSecurityPin() {
     }
 }
 
+// ==========================================
+// 🚨 BIOMETRIC (WEBAUTHN) ENGINE
+// ==========================================
+
+// Check if device supports Biometrics
+const isBiometricSupported = window.PublicKeyCredential !== undefined;
+
+// Load saved preference for this specific device
+let isBioEnabledLocally = localStorage.getItem(`adhyora_bio_${currentUserID}`) === "true";
+
+// Update the toggle UI in Settings
+if (!isBiometricSupported) {
+    elLock.btnToggleWrap.style.opacity = "0.5";
+    elLock.btnToggleWrap.title = "Not supported on this device/browser.";
+} else if (isBioEnabledLocally) {
+    elLock.toggleBio.classList.add("active");
+}
+
+// 1. Settings Menu Toggle Logic
+elLock.btnToggleWrap.addEventListener("click", async () => {
+    if (!isBiometricSupported) return;
+
+    if (isBioEnabledLocally) {
+        // Turn it off
+        isBioEnabledLocally = false;
+        localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+        elLock.toggleBio.classList.remove("active");
+        showRcToast("Biometrics disabled for this device.");
+    } else {
+        // Turn it on: Require them to scan their face/finger to register!
+        try {
+            const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+            const userIDBuffer = new TextEncoder().encode(currentUserID);
+
+            await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "Adhyora AMS", id: window.location.hostname },
+                    user: { id: userIDBuffer, name: myRealName, displayName: myRealName },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000
+                }
+            });
+
+            isBioEnabledLocally = true;
+            localStorage.setItem(`adhyora_bio_${currentUserID}`, "true");
+            elLock.toggleBio.classList.add("active");
+            showRcToast("✅ Biometrics Linked Successfully!");
+        } catch (err) {
+            console.error(err);
+            showRcToast("❌ Failed to link Biometrics.");
+        }
+    }
+});
+
+// 2. Lock Screen Verification Logic
+elLock.btnBio.addEventListener("click", async () => {
+    elLock.btnBio.innerText = "Scanning...";
+    try {
+        const challenge = window.crypto.getRandomValues(new Uint8Array(32));
+        await navigator.credentials.get({
+            publicKey: {
+                challenge: challenge,
+                rpId: window.location.hostname,
+                userVerification: "required",
+                timeout: 60000
+            }
+        });
+
+        // 🚨 SUCCESS! If we reach here, their Face/Fingerprint matched!
+        elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
+        setTimeout(() => {
+            UnlockSecurityWall(); // Bypass the PIN!
+        }, 500);
+
+    } catch (err) {
+        console.error(err);
+        elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again';
+        elLock.status.innerText = "Biometric scan failed or cancelled.";
+        elLock.status.style.color = "#ef4444";
+    }
+});
+
+
 function SetLockMode(mode) {
     lockMode = mode;
     elLock.input.value = "";
@@ -3737,7 +3824,16 @@ function SetLockMode(mode) {
         elLock.status.style.color = "#94a3b8";
         elLock.btnSubmit.innerText = "Unlock Dashboard";
         if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
-    } 
+        
+        // 🚨 NEW: Show Biometrics button if enabled on this device!
+        if (isBioEnabledLocally && isBiometricSupported) {
+            elLock.btnBio.style.display = "block";
+            // Optional: Auto-trigger it as soon as the screen opens!
+            setTimeout(() => elLock.btnBio.click(), 500); 
+        } else {
+            elLock.btnBio.style.display = "none";
+        }
+    }
     else if (mode === "SETUP_1" || mode === "RESET_NEW_1") {
         elLock.title.innerText = "CREATE SECURITY PIN";
         elLock.status.innerText = "Set a 4-digit PIN to secure your dashboard.";
