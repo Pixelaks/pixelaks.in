@@ -669,35 +669,33 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
 }
 
 /* =========================================
-   📱 MOBILE POLISH & SCROLL FIXES (THE REAL FIX)
+   📱 MOBILE POLISH & SCROLL FIXES (PERFECT FIT)
    ========================================= */
 @media (max-width: 900px) {
     
-    /* 1. Lock body to prevent URL bar jumping */
     body {
         height: 100dvh !important;
         overflow: hidden !important;
     }
 
-    /* 2. 🚨 THE FIX: Uniform padding. No more invisible masking wall! */
+    /* 1. 🚨 SHRINKS THE BOX: Stops the container's bottom border exactly above the nav bar */
     .main-content {
-        height: 100dvh !important; 
-        padding: 15px !important; /* Uniform 15px all around */
+        height: calc(100dvh - 85px) !important; /* Automatically calculates the exact height needed */
+        padding: 15px !important; 
         box-sizing: border-box !important;
         overflow: hidden !important;
     }
 
-    /* 3. The scrollable area now goes all the way to the bottom border */
+    /* 2. 🚨 REMOVES THE MASSIVE GAP: Normal padding inside the scroll view */
     .dashboard-view {
         height: 100% !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
-        /* The spacer goes IN the scroll view, so you can scroll the last card up past the nav bar */
-        padding-bottom: 120px !important; 
+        padding-bottom: 10px !important; /* Removes that huge empty grid space! */
     }
 
-    /* 4. Fix Teacher/Student Cards Cut-off */
+    /* 3. Fix Teacher/Student Cards Cut-off */
     .data-card {
         flex-direction: column !important;
         align-items: flex-start !important;
@@ -710,7 +708,7 @@ body.dark-mode #successExpiryDate { color: #94a3b8 !important; }
         gap: 12px;
     }
 
-    /* 5. Fix Attendance Grid Alignment */
+    /* 4. Fix Attendance Grid Alignment */
     .attd-row {
         grid-template-columns: 1.4fr repeat(6, 1fr) !important;
         padding: 10px 5px !important;
