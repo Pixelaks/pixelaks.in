@@ -303,8 +303,6 @@ let attCurrentBatchMap = null;
 let attCurrentContainer = null;
 
 let attSubjectListenerUnsub = null;
-
-let attSubjectListenerUnsub = null;
 let attStudentRosterUnsub = null;
 let attSessionListenerUnsub = null;
 let attMainEventListenerUnsub = null;
