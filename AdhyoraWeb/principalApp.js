@@ -3457,7 +3457,6 @@ const RAZORPAY_MONTHLY = "https://pages.razorpay.com/pl_Rv6FL0YCAcrpNB/view";
 const RAZORPAY_YEARLY = "https://pages.razorpay.com/pl_Rv6Dh4gbH5csJe/view";
 
 function startSubscriptionListener() {
-    // 🚨 SINGLE LISTENER: Handles both Subscriptions AND Semester syncs for 1 read cost!
     subscriptionListener = onSnapshot(doc(db, "colleges", currentCollegeID), (snapshot) => {
         if (!snapshot.exists()) return;
         
@@ -3471,19 +3470,20 @@ function startSubscriptionListener() {
         // 2. Subscription Engine
         let subData = data.subscription;
         if (!subData) {
-            HandleBlockState("Welcome to Adhyora!\nPlease select a plan to activate your account and start your Free Trial.");
+            // 🚨 No subscription data at all = FIRST TIME USER!
+            HandleBlockState("Welcome to Adhyora! Please select a plan to activate your institution.", true);
             isFirstSubLoad = false;
             return;
         }
 
         let newExpiry = subData.expiryDate || 0;
         let newPlan = subData.planType || "Premium";
+        let isTrialUsed = subData.isTrialUsed || false; // Check if they've had a trial
         
-        // Smart Check: Did the expiry date just change? (They bought a plan)
         let dateChanged = (!isFirstSubLoad && newExpiry !== cachedExpiryTimestamp);
         cachedExpiryTimestamp = newExpiry;
 
-        ValidateExpiry(newExpiry);
+        ValidateExpiry(newExpiry, isTrialUsed);
 
         if (dateChanged) {
             ShowSuccessPanel(newExpiry, newPlan);
@@ -3493,11 +3493,9 @@ function startSubscriptionListener() {
     });
 }
 
-function ValidateExpiry(expirySeconds) {
-    let expiryDate = new Date(expirySeconds * 1000); // Unix to JS Date
+function ValidateExpiry(expirySeconds, isTrialUsed) {
+    let expiryDate = new Date(expirySeconds * 1000); 
     let today = new Date();
-    
-    // Calculate the Hard Block Date (Expiry + Grace Period)
     let hardBlockDate = new Date(expiryDate.getTime() + (gracePeriodDays * 24 * 60 * 60 * 1000));
 
     let daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
@@ -3505,7 +3503,8 @@ function ValidateExpiry(expirySeconds) {
 
     if (today > hardBlockDate) {
         let dateStr = expiryDate.toLocaleDateString('en-US', { day:'numeric', month:'short', year:'numeric' });
-        HandleBlockState(`Plan Expired on ${dateStr}.\nRenew to unlock access.`);
+        // 🚨 If they are expired but they used a trial, they are NOT a first-time user anymore.
+        HandleBlockState(`Your plan expired on ${dateStr}. Please renew to unlock access.`, !isTrialUsed);
     } 
     else if (today > expiryDate) {
         UnlockAccess();
@@ -3521,10 +3520,25 @@ function ValidateExpiry(expirySeconds) {
     }
 }
 
-// 🚨 THE ANTI-HACK GHOST UI (SECURE VERSION)
-function HandleBlockState(msg) {
+// 🚨 THE ANTI-HACK GHOST UI (SMART VERSION)
+function HandleBlockState(msg, isFirstTime) {
     document.getElementById("subBlockText").innerText = msg;
     
+    // 🚨 DYNAMIC TEXT UPDATES
+    let heading = document.getElementById("subBlockHeading");
+    let monthHigh = document.getElementById("monthlyHighlightText");
+    let yearHigh = document.getElementById("yearlyHighlightText");
+
+    if (isFirstTime) {
+        heading.innerText = "CHOOSE A SUBSCRIPTION PLAN";
+        monthHigh.innerText = "1st Month Free Trial";
+        yearHigh.innerText = "1st Month Free Trial";
+    } else {
+        heading.innerText = "SUBSCRIPTION EXPIRED";
+        monthHigh.innerText = "Flexi Renewal";
+        yearHigh.innerText = "Best Value";
+    }
+
     // Hide the initial loader and show the blocker
     const loader = document.getElementById("initialAppLoader");
     if (loader) loader.style.display = "none";
@@ -3542,7 +3556,6 @@ function HandleBlockState(msg) {
     if (mainContent) mainContent.style.setProperty("display", "none", "important");
     if (sidebar) sidebar.style.setProperty("display", "none", "important");
 
-    // 🚨 TURN ON THE WEBSITE NODES BACKGROUND!
     if (typeof tsParticles !== 'undefined') {
         tsParticles.load("subParticles", {
             particles: {
@@ -3557,7 +3570,7 @@ function HandleBlockState(msg) {
                 events: { onHover: { enable: true, mode: "grab" }, onClick: { enable: true, mode: "push" } },
                 modes: { grab: { distance: 200, links: { opacity: 0.8 } }, push: { quantity: 4 } }
             },
-            background: { color: "transparent" } // Must be transparent so the #0a0a0a HTML background shows through
+            background: { color: "transparent" }
         });
     }
 }
