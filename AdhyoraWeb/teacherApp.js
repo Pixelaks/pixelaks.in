@@ -1804,6 +1804,12 @@ document.getElementById("btnResetPinSettings")?.addEventListener("click", () => 
 elLock.btnReAuth.addEventListener("click", async () => {
     let pass = elLock.reAuthPass.value.trim();
     if (!pass) return;
+
+    if (!auth.currentUser || !auth.currentUser.email) {
+        elLock.reAuthStatus.innerText = "Session lost. Please refresh the page.";
+        return;
+    }
+
     elLock.btnReAuth.innerText = "Verifying...";
     elLock.btnReAuth.disabled = true;
     
@@ -1820,24 +1826,40 @@ elLock.btnReAuth.addEventListener("click", async () => {
         SetLockMode("RESET_NEW_1");
         
     } catch(e) {
-        elLock.reAuthStatus.innerText = "Incorrect Password.";
+        console.error("Re-Auth Failed:", e);
+        // Display the EXACT error to the user
+        if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+            elLock.reAuthStatus.innerText = "Incorrect Password.";
+        } else if (e.code === 'auth/too-many-requests') {
+            elLock.reAuthStatus.innerText = "Too many attempts. Try again later.";
+        } else {
+            // This will reveal if it's a Google Auth account or Domain issue
+            elLock.reAuthStatus.innerText = "Firebase Error: " + (e.code || e.message); 
+        }
     }
+    
     elLock.btnReAuth.innerText = "Verify";
     elLock.btnReAuth.disabled = false;
 });
 
 document.getElementById("btnResetPassSettings")?.addEventListener("click", async () => {
-    if (confirm("Send a password reset link to your email?")) {
+    if (!auth.currentUser || !auth.currentUser.email) {
+        showRcToast("Error: No active user session found.");
+        return;
+    }
+
+    if (confirm(`Send a password reset link to ${auth.currentUser.email}?`)) {
         try {
             await sendPasswordResetEmail(auth, auth.currentUser.email);
-            showRcToast("Password reset link sent to your email!");
+            showRcToast("✅ Password reset link sent!");
             document.getElementById("settingsOverlay").classList.remove("active");
         } catch(e) {
-            showRcToast("Failed to send reset link.");
+            console.error("Reset Email Failed:", e);
+            // Show the exact Firebase error code on the toast
+            showRcToast("❌ Failed: " + (e.code || "Unknown Error"));
         }
     }
 });
-
 // 5. App Background Visibility Lock
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
