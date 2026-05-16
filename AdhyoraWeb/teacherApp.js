@@ -126,6 +126,7 @@ async function finalizeProfileUI(rawName, email, deptName) {
         initSubjectDeclarationEngine(); 
         initCalendarEngine(); 
         initAssignmentsEngine(); // 🚨 Added Assignments Init!
+        if (isHOD) setupExportEngine();
     }
 }
 
@@ -5423,4 +5424,352 @@ async function asnSaveTimetable() {
         btn.innerText = "Save Timetable"; 
         btn.disabled = false;
     }
+}
+
+// ==========================================
+// 🚨 HOD DATA EXPORT ENGINE (C# TRANSLATION)
+// ==========================================
+let expDeptName = "";
+let expIsProcessing = false;
+
+// 1. Initialize the button click listener
+document.getElementById("btnOpenExport")?.addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("active");
+    document.getElementById("exportDataModal").classList.add("active");
+});
+
+document.getElementById("btnExecuteExport")?.addEventListener("click", executeDataExport);
+
+// 2. Hook into your existing Profile Engine to setup the HOD details
+// Add this call inside your `finalizeProfileUI` function right after setting `isHOD`:
+// if (isHOD) { setupExportEngine(); }
+async function setupExportEngine() {
+    let btn = document.getElementById("btnOpenExport");
+    if (!btn) return;
+
+    try {
+        let safeDeptId = teacherDeptRaw.startsWith("DEPT_") ? teacherDeptRaw : `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "departments", safeDeptId));
+        
+        if (snap.exists()) {
+            expDeptName = snap.data().name || "";
+            let maxYears = snap.data().maxYears ? parseInt(snap.data().maxYears) : 3;
+            
+            document.getElementById("exportDeptNameText").innerText = expDeptName;
+            
+            let semDrop = document.getElementById("exportSemDrop");
+            semDrop.innerHTML = "";
+            for (let i = 1; i <= maxYears * 2; i++) {
+                semDrop.innerHTML += `<option value="${i}">Semester ${i}</option>`;
+            }
+            
+            btn.style.display = "flex"; // Reveal the button in settings
+        }
+    } catch (e) {
+        console.error("Export Setup Error:", e);
+    }
+}
+
+// 3. The Main Executor
+async function executeDataExport() {
+    if (expIsProcessing) return;
+    
+    let btn = document.getElementById("btnExecuteExport");
+    let semNum = document.getElementById("exportSemDrop").value;
+    let reportType = parseInt(document.getElementById("exportTypeDrop").value);
+    
+    expIsProcessing = true;
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+    showRcToast(`Fetching ${expDeptName} Students...`);
+
+    let yearNum = Math.ceil(parseInt(semNum) / 2).toString();
+
+    try {
+        // Fetch Students exactly like C#
+        let stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), 
+            where("Department", "==", expDeptName), 
+            where("Year", "==", yearNum)));
+
+        if (stuSnap.empty) {
+            stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), 
+                where("department", "==", expDeptName), 
+                where("Year", "==", yearNum)));
+        }
+
+        if (stuSnap.empty) {
+            showRcToast(`No students found for Year ${yearNum}.`);
+            resetExportBtn(btn);
+            return;
+        }
+
+        let students = [];
+        stuSnap.forEach(d => students.push({ id: d.id, ...d.data() }));
+
+        showRcToast("Generating CSV Data...");
+        let csvContent = "";
+
+        if (reportType === 0) csvContent = await generateNepMarksCSV(students, semNum);
+        else if (reportType === 1) csvContent = await generateNepAttendanceStatsCSV(students, semNum);
+        else csvContent = await generateDailyLogsCSV(students, semNum);
+
+        if (!csvContent) {
+            showRcToast("No data found for this semester to export.");
+        } else {
+            downloadCSVFile(csvContent, reportType, semNum);
+            showRcToast("Success! File Downloaded.");
+            document.getElementById("exportDataModal").classList.remove("active");
+        }
+    } catch (e) {
+        console.error("Export Failed:", e);
+        showRcToast("Export Failed! Check console.");
+    }
+
+    resetExportBtn(btn);
+}
+
+function resetExportBtn(btn) {
+    expIsProcessing = false;
+    btn.innerText = "Download CSV";
+    btn.disabled = false;
+    btn.style.opacity = "1";
+}
+
+// 4. CSV GENERATOR: NEP MARKS (Highly Optimized Concurrent Fetch)
+async function generateNepMarksCSV(students, sem) {
+    let globalData = {};
+    let semKey = `Semester ${sem}`;
+
+    // Fetch all student marks concurrently (matches C# Task.WhenAll)
+    let fetchPromises = students.map(s => 
+        getDoc(doc(db, "colleges", currentCollegeID, "students", s.id, "nep_marks", semKey))
+    );
+    
+    let marksSnapshots = await Promise.all(fetchPromises);
+
+    for (let i = 0; i < students.length; i++) {
+        let student = students[i];
+        let snap = marksSnapshots[i];
+
+        if (snap.exists()) {
+            let data = snap.data();
+            for (let subject in data) {
+                let exams = data[subject];
+                for (let examName in exams) {
+                    let stats = exams[examName];
+
+                    if (!globalData[examName]) globalData[examName] = {};
+                    if (!globalData[examName][subject]) globalData[examName][subject] = {};
+
+                    globalData[examName][subject][student.id] = {
+                        Obtained: stats.total || 0,
+                        Max: stats.max !== undefined ? stats.max : 50,
+                        Test: stats.test || 0,
+                        Assign: stats.assign || 0,
+                        Att: stats.att || 0
+                    };
+                }
+            }
+        }
+    }
+
+    if (Object.keys(globalData).length === 0) return "";
+
+    let sb = [];
+    Object.keys(globalData).sort().forEach(examName => {
+        sb.push(`\n===== EXAM: ${examName} =====,,,,,,,,,`);
+        
+        let subjectsMap = globalData[examName];
+        Object.keys(subjectsMap).sort().forEach(subject => {
+            sb.push(`\n--- SUBJECT: ${subject} ---,,,,,,,,,`);
+            sb.push("Roll No,Name,Obtained,Max,Test,Assignment,Attendance,Status");
+
+            students.sort((a,b) => a.id.localeCompare(b.id)).forEach(student => {
+                let roll = student.id;
+                let name = `"${(student.Name || student.studentName || "").replace(/"/g, '""')}"`;
+                
+                if (subjectsMap[subject][roll]) {
+                    let s = subjectsMap[subject][roll];
+                    sb.push(`${roll},${name},${s.Obtained},${s.Max},${s.Test},${s.Assign},${s.Att},Present`);
+                } else {
+                    sb.push(`${roll},${name},Nil,--,--,--,--,Not Entered`);
+                }
+            });
+        });
+        sb.push("");
+    });
+
+    return sb.join("\n");
+}
+
+// 5. CSV GENERATOR: ATTENDANCE STATS
+async function generateNepAttendanceStatsCSV(students, sem) {
+    let semKey = `Semester_${sem}`;
+    let enrolledSemKey = `Semester ${sem}`;
+    let allSubjects = new Set();
+    let electiveSubjects = new Set();
+
+    students.forEach(student => {
+        if (student.attendance_stats && student.attendance_stats[semKey]) {
+            Object.keys(student.attendance_stats[semKey]).forEach(sub => {
+                if (sub !== "Strict_Global") allSubjects.add(sub);
+            });
+        }
+        if (student.enrolledSubjects && student.enrolledSubjects[enrolledSemKey]) {
+            Object.values(student.enrolledSubjects[enrolledSemKey]).forEach(val => {
+                electiveSubjects.add(val.toString());
+            });
+        }
+    });
+
+    if (allSubjects.size === 0) return "";
+    let sb = [];
+
+    sb.push("===== OVERALL ATTENDANCE DATA =====,,,,");
+    sb.push("Roll No,Name,Total Attended,Total Conducted,Overall Percentage");
+
+    students.sort((a,b) => a.id.localeCompare(b.id)).forEach(student => {
+        let roll = student.id;
+        let name = `"${(student.Name || student.studentName || "").replace(/"/g, '""')}"`;
+        let totalPresent = 0;
+        let totalConducted = 0;
+
+        if (student.attendance_stats && student.attendance_stats[semKey]) {
+            let subjects = student.attendance_stats[semKey];
+            for (let sub in subjects) {
+                if (sub === "Strict_Global") continue;
+                totalPresent += parseFloat(subjects[sub].present || 0);
+                totalConducted += parseFloat(subjects[sub].total || 0);
+            }
+        }
+        let pct = totalConducted > 0 ? ((totalPresent / totalConducted) * 100).toFixed(2) + "%" : "0.00%";
+        sb.push(`${roll},${name},${totalPresent},${totalConducted},${pct}`);
+    });
+
+    sb.push("\n");
+
+    Array.from(allSubjects).sort().forEach(subject => {
+        sb.push(`\n--- SUBJECT: ${subject} ---,,,,`);
+        sb.push("Roll No,Name,Present,Total,Percentage");
+
+        let isElective = electiveSubjects.has(subject);
+
+        students.sort((a,b) => a.id.localeCompare(b.id)).forEach(student => {
+            let roll = student.id;
+            let name = `"${(student.Name || student.studentName || "").replace(/"/g, '""')}"`;
+            let hasData = false;
+            let isEnrolledInSubject = false;
+
+            if (!isElective) {
+                isEnrolledInSubject = true;
+            } else {
+                if (student.enrolledSubjects && student.enrolledSubjects[enrolledSemKey]) {
+                    if (Object.values(student.enrolledSubjects[enrolledSemKey]).includes(subject)) {
+                        isEnrolledInSubject = true;
+                    }
+                }
+            }
+
+            if (student.attendance_stats && student.attendance_stats[semKey] && student.attendance_stats[semKey][subject]) {
+                let s = student.attendance_stats[semKey][subject];
+                let p = parseFloat(s.present || 0);
+                let t = parseFloat(s.total || 0);
+                let pct = t > 0 ? ((p / t) * 100).toFixed(2) + "%" : "0.00%";
+                sb.push(`${roll},${name},${p},${t},${pct}`);
+                hasData = true;
+            }
+
+            if (!hasData && isEnrolledInSubject) {
+                sb.push(`${roll},${name},Nil,Nil,0.00%`);
+            }
+        });
+    });
+
+    return sb.join("\n");
+}
+
+// 6. CSV GENERATOR: DAILY LOGS (Optimized)
+async function generateDailyLogsCSV(students, sem) {
+    let sb = ["Date,Semester,Roll No,Name,P1,P2,P3,P4,P5,P6,Daily Status"];
+    let validLogs = [];
+
+    // Optimized Fetch matching C#
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("semester", "==", `Semester ${sem}`)));
+    
+    if (!snap.empty) {
+        snap.forEach(doc => {
+            if (!doc.id.includes("_GLOBAL") && !doc.id.includes("_EVENTS")) validLogs.push({ id: doc.id, ...doc.data() });
+        });
+    }
+
+    if (validLogs.length === 0) return "";
+
+    let groupedLogs = {};
+    validLogs.forEach(doc => {
+        let parts = doc.id.split('_');
+        let key = parts.length >= 2 ? `${parts[0]}_${parts[1]}` : doc.id;
+        if (!groupedLogs[key]) groupedLogs[key] = [];
+        groupedLogs[key].push(doc);
+    });
+
+    Object.keys(groupedLogs).sort().forEach(groupKey => {
+        let keyParts = groupKey.split('_');
+        let dateStr = keyParts[0];
+        let semStr = keyParts.length > 1 ? keyParts[1] : "";
+        let dailyData = groupedLogs[groupKey];
+
+        students.sort((a,b) => a.id.localeCompare(b.id)).forEach(student => {
+            let r = student.id;
+            let name = `"${(student.Name || student.studentName || "").replace(/"/g, '""')}"`;
+            let p = ["-", "-", "-", "-", "-", "-"];
+
+            dailyData.forEach(data => {
+                for (let i = 1; i <= 6; i++) {
+                    if (p[i-1] === "-") p[i-1] = checkNepPeriod(data, `period_${i}`, r);
+                }
+            });
+
+            let present = p.includes("P");
+            let status = present ? "Present" : "Absent";
+
+            sb.push(`${dateStr},${semStr},${r},${name},${p[0]},${p[1]},${p[2]},${p[3]},${p[4]},${p[5]},${status}`);
+        });
+        
+        sb.push(",,,,,,,,,,"); // Spacer
+        sb.push("----------,----------,----------,----------,----------,----------,----------,----------,----------,----------,----------");
+    });
+
+    return sb.join("\n");
+}
+
+function checkNepPeriod(data, periodKey, rollNo) {
+    if (data[periodKey] && data[periodKey].attendance && data[periodKey].attendance[rollNo] !== undefined) {
+        return data[periodKey].attendance[rollNo] === true ? "P" : "A";
+    }
+    return "-";
+}
+
+// 7. SECURE BROWSER FILE DOWNLOADER
+function downloadCSVFile(csvContent, type, sem) {
+    let typeName = type === 0 ? "Marks" : (type === 1 ? "Stats" : "DailyLogs");
+    let safeDept = expDeptName ? expDeptName.replace(/\s+/g, "") : "Dept";
+    
+    // Formatting timestamp: yyyyMMdd_HHmmss
+    let now = new Date();
+    let timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+    let fileName = `${safeDept}_${typeName}_Sem${sem}_${timeStr}.csv`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    
+    // Create an invisible download link and click it
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
