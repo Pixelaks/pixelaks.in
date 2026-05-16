@@ -5240,7 +5240,9 @@ async function asnSaveTimetable() {
                 let teacherName = parts[1];
 
                 let safeSubj = subjectName.replace(/\s+/g, '').replace(/\//g, ''); 
-                let isCom = !asnActiveRows.any(x => x.period === r.period && x.isSplit);
+                
+                // 🚨 THE JAVASCRIPT FIX: Use .some() instead of .any()
+                let isCom = !asnActiveRows.some(x => x.period === r.period && x.isSplit);
                 let sIdxStr = !isCom ? r.splitIndex.toString() : "0";
 
                 // Map document identifiers precisely to match Unity formatting requirements
