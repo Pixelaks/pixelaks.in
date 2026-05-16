@@ -14,7 +14,10 @@
     --brand-red: #dc2626;
     --text-red: #991b1b;
     --text-light-red: #ef4444;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
     --bg-base: #ffffff;
+    --bg-surface: #f8fafc;
     --bg-grid-color: rgba(220, 38, 38, 0.08); 
     --card-bg: rgba(254, 242, 242, 0.9); 
     --border-color: rgba(239, 68, 68, 0.2);
@@ -121,12 +124,25 @@ body {
 
 .dashboard-view { width: 100%; height: 100%; transition: opacity 0.3s ease; }
 .hidden-view { display: none !important; opacity: 0; }
+.scrollable-list::-webkit-scrollbar { width: 4px; }
+.scrollable-list::-webkit-scrollbar-thumb { background: var(--brand-red); border-radius: 4px; }
+
+/* =========================================
+   🚨 COMPONENT STYLES (Attendance & Filters)
+   ========================================= */
+.attd-toggle { position: relative; width: 46px; height: 24px; background: #fecaca; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+.attd-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.attd-toggle.active { background: #10b981; }
+.attd-toggle.active::after { left: 24px; }
+.attd-toggle.locked { opacity: 0.5; cursor: not-allowed; }
+
+.filter-select { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-dark); font-weight: 600; flex: 1; min-width: 100px;}
 
 /* =========================================
    🚨 POPUPS & FULL SETTINGS DRAWER
    ========================================= */
 .modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000;
     visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0.3s;
     display: flex !important; justify-content: center !important; align-items: center !important;
 }
@@ -155,7 +171,6 @@ body {
     font-size: 30px; color: var(--text-red);
 }
 
-/* 🚨 UNIFORM SETTINGS BUTTONS */
 .settings-menu { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 5px;}
 .settings-menu::-webkit-scrollbar { width: 4px; }
 .settings-menu::-webkit-scrollbar-thumb { background: var(--brand-red); border-radius: 4px; }
@@ -187,8 +202,11 @@ body {
    ========================================= */
 body.dark-mode {
     --bg-base: #0f172a;
+    --bg-surface: #1e293b;
     --text-red: #f87171;
     --text-light-red: #fca5a5;
+    --text-dark: #f8fafc;
+    --text-muted: #94a3b8;
     --bg-grid-color: rgba(239, 68, 68, 0.1);
     --card-bg: #1e293b;
     --border-color: #334155;
@@ -204,6 +222,7 @@ body.dark-mode .sidebar { background-color: #0f172a; }
 body.dark-mode .menu-btn { background-color: #1e293b; border-color: #334155; }
 body.dark-mode .nav-icon-btn { color: #94a3b8; }
 body.dark-mode .nav-icon-btn.active-nav { color: var(--brand-red); }
+body.dark-mode .filter-select { background: #1e293b; color: #f8fafc; border-color: #334155; }
 
 body.dark-mode .btn-text, body.dark-mode .btn-icon { color: #f8fafc; }
 
@@ -253,4 +272,3 @@ body.dark-mode .settings-btn:hover { background: #1e293b; border-color: var(--br
         box-shadow: 0 5px 20px rgba(220, 38, 38, 0.2); 
     }
 }
-
