@@ -1510,8 +1510,8 @@ async function hashText(text) {
 
         securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), async (snap) => {
             if (snap.exists() && snap.data().securityPin) {
-                const livePin = snap.data().securityPin;
-                const hashedLivePin = await hashText(livePin);
+                // 🚨 The database now gives us the hash directly!
+                const hashedLivePin = snap.data().securityPin;
                 
                 if (!isFirstSecurityLoad && cachedTeacherPinHash && cachedTeacherPinHash !== hashedLivePin) {
                     isBioEnabledLocally = false;
@@ -1714,9 +1714,13 @@ async function hashText(text) {
                 elLock.btnSubmit.innerText = "Saving...";
                 elLock.btnSubmit.disabled = true;
                 try {
-                    await setDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), { securityPin: val }, { merge: true });
+                    // 🚨 1. Hash the PIN immediately on the device
+                    let hashedPinToSave = await hashText(val);
                     
-                    cachedTeacherPinHash = await hashText(val);
+                    // 🚨 2. Send ONLY the hash to Firebase. The plain text never leaves the computer!
+                    await setDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), { securityPin: hashedPinToSave }, { merge: true });
+                    
+                    cachedTeacherPinHash = hashedPinToSave;
                     
                     isBioEnabledLocally = false;
                     localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "false");
