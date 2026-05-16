@@ -77,6 +77,8 @@ function ListenToProfile() {
             return;
         }
 
+        registerTeacherWebSession();
+
         const data = snapshot.data();
         isHOD = data.isHOD || false;
         currentTeacherName = data.name || "Unknown";
@@ -6309,4 +6311,126 @@ window.addEventListener('load', () => {
         localStorage.removeItem("pendingEventOpen");
         setTimeout(() => document.getElementById("btnNavEventAttendance")?.click(), 1500); 
     }
+    
+    // 🚨 ADDED FOR NEW SIGN-IN NOTIFICATION CLICKS:
+    if (window.location.hash === "#sessions" || localStorage.getItem("pendingSessionOpen") === "true") {
+        localStorage.removeItem("pendingSessionOpen");
+        setTimeout(() => {
+            document.getElementById("btnDevices")?.click();
+        }, 1500); 
+    }
 });
+
+// ==========================================
+// 🚨 DEVICE SESSIONS & KICK ENGINE
+// ==========================================
+let myWebDeviceID = localStorage.getItem("myWebDeviceID");
+let sessionsCache = new Map();
+let activeSessionsListenerUnsub = null;
+
+// 1. Initialize Browser unique hardware string & register platform
+async function registerTeacherWebSession() {
+    if (!myWebDeviceID) {
+        myWebDeviceID = "WEB_" + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        localStorage.setItem("myWebDeviceID", myWebDeviceID);
+    }
+    
+    let osName = "Web Browser";
+    if (navigator.userAgent.indexOf("Win") !== -1) osName = "Windows PC";
+    if (navigator.userAgent.indexOf("Mac") !== -1) osName = "Mac OS";
+    if (navigator.userAgent.indexOf("Linux") !== -1) osName = "Linux PC";
+    if (navigator.userAgent.indexOf("Android") !== -1) osName = "Android Browser";
+    if (navigator.userAgent.indexOf("like Mac") !== -1) osName = "iOS Browser";
+
+    try {
+        const sessionRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID, "sessions", myWebDeviceID);
+        await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, { merge: true });
+        
+        // Listen to our own subcollection document. If deleted, instantly force-kick the browser session!
+        onSnapshot(sessionRef, (docSnap) => {
+            if (!docSnap.exists()) {
+                signOut(auth).then(() => window.location.href = "index.html");
+            }
+        });
+    } catch(e) {
+        console.error("Session registration rejected:", e);
+    }
+}
+
+// 2. Bind UI Open/Close buttons
+document.getElementById("btnDevices")?.addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("active");
+    document.getElementById("sessionsModal").classList.add("active");
+    startSessionsListener();
+});
+
+// 3. Real-Time Sessions Cache Synchronization (Matches C# updateSessionCache)
+function startSessionsListener() {
+    if (activeSessionsListenerUnsub) return;
+
+    const sessionsRef = collection(db, "colleges", currentCollegeID, "teachers", currentUserID, "sessions");
+    
+    activeSessionsListenerUnsub = onSnapshot(sessionsRef, (snap) => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "removed") {
+                sessionsCache.delete(change.doc.id);
+            } else {
+                let d = change.doc.data();
+                sessionsCache.set(change.doc.id, { id: change.doc.id, ...d });
+            }
+        });
+        
+        if (document.getElementById("sessionsModal").classList.contains("active")) {
+            renderActiveSessionsUI();
+        }
+    });
+}
+
+// 4. Render Active Device Cards
+function renderActiveSessionsUI() {
+    let container = document.getElementById("sessionsListContainer");
+    if (!container) return;
+
+    if (sessionsCache.size === 0) {
+        container.innerHTML = `<div class="no-data-text" style="text-align:center; color:#94a3b8; padding:20px;">No active sessions found.</div>`;
+        return;
+    }
+    
+    let htmlBuffer = "";
+    sessionsCache.forEach((d) => {
+        let devName = d.deviceName || "Unknown Device";
+        let isMe = (d.id === myWebDeviceID);
+        if (isMe) devName += " <span style='color:#10b981; font-size:11px;'>(This Browser)</span>";
+        
+        let timeStr = "Recently";
+        if (d.loginTime && d.loginTime.toDate) {
+            timeStr = d.loginTime.toDate().toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        }
+
+        let actionElement = isMe 
+            ? `<span style="font-size:12px; color:#10b981; font-weight:bold; padding: 6px 12px;">Active</span>` 
+            : `<button class="revoke-btn" onclick="window.kickActiveSession('${d.id}')" style="background:#fee2e2; color:var(--brand-red); border:none; padding:6px 14px; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s; font-family:'Poppins'; font-size:12px;">Kick</button>`;
+        
+        htmlBuffer += `
+            <div class="session-card" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface, #f8fafc); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:2px; box-shadow:0 1px 3px rgba(0,0,0,0.01);">
+                <div class="session-info" style="text-align:left;">
+                    <h4 style="margin:0 0 4px 0; font-size:14px; color:var(--text-dark); font-weight:bold;">${devName}</h4>
+                    <p style="margin:0; font-size:11px; color:var(--text-muted); font-weight:600;">Logged in: ${timeStr}</p>
+                </div>
+                ${actionElement}
+            </div>`;
+    });
+    container.innerHTML = htmlBuffer;
+}
+
+// 5. Revoke Session Engine (Kicking functionality)
+window.kickActiveSession = async function(sessionID) {
+    if (!confirm("Are you sure you want to kick this device out of your account?")) return;
+    try {
+        await deleteDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID, "sessions", sessionID));
+        showRcToast("Device kicked! Access revoked.");
+        renderActiveSessionsUI();
+    } catch(e) { 
+        showRcToast("Error revoking session."); 
+    }
+};
