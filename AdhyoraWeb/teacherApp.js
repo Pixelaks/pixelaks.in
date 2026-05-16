@@ -4618,7 +4618,7 @@ function ttRenderDay(periodData) {
         let semText = hasClass ? periodData[i].semester : "-";
         let roomText = hasClass ? periodData[i].room : "-";
         
-        // 🚨 Exact Match to Reference UI: Dashed for empty, solid red + tinted bg for active
+        // Exact Match to Reference UI: Dashed for empty, solid red + tinted bg for active
         let borderStyle = hasClass ? "1px solid var(--brand-red)" : "1px dashed var(--border-color)";
         let bgStyle = hasClass ? "var(--bg-grid-color)" : "transparent"; 
 
