@@ -5651,17 +5651,22 @@ function resetExportBtn(btn) {
     btn.style.opacity = "1";
 }
 
-// 4. CSV GENERATOR: NEP MARKS (Highly Optimized Concurrent Fetch)
+// 4. CSV GENERATOR: NEP MARKS (Highly Optimized Chunked Fetch)
 async function generateNepMarksCSV(students, sem) {
     let globalData = {};
     let semKey = `Semester ${sem}`;
+    let marksSnapshots = [];
+    const CHUNK_SIZE = 30; // 🚀 OPTIMIZATION: Safe batching limit
 
-    // Fetch all student marks concurrently (matches C# Task.WhenAll)
-    let fetchPromises = students.map(s => 
-        getDoc(doc(db, "colleges", currentCollegeID, "students", s.id, "nep_marks", semKey))
-    );
-    
-    let marksSnapshots = await Promise.all(fetchPromises);
+    // Fetch in chunks to prevent Firebase connection throttling and RAM spikes
+    for (let i = 0; i < students.length; i += CHUNK_SIZE) {
+        let chunk = students.slice(i, i + CHUNK_SIZE);
+        let fetchPromises = chunk.map(s => 
+            getDoc(doc(db, "colleges", currentCollegeID, "students", s.id, "nep_marks", semKey))
+        );
+        let chunkResults = await Promise.all(fetchPromises);
+        marksSnapshots.push(...chunkResults);
+    }
 
     for (let i = 0; i < students.length; i++) {
         let student = students[i];
