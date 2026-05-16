@@ -111,12 +111,12 @@ async function finalizeProfileUI(rawName, email, deptName) {
         startInboxListener();
         hasStartedInbox = true;
 
-        // 🚨 THE RACE CONDITION FIX: Force JS to wait for the exact Semester Type 
-        // from the database BEFORE booting up the dropdowns!
+        // 🚨 THE RACE CONDITION FIX
         await syncSemesterWithDatabase();
 
         initAttendanceEngine(); 
         initSubjectDeclarationEngine(); 
+        initCalendarEngine(); // 🚨 Added Calendar Init!
     }
 }
 
@@ -2164,4 +2164,298 @@ async function subjSaveNewSelections() {
         saveBtn.innerText = "Save Selections";
         saveBtn.style.pointerEvents = "auto";
     }
+}
+
+// ==========================================
+// 🚨 ACADEMIC CALENDAR ENGINE
+// ==========================================
+let calDisplayDate = new Date();
+let calTodayDate = new Date();
+let calCachedAcademicYear = "";
+let calIsInit = false;
+
+// The Static Caches (Survives tab switches!)
+let calCachedCollegeID = "";
+let calVersionListenerUnsub = null;
+let calCachedVersion = "";
+
+let calWorkingDays = new Set();
+let calNonWorkingDays = new Map();
+let calSemStartDates = new Map();
+let calSemEndDates = new Map();
+let calAvailableYears = [];
+
+let calPopupTimeout = null;
+
+document.getElementById("calPrevMonthBtn")?.addEventListener("click", () => {
+    calDisplayDate.setMonth(calDisplayDate.getMonth() - 1);
+    calFetchDataForMonth();
+});
+
+document.getElementById("calNextMonthBtn")?.addEventListener("click", () => {
+    calDisplayDate.setMonth(calDisplayDate.getMonth() + 1);
+    calFetchDataForMonth();
+});
+
+async function initCalendarEngine() {
+    if (calIsInit && calCachedCollegeID === currentCollegeID) return;
+    
+    calTodayDate = new Date();
+    calDisplayDate = new Date();
+    calCachedCollegeID = currentCollegeID;
+    
+    document.getElementById("calMonthYearText").innerText = "Loading...";
+    
+    calStartVersionListener();
+    await calFetchAvailableYears();
+    await calFetchDataForMonth();
+    
+    calIsInit = true;
+}
+
+function calStartVersionListener() {
+    if (calVersionListenerUnsub) return; // Already listening
+    
+    const versionRef = doc(db, "colleges", currentCollegeID, "system_flags", "calendar_version");
+    calVersionListenerUnsub = onSnapshot(versionRef, async (snapshot) => {
+        if (snapshot.exists() && snapshot.data().updatedAt) {
+            let latestVersion = snapshot.data().updatedAt.toString();
+            
+            if (calCachedVersion === "") {
+                calCachedVersion = latestVersion;
+            } else if (calCachedVersion !== latestVersion) {
+                // Principal updated the calendar! Wipe cache and refresh!
+                calCachedVersion = latestVersion;
+                calWorkingDays.clear();
+                calNonWorkingDays.clear();
+                calSemStartDates.clear();
+                calSemEndDates.clear();
+                calAvailableYears = [];
+                calCachedAcademicYear = "";
+                
+                // If user is currently looking at the calendar, refresh it immediately
+                if (document.getElementById("calendarView").classList.contains("active")) {
+                    await calFetchAvailableYears();
+                    await calFetchDataForMonth();
+                }
+            }
+        }
+    });
+}
+
+async function calFetchAvailableYears() {
+    try {
+        let snap = await getDocs(collection(db, "colleges", currentCollegeID, "semesters"));
+        calAvailableYears = [];
+        snap.forEach(docSnap => {
+            let parts = docSnap.id.split('-');
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                calAvailableYears.push({ startYear: parseInt(parts[0]), endYear: parseInt(parts[1]) });
+            }
+        });
+        calAvailableYears.sort((a, b) => b.startYear - a.startYear);
+    } catch(e) { console.error("Error fetching available years:", e); }
+}
+
+async function calFetchDataForMonth() {
+    let targetYearStr = "";
+    let dYear = calDisplayDate.getFullYear();
+    let dMonth = calDisplayDate.getMonth() + 1; // 1-12
+
+    for (let yr of calAvailableYears) {
+        if (dYear === yr.startYear && dMonth >= 6) { targetYearStr = `${yr.startYear}-${yr.endYear}`; break; }
+        if (dYear === yr.endYear && dMonth <= 5) { targetYearStr = `${yr.startYear}-${yr.endYear}`; break; }
+    }
+
+    if (!targetYearStr) {
+        let fallbackStart = dMonth >= 6 ? dYear : dYear - 1;
+        targetYearStr = `${fallbackStart}-${fallbackStart + 1}`;
+    }
+
+    if (calCachedAcademicYear !== targetYearStr) {
+        calCachedAcademicYear = targetYearStr;
+        await calFetchYearData(targetYearStr);
+    }
+
+    calGenerateGrid();
+    calUpdateUpcomingEvent();
+}
+
+async function calFetchYearData(yearID) {
+    calSemStartDates.clear();
+    calSemEndDates.clear();
+    calWorkingDays.clear();
+    calNonWorkingDays.clear();
+
+    try {
+        const [semSnap, workSnap, holSnap] = await Promise.all([
+            getDoc(doc(db, "colleges", currentCollegeID, "semesters", yearID)),
+            getDoc(doc(db, "colleges", currentCollegeID, "workingDays", yearID)),
+            getDoc(doc(db, "colleges", currentCollegeID, "nonWorkingDays", yearID))
+        ]);
+
+        if (semSnap.exists()) {
+            let data = semSnap.data();
+            let parseSem = (key, name) => {
+                if (data[key]) {
+                    if (data[key].startDate) calSemStartDates.set(name, data[key].startDate);
+                    if (data[key].endDate) calSemEndDates.set(name, data[key].endDate);
+                }
+            };
+            parseSem("oddSemester", "Odd");
+            parseSem("evenSemester", "Even");
+        }
+
+        if (workSnap.exists()) {
+            Object.keys(workSnap.data()).forEach(k => calWorkingDays.add(k));
+        }
+
+        if (holSnap.exists()) {
+            let data = holSnap.data();
+            Object.keys(data).forEach(k => calNonWorkingDays.set(k, String(data[k])));
+        }
+    } catch(e) { console.error("Error fetching year data:", e); }
+}
+
+function calGenerateGrid() {
+    const grid = document.getElementById("calGridContainer");
+    grid.innerHTML = "";
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    document.getElementById("calMonthYearText").innerText = `${monthNames[calDisplayDate.getMonth()]} ${calDisplayDate.getFullYear()}`;
+
+    let y = calDisplayDate.getFullYear();
+    let m = calDisplayDate.getMonth();
+    
+    let firstDayIndex = new Date(y, m, 1).getDay();
+    let daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    let mStr = String(m + 1).padStart(2, '0');
+
+    // Empty slots before 1st of month
+    for (let i = 0; i < firstDayIndex; i++) {
+        let emptyCell = document.createElement("div");
+        emptyCell.style.padding = "10px";
+        grid.appendChild(emptyCell);
+    }
+
+    // Days
+    for (let day = 1; day <= daysInMonth; day++) {
+        let dStr = String(day).padStart(2, '0');
+        let dateKey = `${y}-${mStr}-${dStr}`;
+        let dateObj = new Date(y, m, day);
+        let dayOfWeek = dateObj.getDay();
+
+        let isToday = (calTodayDate.getFullYear() === y && calTodayDate.getMonth() === m && calTodayDate.getDate() === day);
+
+        let cell = document.createElement("button");
+        cell.style.cssText = `
+            width: 100%; aspect-ratio: 1; border: none; border-radius: 12px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: bold; background: white; color: var(--text-dark);
+            transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        `;
+
+        let subText = "";
+        let reasonToPopup = "";
+        let textColor = "var(--text-dark)";
+
+        // Check Semesters
+        let startSem = [...calSemStartDates].find(([k, v]) => v === dateKey)?.[0];
+        let endSem = [...calSemEndDates].find(([k, v]) => v === dateKey)?.[0];
+
+        if (startSem) {
+            textColor = "#3b82f6"; // Blue
+            subText = "Start";
+            reasonToPopup = `${startSem} Semester Starts`;
+        } else if (endSem) {
+            textColor = "#3b82f6"; // Blue
+            subText = "End";
+            reasonToPopup = `${endSem} Semester Ends`;
+        } else {
+            // Check Holidays & Weekends
+            if (calWorkingDays.has(dateKey)) {
+                textColor = "var(--text-dark)";
+            } else if (calNonWorkingDays.has(dateKey)) {
+                textColor = "var(--brand-red)";
+                reasonToPopup = calNonWorkingDays.get(dateKey);
+            } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                textColor = "var(--brand-red)";
+            }
+        }
+
+        if (isToday) {
+            cell.style.background = "#10b981"; // Today Green
+            cell.style.color = "white";
+            textColor = "white";
+        } else {
+            cell.style.color = textColor;
+        }
+
+        cell.innerHTML = `<span>${day}</span>`;
+        if (subText) {
+            cell.innerHTML += `<span style="font-size:10px; font-weight:normal; margin-top:2px;">${subText}</span>`;
+        }
+
+        if (reasonToPopup) {
+            cell.addEventListener("click", () => calShowPopup(reasonToPopup));
+        }
+
+        grid.appendChild(cell);
+    }
+}
+
+function calUpdateUpcomingEvent() {
+    let checkDate = new Date();
+    let foundReason = "";
+    let foundDateStr = "";
+    let found = false;
+
+    // Scan the next 60 days exactly like Unity
+    for (let i = 0; i < 60; i++) {
+        let futureDate = new Date(checkDate);
+        futureDate.setDate(checkDate.getDate() + i);
+        
+        let y = futureDate.getFullYear();
+        let m = String(futureDate.getMonth() + 1).padStart(2, '0');
+        let d = String(futureDate.getDate()).padStart(2, '0');
+        let dateKey = `${y}-${m}-${d}`;
+        let dayOfWeek = futureDate.getDay();
+
+        if (calNonWorkingDays.has(dateKey)) {
+            foundReason = calNonWorkingDays.get(dateKey);
+            if (foundReason === "Holiday/Weekend") foundReason = "Holiday";
+            foundDateStr = `${futureDate.getDate()} | ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][futureDate.getMonth()]} ${y}`;
+            found = true;
+            break;
+        }
+
+        if ((dayOfWeek === 0 || dayOfWeek === 6) && !calWorkingDays.has(dateKey)) {
+            foundReason = "Weekend";
+            foundDateStr = `${futureDate.getDate()} | ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][futureDate.getMonth()]} ${y}`;
+            found = true;
+            break;
+        }
+    }
+
+    let textEl = document.getElementById("calUpcomingEventText");
+    if (found) {
+        textEl.innerHTML = `<span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Upcoming</span><br><span style="font-size:18px; font-weight:bold; color:var(--brand-red);">${foundDateStr}</span><br><b>${foundReason}</b>`;
+    } else {
+        textEl.innerHTML = `No upcoming holidays`;
+    }
+}
+
+function calShowPopup(reason) {
+    let popup = document.getElementById("calHolidayPopup");
+    document.getElementById("calHolidayReasonText").innerText = reason;
+    
+    popup.style.bottom = "100px";
+    popup.style.opacity = "1";
+    
+    if (calPopupTimeout) clearTimeout(calPopupTimeout);
+    calPopupTimeout = setTimeout(() => {
+        popup.style.bottom = "30px";
+        popup.style.opacity = "0";
+    }, 2000);
 }
