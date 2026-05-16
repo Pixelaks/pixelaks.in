@@ -36,6 +36,9 @@ body {
     background: rgba(20, 20, 20, 0.35); 
     backdrop-filter: blur(8px); 
     -webkit-backdrop-filter: blur(8px);
+
+    transform: translateZ(0);
+    will-change: transform, backdrop-filter;
     
     border: 1px solid rgba(255, 255, 255, 0.08); 
     border-top: 1px solid rgba(255, 255, 255, 0.15);
@@ -78,7 +81,13 @@ body {
     line-height: 1.1;
     display: inline-block;
     color: var(--primary-green);
-    filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.4));
+    
+    /* REPLACE THIS: */
+    /* filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.4)); */
+    
+    /* WITH THIS: */
+    text-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+    
     margin-bottom: 5px;
 }
 
