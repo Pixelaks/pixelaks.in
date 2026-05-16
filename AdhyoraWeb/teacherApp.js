@@ -6470,7 +6470,6 @@ function fetchAsgnTeacherSubjects() {
     });
 }
 
-// Execution Core Logic (Target Audience Analysis + Reminder Queue + Push Delivery)
 async function executeCreateAssignment() {
     if (asgnIsProcessing) return;
 
@@ -6502,9 +6501,8 @@ async function executeCreateAssignment() {
     let standardizedDateISO = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}T23:59:59Z`;
 
     try {
-        // Evaluate Category Layer (Fuzzy check for Core vs Elective exactly matching Unity)
         let isMjdOrCore = false;
-        let targetDeptName = expDeptName; // Use current department display name from settings loader cache
+        let targetDeptName = expDeptName; 
 
         const subSnap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         for (let docObj of subSnap.docs) {
@@ -6512,7 +6510,7 @@ async function executeCreateAssignment() {
             let dName = data.name || data.Name || "";
 
             if (dName.replace(/\s+/g, "").toLowerCase() === selectedSubject.replace(/\s+/g, "").toLowerCase()) {
-                let type = (data.type || data.type || "").toUpperCase();
+                let type = (data.type || data.Type || "").toUpperCase();
                 if (type.includes("MJD") || type.includes("CORE") || type.includes("MAJOR")) {
                     isMjdOrCore = true;
                 }
@@ -6522,16 +6520,15 @@ async function executeCreateAssignment() {
                     let safeFetch = fetchedDept.replace(/\s+/g, "").toLowerCase();
                     let safeCurrent = expDeptName.replace(/\s+/g, "").toLowerCase();
                     if (safeCurrent.includes(safeFetch) || safeFetch.includes(safeCurrent)) {
-                        targetDeptName = expDeptName; // Auto-correct matching
+                        targetDeptName = expDeptName; 
                     } else {
-                        targetDeptName = fetchedDept; // Cross-Department Elective
+                        targetDeptName = fetchedDept; 
                     }
                 }
                 break;
             }
         }
 
-        // A. Save Document to Database
         showRcToast("Posting Assignment Document...");
         let assignmentPayload = {
             teacherID: currentUserID,
@@ -6548,18 +6545,15 @@ async function executeCreateAssignment() {
 
         await addDoc(collection(db, "colleges", currentCollegeID, "assignments"), assignmentPayload);
 
-        // B. Dynamic Push Notification Router Engine
         let pushTopic = "";
         let targetTokens = [];
         let pushTitle = `New Assignment • ${currentTeacherName}`;
         let pushBody = `A new assignment has been posted for ${selectedSubject}.`;
 
         if (isMjdOrCore) {
-            // ROUTE A: BROADCAST (CORE SUBJECTS)
             pushTopic = `${getSafeTopic(currentCollegeID)}_STUDENTS_${getSafeTopic(targetDeptName)}_${getSafeTopic("Year" + Math.ceil(parseInt(semNum) / 2))}`;
             sendPushNotification(pushTitle, pushBody, null, [pushTopic]);
         } else {
-            // ROUTE B: SAFE ELECTIVE TOKEN INTERCEPTION 
             let targetYearStr = Math.ceil(parseInt(semNum) / 2).toString();
             const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYearStr)));
             
@@ -6577,7 +6571,6 @@ async function executeCreateAssignment() {
                 }
 
                 if (isEnrolled) {
-                    // Extract Mobile and Web push token strings securely
                     if (sData.fcmTokens) sData.fcmTokens.forEach(t => { if(t && !targetTokens.includes(t)) targetTokens.push(t); });
                     else if (sData.fcmToken && !targetTokens.includes(sData.fcmToken)) targetTokens.push(sData.fcmToken);
 
@@ -6591,7 +6584,6 @@ async function executeCreateAssignment() {
             }
         }
 
-        // C. Queue Automation Reminders Token Map
         let reminderPayload = {
             topic: pushTopic || "",
             tokens: targetTokens,
