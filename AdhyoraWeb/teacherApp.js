@@ -4897,13 +4897,14 @@ async function asnPopulateSubjects(row) {
     if (!subDrop) return;
 
     if (row.category.toLowerCase().includes("tutorial")) {
-        subDrop.innerHTML = `<option value="Tutorial">Tutorial</option>`;
+        subDrop.innerHTML = `<option value="Tutorial" selected>Tutorial</option>`;
         subDrop.disabled = true;
         asnPopulateTeachers(row);
         return;
     }
 
     subDrop.innerHTML = `<option value="">Loading...</option>`;
+    let cleanRowSubject = (row.subject || "").trim().toLowerCase();
 
     try {
         const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
@@ -4933,16 +4934,13 @@ async function asnPopulateSubjects(row) {
             subList.sort();
             subList = [...new Set(subList)]; 
             
-            let opts = `<option value="">Select Subject</option>`;
-            subList.forEach(s => opts += `<option value="${s}">${s}</option>`);
+            // Build the selected attribute directly into the HTML!
+            let opts = `<option value="" ${cleanRowSubject ? '' : 'selected'}>Select Subject</option>`;
+            subList.forEach(s => {
+                let isMatch = cleanRowSubject === s.trim().toLowerCase();
+                opts += `<option value="${s}" ${isMatch ? 'selected' : ''}>${s}</option>`;
+            });
             subDrop.innerHTML = opts;
-            
-            // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded subject
-            if (row.subject) {
-                let match = Array.from(subDrop.options).find(o => o.text === row.subject);
-                if (match) subDrop.value = match.value;
-            }
-            
             asnPopulateTeachers(row);
         }
     } catch(e) {
@@ -4962,30 +4960,24 @@ async function asnPopulateTeachers(row) {
     }
 
     let isTutorial = row.subject.toLowerCase() === "tutorial" || row.category.toLowerCase().includes("tutorial");
+    let cleanRowTeacher = (row.teacher || "").trim().toLowerCase();
     
     if (isTutorial) {
         let safeHodDept = teacherDeptRaw.replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
-        let opts = `<option value="">Unassigned</option>`;
+        let opts = `<option value="" ${cleanRowTeacher ? '' : 'selected'}>Unassigned</option>`;
         
         asnCachedTeachers.forEach(t => {
             let tDept = (t.dept || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
             if (tDept === safeHodDept || safeHodDept.includes(tDept)) {
-                opts += `<option value="${t.id}|${t.name}">${t.name}</option>`;
+                let isMatch = cleanRowTeacher === t.name.trim().toLowerCase();
+                opts += `<option value="${t.id}|${t.name}" ${isMatch ? 'selected' : ''}>${t.name}</option>`;
             }
         });
-        
         teaDrop.innerHTML = opts;
-        
-        // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded teacher
-        if (row.teacher) {
-            let match = Array.from(teaDrop.options).find(o => o.text === row.teacher);
-            if (match) teaDrop.value = match.value;
-        }
-        
     } else {
         try {
             const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("subjectName", "==", row.subject), where("isActive", "==", true)));
-            let opts = `<option value="">Unassigned</option>`;
+            let opts = `<option value="" ${cleanRowTeacher ? '' : 'selected'}>Unassigned</option>`;
             let foundNames = new Set();
             
             snap.forEach(d => {
@@ -4994,19 +4986,13 @@ async function asnPopulateTeachers(row) {
                 let tID = data.teacherID || "";
                 if (!foundNames.has(tName)) {
                     foundNames.add(tName);
-                    opts += `<option value="${tID}|${tName}">${tName}</option>`;
+                    let isMatch = cleanRowTeacher === tName.trim().toLowerCase();
+                    opts += `<option value="${tID}|${tName}" ${isMatch ? 'selected' : ''}>${tName}</option>`;
                 }
             });
             
             if (foundNames.size === 0) opts += `<option value="">No faculty assigned</option>`;
             teaDrop.innerHTML = opts;
-            
-            // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded teacher
-            if (row.teacher) {
-                let match = Array.from(teaDrop.options).find(o => o.text === row.teacher);
-                if (match) teaDrop.value = match.value;
-            }
-            
         } catch(e) {
             console.error(e);
             teaDrop.innerHTML = `<option value="">Error</option>`;
@@ -5023,29 +5009,64 @@ window.asnOnCatChange = (rowId, val) => {
 window.asnOnSubChange = (rowId, val) => {
     let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
     row.subject = val; row.teacher = ""; row.teacherID = ""; row.room = "";
-    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); // Wipe old splits
+    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); 
     
-    // Auto restore if they had batches saved!
     if (val) {
-        let safeSubj = val.replace(/\s+/g, '').replace(/\//g, '');
-        let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${row.period}_0_${safeSubj}`;
-        
-        getDoc(doc(db, "colleges", currentCollegeID, "timetable_allocations", docID)).then(snap => {
-            if (snap.exists()) {
-                row.teacher = snap.data().teacherName || ""; row.teacherID = snap.data().teacherID || ""; row.room = snap.data().room || "";
+        // Query ALL allocations for this period/subject to capture splits
+        getDocs(query(
+            collection(db, "colleges", currentCollegeID, "timetable_allocations"),
+            where("semester", "==", asnCurrentSem),
+            where("day", "==", asnSelectedDay),
+            where("period", "==", row.period.toString()),
+            where("subjectName", "==", val)
+        )).then(snap => {
+            if (!snap.empty) {
+                let allocs = [];
+                snap.forEach(d => allocs.push(d.data()));
+                
+                // Sort by split index securely
+                allocs.sort((a,b) => (parseInt(a.splitIndex)||0) - (parseInt(b.splitIndex)||0));
+                
+                // Restore the main row (Batch 1 / Common)
+                let mainAlloc = allocs[0];
+                row.teacher = mainAlloc.teacherName || "";
+                row.teacherID = mainAlloc.teacherID || "";
+                row.room = mainAlloc.room || "";
+
                 // Check if batched
                 getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", val))).then(bSnap => {
                     if (bSnap.size > 1) {
                         let bDocs = []; bSnap.forEach(d => bDocs.push(d.data())); bDocs.sort((a,b) => a.batchName.localeCompare(b.batchName));
                         for(let i=1; i<bDocs.length; i++) {
-                            asnActiveRows.push({ id: `r_${row.period}_${i}_${Date.now()}`, period: row.period, splitIndex: i, isSplit: true, category: row.category, subject: val, teacher: "", teacherID: "", room: "" });
+                            
+                            // 🚨 Safely pull the corresponding teacher for this specific batch
+                            let matchAlloc = allocs.find(a => parseInt(a.splitIndex) === i);
+                            let tName = matchAlloc ? matchAlloc.teacherName : "";
+                            let tID = matchAlloc ? matchAlloc.teacherID : "";
+                            let tRoom = matchAlloc ? matchAlloc.room : "";
+
+                            asnActiveRows.push({ 
+                                id: `r_${row.period}_${i}_${Date.now()}`, 
+                                period: row.period, 
+                                splitIndex: i, 
+                                isSplit: true, 
+                                category: row.category, 
+                                subject: val, 
+                                teacher: tName, 
+                                teacherID: tID, 
+                                room: tRoom 
+                            });
                         }
                     }
                     asnRenderLayout();
                 });
-            } else asnRenderLayout();
+            } else {
+                asnRenderLayout();
+            }
         });
-    } else asnRenderLayout();
+    } else {
+        asnRenderLayout();
+    }
 };
 window.asnOnTeacherChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; if(val){ let parts = val.split('|'); row.teacherID = parts[0]; row.teacher = parts[1]; } else { row.teacherID = ""; row.teacher = ""; } };
 window.asnOnRoomChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; row.room = val; };
