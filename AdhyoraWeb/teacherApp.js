@@ -6032,14 +6032,20 @@ async function sendPrivateMessageToDatabase(title, body, targetID, targetName, s
 }
 
 // 4. WEBHOOK EXECUTOR
-function sendPushNotification(title, body, tokens, topics) {
+// 🚨 FIX 1: Added 'customType' parameter (defaults to "chat")
+function sendPushNotification(title, body, tokens, topics, customType = "chat") {
     let finalTitle = `${title} • ${currentTeacherName} (Teacher)`;
     let iconUrl = "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/80f18d76be90054cccf1b1ddd5d04d8282635b59/AdhyoraRedSplashIcon.png";
-    let messageType = "chat";
-    let payload = { title: finalTitle, body: body, image: iconUrl, type: messageType, priority: "high" };
+    
+    // 🚨 FIX 2: Apply the customType to the payload
+    let payload = { title: finalTitle, body: body, image: iconUrl, type: customType, priority: "high" };
+    
     if (tokens && tokens.length > 0) payload.tokens = tokens;
     else if (topics && topics.length > 0) payload.topics = topics;
-    fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(e => console.log("Push notification skipped.", e));
+    
+    fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", { 
+        method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) 
+    }).catch(e => console.log("Push notification skipped.", e));
 }
 
 // ==========================================
@@ -6517,7 +6523,7 @@ async function executeCreateAssignment() {
 
         if (isMjdOrCore) {
             pushTopic = `${getSafeTopic(currentCollegeID)}_STUDENTS_${getSafeTopic(targetDeptName)}_${getSafeTopic("Year" + Math.ceil(parseInt(semNum) / 2))}`;
-            sendPushNotification(pushTitle, pushBody, null, [pushTopic]);
+            sendPushNotification(pushTitle, pushBody, null, [pushTopic], "assignment");
         } else {
             let targetYearStr = Math.ceil(parseInt(semNum) / 2).toString();
             const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYearStr)));
@@ -6545,7 +6551,7 @@ async function executeCreateAssignment() {
             });
 
             if (targetTokens.length > 0) {
-                sendPushNotification(pushTitle, pushBody, targetTokens, null);
+                sendPushNotification(pushTitle, pushBody, targetTokens, null, "assignment");
             }
         }
 
