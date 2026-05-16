@@ -9,6 +9,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="theme-color" content="#0a0a0a">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Adhyora">
+    
+    <link rel="apple-touch-icon" href="../AdhyoraSplashLogo5.png">
+    
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js" integrity="sha256-W8yB8zR21tXW9x2w8eG+A1/Tq7k0O5M+q6Y1R3w5K8g=" crossorigin="anonymous"></script>
 </head>
 <body class="light-mode">
@@ -741,6 +752,18 @@
     </div>
 
     <div id="rcToast" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: bottom 0.3s; z-index: 9999;">Notification</div>
+
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                    .then(reg => console.log('Service Worker Active on Dashboard!', reg))
+                    .catch(err => console.error('Service Worker Registration Failed!', err));
+            });
+        }
+    </script>
+    
 
     <script type="module" src="principalApp.js"></script>
 </body>
