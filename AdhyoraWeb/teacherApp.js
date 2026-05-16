@@ -4603,28 +4603,30 @@ function ttRenderDay(periodData) {
         let pNum = i + 1;
         let idBase = `my_tt_${i}`;
         
-        let catText = hasClass ? periodData[i].category : "Leisure";
+        let catText = hasClass ? periodData[i].category : "LEISURE";
         let subText = hasClass ? periodData[i].subject : "No Class";
         let semText = hasClass ? periodData[i].semester : "-";
         let roomText = hasClass ? periodData[i].room : "-";
         
-        let bgStyle = hasClass ? "rgba(220, 38, 38, 0.05)" : "var(--bg-surface)";
-        let borderStyle = hasClass ? "var(--brand-red)" : "var(--border-color)";
+        // Match screenshot logic: Dashed borders for unassigned, solid for assigned, hidden for empty
+        let borderStyle = hasClass ? "2px solid var(--brand-red)" : "2px solid transparent";
+        let bgStyle = hasClass ? "white" : "transparent";
 
         html += `
         <div class="tt-row" id="row_${idBase}">
             <div class="tt-timeline-col">
-                <div class="tt-node" id="node_${idBase}" style="border-color:${borderStyle}; color:${hasClass ? 'var(--brand-red)' : 'var(--text-muted)'}">${pNum}</div>
-                ${i < 5 ? `<div class="tt-line-bg" style="background:var(--border-color);"><div class="tt-line-fill" id="fill_${idBase}" style="background:var(--brand-red);"></div></div>` : ''}
+                <div class="tt-node" id="node_${idBase}" style="border-color:${hasClass ? 'var(--brand-red)' : '#cbd5e1'}; color:${hasClass ? 'var(--brand-red)' : '#94a3b8'};">${pNum}</div>
+                ${i < 5 ? `<div class="tt-line-bg"><div class="tt-line-fill" id="fill_${idBase}" style="background:var(--brand-red);"></div></div>` : ''}
             </div>
-            <div class="tt-card" style="background:${bgStyle}; border-color:${borderStyle}; display:flex; justify-content:space-between; align-items:center; padding:15px; border-radius:12px; flex:1;">
-                <div>
-                    <div style="font-size:12px; font-weight:800; color:var(--brand-red); text-transform:uppercase; margin-bottom:2px;">${catText}</div>
+            
+            <div class="tt-card" style="background:${bgStyle}; border:${borderStyle};">
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:12px; font-weight:800; color:${hasClass ? 'var(--brand-red)' : 'var(--text-muted)'}; text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">${catText}</div>
                     <div style="font-size:15px; font-weight:bold; color:var(--text-dark);">${subText}</div>
                 </div>
-                <div style="text-align:right;">
-                    <div style="font-size:13px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${roomText}</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:600;">${semText}</div>
+                <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
+                    <div style="font-size:14px; font-weight:bold; color:var(--text-dark); margin-bottom:5px;">${roomText}</div>
+                    <div style="font-size:12px; font-weight:600; color:var(--text-muted);">${semText}</div>
                 </div>
             </div>
         </div>`;
@@ -4787,23 +4789,24 @@ function asnRenderLayout() {
         groupedRows[r.period].push(r);
     });
 
-    let html = "";
+    // 🚨 FIX 1: Wrapping everything in your 'asn-periods-grid' CSS class
+    let html = `<div class="asn-periods-grid">`;
+    
     Object.keys(groupedRows).sort((a,b) => a - b).forEach(p => {
         let rows = groupedRows[p].sort((a,b) => a.splitIndex - b.splitIndex);
         
-        html += `<div class="asn-period-wrapper" style="background:white; border:2px solid var(--border-color); border-radius:16px; padding:15px; display:flex; flex-direction:column; gap:15px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">`;
-        html += `<div style="text-align:center; font-weight:800; color:var(--brand-red); font-size:16px; text-transform:uppercase; letter-spacing:1px;">Period ${p}</div>`;
+        // 🚨 FIX 2: Relying purely on 'asn-period-wrapper' and 'asn-period-header'
+        html += `<div class="asn-period-wrapper">`;
+        html += `<div class="asn-period-header">Period ${p}</div>`;
         
         rows.forEach((row, idx) => {
             let isMjdOrTut = row.category.toUpperCase().includes("MJD") || row.category.toUpperCase().includes("MID") || row.category.toUpperCase().includes("SEC") || row.category.toUpperCase().includes("TUTORIAL");
             
-            // Generate Category Dropdown
             let catOptions = "";
             if (isMjdOrTut) {
                 let mjd = row.category.replace("MID", "MJD").replace("SEC", "MJD");
                 let mid = row.category.replace("MJD", "MID").replace("SEC", "MID");
                 let sec = row.category.replace("MJD", "SEC").replace("MID", "SEC");
-                
                 catOptions += `<option value="${mjd}" ${row.category === mjd ? 'selected' : ''}>${mjd}</option>`;
                 catOptions += `<option value="${mid}" ${row.category === mid ? 'selected' : ''}>${mid}</option>`;
                 catOptions += `<option value="${sec}" ${row.category === sec ? 'selected' : ''}>${sec}</option>`;
@@ -4816,43 +4819,45 @@ function asnRenderLayout() {
             let subLocked = row.isSplit ? "disabled" : "";
 
             let isDel = row.isSplit; 
-            let btnClass = isDel ? "background:#fca5a5; color:var(--text-dark);" : "background:var(--bg-surface); border:1px solid var(--border-color); color:var(--text-dark);"; 
+            let btnClass = isDel ? "asn-split-btn del" : "asn-split-btn"; 
             let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : '<i class="fas fa-cut"></i> Split';
-            let cardStyle = isDel ? "background:#fff5f5; border-color:var(--brand-red);" : "background:white; border-color:var(--border-color);";
+            let cardClass = isDel ? "asn-card split" : "asn-card";
 
             let badgeHtml = "";
             if (rows.length > 1) {
-                badgeHtml = `<div style="position:absolute; top:-12px; left:15px; background:var(--brand-red); color:white; font-size:11px; padding:4px 12px; border-radius:12px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1); text-transform:uppercase;">Batch ${idx + 1}</div>`;
+                badgeHtml = `<div class="asn-batch-badge" style="background:var(--brand-red); color:white;">Batch ${idx + 1}</div>`;
             }
 
+            // 🚨 FIX 3: Using 'asn-card' and 'asn-grid' with 'asn-input' cleanly
             html += `
-            <div class="asn-card" id="card_${row.id}" style="${cardStyle} width:100%; border-radius:12px; padding:20px 15px 15px 15px; position:relative; border-width:1px; border-style:solid; margin-top:${isDel ? '10px' : '0'};">
+            <div class="${cardClass}" id="card_${row.id}">
                 ${badgeHtml}
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
-                    <select class="filter-select" id="cat_${row.id}" ${catLocked} onchange="asnOnCatChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">${catOptions}</select>
-                    <select class="filter-select" id="sub_${row.id}" ${subLocked} onchange="asnOnSubChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                <div class="asn-grid">
+                    <select class="asn-input select" id="cat_${row.id}" ${catLocked} onchange="asnOnCatChange('${row.id}', this.value)">${catOptions}</select>
+                    <select class="asn-input select" id="sub_${row.id}" ${subLocked} onchange="asnOnSubChange('${row.id}', this.value)">
                         <option value="">${row.subject ? row.subject : 'Loading...'}</option>
                     </select>
-                    <select class="filter-select" id="tea_${row.id}" onchange="asnOnTeacherChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                    <select class="asn-input select" id="tea_${row.id}" onchange="asnOnTeacherChange('${row.id}', this.value)">
                         <option value="">${row.teacher ? row.teacher : 'Loading...'}</option>
                     </select>
-                    <input type="text" class="filter-select" id="rm_${row.id}" value="${row.room}" placeholder="Room TBD" onchange="asnOnRoomChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                    <input type="text" class="asn-input" id="rm_${row.id}" value="${row.room}" placeholder="Room TBD" onchange="asnOnRoomChange('${row.id}', this.value)">
                 </div>
-                <button onclick="asnRequestSplit('${row.id}')" style="width:100%; border-radius:8px; font-weight:700; font-size:14px; padding:8px; cursor:pointer; transition:0.2s; ${btnClass}">${btnIcon}</button>
+                <button class="${btnClass}" onclick="asnRequestSplit('${row.id}')">${btnIcon}</button>
             </div>`;
         });
         html += `</div>`;
     });
+    html += `</div>`; // Close grid
 
     container.innerHTML = html;
     
-    // Auto-populate dropdowns silently
     asnActiveRows.forEach(row => {
         asnPopulateSubjects(row);
     });
 }
 
-function asnPopulateSubjects(row) {
+// 🚨 FIX 4: Replaced C# db.Collection with Web getDocs(query(...))
+async function asnPopulateSubjects(row) {
     let subDrop = document.getElementById(`sub_${row.id}`);
     if (!subDrop) return;
 
@@ -4865,33 +4870,36 @@ function asnPopulateSubjects(row) {
 
     subDrop.innerHTML = `<option value="">Loading...</option>`;
     
-    db.Collection("colleges").Document(currentCollegeID).Collection("subjects")
-      .WhereEqualTo("department", teacherDeptRaw)
-      .GetSnapshotAsync().ContinueWithOnMainThread(task => {
-          if (!task.IsCompletedSuccessfully) return;
-          
-          let subList = [];
-          task.Result.Documents.forEach(d => {
-              let docSem = d.ContainsField("semester") ? d.GetValue("semester") : "";
-              if (docSem.split(',').some(s => s.trim() == asnCurrentSem)) {
-                  let docType = d.ContainsField("type") ? d.GetValue("type").trim() : "";
-                  if (docType == row.category) subList.push(d.GetValue("name"));
-              }
-          });
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subjects"), where("department", "==", teacherDeptRaw)));
+        let subList = [];
+        
+        snap.forEach(d => {
+            let data = d.data();
+            let docSem = data.semester || data.Semester || "";
+            if (docSem.toString().split(',').some(s => s.trim() == asnCurrentSem)) {
+                let docType = (data.type || data.Type || "").trim();
+                if (docType === row.category) subList.push(data.name || data.Name);
+            }
+        });
 
-          if (subList.length === 0) {
-              subDrop.innerHTML = `<option value="">No Subjects</option>`;
-          } else {
-              subList.sort();
-              let opts = `<option value="">Select Subject</option>`;
-              subList.forEach(s => opts += `<option value="${s}" ${s === row.subject ? 'selected' : ''}>${s}</option>`);
-              subDrop.innerHTML = opts;
-              asnPopulateTeachers(row);
-          }
-      });
+        if (subList.length === 0) {
+            subDrop.innerHTML = `<option value="">No Subjects</option>`;
+        } else {
+            subList.sort();
+            let opts = `<option value="">Select Subject</option>`;
+            subList.forEach(s => opts += `<option value="${s}" ${s === row.subject ? 'selected' : ''}>${s}</option>`);
+            subDrop.innerHTML = opts;
+            asnPopulateTeachers(row);
+        }
+    } catch(e) {
+        console.error(e);
+        subDrop.innerHTML = `<option value="">Error</option>`;
+    }
 }
 
-function asnPopulateTeachers(row) {
+// 🚨 FIX 5: Replaced C# db.Collection with Web getDocs(query(...))
+async function asnPopulateTeachers(row) {
     let teaDrop = document.getElementById(`tea_${row.id}`);
     if (!teaDrop) return;
     
@@ -4903,7 +4911,6 @@ function asnPopulateTeachers(row) {
     let isTutorial = row.subject.toLowerCase() === "tutorial" || row.category.toLowerCase().includes("tutorial");
     
     if (isTutorial) {
-        // Load all teachers in department
         let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
         let opts = `<option value="">Unassigned</option>`;
         asnCachedTeachers.forEach(t => {
@@ -4913,28 +4920,26 @@ function asnPopulateTeachers(row) {
         });
         teaDrop.innerHTML = opts;
     } else {
-        // Normal Subject Query
-        db.Collection("colleges").Document(currentCollegeID).Collection("faculty_subjects")
-          .WhereEqualTo("subjectName", row.subject)
-          .WhereEqualTo("isActive", true)
-          .GetSnapshotAsync().ContinueWithOnMainThread(task => {
-              if (!task.IsCompletedSuccessfully) return;
-              
-              let opts = `<option value="">Unassigned</option>`;
-              let foundNames = new Set();
-              
-              task.Result.Documents.forEach(d => {
-                  let tName = d.ContainsField("teacherName") ? d.GetValue("teacherName") : "Unknown";
-                  let tID = d.ContainsField("teacherID") ? d.GetValue("teacherID") : "";
-                  if (!foundNames.has(tName)) {
-                      foundNames.add(tName);
-                      opts += `<option value="${tID}|${tName}" ${tName === row.teacher ? 'selected' : ''}>${tName}</option>`;
-                  }
-              });
-              
-              if (foundNames.size === 0) opts += `<option value="">No faculty assigned</option>`;
-              teaDrop.innerHTML = opts;
-          });
+        try {
+            const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("subjectName", "==", row.subject), where("isActive", "==", true)));
+            let opts = `<option value="">Unassigned</option>`;
+            let foundNames = new Set();
+            
+            snap.forEach(d => {
+                let data = d.data();
+                let tName = data.teacherName || "Unknown";
+                let tID = data.teacherID || "";
+                if (!foundNames.has(tName)) {
+                    foundNames.add(tName);
+                    opts += `<option value="${tID}|${tName}" ${tName === row.teacher ? 'selected' : ''}>${tName}</option>`;
+                }
+            });
+            
+            if (foundNames.size === 0) opts += `<option value="">No faculty assigned</option>`;
+            teaDrop.innerHTML = opts;
+        } catch(e) {
+            console.error(e);
+        }
     }
 }
 
