@@ -2167,14 +2167,14 @@ async function subjSaveNewSelections() {
 }
 
 // ==========================================
-// 🚨 ACADEMIC CALENDAR ENGINE (Fit Layout)
+// 🚨 ACADEMIC CALENDAR ENGINE (Principal Layout)
 // ==========================================
 let calDisplayDate = new Date();
 let calTodayDate = new Date();
 let calCachedAcademicYear = "";
 let calIsInit = false;
 
-// The Static Caches (Survives tab switches!)
+// The Static Caches
 let calCachedCollegeID = "";
 let calVersionListenerUnsub = null;
 let calCachedVersion = "";
@@ -2214,17 +2214,17 @@ async function initCalendarEngine() {
 }
 
 function calStartVersionListener() {
-    if (calVersionListenerUnsub) return; // Already listening
+    if (calVersionListenerUnsub) return;
     
     const versionRef = doc(db, "colleges", currentCollegeID, "system_flags", "calendar_version");
-    calVersionListenerUnsub = onSnapshot(versionRef, async (snapshot) => {
+    
+    // 🚨 BUG FIX: Added an error handler so if Teachers don't have permission to read this flag, it doesn't crash the app!
+    calVersionListenerUnsub = onSnapshot(versionRef, (snapshot) => {
         if (snapshot.exists() && snapshot.data().updatedAt) {
             let latestVersion = snapshot.data().updatedAt.toString();
-            
             if (calCachedVersion === "") {
                 calCachedVersion = latestVersion;
             } else if (calCachedVersion !== latestVersion) {
-                // Principal updated the calendar! Wipe cache and refresh!
                 calCachedVersion = latestVersion;
                 calWorkingDays.clear();
                 calNonWorkingDays.clear();
@@ -2232,14 +2232,13 @@ function calStartVersionListener() {
                 calSemEndDates.clear();
                 calAvailableYears = [];
                 calCachedAcademicYear = "";
-                
-                // If user is currently looking at the calendar, refresh it immediately
                 if (document.getElementById("calendarView").classList.contains("active")) {
-                    await calFetchAvailableYears();
-                    await calFetchDataForMonth();
+                    calFetchAvailableYears().then(calFetchDataForMonth);
                 }
             }
         }
+    }, (error) => {
+        console.warn("Calendar Version tracker skipped (Permission Denied). Falling back to static cache.", error);
     });
 }
 
@@ -2272,8 +2271,9 @@ async function calFetchDataForMonth() {
         targetYearStr = `${fallbackStart}-${fallbackStart + 1}`;
     }
 
+    // 🚨 BUG FIX: Fixed the typo!
     if (calCachedAcademicYear !== targetYearStr) {
-        calAcademicYear = targetYearStr;
+        calCachedAcademicYear = targetYearStr; 
         await calFetchYearData(targetYearStr);
     }
 
@@ -2329,7 +2329,6 @@ function calGenerateGrid() {
     
     let firstDayIndex = new Date(y, m, 1).getDay();
     let daysInMonth = new Date(y, m + 1, 0).getDate();
-
     let mStr = String(m + 1).padStart(2, '0');
 
     // Empty slots before 1st of month
@@ -2337,10 +2336,6 @@ function calGenerateGrid() {
         let emptyCell = document.createElement("div");
         grid.appendChild(emptyCell);
     }
-
-    // Total cells drawn: Sun-Sat grid must fill 6 rows (42 cells) to fit without scrolling.
-    let totalCellsToDraw = 42;
-    let daysDrawn = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
         let dStr = String(day).padStart(2, '0');
@@ -2351,55 +2346,49 @@ function calGenerateGrid() {
         let isToday = (calTodayDate.getFullYear() === y && calTodayDate.getMonth() === m && calTodayDate.getDate() === day);
 
         let cell = document.createElement("button");
+        // 🚨 STYLING UPDATE: Aspect ratio 1 creates the perfect squares from your image!
         cell.style.cssText = `
-            width: 100%; height: 100%; border: none; border-radius: 8px; cursor: pointer;
+            width: 100%; aspect-ratio: 1; border: none; border-radius: 12px; cursor: pointer;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: bold; background: white; color: var(--text-dark);
-            transition: 0.2s; 
+            font-size: 15px; font-weight: 800; background: transparent; color: var(--text-dark);
+            transition: 0.2s; padding: 0;
         `;
 
         let subText = "";
         let reasonToPopup = "";
-        let textColor = "var(--text-dark)";
+        
+        let bgColor = "transparent";
+        let textColor = "#334155";
 
-        // Check Semesters
         let startSem = [...calSemStartDates].find(([k, v]) => v === dateKey)?.[0];
         let endSem = [...calSemEndDates].find(([k, v]) => v === dateKey)?.[0];
 
         if (startSem) {
-            textColor = "#3b82f6"; // Blue
-            subText = "Start";
-            reasonToPopup = `${startSem} Semester Starts`;
+            bgColor = "#eff6ff"; textColor = "#3b82f6"; subText = "Start"; reasonToPopup = `${startSem} Semester Starts`;
         } else if (endSem) {
-            textColor = "#3b82f6"; // Blue
-            subText = "End";
-            reasonToPopup = `${endSem} Semester Ends`;
+            bgColor = "#eff6ff"; textColor = "#3b82f6"; subText = "End"; reasonToPopup = `${endSem} Semester Ends`;
         } else {
-            // Check Holidays & Weekends
             if (calWorkingDays.has(dateKey)) {
-                textColor = "var(--text-dark)";
+                bgColor = "transparent"; textColor = "#334155";
             } else if (calNonWorkingDays.has(dateKey)) {
-                textColor = "var(--brand-red)";
-                reasonToPopup = calNonWorkingDays.get(dateKey);
+                bgColor = "#fef2f2"; textColor = "#ef4444"; reasonToPopup = calNonWorkingDays.get(dateKey);
             } else if (dayOfWeek === 0 || dayOfWeek === 6) {
-                textColor = "var(--brand-red)";
+                bgColor = "#fef2f2"; textColor = "#ef4444";
             }
         }
 
         if (isToday) {
-            cell.style.background = "#10b981"; // Today Green
-            cell.style.color = "white";
+            bgColor = "#22c55e"; // Bright Green from your image
             textColor = "white";
-        } else {
-            cell.style.color = textColor;
-            // Hover effect only for non-today cells
-            cell.addEventListener("mouseenter", () => cell.style.background = "#f8fafc");
-            cell.addEventListener("mouseleave", () => cell.style.background = "white");
+            cell.style.boxShadow = "0 4px 10px rgba(34, 197, 94, 0.4)";
         }
+
+        cell.style.background = bgColor;
+        cell.style.color = textColor;
 
         cell.innerHTML = `<span>${day}</span>`;
         if (subText) {
-            cell.innerHTML += `<span style="font-size:9px; font-weight:normal; margin-top:1px;">${subText}</span>`;
+            cell.innerHTML += `<span style="font-size:9px; font-weight:bold; margin-top:2px;">${subText}</span>`;
         }
 
         if (reasonToPopup) {
@@ -2407,14 +2396,6 @@ function calGenerateGrid() {
         }
 
         grid.appendChild(cell);
-        daysDrawn++;
-    }
-
-    // Pad remaining grid cells to ensure a full 7x6 (42 cell) layout to fit without scrolling.
-    let paddedCellsCount = totalCellsToDraw - (daysDrawn + firstDayIndex);
-    for (let i = 0; i < paddedCellsCount; i++) {
-        let emptyCell = document.createElement("div");
-        grid.appendChild(emptyCell);
     }
 }
 
@@ -2424,7 +2405,6 @@ function calUpdateUpcomingEvent() {
     let foundDateStr = "";
     let found = false;
 
-    // Scan the next 60 days exactly like Unity
     for (let i = 0; i < 60; i++) {
         let futureDate = new Date(checkDate);
         futureDate.setDate(checkDate.getDate() + i);
@@ -2438,24 +2418,24 @@ function calUpdateUpcomingEvent() {
         if (calNonWorkingDays.has(dateKey)) {
             foundReason = calNonWorkingDays.get(dateKey);
             if (foundReason === "Holiday/Weekend") foundReason = "Holiday";
-            foundDateStr = `${futureDate.getDate()} | ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][futureDate.getMonth()]} ${y}`;
+            foundDateStr = `${futureDate.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][futureDate.getMonth()]}`;
             found = true;
             break;
         }
 
         if ((dayOfWeek === 0 || dayOfWeek === 6) && !calWorkingDays.has(dateKey)) {
             foundReason = "Weekend";
-            foundDateStr = `${futureDate.getDate()} | ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][futureDate.getMonth()]} ${y}`;
+            foundDateStr = `${futureDate.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][futureDate.getMonth()]}`;
             found = true;
             break;
         }
     }
 
-    let textEl = document.getElementById("calUpcomingEventText");
+    let banner = document.getElementById("calUpcomingEventBanner");
     if (found) {
-        textEl.innerHTML = `<span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:bold;">Upcoming</span><br><span style="font-size:15px; font-weight:bold; color:var(--brand-red);">${foundDateStr}</span><br><b style="font-size:13px;">${foundReason}</b>`;
+        banner.innerHTML = `Upcoming: ${foundDateStr} - ${foundReason}`;
     } else {
-        textEl.innerHTML = `No upcoming holidays`;
+        banner.innerHTML = `No upcoming holidays`;
     }
 }
 
@@ -2463,12 +2443,12 @@ function calShowPopup(reason) {
     let popup = document.getElementById("calHolidayPopup");
     document.getElementById("calHolidayReasonText").innerText = reason;
     
-    popup.style.bottom = "80px";
+    popup.style.bottom = "120px";
     popup.style.opacity = "1";
     
     if (calPopupTimeout) clearTimeout(calPopupTimeout);
     calPopupTimeout = setTimeout(() => {
-        popup.style.bottom = "20px";
+        popup.style.bottom = "80px";
         popup.style.opacity = "0";
     }, 2000);
 }
