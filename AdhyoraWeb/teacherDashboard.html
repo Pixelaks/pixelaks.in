@@ -10,15 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Yatra+One&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .attd-toggle { position: relative; width: 46px; height: 24px; background: #fecaca; border-radius: 12px; cursor: pointer; transition: 0.3s; }
-        .attd-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .attd-toggle.active { background: #10b981; }
-        .attd-toggle.active::after { left: 24px; }
-        .attd-toggle.locked { opacity: 0.5; cursor: not-allowed; }
-        .filter-select { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-dark); font-weight: 600; flex: 1; min-width: 100px;}
-        body.dark-mode .filter-select { background: #1e293b; color: #f8fafc; border-color: #334155; }
-    </style>
 </head>
 <body class="light-mode">
 
@@ -86,14 +77,9 @@
                     <h2 class="welcome-text">Welcome To ADHYORA</h2>
                 </div>
 
-                <!-- 🚨 NEW: NEP ATTENDANCE DASHBOARD 🚨 -->
                 <div id="attendanceView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%;">
                     
-                    <!-- ============================================== -->
-                    <!-- SCREEN 1: MAIN ATTENDANCE SCREEN -->
-                    <!-- ============================================== -->
                     <div id="attMainScreen" style="display: flex; flex-direction: column; height: 100%;">
-                        <!-- Header -->
                         <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">Attendance</h3>
                             <div style="display:flex; gap:10px; align-items:center;">
@@ -106,7 +92,6 @@
                             </div>
                         </div>
 
-                        <!-- Filters -->
                         <div style="padding: 15px 25px; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(0,0,0,0.02);">
                             <select id="attSemDropdown" class="filter-select"></select>
                             <select id="attPeriodDropdown" class="filter-select">
@@ -116,29 +101,22 @@
                             <select id="attSubjDropdown" class="filter-select" style="flex: 2;"><option>Loading...</option></select>
                         </div>
 
-                        <!-- Stats Bar -->
                         <div style="padding: 10px 25px; border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; font-size:13px; font-weight:600; color:var(--text-muted);">
                             <span id="attTotalStudentsText"></span>
                             <span style="color:var(--brand-red);" id="attLockStatusText"></span>
                         </div>
 
-                        <!-- List Area -->
                         <div id="attListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
-                            <!-- Center Message -->
                             <div id="attCenterMessagePanel" style="display:flex; height:100%; align-items:center; justify-content:center; text-align:center;">
                                 <p id="attCenterMessageText" style="color:var(--text-muted); font-size:16px; font-weight:600; line-height:1.5;">Select a subject to begin.</p>
                             </div>
                         </div>
 
-                        <!-- Bottom Action Bar -->
                         <div style="padding: 15px 25px; background: var(--card-bg); border-top: 1px solid var(--border-color);">
                             <button id="attSaveBtn" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Save Attendance</button>
                         </div>
                     </div>
 
-                    <!-- ============================================== -->
-                    <!-- SCREEN 2: HISTORY LIST SCREEN -->
-                    <!-- ============================================== -->
                     <div id="attHistoryScreen" style="display: none; flex-direction: column; height: 100%;">
                         <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px;">
                             <button id="backFromHistoryBtn" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-dark); cursor:pointer; font-weight:bold; transition:0.2s;"><i class="fas fa-arrow-left"></i> Back</button>
@@ -158,9 +136,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================== -->
-                    <!-- SCREEN 3: RECORD VIEWER SCREEN (Read-Only) -->
-                    <!-- ============================================== -->
                     <div id="attRecordScreen" style="display: none; flex-direction: column; height: 100%;">
                         <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px;">
                             <button id="backFromRecordBtn" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-dark); cursor:pointer;"><i class="fas fa-arrow-left"></i> Back</button>
@@ -177,6 +152,7 @@
 
                 <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Timetable</h3></div>
                 <div id="internalMarksView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Internal Marks</h3></div>
+                
                 <div id="subjectsView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%;">
                     <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">My Subjects</h3>
@@ -198,6 +174,7 @@
                         <button id="subjSaveBtn" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Save Selections</button>
                     </div>
                 </div>
+
                 <div id="calendarView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; background: transparent; padding: 20px; box-sizing: border-box; overflow: hidden;">
                     
                     <div id="calViewCard" style="width: 100%; max-width: 480px; height: 100%; max-height: 600px; background: white; border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; position: relative;">
@@ -224,6 +201,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Assignments</h3></div>
                 <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Students</h3></div>
                 <div id="subjectAssignView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Subject Assign</h3></div>
@@ -252,9 +230,6 @@
         </main>
     </div>
 
-    <!-- 🚨 MODALS & SETTINGS -->
-
-    <!-- Update Progress Modal -->
     <div class="modal-overlay" id="updateProgressModal">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 300px; margin: auto; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 15px;">
@@ -264,7 +239,6 @@
         </div>
     </div>
 
-    <!-- Substitute Confirm Modal -->
     <div class="modal-overlay" id="subConfirmModal">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <i class="fas fa-exchange-alt" style="font-size: 40px; color: #f59e0b; margin-bottom: 15px;"></i>
@@ -276,7 +250,6 @@
         </div>
     </div>
 
-    <!-- Jump Date Modal -->
     <div class="modal-overlay" id="jumpDateModal">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; border-radius: 20px; padding: 25px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <h3 style="color: var(--brand-red); margin-bottom: 15px;">Jump to Date</h3>
