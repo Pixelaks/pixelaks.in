@@ -5031,9 +5031,94 @@ window.asnOnSubChange = (rowId, val) => {
 window.asnOnTeacherChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; if(val){ let parts = val.split('|'); row.teacherID = parts[0]; row.teacher = parts[1]; } else { row.teacherID = ""; row.teacher = ""; } };
 window.asnOnRoomChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; row.room = val; };
 
+// 1. DYNAMIC MODAL GENERATOR 
+// (Creates the UI popup safely without touching your HTML file)
+function getAsnConfirmModal() {
+    let modal = document.getElementById("asnConfirmModal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.className = "modal-overlay";
+        modal.id = "asnConfirmModal";
+        modal.innerHTML = `
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+            <i id="asnConfirmIcon" class="fas fa-exclamation-triangle" style="font-size: 40px; margin-bottom: 15px;"></i>
+            <h4 id="asnConfirmText" style="color: var(--text-dark); margin-bottom: 20px; line-height: 1.5; font-size:15px;">Confirm?</h4>
+            <div style="display:flex; gap:10px;">
+                <button onclick="document.getElementById('asnConfirmModal').classList.remove('active')" style="flex:1; padding:12px; border-radius:10px; border:1px solid #cbd5e1; background:white; color:#64748b; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button id="asnConfirmYesBtn" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--brand-red); color:white; font-weight:bold; cursor:pointer;">Confirm</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    }
+    return modal;
+}
+
+// 2. THE TRAFFIC COP (Matches C# Warning Logic)
+let asnPendRowId = "";
+
 window.asnRequestSplit = (rowId) => {
-    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
-    let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
+    let row = asnActiveRows.find(r => r.id === rowId); 
+    if(!row) return;
+
+    // Strict detection for Department-Level Splits (Matches Unity)
+    let cleanCat = row.category.toUpperCase().replace(/\s+/g,"");
+    let cleanSubj = row.subject ? row.subject.toUpperCase().replace(/\s+/g,"") : "";
+    
+    let isDeptSplit = cleanCat.includes("AECC") || cleanSubj.includes("AECC") ||
+                      cleanCat.includes("MLD")  || cleanSubj.includes("MLD") ||
+                      cleanCat.includes("VAC")  || cleanSubj.includes("VAC") ||
+                      cleanCat.includes("MID")  || cleanSubj.includes("MID");
+
+    asnPendRowId = rowId;
+    
+    let modal = getAsnConfirmModal();
+    let txt = document.getElementById("asnConfirmText");
+    let btnYes = document.getElementById("asnConfirmYesBtn");
+    let icon = document.getElementById("asnConfirmIcon");
+
+    if (row.isSplit) {
+        icon.className = "fas fa-trash-alt";
+        icon.style.color = "var(--brand-red)";
+        btnYes.style.background = "var(--brand-red)";
+        
+        if (isDeptSplit) {
+            txt.innerHTML = `Remove a batch for <b>${row.subject}</b>?<br><span style="font-size:12px; color:var(--text-muted); font-weight:normal;">You will need to reassign the departments in the next menu.</span>`;
+        } else {
+            txt.innerHTML = `Delete this batch for <b>${row.subject}</b>?<br><span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Students will be intelligently re-distributed into the remaining batches.</span>`;
+        }
+        btnYes.innerText = "Delete Batch";
+    } else {
+        if (!row.subject || row.subject === "Select Subject" || row.subject === "Loading...") { 
+            showRcToast("Select a subject first!"); 
+            return; 
+        }
+        icon.className = "fas fa-cut";
+        icon.style.color = "#f59e0b";
+        btnYes.style.background = "#f59e0b";
+        
+        txt.innerHTML = `Divide students for <b>${row.subject}</b><br>into a new batch?`;
+        btnYes.innerText = "Split Class";
+    }
+    
+    btnYes.onclick = () => {
+        modal.classList.remove("active");
+        asnExecuteSplitAction();
+    };
+    
+    modal.classList.add("active");
+};
+
+// 3. THE SPLIT/DELETE EXECUTOR
+function asnExecuteSplitAction() {
+    let row = asnActiveRows.find(r => r.id === asnPendRowId); 
+    if(!row) return;
+
+    let cleanCat = row.category.toUpperCase().replace(/\s+/g,"");
+    let cleanSubj = row.subject ? row.subject.toUpperCase().replace(/\s+/g,"") : "";
+    let isDeptSplit = cleanCat.includes("AECC") || cleanSubj.includes("AECC") ||
+                      cleanCat.includes("MLD")  || cleanSubj.includes("MLD") ||
+                      cleanCat.includes("VAC")  || cleanSubj.includes("VAC") ||
+                      cleanCat.includes("MID")  || cleanSubj.includes("MID");
 
     if (row.isSplit) {
         // DELETE LOGIC
@@ -5047,22 +5132,25 @@ window.asnRequestSplit = (rowId) => {
             if (newBatches === 1) {
                 showRcToast("Reverted to a single class.");
                 getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", row.subject))).then(snap => {
-                    snap.forEach(d => deleteDoc(d.ref));
+                    let wb = writeBatch(db); // Safer fallback for DB deletion
+                    snap.forEach(d => wb.delete(d.ref));
+                    wb.commit();
                 });
             } else {
-                if (isVac) asnOpenDeptSplit(remRows[0], true);
+                if (isDeptSplit) asnOpenDeptSplit(remRows[0], true);
                 else {
                     showRcToast(`Re-balancing into ${newBatches} batches...`);
                     getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", row.subject))).then(snap => {
-                        const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref)); wb.commit().then(() => asnExecuteDivideEvenly(row.subject, newBatches));
+                        const wb = writeBatch(db); 
+                        snap.forEach(d => wb.delete(d.ref)); 
+                        wb.commit().then(() => asnExecuteDivideEvenly(row.subject, newBatches));
                     });
                 }
             }
         }
     } else {
         // ADD LOGIC
-        if (!row.subject) { showRcToast("Select a subject first!"); return; }
-        if (isVac) asnOpenDeptSplit(row, false); 
+        if (isDeptSplit) asnOpenDeptSplit(row, false); 
         else {
             let newIdx = asnActiveRows.filter(r => r.period === row.period && r.isSplit).length + 1; 
             asnActiveRows.push({ id: `r_${row.period}_${newIdx}_${Date.now()}`, period: row.period, splitIndex: newIdx, isSplit: true, category: row.category, subject: row.subject, teacher: "", teacherID: "", room: "" }); 
@@ -5070,7 +5158,7 @@ window.asnRequestSplit = (rowId) => {
             asnExecuteDivideEvenly(row.subject, newIdx + 1);
         }
     }
-};
+}
 
 async function asnExecuteDivideEvenly(subject, totalBatches) {
     let allStudents = asnCachedYearStudents.map(s => s.id);
