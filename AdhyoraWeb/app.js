@@ -456,13 +456,21 @@ function getErrorMessage(code) {
 // ==========================================
 
 tsParticles.load("tsparticles", {
+    fpsLimit: 60, // Cap the framerate so it doesn't drain 120Hz/144Hz monitors
+    detectRetina: false, // HUGE performance boost. Disables 4x pixel rendering on MacBooks/Phones
     particles: {
-        number: { value: 80, density: { enable: true, area: 800 } },
+        number: { value: 50, density: { enable: true, area: 800 } }, // Reduced from 80 to 50 (barely noticeable)
         color: { value: "#2ecc71" }, 
-        links: { enable: true, distance: 150, color: "#2ecc71", opacity: 0.3, width: 1 },
-        move: { enable: true, speed: 1.5, outModes: { default: "out" } },
+        links: { 
+            enable: true, 
+            distance: 110, // Reduced from 150. Exponentially decreases the math required to draw lines
+            color: "#2ecc71", 
+            opacity: 0.3, 
+            width: 1 
+        },
+        move: { enable: true, speed: 1.2, outModes: { default: "out" } }, // Slightly reduced speed
         opacity: { value: 0.4 },
-        size: { value: { min: 1, max: 3 } }
+        size: { value: { min: 1, max: 2 } } // Removed max 3 for better anti-aliasing performance
     },
     interactivity: {
         events: { onHover: { enable: true, mode: "grab" }, onClick: { enable: true, mode: "push" } },
