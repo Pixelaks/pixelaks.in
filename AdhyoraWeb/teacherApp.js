@@ -5781,11 +5781,14 @@ let composeIsPrivate = false;
 let composeRecipientID = "";
 let composeFCMTokens = [];
 
+// RAM Cache for Departments (Matches C# cachedDepartments)
+let composeCachedDepartments = [];
+
 // 1. Bind Buttons
 document.getElementById("btnOpenCompose")?.addEventListener("click", () => window.OpenCompose(false));
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
-// Dynamic Dropdown Toggle (Matches C# OnToggleChanged)
+// Dynamic UI Toggles (Matches C# OnToggleChanged)
 function updateComposeUI() {
     let sendT = document.getElementById("chkSendTeachers").checked;
     let sendS = document.getElementById("chkSendStudents").checked;
@@ -5801,8 +5804,28 @@ document.getElementById("chkSendTeachers")?.addEventListener("change", updateCom
 document.getElementById("chkSendStudents")?.addEventListener("change", updateComposeUI);
 document.getElementById("chkSendPrincipal")?.addEventListener("change", updateComposeUI);
 
+// Dynamic Max Years Toggle (Matches C# OnDeptChanged)
+document.getElementById("composeDeptDrop")?.addEventListener("change", () => {
+    let deptDrop = document.getElementById("composeDeptDrop");
+    let yearDrop = document.getElementById("composeYearDrop");
+    if (!deptDrop || !yearDrop) return;
+
+    let maxYears = 4; // Default fallback
+    let selectedOpt = deptDrop.options[deptDrop.selectedIndex];
+    
+    if (selectedOpt && selectedOpt.hasAttribute("data-max")) {
+        maxYears = parseInt(selectedOpt.getAttribute("data-max"));
+    }
+
+    let yHtml = `<option value="All">All Years</option>`;
+    for(let i = 1; i <= maxYears; i++) {
+        yHtml += `<option value="Year ${i}">Year ${i}</option>`;
+    }
+    yearDrop.innerHTML = yHtml;
+});
+
 // 2. Open Modal Logic
-window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID = "") => {
+window.OpenCompose = async (isPrivate, recipientName = "", fcmTokens = [], recipientID = "") => {
     composeIsPrivate = isPrivate;
     composeFCMTokens = fcmTokens;
     composeRecipientID = recipientID;
@@ -5829,12 +5852,36 @@ window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID
         document.getElementById("chkSendStudents").checked = false;
         updateComposeUI();
         
-        // Dynamically adjust the "My Department" option text
+        // Fetch Departments dynamically
         let deptDrop = document.getElementById("composeDeptDrop");
-        let optDept = deptDrop.querySelector("option[value='My Dept']");
-        if (optDept && teacherDeptRaw) {
-            optDept.text = `My Dept (${teacherDeptRaw.replace("DEPT_", "")})`;
+        
+        if (composeCachedDepartments.length === 0) {
+            try {
+                const snap = await getDocs(collection(db, "colleges", currentCollegeID, "departments"));
+                snap.forEach(d => {
+                    let data = d.data();
+                    let name = data.name || d.id;
+                    let max = data.maxYears ? parseInt(data.maxYears) : 3;
+                    composeCachedDepartments.push({ id: d.id, name: name, maxYears: max });
+                });
+                composeCachedDepartments.sort((a, b) => a.name.localeCompare(b.name));
+            } catch(e) { console.error("Failed to load departments:", e); }
         }
+
+        // Populate Dropdown
+        let html = `<option value="All" data-max="4">All Departments</option>`;
+        if (teacherDeptRaw) {
+            html += `<option value="My Dept" data-max="4">My Dept (${teacherDeptRaw.replace("DEPT_", "")})</option>`;
+        }
+        
+        composeCachedDepartments.forEach(d => {
+            html += `<option value="${d.name}" data-max="${d.maxYears}">${d.name}</option>`;
+        });
+        
+        deptDrop.innerHTML = html;
+        
+        // Force the Year dropdown to update based on the default selection
+        deptDrop.dispatchEvent(new Event("change"));
     }
 
     document.getElementById("composeMessageModal").classList.add("active");
@@ -5855,6 +5902,10 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
+    // 🚨 COLOR FIX: Ensure the Unity C# script reads this strictly as "Teacher"
+    let safeSenderRole = "Teacher"; 
+    let displaySenderName = isHOD ? `${currentTeacherName} (HOD)` : currentTeacherName;
+
     try {
         if (composeIsPrivate && composeRecipientID) {
             // ==========================================
@@ -5863,13 +5914,12 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
             let chatRoomID = [currentUserID, composeRecipientID].sort().join("_");
             let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
             
-            // Meta & Message
             let batch = writeBatch(db);
             batch.set(chatRef, {
                 participants: [currentUserID, composeRecipientID],
                 lastMessage: body,
                 lastUpdated: serverTimestamp(),
-                receiverName: privateTarget.value // Uses modal input
+                receiverName: privateTarget.value 
             }, { merge: true });
 
             let msgRef = doc(collection(chatRef, "messages"));
@@ -5877,8 +5927,8 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 title: title,
                 body: body,
                 senderID: currentUserID,
-                senderName: currentTeacherName,
-                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                senderName: displaySenderName,
+                senderRole: safeSenderRole,
                 timestamp: serverTimestamp(),
                 type: "incoming",
                 status: "sent"
@@ -5893,9 +5943,9 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 type: "personal", status: "sent",
                 linkedChatID: chatRoomID,
                 linkedMessageID: msgRef.id,
-                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                senderRole: safeSenderRole,
                 senderID: currentUserID,
-                senderName: currentTeacherName
+                senderName: displaySenderName
             });
 
             await batch.commit();
@@ -5907,7 +5957,7 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 
         } else {
             // ==========================================
-            // 🚨 BROADCAST ROUTING (Matches C# Logic)
+            // 🚨 BROADCAST ROUTING
             // ==========================================
             let sendP = document.getElementById("chkSendPrincipal").checked;
             let sendT = document.getElementById("chkSendTeachers").checked;
@@ -5924,11 +5974,11 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
             let deptVal = document.getElementById("composeDeptDrop").value;
             let yearVal = document.getElementById("composeYearDrop").value;
 
-            let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : "All";
+            let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : deptVal;
             let actualYear = yearVal;
 
             let safeColID = getSafeTopic(currentCollegeID);
-            let safeDept = getSafeTopic(deptVal === "My Dept" ? teacherDeptRaw : "All");
+            let safeDept = getSafeTopic(actualDeptName);
             let safeYear = getSafeTopic(yearVal);
 
             let targetDescription = "";
@@ -5965,9 +6015,9 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 timestamp: serverTimestamp(),
                 type: "broadcast",
                 status: "sent",
-                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                senderRole: safeSenderRole,
                 senderID: currentUserID,
-                senderName: currentTeacherName
+                senderName: displaySenderName
             };
 
             await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
@@ -5991,7 +6041,7 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     }
 });
 
-// 4. WEBHOOK EXECUTOR (Matches C# PostNotification Coroutine)
+// 4. WEBHOOK EXECUTOR
 function sendPushNotification(title, body, tokens, topics) {
     let finalTitle = `${title} • ${currentTeacherName} (Teacher)`;
     let iconUrl = "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/80f18d76be90054cccf1b1ddd5d04d8282635b59/AdhyoraRedSplashIcon.png";
