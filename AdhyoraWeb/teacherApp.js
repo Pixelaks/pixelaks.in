@@ -22,7 +22,7 @@ let currentTeacherName = "Unknown";
 let isHOD = false;
 let profileListener = null;
 let teacherDeptRaw = ""; 
-let currentDeptName = "Unknown Dept"; // 🚨 ADD THIS
+let currentDeptName = "Unknown Dept"; 
 let hasStartedInbox = false;
 
 // Notification Variables
@@ -32,7 +32,7 @@ let globalListenerUnsub = null;
 let inboxListenerUnsub = null;
 
 // ==========================================
-// 🚨 FIREBASE CONFIGURATION
+// 🚨 FIREBASE CONFIGURATION & CACHE SHIELD
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
@@ -46,7 +46,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🚨 REPLACED: const db = getFirestore(app); with Cost-Optimized Cache
+// 🚨 COST OPTIMIZATION: Native RAM Caching Enabled!
 const db = initializeFirestore(app, {
     localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
@@ -55,7 +55,7 @@ const db = initializeFirestore(app, {
 
 const messaging = getMessaging(app);
 
-let myCurrentPushToken = ""; // 🚨 ADDED TO TRACK ACTIVE SESSION
+let myCurrentPushToken = ""; // Tracks active session
 
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
@@ -68,14 +68,15 @@ if (!currentCollegeID) {
             currentUserID = user.uid; 
             ListenToProfile(); 
             
-            // 🚨 ADDED: Hash Router Recovery (Restores panel instantly if they press F5/Refresh)
+            // 🚨 OPTIMIZATION: Hash Router Recovery
+            // Restores the exact panel if the user presses F5/Refresh
             const currentHash = window.location.hash.replace("#", "");
             if (currentHash && currentHash !== "HOME" && views[currentHash]) {
                 setTimeout(() => {
                     let btnId = "btnNav" + currentHash.charAt(0).toUpperCase() + currentHash.slice(1);
                     let targetBtn = document.getElementById(btnId);
                     switchView(views[currentHash], targetBtn || null, true);
-                }, 1000); // Waits 1s for backend engines to boot
+                }, 1000); 
             }
         } else { 
             window.location.href = "index.html"; 
@@ -1431,7 +1432,7 @@ const views = {
     welcome: document.getElementById("welcomeView"), 
     attendance: document.getElementById("attendanceView"), 
     timetable: document.getElementById("timetableView"),
-    assign: document.getElementById("assignView"),
+    assign: document.getElementById("assignView"), 
     internalMarks: document.getElementById("internalMarksView"), 
     subjects: document.getElementById("subjectsView"), 
     calendar: document.getElementById("calendarView"),
@@ -1503,7 +1504,7 @@ function cleanupAttendanceView() {
     if (recScr) recScr.style.display = "none";
 }
 
-// 🚨 UPDATED: SwitchView now accepts a 3rd parameter to handle history states
+// 🚨 OPTIMIZATION: Handles native history push states
 function switchView(targetView, clickedBtn, isHistoryNav = false) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
@@ -1531,7 +1532,6 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
         else showRcToast("This module is under construction.");
     }
 
-    // 🚨 ADDED: Push the current panel into the browser/phone history stack
     if (!isHistoryNav) {
         let vName = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
         if (vName !== lastPushedView) {
@@ -1544,7 +1544,11 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
     }
 }
 
-function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
+// 🚨 THIS WAS CAUSING THE ERROR! It is now declared exactly ONCE here.
+function attachSafeClick(elementId, action) { 
+    let el = document.getElementById(elementId); 
+    if (el) el.addEventListener("click", action); 
+}
 
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
 attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
@@ -1569,19 +1573,18 @@ window.addEventListener("load", () => {
 });
 
 window.addEventListener("popstate", (e) => {
-    // 1. Close open Modals/Settings FIRST without changing the actual view!
+    // 1. Close open Modals/Settings FIRST
     let activeModals = document.querySelectorAll(".modal-overlay.active, .settings-drawer.active");
     if (activeModals.length > 0) {
         activeModals.forEach(m => m.classList.remove("active"));
         
-        // Re-push the current state so the back button doesn't break the view order
         let vName = e.state ? e.state.viewId : "HOME";
         let btnId = e.state ? e.state.btnId : "btnHome";
         history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
         return;
     }
 
-    // 2. Handle actual View Panel Navigation
+    // 2. Handle actual Panel Navigation
     if (e.state && e.state.viewId) {
         let vName = e.state.viewId;
         let btnId = e.state.btnId;
@@ -1598,7 +1601,7 @@ window.addEventListener("popstate", (e) => {
             }
         }
     } else {
-        // 3. User reached the absolute beginning of the history (HOME) and clicked back again!
+        // 3. Prevent accidental app exit
         if (confirm("Do you want to sign out of Adhyora?")) {
             handleSignOut();
         } else {
