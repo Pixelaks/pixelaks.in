@@ -2167,7 +2167,7 @@ async function subjSaveNewSelections() {
 }
 
 // ==========================================
-// 🚨 ACADEMIC CALENDAR ENGINE
+// 🚨 ACADEMIC CALENDAR ENGINE (Fit Layout)
 // ==========================================
 let calDisplayDate = new Date();
 let calTodayDate = new Date();
@@ -2273,7 +2273,7 @@ async function calFetchDataForMonth() {
     }
 
     if (calCachedAcademicYear !== targetYearStr) {
-        calCachedAcademicYear = targetYearStr;
+        calAcademicYear = targetYearStr;
         await calFetchYearData(targetYearStr);
     }
 
@@ -2335,11 +2335,13 @@ function calGenerateGrid() {
     // Empty slots before 1st of month
     for (let i = 0; i < firstDayIndex; i++) {
         let emptyCell = document.createElement("div");
-        emptyCell.style.padding = "10px";
         grid.appendChild(emptyCell);
     }
 
-    // Days
+    // Total cells drawn: Sun-Sat grid must fill 6 rows (42 cells) to fit without scrolling.
+    let totalCellsToDraw = 42;
+    let daysDrawn = 0;
+
     for (let day = 1; day <= daysInMonth; day++) {
         let dStr = String(day).padStart(2, '0');
         let dateKey = `${y}-${mStr}-${dStr}`;
@@ -2350,10 +2352,10 @@ function calGenerateGrid() {
 
         let cell = document.createElement("button");
         cell.style.cssText = `
-            width: 100%; aspect-ratio: 1; border: none; border-radius: 12px; cursor: pointer;
+            width: 100%; height: 100%; border: none; border-radius: 8px; cursor: pointer;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 15px; font-weight: bold; background: white; color: var(--text-dark);
-            transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            font-size: 13px; font-weight: bold; background: white; color: var(--text-dark);
+            transition: 0.2s; 
         `;
 
         let subText = "";
@@ -2390,11 +2392,14 @@ function calGenerateGrid() {
             textColor = "white";
         } else {
             cell.style.color = textColor;
+            // Hover effect only for non-today cells
+            cell.addEventListener("mouseenter", () => cell.style.background = "#f8fafc");
+            cell.addEventListener("mouseleave", () => cell.style.background = "white");
         }
 
         cell.innerHTML = `<span>${day}</span>`;
         if (subText) {
-            cell.innerHTML += `<span style="font-size:10px; font-weight:normal; margin-top:2px;">${subText}</span>`;
+            cell.innerHTML += `<span style="font-size:9px; font-weight:normal; margin-top:1px;">${subText}</span>`;
         }
 
         if (reasonToPopup) {
@@ -2402,6 +2407,14 @@ function calGenerateGrid() {
         }
 
         grid.appendChild(cell);
+        daysDrawn++;
+    }
+
+    // Pad remaining grid cells to ensure a full 7x6 (42 cell) layout to fit without scrolling.
+    let paddedCellsCount = totalCellsToDraw - (daysDrawn + firstDayIndex);
+    for (let i = 0; i < paddedCellsCount; i++) {
+        let emptyCell = document.createElement("div");
+        grid.appendChild(emptyCell);
     }
 }
 
@@ -2440,7 +2453,7 @@ function calUpdateUpcomingEvent() {
 
     let textEl = document.getElementById("calUpcomingEventText");
     if (found) {
-        textEl.innerHTML = `<span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Upcoming</span><br><span style="font-size:18px; font-weight:bold; color:var(--brand-red);">${foundDateStr}</span><br><b>${foundReason}</b>`;
+        textEl.innerHTML = `<span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:bold;">Upcoming</span><br><span style="font-size:15px; font-weight:bold; color:var(--brand-red);">${foundDateStr}</span><br><b style="font-size:13px;">${foundReason}</b>`;
     } else {
         textEl.innerHTML = `No upcoming holidays`;
     }
@@ -2450,12 +2463,12 @@ function calShowPopup(reason) {
     let popup = document.getElementById("calHolidayPopup");
     document.getElementById("calHolidayReasonText").innerText = reason;
     
-    popup.style.bottom = "100px";
+    popup.style.bottom = "80px";
     popup.style.opacity = "1";
     
     if (calPopupTimeout) clearTimeout(calPopupTimeout);
     calPopupTimeout = setTimeout(() => {
-        popup.style.bottom = "30px";
+        popup.style.bottom = "20px";
         popup.style.opacity = "0";
     }, 2000);
 }
