@@ -6554,9 +6554,14 @@ async function executeCreateAssignment() {
             tokens: targetTokens,
             subject: selectedSubject,
             dueDateISO: standardizedDateISO,
-            teacherName: currentTeacherName
+            teacherName: currentTeacherName,
+            teacherID: currentUserID,      
+            collegeID: currentCollegeID,   
+            createdAt: serverTimestamp()   
         };
-        await setDoc(doc(collection(db, "adhyora_reminders")), reminderPayload);
+        
+        // 🚨 FIX 2: Swapped setDoc(doc(...)) for addDoc(...) for standard permission compliance
+        await addDoc(collection(db, "adhyora_reminders"), reminderPayload);
 
         showRcToast("Assignment Posted Successfully!");
         setTimeout(() => {
