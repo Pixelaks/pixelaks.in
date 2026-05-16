@@ -69,6 +69,15 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
+function hideAppLoader() {
+    const loader = document.getElementById("initialAppLoader");
+    if (loader && !loader.classList.contains("hidden")) {
+        setTimeout(() => {
+            loader.classList.add("hidden");
+        }, 800);
+    }
+}
+
 // ==========================================
 // 🚨 INITIAL AUTHENTICATION CHECK
 // ==========================================
@@ -3571,9 +3580,8 @@ function HandleBlockState(msg, isFirstTime) {
         yearHigh.innerText = "Best Value";
     }
 
-    // Hide the initial loader and show the blocker
-    const loader = document.getElementById("initialAppLoader");
-    if (loader) loader.style.display = "none";
+    // 🚨 REPLACED: We use the smooth fade-out instead of instantly hiding it!
+    hideAppLoader();
     
     let blockPanel = document.getElementById("subBlockPanel");
     
@@ -3608,9 +3616,8 @@ function HandleBlockState(msg, isFirstTime) {
 }
 
 function UnlockAccess() {
-    // 1. Remove the initial loader
-    const loader = document.getElementById("initialAppLoader");
-    if (loader) loader.style.display = "none";
+    // 🚨 REPLACED: Use the smooth fade-out here too!
+    hideAppLoader();
 
     // 2. Hide the block panel
     let blockPanel = document.getElementById("subBlockPanel");
