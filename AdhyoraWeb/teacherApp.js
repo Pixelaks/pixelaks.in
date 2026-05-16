@@ -1545,10 +1545,7 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
 }
 
 // 🚨 THIS WAS CAUSING THE ERROR! It is now declared exactly ONCE here.
-function attachSafeClick(elementId, action) { 
-    let el = document.getElementById(elementId); 
-    if (el) el.addEventListener("click", action); 
-}
+function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
 
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
 attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
