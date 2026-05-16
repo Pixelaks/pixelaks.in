@@ -4130,6 +4130,9 @@ function imProcessAndSpawnStudents(studentsDocList, selectedSemText, selectedSub
     let container = document.getElementById("imListContainer");
     let html = "";
     let activeCount = 0;
+    
+    // 🚨 NEW: Keep track of who is actually on the screen so we can fetch their marks!
+    let renderedStudentIDs = []; 
 
     // A. BATCHED SUBJECT
     if (batches && batches.length > 0) {
@@ -4148,6 +4151,7 @@ function imProcessAndSpawnStudents(studentsDocList, selectedSemText, selectedSub
                 if (stuDoc) {
                     stuHtml += imGenerateStudentRow(stuDoc, selectedSemText, selectedSubject, bName);
                     activeCount++;
+                    renderedStudentIDs.push(sid); // 🚨 Track ID
                 }
             });
 
@@ -4202,6 +4206,7 @@ function imProcessAndSpawnStudents(studentsDocList, selectedSemText, selectedSub
             if (isEnrolled) {
                 html += imGenerateStudentRow(stuDoc, selectedSemText, selectedSubject, "Common");
                 activeCount++;
+                renderedStudentIDs.push(stuDoc.id); // 🚨 Track ID
             }
         });
         
@@ -4214,6 +4219,9 @@ function imProcessAndSpawnStudents(studentsDocList, selectedSemText, selectedSub
         imShowEmpty(`No students found enrolled in '${selectedSubject}'.`);
     } else {
         container.innerHTML = html;
+        
+        // 🚨 NEW: Fetch the marks for everyone visible on the screen!
+        renderedStudentIDs.forEach(sid => imPopulateMarksPreview(sid, selectedSemText, selectedSubject));
     }
 }
 
@@ -4222,7 +4230,6 @@ function imGenerateStudentRow(stuDoc, selectedSem, selectedSubject, batchName) {
     let roll = stuDoc.RollNumber || stuDoc.rollNumber || "No Roll";
     let dept = (stuDoc.Department || stuDoc.department || "").replace("DEPT_", "");
 
-    // 🚨 ZERO-COST ATTENDANCE MATH ENGINE (Exact C# Replica)
     let autoAttendanceMark = "";
     let semKeyStrict = `Semester_${selectedSem.replace("Semester ", "").trim()}`;
     let semKeySpace = selectedSem;
@@ -4262,14 +4269,40 @@ function imGenerateStudentRow(stuDoc, selectedSem, selectedSubject, batchName) {
     let autoAttEnc = encodeURIComponent(autoAttendanceMark);
     let batchEnc = encodeURIComponent(batchName);
 
+    // 🚨 UI UPDATE: Added the im_preview div to hold the marks!
     return `
     <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px 15px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.02); transition:0.2s;" onclick="imOpenMarksPanel('${payloadStr}', '${autoAttEnc}', '${batchEnc}')" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='translateY(0)';">
-        <div>
+        <div style="flex: 1;">
             <div style="font-size:14px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${name}</div>
-            <div style="font-size:11px; font-weight:600; color:var(--text-muted);">${roll} • ${dept}</div>
+            <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">${roll} • ${dept}</div>
+            <div id="im_preview_${stuDoc.id}" style="display:flex; flex-wrap:wrap; gap:5px;"><span style="font-size:10px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Checking records...</span></div>
         </div>
-        <i class="fas fa-edit" style="color:var(--brand-red); font-size:14px;"></i>
+        <i class="fas fa-edit" style="color:var(--brand-red); font-size:14px; margin-left:10px;"></i>
     </div>`;
+}
+
+// 🚨 NEW FUNCTION: Fetches and displays the badges on the student card!
+async function imPopulateMarksPreview(sid, semester, subject) {
+    let previewEl = document.getElementById(`im_preview_${sid}`);
+    if (!previewEl) return;
+
+    try {
+        let snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sid, "nep_marks", semester));
+        if (snap.exists() && snap.data()[subject]) {
+            let exams = snap.data()[subject];
+            let html = Object.keys(exams).sort().map(examName => {
+                let total = exams[examName].total || 0;
+                let max = exams[examName].max || 0;
+                return `<span style="background:var(--bg-surface); color:var(--brand-red); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:800; border:1px solid var(--border-color);">${examName}: ${total}${max > 0 ? `/${max}` : ''}</span>`;
+            }).join('');
+            
+            previewEl.innerHTML = html || "<span style='font-size:10px; color:var(--text-muted); font-weight:600;'><i class='fas fa-info-circle'></i> No marks entered</span>";
+        } else {
+            previewEl.innerHTML = "<span style='font-size:10px; color:var(--text-muted); font-weight:600;'><i class='fas fa-info-circle'></i> No marks entered</span>";
+        }
+    } catch(e) {
+        if (previewEl) previewEl.innerHTML = "<span style='font-size:10px; color:#ef4444;'>Error loading</span>";
+    }
 }
 
 // ==========================================
@@ -4323,7 +4356,7 @@ function imRenderAccordions() {
         let btnSaveId = `im_btn_save_${idx}`;
 
         html += `
-        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.02); flex-shrink: 0;">
             <div style="background:var(--bg-surface); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="imToggleAccordion('${bodyId}', '${iconId}', '${examName}', '${mySession}', ${idx})">
                 <div id="${headerId}" style="font-weight:bold; color:var(--text-dark); font-size:14px;">${examName} <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(Loading...)</span></div>
                 <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(0deg);"></i>
