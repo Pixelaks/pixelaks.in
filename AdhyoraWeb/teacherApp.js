@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, documentId, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
 function debounce(func, wait = 300) {
@@ -3821,14 +3821,25 @@ function evtOnSearchTyped(queryStr) {
         let isPending = evtPendingStudentIDs.has(s.id);
 
         let chkHtml = "";
+        let clickAction = "";
+        let cursorStyle = "";
+        let bgStyle = isPending ? "rgba(220, 38, 38, 0.05)" : "var(--bg-surface)";
+        let borderStyle = isPending ? "var(--brand-red)" : "var(--border-color)";
+
         if (isAlreadyInCart) {
-            chkHtml = `<input type="checkbox" checked disabled style="width:18px; height:18px; accent-color:var(--text-muted);">`;
+            // Locked State
+            chkHtml = `<input type="checkbox" checked disabled style="width:18px; height:18px; accent-color:var(--text-muted); pointer-events:none;">`;
+            cursorStyle = "cursor:not-allowed; opacity:0.6;";
+            bgStyle = "var(--bg-base)";
         } else {
-            chkHtml = `<input type="checkbox" id="pend_chk_${s.id}" ${isPending ? 'checked' : ''} onchange="evtTogglePending('${s.id}', this.checked)" style="width:18px; height:18px; accent-color:var(--brand-red); cursor:pointer;">`;
+            // Interactive State
+            chkHtml = `<input type="checkbox" id="pend_chk_${s.id}" ${isPending ? 'checked' : ''} style="width:18px; height:18px; accent-color:var(--brand-red); pointer-events:none;">`;
+            cursorStyle = "cursor:pointer;";
+            clickAction = `onclick="evtTogglePendingCard('${s.id}')"`;
         }
 
         html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:5px;">
+        <div id="evt_search_card_${s.id}" style="display:flex; justify-content:space-between; align-items:center; background:${bgStyle}; border:1px solid ${borderStyle}; border-radius:10px; padding:12px; margin-bottom:5px; ${cursorStyle} transition: 0.2s;" ${clickAction}>
             <div>
                 <div style="font-size:13px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${name}</div>
                 <div style="font-size:11px; color:var(--text-muted); font-weight:600;">${roll} - ${dept} - Year ${year}</div>
@@ -3840,9 +3851,25 @@ function evtOnSearchTyped(queryStr) {
     container.innerHTML = html;
 }
 
-window.evtTogglePending = (id, isSelected) => {
-    if (isSelected) evtPendingStudentIDs.add(id);
-    else evtPendingStudentIDs.delete(id);
+// 🚨 NEW: This handles the entire card click!
+window.evtTogglePendingCard = (id) => {
+    let chk = document.getElementById(`pend_chk_${id}`);
+    let card = document.getElementById(`evt_search_card_${id}`);
+    if (!chk || !card) return;
+
+    // Flip the checkbox state
+    chk.checked = !chk.checked; 
+
+    // Update RAM Cache and Visuals instantly
+    if (chk.checked) {
+        evtPendingStudentIDs.add(id);
+        card.style.backgroundColor = "rgba(220, 38, 38, 0.05)"; // Red tint
+        card.style.borderColor = "var(--brand-red)";
+    } else {
+        evtPendingStudentIDs.delete(id);
+        card.style.backgroundColor = "var(--bg-surface)";
+        card.style.borderColor = "var(--border-color)";
+    }
 };
 
 function evtAddSelectedToCart() {
