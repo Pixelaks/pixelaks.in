@@ -1433,6 +1433,11 @@ document.getElementById("btnNavInternalMarks")?.addEventListener("click", () => 
     switchView(views.internalMarks, document.getElementById("btnNavInternalMarks"));
     initInternalMarksEngine(); 
 });
+
+document.getElementById("btnNavTimetable")?.addEventListener("click", () => {
+    switchView(views.timetable, document.getElementById("btnNavTimetable"));
+    initTimetableEngine();
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -1468,6 +1473,10 @@ function switchView(targetView, clickedBtn) {
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
+    }
+
+    if (targetView === views.timetable) {
+        initTimetableEngine();
     }
 
     if (targetView === "HOME") {
@@ -4498,3 +4507,631 @@ window.imSaveMarks = async (examName, idx) => {
     // 🚨 THE FIX: Instantly refresh the badge on the background card!
     imPopulateMarksPreview(imCurrentStudent.id, semester, subject);
 };
+
+// ==========================================
+// 🚨 MY TIMETABLE ENGINE (VIEWER)
+// ==========================================
+let ttLoaded = false;
+let ttSelectedDay = "Monday";
+let ttListenerUnsub = null;
+let ttTimelineInterval = null;
+const ttPeriodEndTimes = [10.5, 11.5, 12.5, 14.5, 15.5, 16.5];
+
+function initTimetableEngine() {
+    if (ttLoaded) return;
+    ttLoaded = true;
+
+    // Show Assign button ONLY if HOD
+    document.getElementById("btnOpenHodAssign").style.display = isHOD ? "block" : "none";
+    document.getElementById("btnOpenHodAssign").addEventListener("click", () => {
+        switchView(views.assign);
+        initAssignEngine();
+    });
+
+    let dayBtns = document.querySelectorAll("#ttMyDaysContainer .tt-day-btn");
+    dayBtns.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            ttSelectedDay = e.target.dataset.day;
+            dayBtns.forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active");
+            ttLoadTimetable();
+        });
+    });
+
+    let todayIdx = new Date().getDay() - 1;
+    if (todayIdx >= 0 && todayIdx <= 4) {
+        dayBtns[todayIdx].click();
+    } else {
+        dayBtns[0].click();
+    }
+
+    if (ttTimelineInterval) clearInterval(ttTimelineInterval);
+    ttTimelineInterval = setInterval(() => {
+        if (document.getElementById("timetableView").classList.contains("active")) {
+            ttUpdateVisuals();
+        }
+    }, 60000);
+}
+
+function ttLoadTimetable() {
+    if (ttListenerUnsub) { ttListenerUnsub(); ttListenerUnsub = null; }
+    
+    document.getElementById("ttMyWrapper").innerHTML = `<div class="no-data-text">Loading Timetable...</div>`;
+
+    const q = query(
+        collection(db, "colleges", currentCollegeID, "timetable_allocations"),
+        where("teacherID", "==", currentUserID),
+        where("day", "==", ttSelectedDay)
+    );
+
+    ttListenerUnsub = onSnapshot(q, (snap) => {
+        let periodData = {};
+        snap.forEach(doc => {
+            let d = doc.data();
+            let pStr = d.period;
+            if (!pStr) return;
+            let pIndex = parseInt(pStr) - 1;
+            
+            let semNum = 1;
+            if (d.semester) semNum = parseInt(d.semester);
+            let isOddSem = (semNum % 2 !== 0);
+            let matchesCycle = (currentSemesterType === "Odd" && isOddSem) || (currentSemesterType === "Even" && !isOddSem);
+
+            if (matchesCycle) {
+                let sub = d.subjectName || "Unknown";
+                if (!d.isCommon && d.splitIndex) sub += ` (Batch ${parseInt(d.splitIndex) + 1})`;
+                
+                periodData[pIndex] = {
+                    category: d.category || "Class",
+                    subject: sub,
+                    semester: `Sem ${d.semester}`,
+                    room: d.room || "TBA"
+                };
+            }
+        });
+
+        ttRenderDay(periodData);
+    });
+}
+
+function ttRenderDay(periodData) {
+    let wrapper = document.getElementById("ttMyWrapper");
+    let html = "";
+
+    for (let i = 0; i < 6; i++) {
+        let hasClass = periodData[i] !== undefined;
+        let pNum = i + 1;
+        let idBase = `my_tt_${i}`;
+        
+        let catText = hasClass ? periodData[i].category : "Leisure";
+        let subText = hasClass ? periodData[i].subject : "No Class";
+        let semText = hasClass ? periodData[i].semester : "-";
+        let roomText = hasClass ? periodData[i].room : "-";
+        
+        let bgStyle = hasClass ? "rgba(220, 38, 38, 0.05)" : "var(--bg-surface)";
+        let borderStyle = hasClass ? "var(--brand-red)" : "var(--border-color)";
+
+        html += `
+        <div class="tt-row" id="row_${idBase}">
+            <div class="tt-timeline-col">
+                <div class="tt-node" id="node_${idBase}" style="border-color:${borderStyle}; color:${hasClass ? 'var(--brand-red)' : 'var(--text-muted)'}">${pNum}</div>
+                ${i < 5 ? `<div class="tt-line-bg" style="background:var(--border-color);"><div class="tt-line-fill" id="fill_${idBase}" style="background:var(--brand-red);"></div></div>` : ''}
+            </div>
+            <div class="tt-card" style="background:${bgStyle}; border-color:${borderStyle}; display:flex; justify-content:space-between; align-items:center; padding:15px; border-radius:12px; flex:1;">
+                <div>
+                    <div style="font-size:12px; font-weight:800; color:var(--brand-red); text-transform:uppercase; margin-bottom:2px;">${catText}</div>
+                    <div style="font-size:15px; font-weight:bold; color:var(--text-dark);">${subText}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:13px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${roomText}</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:600;">${semText}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    wrapper.innerHTML = html;
+    ttUpdateVisuals();
+}
+
+function ttUpdateVisuals() {
+    let now = new Date();
+    let currentHour = now.getHours() + (now.getMinutes() / 60.0);
+    
+    for (let i = 0; i < 6; i++) {
+        let idBase = `my_tt_${i}`;
+        let nodeEl = document.getElementById(`node_${idBase}`);
+        let fillEl = document.getElementById(`fill_${idBase}`);
+        
+        let endTime = ttPeriodEndTimes[i];
+        let startTime = endTime - 1.0;
+        
+        if (nodeEl) {
+            if (currentHour >= endTime) { nodeEl.style.background = "var(--border-color)"; nodeEl.style.color = "white"; }
+            else if (currentHour >= startTime && currentHour < endTime) { nodeEl.style.background = "var(--brand-red)"; nodeEl.style.color = "white"; }
+            else { nodeEl.style.background = "white"; }
+        }
+        
+        if (fillEl && i < 5) {
+            let fillAmount = (currentHour >= endTime) ? 100 : (currentHour <= startTime) ? 0 : ((currentHour - startTime) / (endTime - startTime)) * 100;
+            fillEl.style.height = `${fillAmount}%`;
+        }
+    }
+}
+
+// ==========================================
+// 🚨 HOD EDITOR ENGINE (ASSIGN CLASSES)
+// ==========================================
+let asnLoaded = false;
+let asnSelectedDay = "Monday";
+let asnCurrentSem = "1";
+let asnActiveRows = [];
+let asnCachedTeachers = [];
+let asnCachedYearStudents = [];
+let asnPendSplitRow = null;
+
+function initAssignEngine() {
+    if (asnLoaded) return;
+    asnLoaded = true;
+
+    document.getElementById("btnBackFromAssign").addEventListener("click", () => switchView(views.timetable));
+    document.getElementById("btnAsnSave").addEventListener("click", asnSaveTimetable);
+
+    // Setup Semester Dropdown
+    let dropSem = document.getElementById("asnSemDrop"); 
+    let optionsHtml = "";
+    let activeValue = "";
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0);
+        if ((currentSemesterType === "Odd" && isOdd) || (currentSemesterType === "Even" && !isOdd)) {
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
+        }
+    }
+    dropSem.innerHTML = optionsHtml; 
+    asnCurrentSem = activeValue;
+    dropSem.value = asnCurrentSem;
+    dropSem.addEventListener("change", (e) => { asnCurrentSem = e.target.value; asnLoadData(); });
+
+    let dayBtns = document.querySelectorAll("#asnDaysContainer .asn-day-btn");
+    dayBtns.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            asnSelectedDay = e.target.dataset.day;
+            dayBtns.forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active");
+            asnLoadData();
+        });
+    });
+
+    // Fetch all teachers once for caching
+    getDocs(collection(db, "colleges", currentCollegeID, "teachers")).then(snap => {
+        asnCachedTeachers = [];
+        snap.forEach(d => asnCachedTeachers.push({ id: d.id, name: d.data().name || d.data().teacherName || "Unknown", dept: d.data().departmentID || "" }));
+        
+        let todayIdx = new Date().getDay() - 1;
+        if (todayIdx >= 0 && todayIdx <= 4) dayBtns[todayIdx].click();
+        else dayBtns[0].click();
+    });
+}
+
+async function asnLoadData() {
+    document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">Loading Assign Panel...</div>`;
+
+    // 1. Fetch Structure to know Categories
+    let docID = `Sem${asnCurrentSem}_${asnSelectedDay}`;
+    const structSnap = await getDoc(doc(db, "colleges", currentCollegeID, "timetable_structure", docID));
+    
+    if (!structSnap.exists() || !structSnap.data().slots) {
+        document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No structure set for this day by Principal.</div>`;
+        return;
+    }
+
+    let slots = structSnap.data().slots;
+    let validPeriods = [];
+    let pCats = {};
+    for (let i = 1; i <= 6; i++) {
+        if (slots[`P${i}`]) {
+            let cat = slots[`P${i}`].trim();
+            if (cat !== "Break" && cat !== "Lunch" && cat !== "Select Category") {
+                validPeriods.push(i);
+                pCats[i] = cat;
+            }
+        }
+    }
+
+    if (validPeriods.length === 0) {
+        document.getElementById("asnListContainer").innerHTML = `<div class="no-data-text">No classes scheduled today.</div>`;
+        return;
+    }
+
+    // 2. Fetch Existing Allocations for HOD's Dept
+    let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+    const allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", safeHodDept)));
+    
+    let allocsByPeriod = {};
+    allocSnap.forEach(d => {
+        let p = parseInt(d.data().period);
+        if (!allocsByPeriod[p]) allocsByPeriod[p] = [];
+        allocsByPeriod[p].push(d.data());
+    });
+
+    asnActiveRows = [];
+    validPeriods.forEach(p => {
+        let cat = pCats[p];
+        if (allocsByPeriod[p]) {
+            let docs = allocsByPeriod[p].sort((a,b) => (parseInt(a.splitIndex)||0) - (parseInt(b.splitIndex)||0));
+            docs.forEach((d, idx) => {
+                let actualCat = d.category ? d.category : cat; // Support tutorial overrides
+                asnActiveRows.push({ id: `r_${p}_${idx}`, period: p, splitIndex: parseInt(d.splitIndex)||0, isSplit: (parseInt(d.splitIndex)||0) > 0 || !d.isCommon, category: actualCat, subject: d.subjectName || "", teacher: d.teacherName || "", teacherID: d.teacherID || "", room: d.room || "" });
+            });
+        } else {
+            asnActiveRows.push({ id: `r_${p}_0`, period: p, splitIndex: 0, isSplit: false, category: cat, subject: "", teacher: "", teacherID: "", room: "" });
+        }
+    });
+
+    // 3. Cache Students for Splitting Logic
+    let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
+    const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
+    asnCachedYearStudents = [];
+    stuSnap.forEach(d => asnCachedYearStudents.push({ id: d.id, ...d.data() }));
+
+    asnRenderLayout();
+}
+
+function asnRenderLayout() {
+    let container = document.getElementById("asnListContainer");
+    let groupedRows = {};
+    
+    asnActiveRows.forEach(r => {
+        if (!groupedRows[r.period]) groupedRows[r.period] = [];
+        groupedRows[r.period].push(r);
+    });
+
+    let html = "";
+    Object.keys(groupedRows).sort((a,b) => a - b).forEach(p => {
+        let rows = groupedRows[p].sort((a,b) => a.splitIndex - b.splitIndex);
+        
+        html += `<div class="asn-period-wrapper" style="background:white; border:2px solid var(--border-color); border-radius:16px; padding:15px; display:flex; flex-direction:column; gap:15px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">`;
+        html += `<div style="text-align:center; font-weight:800; color:var(--brand-red); font-size:16px; text-transform:uppercase; letter-spacing:1px;">Period ${p}</div>`;
+        
+        rows.forEach((row, idx) => {
+            let isMjdOrTut = row.category.toUpperCase().includes("MJD") || row.category.toUpperCase().includes("MID") || row.category.toUpperCase().includes("SEC") || row.category.toUpperCase().includes("TUTORIAL");
+            
+            // Generate Category Dropdown
+            let catOptions = "";
+            if (isMjdOrTut) {
+                let mjd = row.category.replace("MID", "MJD").replace("SEC", "MJD");
+                let mid = row.category.replace("MJD", "MID").replace("SEC", "MID");
+                let sec = row.category.replace("MJD", "SEC").replace("MID", "SEC");
+                
+                catOptions += `<option value="${mjd}" ${row.category === mjd ? 'selected' : ''}>${mjd}</option>`;
+                catOptions += `<option value="${mid}" ${row.category === mid ? 'selected' : ''}>${mid}</option>`;
+                catOptions += `<option value="${sec}" ${row.category === sec ? 'selected' : ''}>${sec}</option>`;
+                catOptions += `<option value="Tutorial" ${row.category === "Tutorial" ? 'selected' : ''}>Tutorial</option>`;
+            } else {
+                catOptions = `<option value="${row.category}">${row.category}</option>`;
+            }
+
+            let catLocked = row.isSplit || !isMjdOrTut ? "disabled" : "";
+            let subLocked = row.isSplit ? "disabled" : "";
+
+            let isDel = row.isSplit; 
+            let btnClass = isDel ? "background:#fca5a5; color:var(--text-dark);" : "background:var(--bg-surface); border:1px solid var(--border-color); color:var(--text-dark);"; 
+            let btnIcon = isDel ? '<i class="fas fa-trash"></i> Delete Batch' : '<i class="fas fa-cut"></i> Split';
+            let cardStyle = isDel ? "background:#fff5f5; border-color:var(--brand-red);" : "background:white; border-color:var(--border-color);";
+
+            let badgeHtml = "";
+            if (rows.length > 1) {
+                badgeHtml = `<div style="position:absolute; top:-12px; left:15px; background:var(--brand-red); color:white; font-size:11px; padding:4px 12px; border-radius:12px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1); text-transform:uppercase;">Batch ${idx + 1}</div>`;
+            }
+
+            html += `
+            <div class="asn-card" id="card_${row.id}" style="${cardStyle} width:100%; border-radius:12px; padding:20px 15px 15px 15px; position:relative; border-width:1px; border-style:solid; margin-top:${isDel ? '10px' : '0'};">
+                ${badgeHtml}
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <select class="filter-select" id="cat_${row.id}" ${catLocked} onchange="asnOnCatChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">${catOptions}</select>
+                    <select class="filter-select" id="sub_${row.id}" ${subLocked} onchange="asnOnSubChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                        <option value="">${row.subject ? row.subject : 'Loading...'}</option>
+                    </select>
+                    <select class="filter-select" id="tea_${row.id}" onchange="asnOnTeacherChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                        <option value="">${row.teacher ? row.teacher : 'Loading...'}</option>
+                    </select>
+                    <input type="text" class="filter-select" id="rm_${row.id}" value="${row.room}" placeholder="Room TBD" onchange="asnOnRoomChange('${row.id}', this.value)" style="margin:0; padding:8px 12px; font-size:12px; font-weight:600; color:var(--text-dark); background:white;">
+                </div>
+                <button onclick="asnRequestSplit('${row.id}')" style="width:100%; border-radius:8px; font-weight:700; font-size:14px; padding:8px; cursor:pointer; transition:0.2s; ${btnClass}">${btnIcon}</button>
+            </div>`;
+        });
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+    
+    // Auto-populate dropdowns silently
+    asnActiveRows.forEach(row => {
+        asnPopulateSubjects(row);
+    });
+}
+
+function asnPopulateSubjects(row) {
+    let subDrop = document.getElementById(`sub_${row.id}`);
+    if (!subDrop) return;
+
+    if (row.category.toLowerCase().includes("tutorial")) {
+        subDrop.innerHTML = `<option value="Tutorial">Tutorial</option>`;
+        subDrop.disabled = true;
+        asnPopulateTeachers(row);
+        return;
+    }
+
+    subDrop.innerHTML = `<option value="">Loading...</option>`;
+    
+    db.Collection("colleges").Document(currentCollegeID).Collection("subjects")
+      .WhereEqualTo("department", teacherDeptRaw)
+      .GetSnapshotAsync().ContinueWithOnMainThread(task => {
+          if (!task.IsCompletedSuccessfully) return;
+          
+          let subList = [];
+          task.Result.Documents.forEach(d => {
+              let docSem = d.ContainsField("semester") ? d.GetValue("semester") : "";
+              if (docSem.split(',').some(s => s.trim() == asnCurrentSem)) {
+                  let docType = d.ContainsField("type") ? d.GetValue("type").trim() : "";
+                  if (docType == row.category) subList.push(d.GetValue("name"));
+              }
+          });
+
+          if (subList.length === 0) {
+              subDrop.innerHTML = `<option value="">No Subjects</option>`;
+          } else {
+              subList.sort();
+              let opts = `<option value="">Select Subject</option>`;
+              subList.forEach(s => opts += `<option value="${s}" ${s === row.subject ? 'selected' : ''}>${s}</option>`);
+              subDrop.innerHTML = opts;
+              asnPopulateTeachers(row);
+          }
+      });
+}
+
+function asnPopulateTeachers(row) {
+    let teaDrop = document.getElementById(`tea_${row.id}`);
+    if (!teaDrop) return;
+    
+    if (!row.subject || row.subject === "Select Subject" || row.subject === "No Subjects") {
+        teaDrop.innerHTML = `<option value="">Unassigned</option>`;
+        return;
+    }
+
+    let isTutorial = row.subject.toLowerCase() === "tutorial" || row.category.toLowerCase().includes("tutorial");
+    
+    if (isTutorial) {
+        // Load all teachers in department
+        let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+        let opts = `<option value="">Unassigned</option>`;
+        asnCachedTeachers.forEach(t => {
+            if (t.dept === safeHodDept || t.dept === teacherDeptRaw) {
+                opts += `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`;
+            }
+        });
+        teaDrop.innerHTML = opts;
+    } else {
+        // Normal Subject Query
+        db.Collection("colleges").Document(currentCollegeID).Collection("faculty_subjects")
+          .WhereEqualTo("subjectName", row.subject)
+          .WhereEqualTo("isActive", true)
+          .GetSnapshotAsync().ContinueWithOnMainThread(task => {
+              if (!task.IsCompletedSuccessfully) return;
+              
+              let opts = `<option value="">Unassigned</option>`;
+              let foundNames = new Set();
+              
+              task.Result.Documents.forEach(d => {
+                  let tName = d.ContainsField("teacherName") ? d.GetValue("teacherName") : "Unknown";
+                  let tID = d.ContainsField("teacherID") ? d.GetValue("teacherID") : "";
+                  if (!foundNames.has(tName)) {
+                      foundNames.add(tName);
+                      opts += `<option value="${tID}|${tName}" ${tName === row.teacher ? 'selected' : ''}>${tName}</option>`;
+                  }
+              });
+              
+              if (foundNames.size === 0) opts += `<option value="">No faculty assigned</option>`;
+              teaDrop.innerHTML = opts;
+          });
+    }
+}
+
+window.asnOnCatChange = (rowId, val) => {
+    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
+    row.category = val; row.subject = ""; row.teacher = ""; row.teacherID = ""; row.room = "";
+    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); // Wipe old splits
+    asnRenderLayout();
+};
+window.asnOnSubChange = (rowId, val) => {
+    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
+    row.subject = val; row.teacher = ""; row.teacherID = ""; row.room = "";
+    asnActiveRows = asnActiveRows.filter(r => !(r.period === row.period && r.isSplit)); // Wipe old splits
+    
+    // Auto restore if they had batches saved!
+    if (val) {
+        let safeSubj = val.replace(/\s+/g, '').replace(/\//g, '');
+        let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${row.period}_0_${safeSubj}`;
+        
+        getDoc(doc(db, "colleges", currentCollegeID, "timetable_allocations", docID)).then(snap => {
+            if (snap.exists()) {
+                row.teacher = snap.data().teacherName || ""; row.teacherID = snap.data().teacherID || ""; row.room = snap.data().room || "";
+                // Check if batched
+                getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", val))).then(bSnap => {
+                    if (bSnap.size > 1) {
+                        let bDocs = []; bSnap.forEach(d => bDocs.push(d.data())); bDocs.sort((a,b) => a.batchName.localeCompare(b.batchName));
+                        for(let i=1; i<bDocs.length; i++) {
+                            asnActiveRows.push({ id: `r_${row.period}_${i}_${Date.now()}`, period: row.period, splitIndex: i, isSplit: true, category: row.category, subject: val, teacher: "", teacherID: "", room: "" });
+                        }
+                    }
+                    asnRenderLayout();
+                });
+            } else asnRenderLayout();
+        });
+    } else asnRenderLayout();
+};
+window.asnOnTeacherChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; if(val){ let parts = val.split('|'); row.teacherID = parts[0]; row.teacher = parts[1]; } else { row.teacherID = ""; row.teacher = ""; } };
+window.asnOnRoomChange = (rowId, val) => { let row = asnActiveRows.find(r => r.id === rowId); if(!row) return; row.room = val; };
+
+window.asnRequestSplit = (rowId) => {
+    let row = asnActiveRows.find(r => r.id === rowId); if(!row) return;
+    let isVac = (row.subject.toUpperCase().includes("VAC") || row.category.toUpperCase().includes("VAC"));
+
+    if (row.isSplit) {
+        // DELETE LOGIC
+        asnActiveRows = asnActiveRows.filter(r => r.id !== row.id);
+        let remRows = asnActiveRows.filter(r => r.period === row.period).sort((a,b) => a.splitIndex - b.splitIndex);
+        remRows.forEach((r, idx) => { r.splitIndex = idx; if(idx === 0) r.isSplit = false; });
+        asnRenderLayout();
+        
+        if (row.subject) {
+            let newBatches = remRows.length;
+            if (newBatches === 1) {
+                showRcToast("Reverted to a single class.");
+                getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", row.subject))).then(snap => {
+                    snap.forEach(d => deleteDoc(d.ref));
+                });
+            } else {
+                if (isVac) asnOpenDeptSplit(remRows[0], true);
+                else {
+                    showRcToast(`Re-balancing into ${newBatches} batches...`);
+                    getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", row.subject))).then(snap => {
+                        const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref)); wb.commit().then(() => asnExecuteDivideEvenly(row.subject, newBatches));
+                    });
+                }
+            }
+        }
+    } else {
+        // ADD LOGIC
+        if (!row.subject) { showRcToast("Select a subject first!"); return; }
+        if (isVac) asnOpenDeptSplit(row, false); 
+        else {
+            let newIdx = asnActiveRows.filter(r => r.period === row.period && r.isSplit).length + 1; 
+            asnActiveRows.push({ id: `r_${row.period}_${newIdx}_${Date.now()}`, period: row.period, splitIndex: newIdx, isSplit: true, category: row.category, subject: row.subject, teacher: "", teacherID: "", room: "" }); 
+            asnRenderLayout(); 
+            asnExecuteDivideEvenly(row.subject, newIdx + 1);
+        }
+    }
+};
+
+async function asnExecuteDivideEvenly(subject, totalBatches) {
+    let allStudents = asnCachedYearStudents.map(s => s.id);
+    let baseSize = Math.floor(allStudents.length / totalBatches); let remainder = allStudents.length % totalBatches;
+    const wb = writeBatch(db); let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, ''); let offset = 0;
+    for(let i=0; i<totalBatches; i++){
+        let size = baseSize + (i < remainder ? 1 : 0); let bStudents = allStudents.slice(offset, offset + size); offset += size; let bName = `Batch ${i+1}`; let docID = `BATCH_Sem${asnCurrentSem}_${cleanSub}_${bName.replace(/\s+/g,'')}`;
+        wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", docID), { batchName: bName, subjectName: subject, semester: asnCurrentSem, studentIDs: bStudents }, {merge: true});
+    }
+    await wb.commit();
+    showRcToast(`Split Class evenly!`);
+}
+
+function asnOpenDeptSplit(row, isDeleting) {
+    asnPendSplitRow = row; let sub = row.subject; 
+    let students = asnCachedYearStudents; let uniqueDepts = new Set(); let studentToDept = {};
+    
+    students.forEach(s => {
+        let isEnrolled = false;
+        if(s.enrolledSubjects) { let semKey = "Semester_" + asnCurrentSem; let semSpace = "Semester " + asnCurrentSem; let map = s.enrolledSubjects[semKey] || s.enrolledSubjects[semSpace] || s.enrolledSubjects[asnCurrentSem]; if(map) { Object.values(map).forEach(v => { if(v.toString().trim() === sub.trim()) isEnrolled = true; }); } }
+        if (isEnrolled) { let d = (s.Department || s.department || "Unknown").trim(); uniqueDepts.add(d); studentToDept[s.id] = d; }
+    });
+    
+    if (uniqueDepts.size === 0) { showRcToast("No students enrolled in this subject."); return; }
+
+    getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", sub))).then(snap => {
+        let existingMap = {}; let existCount = snap.size;
+        snap.forEach(d => { let bName = d.data().batchName; (d.data().studentIDs || []).forEach(sid => { if(studentToDept[sid]) existingMap[studentToDept[sid]] = bName; }); });
+        
+        let drop = document.getElementById("dsBatchCount"); 
+        drop.innerHTML = `<option value="1">1 Batch (Unified)</option><option value="2">2 Batches</option><option value="3">3 Batches</option><option value="4">4 Batches</option><option value="5">5 Batches</option><option value="6">6 Batches</option>`;
+        let targetCount = existCount > 0 ? existCount : 2; if(isDeleting && targetCount > 1) targetCount--; drop.value = targetCount;
+
+        const renderDepts = () => {
+            let count = parseInt(drop.value); let html = "";
+            Array.from(uniqueDepts).forEach(d => {
+                let opts = count === 1 ? `<option>Unified Class</option>` : Array.from({length:count}, (_,i)=>`<option value="Batch ${i+1}">Batch ${i+1}</option>`).join('') + `<option value="Exclude">Exclude</option>`;
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:10px 15px; border-radius:10px; border:1px solid var(--border-color);">
+                    <span style="font-weight:bold; color:var(--text-dark); font-size:13px;">${d.replace('DEPT_','')}</span>
+                    <select class="ds-dept-select" data-dept="${d}" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border-color); outline:none; font-family:'Poppins'; font-size:12px; font-weight:bold; color:var(--brand-red); background:white;" ${count===1?'disabled':''}>${opts}</select>
+                </div>`;
+            });
+            document.getElementById("dsDeptList").innerHTML = html;
+            if(count > 1) { document.querySelectorAll(".ds-dept-select").forEach(s => { let d = s.dataset.dept; if(existingMap[d]) { let idx = Array.from(s.options).findIndex(o=>o.value===existingMap[d]); if(idx>=0) s.selectedIndex = idx; } }); }
+        };
+        drop.onchange = renderDepts; renderDepts();
+        document.getElementById("btnConfirmDeptSplit").onclick = () => asnConfirmDeptSplit(sub, uniqueDepts, studentToDept);
+        document.getElementById("deptSplitOverlay").classList.add("active");
+    });
+}
+
+async function asnConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
+    let totalBatches = parseInt(document.getElementById("dsBatchCount").value); 
+    let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, '');
+    
+    if (totalBatches > 1) {
+        let selectedBatches = new Set();
+        document.querySelectorAll(".ds-dept-select").forEach(s => { if (s.value !== "Exclude") selectedBatches.add(s.value); });
+        for (let i = 1; i <= totalBatches; i++) {
+            if (!selectedBatches.has(`Batch ${i}`)) { showRcToast(`⚠️ Please assign at least one department to Batch ${i}!`); return; }
+        }
+    }
+
+    document.getElementById("deptSplitOverlay").classList.remove("active"); 
+    showRcToast("Saving configurations...");
+    
+    if (totalBatches === 1) {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", subject)));
+        const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref)); await wb.commit();
+        asnActiveRows = asnActiveRows.filter(r => !(r.period === asnPendSplitRow.period && r.isSplit)); let mRow = asnActiveRows.find(r => r.period === asnPendSplitRow.period); if(mRow) { mRow.isSplit = false; mRow.splitIndex = 0; }
+        asnRenderLayout(); return;
+    }
+
+    let batchMap = {}; for(let i=1; i<=totalBatches; i++) batchMap[`Batch ${i}`] = [];
+    document.querySelectorAll(".ds-dept-select").forEach(s => { let val = s.value; if(val !== "Exclude") { Object.keys(studentToDept).forEach(sid => { if(studentToDept[sid] === s.dataset.dept) batchMap[val].push(sid); }); } });
+
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", subject)));
+    const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
+    for(let i=1; i<=totalBatches; i++) { wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", `BATCH_Sem${asnCurrentSem}_${cleanSub}_Batch${i}`), { batchName: `Batch ${i}`, subjectName: subject, semester: asnCurrentSem, studentIDs: batchMap[`Batch ${i}`] }, {merge:true}); }
+    await wb.commit();
+
+    let existingCount = asnActiveRows.filter(r => r.period === asnPendSplitRow.period).length;
+    if (totalBatches > existingCount) { for(let i=existingCount; i<totalBatches; i++) asnActiveRows.push({ id: `r_${asnPendSplitRow.period}_${i}_${Date.now()}`, period: asnPendSplitRow.period, splitIndex: i, isSplit: true, category: asnPendSplitRow.category, subject: subject, teacher: "", teacherID: "", room: "" }); }
+    else if (totalBatches < existingCount) { asnActiveRows = asnActiveRows.filter(r => r.period !== asnPendSplitRow.period || r.splitIndex < totalBatches); }
+    asnRenderLayout(); showRcToast(`Saved as ${totalBatches} batches!`);
+}
+
+async function asnSaveTimetable() {
+    let btn = document.getElementById("btnAsnSave"); btn.innerText = "Saving..."; btn.disabled = true;
+    let tMap = {}; let conflict = false;
+    
+    asnActiveRows.forEach(r => {
+        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
+            if(!tMap[r.period]) tMap[r.period] = {};
+            if(tMap[r.period][r.teacher]) { let eSub = tMap[r.period][r.teacher]; let isVac3 = r.subject.toUpperCase().includes("VAC3") || r.category.toUpperCase().includes("VAC3"); if(!isVac3 || eSub !== r.subject) conflict = true; }
+            else tMap[r.period][r.teacher] = r.subject;
+        }
+    });
+    
+    if(conflict) { showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); btn.innerText = "Save Timetable"; btn.disabled = false; return; }
+
+    let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", safeHodDept)));
+    const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
+
+    asnActiveRows.forEach(r => {
+        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
+            let safeSubj = r.subject.replace(/\s+/g, '').replace(/\//g, ''); let sIdx = r.isSplit ? r.splitIndex.toString() : "0";
+            let isCom = !asnActiveRows.some(x => x.period === r.period && x.isSplit);
+            
+            wb.set(doc(db, "colleges", currentCollegeID, "timetable_allocations", `Sem${asnCurrentSem}_${asnSelectedDay}_P${r.period}_${sIdx}_${safeSubj}`), {
+                semester: asnCurrentSem, day: asnSelectedDay, period: r.period.toString(), category: r.category, subjectName: r.subject, teacherName: r.teacher, teacherID: r.teacherID, departmentID: safeHodDept, room: r.room, isCommon: isCom, splitIndex: isCom ? null : sIdx
+            }, {merge:true});
+        }
+    });
+    
+    await wb.commit(); 
+    showRcToast("Successfully Saved Timetable!"); 
+    btn.innerText = "Save Timetable"; btn.disabled = false;
+    switchView(views.timetable); 
+}
