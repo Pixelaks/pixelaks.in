@@ -1492,28 +1492,6 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
-    // 🚨 FIX: Re-bind the floating main action action "+" button handler based on current tab context
-    let topActionBtn = document.getElementById("btnOpenCompose");
-    if (topActionBtn) {
-        // Clear all previous attached instances to prevent ghost actions
-        let newActionBtn = topActionBtn.cloneNode(true);
-        topActionBtn.parentNode.replaceChild(newActionBtn, topActionBtn);
-        
-        if (targetView === views.assignments) {
-            newActionBtn.title = "Add Assignment";
-            newActionBtn.onclick = (e) => {
-                e.stopPropagation();
-                window.OpenAssignmentPanel();
-            };
-        } else {
-            newActionBtn.title = "Add Announcement";
-            newActionBtn.onclick = (e) => {
-                e.stopPropagation();
-                window.OpenCompose(false);
-            };
-        }
-    }
-
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
@@ -5842,7 +5820,21 @@ let composeFCMTokens = [];
 // RAM Cache for Departments (Matches C# cachedDepartments)
 let composeCachedDepartments = [];
 
-// 1. Bind Buttons (Clean Contextual Mapping)
+// 1. Universal Smart Click Router (Parity with Unity Panel Logic)
+document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let assignmentsPanel = document.getElementById("assignmentsView");
+    
+    // 🧠 The Context Check: If the assignment view is active, open the Assignment engine!
+    if (assignmentsPanel && !assignmentsPanel.classList.contains("hidden-view")) {
+        window.OpenAssignmentPanel();
+    } else {
+        window.OpenCompose(false); // Otherwise, default to announcement engine
+    }
+});
+
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
 // Dynamic UI Toggles (Matches C# OnToggleChanged)
