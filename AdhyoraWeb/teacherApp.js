@@ -1494,16 +1494,21 @@ function switchView(targetView, clickedBtn) {
 
     // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
     // 🚨 STATIC ENGINE: Force the + button to always act as the Assignment Panel trigger
-    let topActionBtn = document.getElementById("btnOpenCompose");
-    if (topActionBtn) {
-        topActionBtn.title = "Add Assignment";
-        topActionBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.OpenAssignmentPanel(); 
-        };
-    }
-
+    // 🚨 GLOBAL FORCE ENGINE: Plus button brings view focus to assignments and pops the modal instantly
+    let topActionBtn = document.getElementById("btnOpenCompose");
+    if (topActionBtn) {
+        topActionBtn.title = "Add Assignment";
+        topActionBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Force interface state router focus change instantly
+            let assignmentsTabBtn = document.getElementById("btnNavAssignments");
+            switchView(views.assignments, assignmentsTabBtn);
+            
+            window.OpenAssignmentPanel(); 
+        };
+    }
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
@@ -6367,51 +6372,29 @@ window.OpenAssignmentPanel = () => {
     document.getElementById("asgnTopicInput").value = "";
     document.getElementById("asgnDescInput").value = "";
     
+    // Clear and set default today's date into native input picker
+    let dateInput = document.getElementById("asgnDatePicker");
+    if (dateInput) {
+        let today = new Date();
+        let yyyy = today.getFullYear();
+        let mm = String(today.getMonth() + 1).padStart(2, '0');
+        let dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
     let btn = document.getElementById("btnPostAssignment");
     btn.innerText = "Post Assignment";
     btn.disabled = false;
     btn.style.opacity = "1";
 
-    setupAsgnDateDropdowns();
     fetchAsgnTeacherSubjects();
     document.getElementById("createAssignmentModal").classList.add("active");
 };
 
-// Wheel Date Population Logic
-function setupAsgnDateDropdowns() {
-    let dayDrop = document.getElementById("asgnDateDay");
-    let monthDrop = document.getElementById("asgnDateMonth");
-    let yearDrop = document.getElementById("asgnDateYear");
-
-    let now = new Date();
-    
-    monthDrop.innerHTML = asgnMonthNames.map((m, i) => `<option value="${i + 1}" ${i === now.getMonth() ? 'selected' : ''}>${m}</option>`).join('');
-    yearDrop.innerHTML = [0, 1].map(i => `<option value="${now.getFullYear() + i}">${now.getFullYear() + i}</option>`).join('');
-
-    const updateDays = () => {
-        let currentDayVal = parseInt(dayDrop.value) || now.getDate();
-        let m = parseInt(monthDrop.value);
-        let y = parseInt(yearDrop.value);
-        let daysInMonth = new Date(y, m, 0).getDate();
-
-        let dayOpts = "";
-        for (let i = 1; i <= daysInMonth; i++) {
-            dayOpts += `<option value="${i}" ${i === currentDayVal ? 'selected' : ''}>${i}</option>`;
-        }
-        dayDrop.innerHTML = dayOpts;
-    };
-
-    monthDrop.onchange = updateDays;
-    yearDrop.onchange = updateDays;
-    updateDays();
-}
-
-// Dynamic Filtering Core Maps
 function fetchAsgnTeacherSubjects() {
     let subDrop = document.getElementById("asgnSubDrop");
     subDrop.innerHTML = `<option value="">Loading Subjects...</option>`;
 
-    // Access real-time mappings matching Unity's FetchTeacherSubjects
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID), where("isActive", "==", true)), (snap) => {
         asgnSubjectsMap.clear();
         
@@ -6431,7 +6414,6 @@ function fetchAsgnTeacherSubjects() {
             });
         });
 
-        // Initialize Year View Selection Wheel (Parity matching Unity layout setup)
         let yearDrop = document.getElementById("asgnYearDrop");
         yearDrop.innerHTML = `<option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option>`;
         
@@ -6470,13 +6452,17 @@ async function executeCreateAssignment() {
     let desc = document.getElementById("asgnDescInput").value.trim();
     let selectedSubject = document.getElementById("asgnSubDrop").value;
     let semNum = document.getElementById("asgnSemDrop").value;
+    let dateVal = document.getElementById("asgnDatePicker").value;
 
     if (!topic) { showRcToast("Topic Title is required!"); return; }
     if (!selectedSubject || selectedSubject === "None") { showRcToast("Select a valid allocated subject."); return; }
+    if (!dateVal) { showRcToast("Please select a due date!"); return; }
 
-    let d = parseInt(document.getElementById("asgnDateDay").value);
-    let m = parseInt(document.getElementById("asgnDateMonth").value);
-    let y = parseInt(document.getElementById("asgnDateYear").value);
+    // Parse native picker layout string (YYYY-MM-DD)
+    let parts = dateVal.split('-');
+    let y = parseInt(parts[0]);
+    let m = parseInt(parts[1]);
+    let d = parseInt(parts[2]);
 
     let selectedDate = new Date(y, m - 1, d, 23, 59, 59);
     let today = new Date(); today.setHours(0,0,0,0);
