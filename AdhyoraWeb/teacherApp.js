@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, documentId } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, documentId, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
 // 🚨 GLOBAL VARIABLES
@@ -2060,7 +2060,10 @@ async function subjExecuteDelete() {
     if (stateOrDocID !== "PENDING") {
         showRcToast("Removing subject...");
         try {
-            await doc(db, "colleges", currentCollegeID, "faculty_subjects", stateOrDocID).update({ isActive: false });
+            // 🚨 THE FIX: Use the modular updateDoc function!
+            let docRef = doc(db, "colleges", currentCollegeID, "faculty_subjects", stateOrDocID);
+            await updateDoc(docRef, { isActive: false });
+            
             showRcToast("Subject Removed!");
         } catch(e) {
             console.error("Failed to remove subject", e);
