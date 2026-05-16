@@ -202,7 +202,17 @@
                     </div>
                 </div>
 
-                <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Assignments</h3></div>
+                <div id="assignmentsView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">My Assignments</h3>
+                    </div>
+                    
+                    <div id="asnListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px; background: rgba(0,0,0,0.01);">
+                        <div id="asnEmptyMessage" style="text-align:center; padding:40px 20px; color:var(--text-muted); font-weight:bold; font-size:15px;">Loading Assignments...</div>
+                        <div id="asnItemsArea" style="display: flex; flex-direction: column; gap: 15px;">
+                            </div>
+                    </div>
+                </div>
                 <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Students</h3></div>
                 <div id="subjectAssignView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Subject Assign</h3></div>
                 <div id="batchView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Batch Management</h3></div>
