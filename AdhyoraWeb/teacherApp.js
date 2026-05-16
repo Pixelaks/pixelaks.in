@@ -6031,7 +6031,7 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     } catch (e) {
         console.error("Error sending message: ", e);
         showRcToast("Failed to send message.");
-    } planetary {
+    } finally {   // <--- Change this line
         btn.innerText = "Send Message"; btn.disabled = false; btn.style.opacity = "1";
     }
 });
