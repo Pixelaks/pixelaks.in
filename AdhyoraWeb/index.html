@@ -79,7 +79,7 @@
                 </span>
             </div>
 
-            <a href="#" class="text-link forgot-pass">Forgot Password?</a>
+            <a href="javascript:void(0);" onclick="switchPanel('forgotPasswordPanel')" class="text-link forgot-pass">Forgot Password?</a>
 
             <button id="signInBtn" class="primary-btn">SignIn</button>
 
@@ -121,6 +121,19 @@
             <p class="switch-panel-text">
                 Already have an account?<br>
                 <a href="javascript:void(0);" onclick="switchPanel('signInPanel')" class="text-link">SignIn</a>
+            </p>
+        </div>
+
+        <div id="forgotPasswordPanel" class="panel">
+            <h2 class="panel-title">Reset Password</h2>
+            
+            <input type="email" id="forgotEmail" class="input-field" placeholder="Enter your registered email...">
+            
+            <button id="resetPasswordBtn" class="primary-btn">Send Reset Link</button>
+        
+            <p class="switch-panel-text">
+                Remember your password?<br>
+                <a href="javascript:void(0);" onclick="switchPanel('signInPanel')" class="text-link">Back to SignIn</a>
             </p>
         </div>
 
