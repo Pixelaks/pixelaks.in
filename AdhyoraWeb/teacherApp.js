@@ -1390,10 +1390,20 @@ async function saveAttendance() {
 const views = {
     welcome: document.getElementById("welcomeView"), attendance: document.getElementById("attendanceView"), timetable: document.getElementById("timetableView"),
     internalMarks: document.getElementById("internalMarksView"), subjects: document.getElementById("subjectsView"), calendar: document.getElementById("calendarView"),
-    assignments: document.getElementById("assignmentsView"), studentList: document.getElementById("studentListView"), subjectAssign: document.getElementById("subjectAssignView"),
+    assignments: document.getElementById("assignmentsView"), studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"), subjectAssign: document.getElementById("subjectAssignView"),
     batch: document.getElementById("batchView"), eventAttendance: document.getElementById("eventAttendanceView"), notifications: document.getElementById("notificationsView"),
     messages: document.getElementById("messagesView")
 };
+
+// Also update the button listener below it to trigger the listener
+document.getElementById("btnNavStudentList")?.addEventListener("click", () => {
+    switchView(views.studentList, document.getElementById("btnNavStudentList"));
+    if (!slLoaded) startStudentListListener();
+});
+
+document.getElementById("btnBackToStudents")?.addEventListener("click", () => {
+    switchView(views.studentList, document.getElementById("btnNavStudentList"));
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -2576,4 +2586,318 @@ function asnRenderList(dataList) {
     });
 
     listArea.innerHTML = html;
+}
+
+// ==========================================
+// 🚨 STUDENT LIST & DASHBOARD ENGINE
+// ==========================================
+let slLoaded = false; 
+let cachedStudents = [];
+let studentRenderLimit = 50; 
+
+function startStudentListListener() {
+    if (slLoaded) return;
+    slLoaded = true;
+    onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
+        cachedStudents = []; 
+        snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
+        document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; 
+        renderStudentList(document.getElementById("slSearchInput").value);
+    });
+}
+
+function renderStudentList(searchTerm = "") {
+    const listEl = document.getElementById("studentListContainer"); 
+    const noData = document.getElementById("slNoDataText");
+    let filtered = cachedStudents;
+    
+    if (searchTerm) { 
+        let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); 
+        filtered = cachedStudents.filter(s => { 
+            let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); 
+            return terms.every(term => sStr.includes(term)); 
+        }); 
+    }
+    
+    if (filtered.length === 0) { 
+        noData.style.display = "block"; 
+        noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; 
+        listEl.innerHTML = ""; 
+        listEl.appendChild(noData); 
+        return; 
+    }
+    noData.style.display = "none";
+    
+    // RAM SCROLL: Slice the array based on the current limit
+    let renderBatch = filtered.slice(0, studentRenderLimit);
+    let oldScroll = listEl.scrollTop;
+
+    listEl.innerHTML = renderBatch.map(s => {
+        let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); 
+        let status = s.status || "Approved";
+        let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
+        let statusLabel = status === "Approved" ? "Active" : status;
+        
+        return `
+        <div class="data-card ${statusClass}" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
+            <div style="flex:1; cursor:pointer;" onclick="window.SL_OpenDashboard('${s.id}')">
+                <div class="card-title" style="margin-bottom:2px; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
+                <div style="font-size:12px; font-weight:bold; color:var(--text-muted); margin-top:4px;">${cleanDept} - Year ${s.Year || "1"}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
+            </div>
+        </div>`;
+    }).join('');
+    
+    listEl.appendChild(noData); 
+    listEl.scrollTop = oldScroll;
+}
+
+document.getElementById("slSearchInput").addEventListener("input", debounce((e) => {
+    studentRenderLimit = 50; 
+    renderStudentList(e.target.value.trim());
+}, 250));
+
+document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
+    let el = e.target;
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
+        let searchTerm = document.getElementById("slSearchInput").value.trim();
+        if (studentRenderLimit < cachedStudents.length) {
+            studentRenderLimit += 50;
+            renderStudentList(searchTerm);
+        }
+    }
+});
+
+// ==========================================
+// STUDENT DASHBOARD DETAILS
+// ==========================================
+let sdCurrentStudentID = "";
+let sdStudentData = null;
+let sdSemKeys = [];
+let sdCurrentSemIndex = 0;
+let sdWorkingDays = new Set();
+let sdSemesterRanges = {};
+let sdCachedGlobalSubjects = [];
+
+async function fetchGlobalSubjects() {
+    if (sdCachedGlobalSubjects.length > 0) return;
+    let localCache = sessionStorage.getItem(`adhyora_subjects_${currentCollegeID}`);
+    if (localCache) {
+        sdCachedGlobalSubjects = JSON.parse(localCache);
+        return;
+    }
+    try {
+        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
+        snap.forEach(doc => {
+            let d = doc.data();
+            sdCachedGlobalSubjects.push({
+                id: doc.id,
+                cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''),
+                cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""),
+                semesterArray: (d.Semester || d.semester || "").toString(),
+                displayName: d.Name || d.name || "Unnamed",
+                rawType: d.Type || d.type || ""
+            });
+        });
+        sessionStorage.setItem(`adhyora_subjects_${currentCollegeID}`, JSON.stringify(sdCachedGlobalSubjects));
+    } catch(e) {}
+}
+
+window.SL_OpenDashboard = async (sID) => {
+    sdCurrentStudentID = sID;
+    switchView(views.studentDashboard, document.getElementById('btnNavStudentList'));
+    
+    document.getElementById("sdNameText").innerText = "Loading..."; document.getElementById("sdRollText").innerText = ""; document.getElementById("sdStatusBadge").innerText = "..."; document.getElementById("sdSemesterTitle").innerText = "Loading...";
+    SD_UpdateWaveUI(0); ["sdStatAtt", "sdStatAbs", "sdStatTot", "sdStatPAtt", "sdStatPAbs", "sdStatPTot"].forEach(id => document.getElementById(id).innerText = "0");
+    document.getElementById("sdSubjectList").innerHTML = ""; document.getElementById("sdEnrolledList").innerHTML = "<i>Loading subjects...</i>";
+    
+    if(sdWorkingDays.size === 0) {
+        let displayYear = new Date().getFullYear(); let displayMonth = new Date().getMonth() + 1; 
+        let aYear = (displayMonth >= 6) ? `${displayYear}-${displayYear + 1}` : `${displayYear - 1}-${displayYear}`;
+        try {
+            const [wDoc, sDoc] = await Promise.all([ getDoc(doc(db, "colleges", currentCollegeID, "workingDays", aYear)), getDoc(doc(db, "colleges", currentCollegeID, "semesters", aYear)) ]);
+            if(wDoc.exists()) Object.entries(wDoc.data()).forEach(([k,v]) => { if(v==="Regular Working Day") sdWorkingDays.add(k); });
+            if(sDoc.exists()) { let d = sDoc.data(); if(d.oddSemester?.startDate) sdSemesterRanges.Odd = { start: new Date(d.oddSemester.startDate), end: new Date(d.oddSemester.endDate) }; if(d.evenSemester?.startDate) sdSemesterRanges.Even = { start: new Date(d.evenSemester.startDate), end: new Date(d.evenSemester.endDate) }; }
+        } catch(e) {}
+    }
+
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sID));
+        if(snap.exists()) {
+            sdStudentData = snap.data();
+            document.getElementById("sdNameText").innerText = sdStudentData.Name || "Unknown"; document.getElementById("sdRollText").innerText = `Roll No: ${sdStudentData.RollNumber || "N/A"}`;
+            let status = sdStudentData.status || "Approved"; let badge = document.getElementById("sdStatusBadge"); badge.innerText = status; badge.style.color = status==="Approved" ? "#166534" : "#b91c1c"; badge.style.backgroundColor = status==="Approved" ? "#f0fdf4" : "#fef2f2"; badge.style.borderColor = status==="Approved" ? "#86efac" : "#fca5a5";
+
+            sdSemKeys = []; for(let i=1; i<=8; i++) sdSemKeys.push(`Semester_${i}`);
+            let yearStr = (sdStudentData.Year || "1").toString().replace(/[^0-9]/g, ''); 
+            let studentYear = parseInt(yearStr) || 1; 
+            
+            // Uses global currentSemesterType from teacherApp.js
+            let currentSemNum = (currentSemesterType === "Odd") ? (studentYear * 2) - 1 : (studentYear * 2);
+            
+            sdCurrentSemIndex = Math.max(0, Math.min(7, currentSemNum - 1));
+            
+            document.getElementById("sdDateFilter").value = "";
+            document.getElementById("sdBtnAllTime").click(); 
+        }
+    } catch(e) { }
+};
+
+document.getElementById("sdBtnNextSem").addEventListener("click", () => { if(sdCurrentSemIndex < 7) { sdCurrentSemIndex++; SD_BuildUI(); } });
+document.getElementById("sdBtnPrevSem").addEventListener("click", () => { if(sdCurrentSemIndex > 0) { sdCurrentSemIndex--; SD_BuildUI(); } });
+
+async function SD_BuildUI(specificDate = "All Time") {
+    if(!sdStudentData) return;
+    let semKey = sdSemKeys[sdCurrentSemIndex]; 
+    let semDisplay = semKey.replace("_", " ");
+    document.getElementById("sdSemesterTitle").innerText = semDisplay;
+
+    await fetchGlobalSubjects(); 
+    let cleanSemNum = semKey.replace(/[^0-9]/g, '');
+    let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
+    let finalSubjects = [];
+
+    let enrollMap = {};
+    if (sdStudentData.enrolledSubjects) enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
+
+    Object.entries(enrollMap).forEach(([k,v]) => {
+        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${k}]</b> <span style="font-size:13px; color:var(--text-dark);">${v}</span></div>`);
+    });
+
+    sdCachedGlobalSubjects.forEach(sub => {
+        let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
+        if (semMatch) {
+            let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
+            if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
+                let isAlreadyEnrolled = finalSubjects.some(existing => existing.includes(sub.displayName));
+                if (!isAlreadyEnrolled) {
+                    finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:var(--text-dark);">${sub.displayName}</span></div>`);
+                }
+            }
+        }
+    });
+
+    document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
+    SD_FetchMarks(semDisplay);
+
+    let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
+    let subjectAtt = {}; 
+
+    let statsObj = null;
+    if (sdStudentData.attendance_stats) {
+        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
+        if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
+    }
+
+    if(statsObj) {
+        Object.entries(statsObj).forEach(([subName, s]) => {
+            if(subName === "Strict_Global") { strictPresent = s.present || 0; strictTotal = s.total || 0; }
+            else {
+                let p = s.present || 0, t = s.total || 0; simpleAtt += p; simpleTotal += t;
+                let cleanSubName = subName.replace("-", "/");
+                if(cleanSubName.toUpperCase().endsWith("_DROPPED")) cleanSubName = cleanSubName.substring(0, cleanSubName.length - 8) + " <span style='color:#ef4444; font-size:11px;'>(Dropped)</span>";
+                subjectAtt[cleanSubName] = { p:p, t:t };
+            }
+        });
+    }
+
+    let projectedAtt = strictTotal > 0 ? strictPresent : simpleAtt;
+    let projectedTot = strictTotal > 0 ? strictTotal : simpleTotal;
+    let percent = projectedTot > 0 ? (projectedAtt / projectedTot) * 100 : 0;
+    
+    SD_UpdateWaveUI(percent);
+    document.getElementById("sdStatAtt").innerText = strictPresent; document.getElementById("sdStatAbs").innerText = strictTotal - strictPresent; document.getElementById("sdStatTot").innerText = strictTotal;
+    document.getElementById("sdStatPAtt").innerText = simpleAtt; document.getElementById("sdStatPAbs").innerText = simpleTotal - simpleAtt; document.getElementById("sdStatPTot").innerText = simpleTotal;
+
+    if(specificDate === "All Time") {
+        document.getElementById("sdNoDataText").style.display = Object.keys(subjectAtt).length === 0 ? "block" : "none";
+        document.getElementById("sdNoDataText").innerText = "No attendance data for this semester.";
+        
+        document.getElementById("sdSubjectList").innerHTML = Object.entries(subjectAtt).map(([name, data]) => {
+            let p = data.p, t = data.t, per = t>0 ? (p/t)*100 : 0; let col = per >= 75 ? "#10b981" : (per >= 60 ? "#f59e0b" : "var(--brand-red)");
+            return `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${name}</span> <span style="font-size:12px; font-weight:bold; color:${col};">${per.toFixed(0)}% (${p}/${t})</span></div>
+                <div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${per}%;"></div></div>
+            </div>`;
+        }).join('');
+    } else {
+        SD_FetchDailyAttendance(specificDate, semDisplay);
+    }
+}
+
+function SD_UpdateWaveUI(percentage) {
+    let col = percentage >= 75 ? "#10b981" : (percentage >= 60 ? "#f59e0b" : "var(--brand-red)");
+    let txt = percentage.toFixed(2) + "%";
+    let visualPercent = 10 + (percentage * 0.75); 
+
+    let circleFill = document.getElementById("sdCircleWave");
+    circleFill.style.setProperty('--wave-color', col);
+    circleFill.style.top = `${105 - visualPercent}%`; 
+    
+    document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
+
+    let rowFill = document.getElementById("sdWavyFill");
+    rowFill.style.setProperty('--wave-color', col);
+    rowFill.style.setProperty('--wave-percent', `${visualPercent}%`);
+    document.getElementById("sdWavyText").innerText = `Current: ${txt}`;
+}
+
+document.getElementById("sdBtnAllTime").addEventListener("click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
+document.getElementById("sdDateFilter").addEventListener("change", (e) => { if(e.target.value) SD_BuildUI(e.target.value); });
+
+async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
+    const listEl = document.getElementById("sdSubjectList"); listEl.innerHTML = "";
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", targetDate), where("semester", "==", dbSemesterFormat)));
+        if (snap.empty) {
+            document.getElementById("sdNoDataText").style.display = "block"; document.getElementById("sdNoDataText").innerText = "No data available on this date.";
+            document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0"; return;
+        }
+        document.getElementById("sdNoDataText").style.display = "none";
+        let dayPres = 0, dayAbs = 0; let html = "";
+        snap.forEach(doc => {
+            let d = doc.data();
+            Object.keys(d).forEach(k => {
+                if (k.startsWith("period_")) {
+                    let pData = d[k];
+                    if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) {
+                        let isPres = pData.attendance[sdCurrentStudentID]; if(isPres) dayPres++; else dayAbs++;
+                        let subName = pData.subject || "Unknown Subject"; let col = isPres ? "#10b981" : "var(--brand-red)";
+                        html += `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span></div>`;
+                    }
+                }
+            });
+        });
+        document.getElementById("sdStatPAtt").innerText = dayPres; document.getElementById("sdStatPAbs").innerText = dayAbs; document.getElementById("sdStatPTot").innerText = dayPres + dayAbs; listEl.innerHTML = html;
+    } catch(e) { }
+}
+
+let sdCachedMarks = {};
+async function SD_FetchMarks(semDisplay) {
+    let drop = document.getElementById("sdExamDropdown"); drop.innerHTML = "<option>Loading...</option>"; document.getElementById("sdMarksList").innerHTML = ""; document.getElementById("sdNoMarksText").style.display = "none"; sdCachedMarks = {};
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sdCurrentStudentID, "nep_marks", semDisplay));
+        if (snap.exists()) {
+            let data = snap.data();
+            Object.entries(data).forEach(([subName, examsMap]) => {
+                Object.entries(examsMap).forEach(([examName, stats]) => { if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); });
+            });
+            let exams = Object.keys(sdCachedMarks).sort();
+            if(exams.length === 0) { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; } 
+            else { drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); SD_RenderMarksUI(exams[0]); }
+        } else { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; }
+    } catch(e) { drop.innerHTML = "<option>Error</option>"; }
+}
+
+document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
+
+function SD_RenderMarksUI(examName) {
+    let marks = sdCachedMarks[examName]; if(!marks) return;
+    document.getElementById("sdMarksList").innerHTML = marks.map(m => {
+        let maxText = m.max ? m.max : "N/A"; let ratio = m.max ? m.obt / m.max : 0; let per = m.max ? (ratio * 100).toFixed(0) + "%" : "";
+        let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:var(--brand-red); width:${ratio*100}%;"></div></div>` : "";
+        return `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
+    }).join('');
 }
