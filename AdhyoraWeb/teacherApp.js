@@ -1428,6 +1428,11 @@ document.getElementById("btnNavEventAttendance")?.addEventListener("click", () =
     switchView(views.eventAttendance, document.getElementById("btnNavEventAttendance"));
     initEventAttendanceEngine(); 
 });
+
+document.getElementById("btnNavInternalMarks")?.addEventListener("click", () => {
+    switchView(views.internalMarks, document.getElementById("btnNavInternalMarks"));
+    initInternalMarksEngine(); 
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -3963,3 +3968,495 @@ async function evtSaveEventAttendance() {
         saveBtn.innerText = "Send to Principal"; saveBtn.disabled = false;
     }
 }
+
+// ==========================================
+// 🚨 INTERNAL MARKS ENGINE
+// ==========================================
+let imLoaded = false;
+let imExamTypesList = [];
+let imTeacherSubjectsMap = {}; // K: Semester X, V: List of subjects
+let imMjdSubjectsCache = new Set();
+let imCachedStudentsByYear = {};
+let imSessionMaxMarks = {}; // K: cacheKey, V: maxMark
+
+let imCurrentStudent = null;
+let imCurrentAutoAttMark = "";
+let imCurrentBatchName = "Common";
+
+function initInternalMarksEngine() {
+    if (imLoaded) return;
+    imLoaded = true;
+
+    document.getElementById("imYearDrop").addEventListener("change", imOnYearChanged);
+    document.getElementById("imSemDrop").addEventListener("change", imOnSemesterChanged);
+    document.getElementById("imSubDrop").addEventListener("change", imLoadStudents);
+    document.getElementById("btnImAddExam").addEventListener("click", imOnAddExamClicked);
+
+    imFetchExamConfig();
+    imFetchTeacherSubjectsAndStart();
+}
+
+async function imFetchExamConfig() {
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "settings", "exam_config"));
+        if (snap.exists() && snap.data().exams) {
+            imExamTypesList = snap.data().exams;
+        }
+        if (imExamTypesList.length === 0) imExamTypesList = ["1st Internal", "2nd Internal"];
+    } catch (e) {
+        imExamTypesList = ["1st Internal", "2nd Internal"];
+    }
+}
+
+async function imFetchTeacherSubjectsAndStart() {
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID), where("isActive", "==", true)));
+        
+        imTeacherSubjectsMap = {};
+        imMjdSubjectsCache.clear();
+
+        snap.forEach(docSnap => {
+            let d = docSnap.data();
+            let sName = d.subjectName;
+            if (!sName) return;
+
+            let sCode = d.subjectCode || "";
+            if (sCode.toUpperCase().includes("MJD")) imMjdSubjectsCache.add(sName);
+
+            let sSemStr = d.semester !== undefined ? d.semester.toString() : "1";
+            let semArray = sSemStr.split(',');
+
+            semArray.forEach(s => {
+                let cleanSemNum = s.trim();
+                if (!cleanSemNum) return;
+                let semKey = `Semester ${cleanSemNum}`;
+                
+                if (!imTeacherSubjectsMap[semKey]) imTeacherSubjectsMap[semKey] = new Set();
+                imTeacherSubjectsMap[semKey].add(sName);
+            });
+        });
+
+        imSetupYearDropdown();
+    } catch(e) { console.error(e); }
+}
+
+function imSetupYearDropdown() {
+    let yearDrop = document.getElementById("imYearDrop");
+    yearDrop.innerHTML = `<option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option>`;
+    imOnYearChanged();
+}
+
+function imOnYearChanged() {
+    let yearDrop = document.getElementById("imYearDrop");
+    let selectedYear = parseInt(yearDrop.value);
+    
+    // Use the global semester type to find current sem for this year
+    let activeSem = (currentSemesterType === "Odd") ? (selectedYear * 2) - 1 : (selectedYear * 2);
+    
+    let semDrop = document.getElementById("imSemDrop");
+    semDrop.innerHTML = `<option value="${activeSem}">Semester ${activeSem}</option>`;
+    
+    imOnSemesterChanged();
+}
+
+function imOnSemesterChanged() {
+    let semDrop = document.getElementById("imSemDrop");
+    let selectedSemText = semDrop.options[semDrop.selectedIndex].text;
+    
+    let subDrop = document.getElementById("imSubDrop");
+    subDrop.innerHTML = "";
+
+    if (imTeacherSubjectsMap[selectedSemText] && imTeacherSubjectsMap[selectedSemText].size > 0) {
+        let subs = Array.from(imTeacherSubjectsMap[selectedSemText]).sort();
+        subDrop.innerHTML = `<option value="">Select Subject</option>` + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+        subDrop.disabled = false;
+        imShowEmpty("Select a subject to view students.");
+    } else {
+        subDrop.innerHTML = `<option value="">No Subjects</option>`;
+        subDrop.disabled = true;
+        imShowEmpty(`You have no subjects assigned for ${selectedSemText}.`);
+    }
+}
+
+function imShowEmpty(msg) {
+    document.getElementById("imListContainer").innerHTML = "";
+    document.getElementById("imEmptyMsg").innerText = msg;
+    document.getElementById("imEmptyMsg").style.display = "block";
+    document.getElementById("imTotalCount").style.display = "none";
+}
+
+async function imLoadStudents() {
+    let subDrop = document.getElementById("imSubDrop");
+    let selectedSubject = subDrop.value;
+    
+    if (!selectedSubject) {
+        imShowEmpty("Select a subject to view students.");
+        return;
+    }
+
+    let year = parseInt(document.getElementById("imYearDrop").value);
+    let semDrop = document.getElementById("imSemDrop");
+    let selectedSemText = semDrop.options[semDrop.selectedIndex].text;
+    let semNum = selectedSemText.replace("Semester ", "").trim();
+
+    imShowEmpty("Checking Batches...");
+
+    try {
+        // 1. Check if batched
+        const batchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", selectedSubject)));
+        let batches = [];
+        if (!batchSnap.empty) {
+            batchSnap.forEach(d => batches.push({ id: d.id, ...d.data() }));
+        }
+
+        // 2. Fetch Students (with caching)
+        if (!imCachedStudentsByYear[year]) {
+            imShowEmpty("Syncing Class Data...");
+            const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", year.toString())));
+            imCachedStudentsByYear[year] = [];
+            stuSnap.forEach(d => imCachedStudentsByYear[year].push({ id: d.id, ...d.data() }));
+        }
+
+        imProcessAndSpawnStudents(imCachedStudentsByYear[year], selectedSemText, selectedSubject, batches);
+
+    } catch (e) {
+        console.error(e);
+        imShowEmpty("Error loading data.");
+    }
+}
+
+function imProcessAndSpawnStudents(studentsDocList, selectedSemText, selectedSubject, batches) {
+    document.getElementById("imEmptyMsg").style.display = "none";
+    let container = document.getElementById("imListContainer");
+    let html = "";
+    let activeCount = 0;
+
+    // A. BATCHED SUBJECT
+    if (batches && batches.length > 0) {
+        batches.sort((a,b) => a.id.localeCompare(b.id));
+        let fallbackCounter = 1;
+
+        batches.forEach(bDoc => {
+            let bName = bDoc.batchName || `Batch ${fallbackCounter}`;
+            fallbackCounter++;
+            let tName = bDoc.teacherName || "Unknown";
+            let sIDs = bDoc.studentIDs || [];
+            
+            let stuHtml = "";
+            sIDs.forEach(sid => {
+                let stuDoc = studentsDocList.find(s => s.id === sid);
+                if (stuDoc) {
+                    stuHtml += imGenerateStudentRow(stuDoc, selectedSemText, selectedSubject, bName);
+                    activeCount++;
+                }
+            });
+
+            if (stuHtml === "") stuHtml = `<div style="padding:10px; text-align:center; color:var(--text-muted); font-size:12px;">Empty Batch</div>`;
+
+            let bodyId = `im_batch_body_${bDoc.id}`;
+            let iconId = `im_batch_icon_${bDoc.id}`;
+
+            html += `
+            <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; margin-bottom:15px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('${bodyId}').style.display = document.getElementById('${bodyId}').style.display === 'none' ? 'block' : 'none'; document.getElementById('${iconId}').style.transform = document.getElementById('${bodyId}').style.display === 'none' ? 'rotate(0deg)' : 'rotate(90deg)';">
+                    <div>
+                        <div style="font-weight:bold; color:var(--brand-red); font-size:14px; margin-bottom:4px;">${bName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-red); border:1px solid var(--border-color);">${sIDs.length} Students</span></div>
+                        <div style="color:var(--text-muted); font-size:12px;">Assigned: ${tName}</div>
+                    </div>
+                    <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(0deg);"></i>
+                </div>
+                <div id="${bodyId}" style="padding:10px; display:none;">
+                    ${stuHtml}
+                </div>
+            </div>`;
+        });
+        document.getElementById("imTotalCount").style.display = "none";
+    } 
+    // B. COMMON SUBJECT
+    else {
+        let cleanSemNum = selectedSemText.replace("Semester ", "").trim();
+        
+        studentsDocList.forEach(stuDoc => {
+            let isEnrolled = false;
+            
+            if (imMjdSubjectsCache.has(selectedSubject)) {
+                let stuDept = (stuDoc.Department || stuDoc.department || "");
+                let formattedDept = "DEPT_" + stuDept.replace(/ /g, "");
+                if (formattedDept === teacherDeptRaw || stuDept === teacherDeptRaw || !teacherDeptRaw) {
+                    isEnrolled = true;
+                }
+            } else {
+                let eMap = stuDoc.enrolledSubjects;
+                if (eMap) {
+                    let semMap = eMap[`Semester_${cleanSemNum}`] || eMap[selectedSemText] || eMap[cleanSemNum];
+                    if (semMap) {
+                        Object.values(semMap).forEach(v => {
+                            if (v.toString().trim().toLowerCase() === selectedSubject.trim().toLowerCase()) {
+                                isEnrolled = true;
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (isEnrolled) {
+                html += imGenerateStudentRow(stuDoc, selectedSemText, selectedSubject, "Common");
+                activeCount++;
+            }
+        });
+        
+        let tCount = document.getElementById("imTotalCount");
+        tCount.innerText = `Total: ${activeCount}`;
+        tCount.style.display = "block";
+    }
+
+    if (activeCount === 0) {
+        imShowEmpty(`No students found enrolled in '${selectedSubject}'.`);
+    } else {
+        container.innerHTML = html;
+    }
+}
+
+function imGenerateStudentRow(stuDoc, selectedSem, selectedSubject, batchName) {
+    let name = stuDoc.Name || stuDoc.studentName || "Unknown";
+    let roll = stuDoc.RollNumber || stuDoc.rollNumber || "No Roll";
+    let dept = (stuDoc.Department || stuDoc.department || "").replace("DEPT_", "");
+
+    // 🚨 ZERO-COST ATTENDANCE MATH ENGINE (Exact C# Replica)
+    let autoAttendanceMark = "";
+    let semKeyStrict = `Semester_${selectedSem.replace("Semester ", "").trim()}`;
+    let semKeySpace = selectedSem;
+    let semKeyNum = selectedSem.replace("Semester ", "").trim();
+    let possibleSemKeys = [semKeyStrict, semKeySpace, semKeyNum];
+    
+    let subKeyPlain = selectedSubject;
+    let subKeyClean = selectedSubject.replace(/ /g, "").replace(/\//g, "-").replace(/\./g, "");
+    let possibleSubKeys = [subKeyPlain, subKeyClean];
+
+    if (stuDoc.attendance_stats) {
+        let semStats = null;
+        for (let sk of possibleSemKeys) {
+            if (stuDoc.attendance_stats[sk]) { semStats = stuDoc.attendance_stats[sk]; break; }
+        }
+
+        if (semStats) {
+            let subStats = null;
+            for (let subK of possibleSubKeys) {
+                if (semStats[subK]) { subStats = semStats[subK]; break; }
+            }
+
+            if (subStats) {
+                let p = parseFloat(subStats.present) || 0;
+                let t = parseFloat(subStats.total) || 0;
+                if (t > 0) {
+                    let percentage = (p / t) * 100;
+                    if (percentage >= 80) autoAttendanceMark = "5";
+                    else if (percentage >= 70) autoAttendanceMark = "4";
+                    else autoAttendanceMark = "3";
+                }
+            }
+        }
+    }
+
+    let payloadStr = encodeURIComponent(JSON.stringify({ id: stuDoc.id, name: name, rollNumber: roll, department: dept }));
+    let autoAttEnc = encodeURIComponent(autoAttendanceMark);
+    let batchEnc = encodeURIComponent(batchName);
+
+    return `
+    <div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px 15px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.02); transition:0.2s;" onclick="imOpenMarksPanel('${payloadStr}', '${autoAttEnc}', '${batchEnc}')" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='translateY(0)';">
+        <div>
+            <div style="font-size:14px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${name}</div>
+            <div style="font-size:11px; font-weight:600; color:var(--text-muted);">${roll} • ${dept}</div>
+        </div>
+        <i class="fas fa-edit" style="color:var(--brand-red); font-size:14px;"></i>
+    </div>`;
+}
+
+// ==========================================
+// MARKS MODAL LOGIC
+// ==========================================
+
+window.imOpenMarksPanel = (stuPayloadEnc, autoAttEnc, batchEnc) => {
+    imCurrentStudent = JSON.parse(decodeURIComponent(stuPayloadEnc));
+    imCurrentAutoAttMark = decodeURIComponent(autoAttEnc);
+    imCurrentBatchName = decodeURIComponent(batchEnc);
+
+    document.getElementById("imStudentNameText").innerText = imCurrentStudent.name;
+    document.getElementById("imSubjectSubtitle").innerText = document.getElementById("imSubDrop").value;
+
+    imExamTypesList.sort();
+    imRenderAccordions();
+    document.getElementById("imMarksModal").classList.add("active");
+};
+
+function imOnAddExamClicked() {
+    let count = imExamTypesList.length + 1;
+    let newName = `${count}th Internal`;
+    
+    if (!imExamTypesList.includes(newName)) {
+        imExamTypesList.push(newName);
+        setDoc(doc(db, "colleges", currentCollegeID, "settings", "exam_config"), { exams: imExamTypesList }, { merge: true });
+        imRenderAccordions();
+    }
+}
+
+function imRenderAccordions() {
+    let container = document.getElementById("imAccordionsContainer");
+    let html = "";
+    
+    let semText = document.getElementById("imSemDrop");
+    let semester = semText.options[semText.selectedIndex].text;
+    let subject = document.getElementById("imSubDrop").value;
+    
+    // Create an instance-specific session string for Reactivity protection
+    let mySession = Date.now().toString();
+
+    imExamTypesList.forEach((examName, idx) => {
+        let bodyId = `im_acc_body_${idx}`;
+        let iconId = `im_acc_icon_${idx}`;
+        let headerId = `im_acc_head_${idx}`;
+        
+        let inTestId = `im_in_test_${idx}`;
+        let inAttId = `im_in_att_${idx}`;
+        let inAsgnId = `im_in_asgn_${idx}`;
+        let inMaxId = `im_in_max_${idx}`;
+        let btnSaveId = `im_btn_save_${idx}`;
+
+        html += `
+        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+            <div style="background:var(--bg-surface); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="imToggleAccordion('${bodyId}', '${iconId}', '${examName}', '${mySession}', ${idx})">
+                <div id="${headerId}" style="font-weight:bold; color:var(--text-dark); font-size:14px;">${examName} <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(Loading...)</span></div>
+                <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(0deg);"></i>
+            </div>
+            
+            <div id="${bodyId}" style="padding:15px; display:none; background:white; border-top:1px solid var(--border-color);">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Test Marks</label><input type="number" id="${inTestId}" class="filter-select" style="width:100%; margin-top:5px;"></div>
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Attendance</label><input type="number" id="${inAttId}" class="filter-select" style="width:100%; margin-top:5px;" value="${imCurrentAutoAttMark}"></div>
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Assignment</label><input type="number" id="${inAsgnId}" class="filter-select" style="width:100%; margin-top:5px;"></div>
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--brand-red);">Max Marks</label><input type="number" id="${inMaxId}" class="filter-select" style="width:100%; margin-top:5px; border-color:var(--brand-red);"></div>
+                </div>
+                <button id="${btnSaveId}" onclick="imSaveMarks('${examName}', ${idx})" style="width:100%; background:var(--brand-red); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220,38,38,0.2);">Save Marks</button>
+            </div>
+        </div>`;
+        
+        // Auto-Load data silently for header injection
+        imLoadSingleExamData(semester, subject, examName, idx, mySession, false);
+    });
+
+    container.innerHTML = html;
+}
+
+window.imToggleAccordion = (bodyId, iconId, examName, sessionStr, idx) => {
+    let body = document.getElementById(bodyId);
+    let icon = document.getElementById(iconId);
+    let isOpen = body.style.display === "block";
+    
+    if (isOpen) {
+        body.style.display = "none";
+        icon.style.transform = "rotate(0deg)";
+    } else {
+        body.style.display = "block";
+        icon.style.transform = "rotate(90deg)";
+        let semText = document.getElementById("imSemDrop");
+        let semester = semText.options[semText.selectedIndex].text;
+        let subject = document.getElementById("imSubDrop").value;
+        imLoadSingleExamData(semester, subject, examName, idx, sessionStr, true);
+    }
+};
+
+async function imLoadSingleExamData(semester, subject, examName, idx, sessionStr, updateInputs) {
+    let cacheKey = `${currentCollegeID}_${semester}_${subject}_${imCurrentBatchName}_${examName}`;
+    let examExists = false;
+    let t = "", a = imCurrentAutoAttMark, asgn = "", m = "";
+
+    try {
+        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", imCurrentStudent.id, "nep_marks", semester));
+        if (snap.exists()) {
+            let data = snap.data();
+            if (data[subject] && data[subject][examName]) {
+                let examData = data[subject][examName];
+                examExists = true;
+                
+                t = examData.test !== undefined ? examData.test.toString() : "";
+                if (!a) a = examData.att !== undefined ? examData.att.toString() : "";
+                asgn = examData.assign !== undefined ? examData.assign.toString() : "";
+                m = examData.max !== undefined ? examData.max.toString() : "";
+            }
+        }
+    } catch(e) {}
+
+    // Apply Cached Max Mark if empty
+    if (imSessionMaxMarks[cacheKey]) m = imSessionMaxMarks[cacheKey];
+    else if (m) imSessionMaxMarks[cacheKey] = m;
+
+    // Update Header
+    let head = document.getElementById(`im_acc_head_${idx}`);
+    if (head) {
+        if (!examExists) head.innerHTML = `${examName} <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(Not Entered)</span>`;
+        else {
+            let total = (parseFloat(t)||0) + (parseFloat(a)||0) + (parseFloat(asgn)||0);
+            head.innerHTML = `${examName} <span style="color:var(--brand-red); font-weight:800;">(${total}${m ? ` / ${m}` : ''})</span>`;
+        }
+    }
+
+    // Update Inputs if panel was opened
+    if (updateInputs) {
+        let elT = document.getElementById(`im_in_test_${idx}`); if(elT && t) elT.value = t;
+        let elA = document.getElementById(`im_in_att_${idx}`); if(elA && a) elA.value = a;
+        let elAsgn = document.getElementById(`im_in_asgn_${idx}`); if(elAsgn && asgn) elAsgn.value = asgn;
+        let elM = document.getElementById(`im_in_max_${idx}`); if(elM && m) elM.value = m;
+    }
+}
+
+window.imSaveMarks = async (examName, idx) => {
+    let btn = document.getElementById(`im_btn_save_${idx}`);
+    btn.innerText = "Saving..."; btn.disabled = true;
+
+    let tVal = document.getElementById(`im_in_test_${idx}`).value;
+    let aVal = document.getElementById(`im_in_att_${idx}`).value;
+    let asgnVal = document.getElementById(`im_in_asgn_${idx}`).value;
+    let mVal = document.getElementById(`im_in_max_${idx}`).value;
+
+    if (!aVal && imCurrentAutoAttMark) aVal = imCurrentAutoAttMark;
+
+    let test = parseFloat(tVal) || 0;
+    let att = parseFloat(aVal) || 0;
+    let assign = parseFloat(asgnVal) || 0;
+    let maxMark = parseFloat(mVal) || 0;
+    let total = test + att + assign;
+
+    let semText = document.getElementById("imSemDrop");
+    let semester = semText.options[semText.selectedIndex].text;
+    let subject = document.getElementById("imSubDrop").value;
+    let cacheKey = `${currentCollegeID}_${semester}_${subject}_${imCurrentBatchName}_${examName}`;
+
+    if (mVal) imSessionMaxMarks[cacheKey] = mVal;
+
+    let payload = {
+        test: test, att: att, assign: assign, max: maxMark, total: total, timestamp: serverTimestamp()
+    };
+
+    let docRef = doc(db, "colleges", currentCollegeID, "students", imCurrentStudent.id, "nep_marks", semester);
+    let updateData = {};
+    updateData[`${subject}.${examName}`] = payload;
+
+    try {
+        await updateDoc(docRef, updateData);
+    } catch(e) {
+        // Document doesn't exist yet, Set it!
+        let initialData = {};
+        initialData[subject] = {};
+        initialData[subject][examName] = payload;
+        await setDoc(docRef, initialData, { merge: true });
+    }
+
+    showRcToast("Marks Saved Successfully!");
+    btn.innerText = "Save Marks"; btn.disabled = false;
+
+    // Instantly update header visually
+    let head = document.getElementById(`im_acc_head_${idx}`);
+    if (head) {
+        head.innerHTML = `${examName} <span style="color:var(--brand-red); font-weight:800;">(${total}${maxMark > 0 ? ` / ${maxMark}` : ''})</span>`;
+    }
+};
