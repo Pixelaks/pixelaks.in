@@ -1002,6 +1002,11 @@ async function handleSignOut() {
     }
     
     // Now log them out!
+  // 🚨 SWEEP UP THE BREADCRUMBS!
+    localStorage.removeItem("adhyora_role");
+    localStorage.removeItem("adhyora_college");
+    localStorage.removeItem("adhyora_roll");
+  
     signOut(auth).then(() => window.location.href = "index.html");
 }
 
