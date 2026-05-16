@@ -4906,11 +4906,8 @@ async function asnPopulateSubjects(row) {
     subDrop.innerHTML = `<option value="">Loading...</option>`;
 
     try {
-        // 🚨 FIX: Fetch all subjects and filter in RAM to bypass strict Firebase string-matching failures!
         const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         let subList = [];
-        
-        // Clean the HOD department string for fuzzy matching (e.g. "DEPT_BScComputerScience" -> "bsccomputerscience")
         let safeHodDept = teacherDeptRaw.replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
 
         snap.forEach(d => {
@@ -4922,7 +4919,6 @@ async function asnPopulateSubjects(row) {
                 if (docType === row.category) {
                     let subDept = (data.department || data.Department || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
                     
-                    // 🚨 Fuzzy match the department! (Catches General, All, or partial matches)
                     if (subDept === safeHodDept || safeHodDept.includes(subDept) || subDept.includes(safeHodDept) || subDept === "general" || subDept === "all") {
                         subList.push(data.name || data.Name);
                     }
@@ -4932,19 +4928,27 @@ async function asnPopulateSubjects(row) {
 
         if (subList.length === 0) {
             subDrop.innerHTML = `<option value="">No Subjects</option>`;
-            asnPopulateTeachers(row); // 🚨 THE FIX: Tells Teacher Dropdown to stop loading!
+            asnPopulateTeachers(row);
         } else {
             subList.sort();
-            subList = [...new Set(subList)]; // Remove duplicates
+            subList = [...new Set(subList)]; 
+            
             let opts = `<option value="">Select Subject</option>`;
-            subList.forEach(s => opts += `<option value="${s}" ${s === row.subject ? 'selected' : ''}>${s}</option>`);
+            subList.forEach(s => opts += `<option value="${s}">${s}</option>`);
             subDrop.innerHTML = opts;
+            
+            // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded subject
+            if (row.subject) {
+                let match = Array.from(subDrop.options).find(o => o.text === row.subject);
+                if (match) subDrop.value = match.value;
+            }
+            
             asnPopulateTeachers(row);
         }
     } catch(e) {
         console.error(e);
         subDrop.innerHTML = `<option value="">Error</option>`;
-        asnPopulateTeachers(row); // Stop loading on error
+        asnPopulateTeachers(row); 
     }
 }
 
@@ -4952,7 +4956,6 @@ async function asnPopulateTeachers(row) {
     let teaDrop = document.getElementById(`tea_${row.id}`);
     if (!teaDrop) return;
     
-    // 🚨 Safely catch empty subjects!
     if (!row.subject || row.subject === "Select Subject" || row.subject === "No Subjects" || row.subject === "Loading..." || row.subject === "Error") {
         teaDrop.innerHTML = `<option value="">Unassigned</option>`;
         return;
@@ -4963,13 +4966,22 @@ async function asnPopulateTeachers(row) {
     if (isTutorial) {
         let safeHodDept = teacherDeptRaw.replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
         let opts = `<option value="">Unassigned</option>`;
+        
         asnCachedTeachers.forEach(t => {
             let tDept = (t.dept || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
             if (tDept === safeHodDept || safeHodDept.includes(tDept)) {
-                opts += `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`;
+                opts += `<option value="${t.id}|${t.name}">${t.name}</option>`;
             }
         });
+        
         teaDrop.innerHTML = opts;
+        
+        // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded teacher
+        if (row.teacher) {
+            let match = Array.from(teaDrop.options).find(o => o.text === row.teacher);
+            if (match) teaDrop.value = match.value;
+        }
+        
     } else {
         try {
             const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("subjectName", "==", row.subject), where("isActive", "==", true)));
@@ -4982,12 +4994,19 @@ async function asnPopulateTeachers(row) {
                 let tID = data.teacherID || "";
                 if (!foundNames.has(tName)) {
                     foundNames.add(tName);
-                    opts += `<option value="${tID}|${tName}" ${tName === row.teacher ? 'selected' : ''}>${tName}</option>`;
+                    opts += `<option value="${tID}|${tName}">${tName}</option>`;
                 }
             });
             
             if (foundNames.size === 0) opts += `<option value="">No faculty assigned</option>`;
             teaDrop.innerHTML = opts;
+            
+            // 🚨 DOM SELECTION FIX: Force the browser to recognize the loaded teacher
+            if (row.teacher) {
+                let match = Array.from(teaDrop.options).find(o => o.text === row.teacher);
+                if (match) teaDrop.value = match.value;
+            }
+            
         } catch(e) {
             console.error(e);
             teaDrop.innerHTML = `<option value="">Error</option>`;
@@ -5254,9 +5273,7 @@ async function asnSaveTimetable() {
     let tMap = {}; 
     let conflict = false;
     
-    // 1. Conflict Checker mirroring C# logic
     asnActiveRows.forEach(r => {
-        // Grab the elements securely from the DOM to inspect what the user selected
         let elTea = document.getElementById(`tea_${r.id}`);
         let elSub = document.getElementById(`sub_${r.id}`);
         let elCat = document.getElementById(`cat_${r.id}`);
@@ -5289,13 +5306,11 @@ async function asnSaveTimetable() {
         return; 
     }
 
-    // 🚨 FIX 1: Prevent prefix duplication (DEPT_DEPT_ check)
     let safeHodDept = teacherDeptRaw.startsWith("DEPT_") ? teacherDeptRaw : `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
     
     showRcToast("Cleaning old timetable data...");
     
     try {
-        // 2. Perform Clean Slate Wipe matching Unity C# implementation
         const snap = await getDocs(query(
             collection(db, "colleges", currentCollegeID, "timetable_allocations"), 
             where("semester", "==", asnCurrentSem), 
@@ -5307,7 +5322,6 @@ async function asnSaveTimetable() {
         snap.forEach(d => wipeBatch.delete(d.ref));
         await wipeBatch.commit();
 
-        // 3. Prepare fresh batch save
         let saveBatch = writeBatch(db);
         let entriesSaved = 0;
 
@@ -5329,18 +5343,16 @@ async function asnSaveTimetable() {
 
                 let safeSubj = subjectName.replace(/\s+/g, '').replace(/\//g, ''); 
                 
-                // 🚨 THE JAVASCRIPT FIX: Use .some() instead of .any()
                 let isCom = !asnActiveRows.some(x => x.period === r.period && x.isSplit);
                 let sIdxStr = !isCom ? r.splitIndex.toString() : "0";
 
-                // Map document identifiers precisely to match Unity formatting requirements
                 let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${r.period}_${sIdxStr}_${safeSubj}`;
                 let docRef = doc(db, "colleges", currentCollegeID, "timetable_allocations", docID);
 
                 let saveData = {
                     semester: asnCurrentSem, 
                     day: asnSelectedDay, 
-                    period: r.period.toString(), // Strictly stored as string representation of index
+                    period: r.period.toString(), 
                     category: category, 
                     subjectName: subjectName, 
                     teacherName: teacherName, 
@@ -5353,13 +5365,12 @@ async function asnSaveTimetable() {
                     saveData.isCommon = true;
                 } else {
                     saveData.isCommon = false;
-                    saveData.splitIndex = sIdxStr; // Saved as string matching C# implementation
+                    saveData.splitIndex = sIdxStr; 
                 }
 
                 saveBatch.set(docRef, saveData, { merge: true });
                 entriesSaved++;
 
-                // If handling split batches, sync data directly to company metadata collections
                 if (!isCom) {
                     let batchNumber = parseInt(sIdxStr) + 1;
                     let bDoc = `BATCH_Sem${asnCurrentSem}_${safeSubj}_Batch${batchNumber}`;
@@ -5382,7 +5393,8 @@ async function asnSaveTimetable() {
             showRcToast("No active schedules found to register.");
         }
         
-        switchView(views.timetable); 
+        // Removed the line that kicked the user back to the main view here
+        
     } catch(e) {
         console.error("Timetable Batch Commit Failed:", e);
         showRcToast("Database write rejection. Verify permissions.");
