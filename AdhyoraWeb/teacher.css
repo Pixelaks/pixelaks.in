@@ -84,6 +84,7 @@ body {
     box-shadow: 0 4px 10px rgba(220, 38, 38, 0.15);
 }
 
+
 .btn-text { font-weight: 600; color: var(--text-red); font-size: 14px; }
 .btn-icon { color: var(--text-red); font-size: 16px; opacity: 0.8; }
 
