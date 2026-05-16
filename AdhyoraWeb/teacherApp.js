@@ -2708,7 +2708,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
                 <span style="font-size:12px; font-weight:800; color:${statusColor};">${statusLabel}</span>
-                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" style="background:var(--bg-surface); border:1px solid var(--border-color); width:36px; height:36px; border-radius:10px; color:var(--text-muted); display:flex; justify-content:center; align-items:center; transition:0.2s; cursor:pointer;" onmouseover="this.style.color='var(--brand-red)'" onmouseout="this.style.color='var(--text-muted)'">
+                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson}, '${s.id}')" ...>
                     <i class="fas fa-comment-dots"></i>
                 </button>
             </div>
@@ -5773,3 +5773,128 @@ function downloadCSVFile(csvContent, type, sem) {
     link.click();
     document.body.removeChild(link);
 }
+
+// ==========================================
+// 🚨 COMPOSE & MESSAGING ENGINE
+// ==========================================
+let composeIsPrivate = false;
+let composeRecipientID = "";
+let composeFCMTokens = [];
+
+// 1. Bind Buttons
+document.getElementById("btnOpenCompose")?.addEventListener("click", () => window.OpenCompose(false));
+document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
+
+// 2. Open Modal Logic
+window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID = "") => {
+    composeIsPrivate = isPrivate;
+    composeFCMTokens = fcmTokens;
+    composeRecipientID = recipientID;
+
+    let targetDrop = document.getElementById("composeTargetDrop");
+    let privateTarget = document.getElementById("composePrivateTarget");
+    
+    document.getElementById("composeTitle").value = "";
+    document.getElementById("composeBody").value = "";
+
+    if (isPrivate) {
+        // Locked to private chat UI
+        targetDrop.style.display = "none";
+        privateTarget.style.display = "block";
+        privateTarget.value = recipientName;
+    } else {
+        // Standard Broadcast UI
+        targetDrop.style.display = "block";
+        privateTarget.style.display = "none";
+        
+        // Dynamically adjust the "My Department" option
+        let optDept = targetDrop.querySelector("option[value='My Department']");
+        if (optDept && teacherDeptRaw) {
+            optDept.text = `Teachers (${teacherDeptRaw.replace("DEPT_", "")})`;
+            optDept.value = `Teachers (${teacherDeptRaw})`;
+        }
+    }
+
+    document.getElementById("composeMessageModal").classList.add("active");
+};
+
+// 3. Execution & Firestore Write Logic
+document.getElementById("btnSendMessage")?.addEventListener("click", async () => {
+    let btn = document.getElementById("btnSendMessage");
+    let title = document.getElementById("composeTitle").value.trim();
+    let body = document.getElementById("composeBody").value.trim();
+    
+    if (!title || !body) {
+        showRcToast("Please enter a title and message!");
+        return;
+    }
+
+    btn.innerText = "Sending...";
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+
+    try {
+        if (composeIsPrivate && composeRecipientID) {
+            // 🚨 PRIVATE CHAT ROUTING (colleges/{id}/chats/{roomID}/messages)
+            // Generate a consistent Room ID by sorting the two user IDs
+            let chatRoomID = [currentUserID, composeRecipientID].sort().join("_");
+            let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
+            
+            // Ensure the room exists and participants are registered
+            await setDoc(chatRef, {
+                participants: [currentUserID, composeRecipientID],
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            // Push the message payload
+            await addDoc(collection(chatRef, "messages"), {
+                title: title,
+                body: body,
+                senderID: currentUserID,
+                senderName: currentTeacherName,
+                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                timestamp: serverTimestamp(),
+                type: "incoming", // Unity reads this as an incoming private message
+                status: "sent"
+            });
+
+        } else {
+            // 🚨 BROADCAST ROUTING (colleges/{id}/sent_messages)
+            let targetSummary = document.getElementById("composeTargetDrop").value;
+            let targetTopic = "";
+            let safeColID = getSafeTopic(currentCollegeID);
+            
+            // Setup FCM Topics for Push Notifications (if implemented later)
+            if (targetSummary === "Everyone") targetTopic = `${safeColID}_ALL`;
+            else if (targetSummary === "All Students") targetTopic = `${safeColID}_STUDENTS_ALL`;
+            else if (targetSummary === "Teachers (All)") targetTopic = `${safeColID}_TEACHERS_ALL`;
+            else if (targetSummary.startsWith("Teachers (DEPT_")) targetTopic = `${safeColID}_TEACHERS_${getSafeTopic(teacherDeptRaw)}`;
+            
+            let payload = {
+                title: title,
+                body: body,
+                targetSummary: targetSummary,
+                targetTopic: targetTopic,
+                senderID: currentUserID,
+                senderName: currentTeacherName,
+                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                type: "broadcast",
+                status: "sent",
+                timestamp: serverTimestamp()
+            };
+
+            await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
+        }
+
+        showRcToast("Message Sent Successfully!");
+        document.getElementById("composeMessageModal").classList.remove("active");
+        
+    } catch (e) {
+        console.error("Error sending message: ", e);
+        showRcToast("Failed to send message.");
+    } finally {
+        btn.innerText = "Send Message";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
+});
