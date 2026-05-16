@@ -1,6 +1,6 @@
 // Import Firebase functions directly from CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚨 ADDED: setDoc and serverTimestamp for Teacher registration
 import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -18,6 +18,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// ==========================================
+// AUTO-LOGIN ROUTING LOGIC
+// ==========================================
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // Prevent auto-login if they haven't verified their email yet!
+        if (!user.emailVerified) return;
+
+        // Read the breadcrumbs we left behind
+        const savedRole = localStorage.getItem("adhyora_role");
+        const savedCollegeID = localStorage.getItem("adhyora_college");
+        const savedRollNo = localStorage.getItem("adhyora_roll");
+
+        if (savedRole && savedCollegeID) {
+            // Instantly redirect them based on their saved role!
+            if (savedRole === "Student") {
+                window.location.href = `studentDashboard.html?college=${savedCollegeID}&uid=${user.uid}&roll=${savedRollNo}`;
+            } else if (savedRole === "Teacher") {
+                window.location.href = `teacherDashboard.html?college=${savedCollegeID}&uid=${user.uid}`;
+            } else if (savedRole === "Principal") {
+                window.location.href = `principalDashboard.html?college=${savedCollegeID}`;
+            }
+        }
+    }
+});
 
 // Global State
 let selectedCollegeID = "";
@@ -203,6 +229,12 @@ signInBtn.addEventListener("click", async (e) => {
         if (role === "Student") {
             showToast("Login Successful!");
             const rollNo = email.split('@')[0]; 
+
+            // 🚨 ADD THESE BREADCRUMBS
+            localStorage.setItem("adhyora_role", "Student");
+            localStorage.setItem("adhyora_college", selectedCollegeID);
+            localStorage.setItem("adhyora_roll", rollNo.toUpperCase());
+          
             window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
         } 
         // 🚨 ADDED: TEACHER LOGIN VERIFICATION
@@ -215,6 +247,11 @@ signInBtn.addEventListener("click", async (e) => {
                 const status = teacherSnap.data().status || "Pending";
                 if (status === "Approved" || status === "Pending") {
                     showToast("Teacher Login Successful!");
+
+                  // 🚨 ADD THESE BREADCRUMBS
+                    localStorage.setItem("adhyora_role", "Teacher");
+                    localStorage.setItem("adhyora_college", selectedCollegeID);
+                  
                     window.location.href = `teacherDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
                 } else {
                     showToast("Access Denied. Account Status: " + status);
@@ -241,6 +278,11 @@ signInBtn.addEventListener("click", async (e) => {
                 }
                 
                 showToast("Principal Login Successful!");
+
+              // 🚨 ADD THESE BREADCRUMBS
+                localStorage.setItem("adhyora_role", "Principal");
+                localStorage.setItem("adhyora_college", selectedCollegeID);
+              
                 window.location.href = `principalDashboard.html?college=${selectedCollegeID}`;
             } else {
                 showToast("Access Denied: Not a Principal here.");
