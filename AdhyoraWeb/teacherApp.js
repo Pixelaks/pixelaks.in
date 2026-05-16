@@ -1492,6 +1492,28 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
+    // 🚨 FIX: Re-bind the floating main action action "+" button handler based on current tab context
+    let topActionBtn = document.getElementById("btnOpenCompose");
+    if (topActionBtn) {
+        // Clear all previous attached instances to prevent ghost actions
+        let newActionBtn = topActionBtn.cloneNode(true);
+        topActionBtn.parentNode.replaceChild(newActionBtn, topActionBtn);
+        
+        if (targetView === views.assignments) {
+            newActionBtn.title = "Add Assignment";
+            newActionBtn.onclick = (e) => {
+                e.stopPropagation();
+                window.OpenAssignmentPanel();
+            };
+        } else {
+            newActionBtn.title = "Add Announcement";
+            newActionBtn.onclick = (e) => {
+                e.stopPropagation();
+                window.OpenCompose(false);
+            };
+        }
+    }
+
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
@@ -5820,21 +5842,7 @@ let composeFCMTokens = [];
 // RAM Cache for Departments (Matches C# cachedDepartments)
 let composeCachedDepartments = [];
 
-// 1. Bind Buttons
-// 1. Bind Buttons securely across active screen environments
-document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
-    let assignmentsTab = document.getElementById("assignmentsView");
-    
-    // If the assignments view is actively displayed on the teacher's screen, open the assignment builder!
-    if (assignmentsTab && !assignmentsTab.classList.contains("hidden-view")) {
-        e.stopPropagation(); // Stop click from bleeding into message modals
-        window.OpenAssignmentPanel();
-    } else {
-        window.OpenCompose(false); // Default back to message composer
-    }
-});
-
-document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
+// 1. Bind Buttons (Clean Contextual Mapping)
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
 // Dynamic UI Toggles (Matches C# OnToggleChanged)
@@ -5951,6 +5959,7 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
+    // 🚨 COLOR SYNC FIX: Strictly must be "Teacher" so Unity applies Pink panel styles
     let safeSenderRole = "Teacher"; 
     let displaySenderName = isHOD ? `${currentTeacherName} (HOD)` : currentTeacherName;
 
@@ -6005,7 +6014,7 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 
             } else {
                 // ==========================================
-                // 🚨 3. TRUE BROADCAST ROUTING (Groups)
+                // 🚨 3. TRUE BROADCAST ROUTING (Groups Notice Board)
                 // ==========================================
                 let deptVal = document.getElementById("composeDeptDrop").value;
                 let yearVal = document.getElementById("composeYearDrop").value;
@@ -6525,7 +6534,7 @@ function fetchAsgnTeacherSubjects() {
             });
         });
 
-        // Initialize Year View Selection Wheel
+        // Initialize Year View Selection Wheel (Parity matching Unity layout setup)
         let yearDrop = document.getElementById("asgnYearDrop");
         yearDrop.innerHTML = `<option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option>`;
         
