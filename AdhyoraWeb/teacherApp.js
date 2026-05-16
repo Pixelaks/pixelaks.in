@@ -1413,6 +1413,11 @@ document.getElementById("btnNavStudentList")?.addEventListener("click", () => {
 document.getElementById("btnBackToStudents")?.addEventListener("click", () => {
     switchView(views.studentList, document.getElementById("btnNavStudentList"));
 });
+
+document.getElementById("btnNavSubjectAssign")?.addEventListener("click", () => {
+    switchView(views.subjectAssign, document.getElementById("btnNavSubjectAssign"));
+    initSubjectAssignEngine(); 
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -2934,4 +2939,363 @@ function SD_RenderMarksUI(examName) {
         let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:var(--brand-red); width:${ratio*100}%;"></div></div>` : "";
         return `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
+}
+
+// ==========================================
+// 🚨 SUBJECT ASSIGNMENT ENGINE
+// ==========================================
+let saLoaded = false;
+let saCurrentSem = "1";
+let saCachedSubjects = [];
+let saCachedStudents = [];
+let saSelectedUnassigned = new Set();
+let saSelectedAssigned = new Set();
+let saTargetRemoveGroup = ""; // Tracks which group we are trying to remove from
+
+function initSubjectAssignEngine() {
+    if (saLoaded) return;
+    saLoaded = true;
+
+    // 1. Setup Semester Dropdown
+    let dropSem = document.getElementById("saSemDrop"); 
+    let optionsHtml = "";
+    let activeValue = "";
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0);
+        if ((currentSemesterType === "Odd" && isOdd) || (currentSemesterType === "Even" && !isOdd)) {
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
+        }
+    }
+    dropSem.innerHTML = optionsHtml; 
+    saCurrentSem = activeValue;
+    dropSem.value = saCurrentSem;
+    
+    dropSem.addEventListener("change", (e) => { saCurrentSem = e.target.value; saRefreshCategories(); });
+    document.getElementById("saCatDrop").addEventListener("change", saRefreshSubjects);
+    document.getElementById("saSubDrop").addEventListener("change", () => saUpdateActionButton());
+    document.getElementById("btnSaAction").addEventListener("click", saOpenConfirmModal);
+    document.getElementById("saConfirmYesBtn").addEventListener("click", saExecuteAction);
+
+    // 2. Fetch Master Subjects
+    if (saCachedSubjects.length === 0) {
+        getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
+            snap.forEach(doc => {
+                let d = doc.data();
+                saCachedSubjects.push({ 
+                    id: doc.id, name: d.Name || d.name || "", 
+                    type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "1").toString() 
+                });
+            });
+            saRefreshCategories();
+        }).catch(e => console.error(e));
+    } else { saRefreshCategories(); }
+}
+
+function saRefreshCategories() {
+    let types = new Set();
+    saCachedSubjects.forEach(sub => { 
+        let sems = sub.semesters.split(',').map(s=>s.trim()); 
+        // 🚨 Filter out MJD and TUTORIAL just like C# script!
+        if (sems.includes(saCurrentSem) && sub.type && !sub.type.toUpperCase().startsWith("MJD") && !sub.type.toUpperCase().includes("TUTORIAL")) {
+            types.add(sub.type.trim()); 
+        }
+    });
+    
+    let catDrop = document.getElementById("saCatDrop");
+    if (types.size === 0) catDrop.innerHTML = `<option value="">No Categories</option>`;
+    else {
+        let arr = Array.from(types).sort(); 
+        catDrop.innerHTML = `<option value="">Select Category</option>` + arr.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+    saRefreshSubjects();
+}
+
+function saRefreshSubjects() {
+    let cat = document.getElementById("saCatDrop").value; 
+    let subDrop = document.getElementById("saSubDrop");
+    
+    if (!cat) { 
+        subDrop.innerHTML = `<option value="">Select Subject</option>`; 
+        saShowEmpty("Select a Category to view students."); 
+        return; 
+    }
+    
+    let subs = saCachedSubjects.filter(s => s.semesters.split(',').map(x=>x.trim()).includes(saCurrentSem) && s.type.trim() === cat);
+    if (subs.length === 0) { 
+        subDrop.innerHTML = `<option value="">No Subjects</option>`; 
+    } else { 
+        subDrop.innerHTML = `<option value="">Select Subject</option>` + subs.sort((a,b)=>a.name.localeCompare(b.name)).map(s => `<option value="${s.name}">${s.name}</option>`).join(''); 
+    }
+    
+    saLoadStudents();
+}
+
+function saShowEmpty(msg) { 
+    document.getElementById("saGroupsContainer").innerHTML = "";
+    document.getElementById("saUnassignedContainer").innerHTML = "";
+    document.getElementById("saUnassignedHeader").style.display = "none";
+    document.getElementById("saEmptyMsg").innerText = msg;
+    document.getElementById("saEmptyMsg").style.display = "block";
+    saSelectedUnassigned.clear();
+    saSelectedAssigned.clear();
+    saUpdateActionButton();
+}
+
+async function saLoadStudents() {
+    let cat = document.getElementById("saCatDrop").value;
+    if (!cat) return;
+    saShowEmpty(`Loading students...`);
+
+    let targetYear = Math.ceil(parseInt(saCurrentSem) / 2).toString();
+    
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYear)));
+        saCachedStudents = [];
+        snap.forEach(doc => saCachedStudents.push({ id: doc.id, ...doc.data() }));
+        saRenderLayout(cat);
+    } catch (e) {
+        saShowEmpty("Error loading students.");
+    }
+}
+
+function saRenderLayout(cat) {
+    document.getElementById("saEmptyMsg").style.display = "none";
+    saSelectedUnassigned.clear();
+    saSelectedAssigned.clear();
+    
+    let groupedData = {}; // Tracks Assigned Groups
+    let unassignedHTML = "";
+    let semKey = `Semester_${saCurrentSem}`;
+    let semSpace = `Semester ${saCurrentSem}`;
+
+    // 1. Sort students alphabetically by name
+    saCachedStudents.sort((a,b) => (a.Name || "").localeCompare(b.Name || ""));
+
+    saCachedStudents.forEach(s => {
+        let isEnrolledInCat = false;
+        let enrolledSubject = "";
+        let enrolledMap = s.enrolledSubjects ? (s.enrolledSubjects[semKey] || s.enrolledSubjects[semSpace] || s.enrolledSubjects[saCurrentSem]) : null;
+
+        if (enrolledMap && enrolledMap[cat]) {
+            isEnrolledInCat = true;
+            enrolledSubject = enrolledMap[cat];
+        }
+
+        let isEditable = false;
+        if (isEnrolledInCat) {
+            let assignedByMap = s.assigned_by ? (s.assigned_by[semKey] || s.assigned_by[semSpace] || s.assigned_by[saCurrentSem]) : null;
+            let timeMap = s.assignment_timestamps ? (s.assignment_timestamps[semKey] || s.assignment_timestamps[semSpace] || s.assignment_timestamps[saCurrentSem]) : null;
+            
+            // 🚨 1. PRINCIPAL OVERRIDE LOCK
+            if (assignedByMap && assignedByMap[cat] === "Principal") {
+                isEditable = false;
+            } 
+            else {
+                // 🚨 2. STRICT 24-HOUR RULE
+                if (!timeMap || !timeMap[cat]) {
+                    isEditable = true; // Legacy pass
+                } else {
+                    let assignedTime = timeMap[cat].toDate();
+                    let hoursPassed = (new Date() - assignedTime) / (1000 * 60 * 60);
+                    if (hoursPassed < 24) isEditable = true;
+                }
+            }
+        }
+
+        // Build the HTML Card
+        let cleanDept = (s.Department || "Unknown").replace("DEPT_", "");
+        let cardId = `sa_card_${s.id}`;
+        let chkId = `sa_chk_${s.id}`;
+        
+        let cardHTML = ``;
+        
+        if (isEnrolledInCat && !isEditable) {
+            // LOCKED CARD
+            cardHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; background:var(--bg-surface); border:1px solid #cbd5e1; border-radius:12px; margin-bottom:8px; opacity:0.6; cursor:not-allowed;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-lock" style="color:#94a3b8; width:18px; text-align:center;"></i>
+                    <div>
+                        <div style="font-size:14px; font-weight:bold; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
+                        <div style="font-size:11px; color:var(--text-muted);">${cleanDept}</div>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            // UNLOCKED CARD (Clickable)
+            let clickGroup = isEnrolledInCat ? `'${enrolledSubject}'` : `null`;
+            cardHTML = `
+            <div id="${cardId}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; background:white; border:1px solid var(--border-color); border-radius:12px; margin-bottom:8px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.02); transition:0.2s;" onclick="saToggleStudent('${s.id}', ${isEnrolledInCat}, ${clickGroup})">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" id="${chkId}" style="width:16px; height:16px; accent-color:var(--brand-red); pointer-events:none;">
+                    <div>
+                        <div style="font-size:14px; font-weight:bold; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
+                        <div style="font-size:11px; color:var(--text-muted);">${cleanDept}</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        if (isEnrolledInCat) {
+            if (!groupedData[enrolledSubject]) groupedData[enrolledSubject] = [];
+            groupedData[enrolledSubject].push(cardHTML);
+        } else {
+            unassignedHTML += cardHTML;
+        }
+    });
+
+    // Render Assigned Groups (Accordions)
+    let groupHTML = "";
+    Object.keys(groupedData).sort().forEach((subName, idx) => {
+        let count = groupedData[subName].length;
+        let bodyId = `sa_group_body_${idx}`;
+        let iconId = `sa_group_icon_${idx}`;
+        
+        groupHTML += `
+        <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="document.getElementById('${bodyId}').style.display = document.getElementById('${bodyId}').style.display === 'none' ? 'block' : 'none'; document.getElementById('${iconId}').style.transform = document.getElementById('${bodyId}').style.display === 'none' ? 'rotate(0deg)' : 'rotate(90deg)';">
+                <div style="font-weight:bold; color:var(--brand-red); font-size:14px;">${cat} : ${subName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-red); border: 1px solid var(--border-color);">${count}</span></div>
+                <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(90deg);"></i>
+            </div>
+            <div id="${bodyId}" style="padding:10px 10px 2px 10px; display:block;">
+                ${groupedData[subName].join('')}
+            </div>
+        </div>`;
+    });
+
+    document.getElementById("saGroupsContainer").innerHTML = groupHTML;
+
+    // Render Unassigned
+    let uHead = document.getElementById("saUnassignedHeader");
+    let uCont = document.getElementById("saUnassignedContainer");
+    if (unassignedHTML) {
+        uHead.style.display = "block";
+        uCont.innerHTML = unassignedHTML;
+    } else {
+        uHead.style.display = "none";
+        uCont.innerHTML = "";
+    }
+
+    saUpdateActionButton();
+}
+
+window.saToggleStudent = (sid, isAssigned, groupName) => {
+    let chk = document.getElementById(`sa_chk_${sid}`);
+    let card = document.getElementById(`sa_card_${sid}`);
+    
+    chk.checked = !chk.checked; 
+
+    if (chk.checked) {
+        card.style.backgroundColor = "rgba(220, 38, 38, 0.05)"; // Red tint
+        if (isAssigned) {
+            saSelectedAssigned.add(sid);
+            saTargetRemoveGroup = groupName; // Track which group we are removing from
+        } else {
+            saSelectedUnassigned.add(sid);
+        }
+    } else {
+        card.style.backgroundColor = "white";
+        if (isAssigned) saSelectedAssigned.delete(sid);
+        else saSelectedUnassigned.delete(sid);
+    }
+
+    saUpdateActionButton();
+};
+
+function saUpdateActionButton() {
+    let btn = document.getElementById("btnSaAction");
+    let unassignedCount = saSelectedUnassigned.size;
+    let assignedCount = saSelectedAssigned.size;
+
+    if (unassignedCount > 0 && assignedCount == 0) {
+        btn.innerText = "Assign";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    } 
+    else if (assignedCount > 0 && unassignedCount == 0) {
+        btn.innerText = "Remove";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    } 
+    else if (unassignedCount > 0 && assignedCount > 0) {
+        btn.innerText = "Conflict";
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+    } 
+    else {
+        btn.innerText = "Assign";
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+    }
+}
+
+function saOpenConfirmModal() {
+    let unassignedCount = saSelectedUnassigned.size;
+    let assignedCount = saSelectedAssigned.size;
+    let txt = document.getElementById("saConfirmText");
+    let btnYes = document.getElementById("saConfirmYesBtn");
+
+    if (unassignedCount > 0) {
+        let sub = document.getElementById("saSubDrop").value;
+        if (!sub) { showRcToast("Select Subject First!"); return; }
+        
+        saIsRemoveMode = false;
+        txt.innerHTML = `Assign ${unassignedCount} students to<br><b>${sub}</b>?`;
+        btnYes.innerText = "Assign";
+    } 
+    else if (assignedCount > 0) {
+        saIsRemoveMode = true;
+        txt.innerHTML = `<span style="color:var(--brand-red);">Remove</span> ${assignedCount} students from<br><b>${saTargetRemoveGroup}</b>?`;
+        btnYes.innerText = "Remove";
+    }
+    
+    document.getElementById("saConfirmModal").classList.add("active");
+}
+
+let saIsRemoveMode = false;
+
+async function saExecuteAction() {
+    document.getElementById("saConfirmModal").classList.remove("active");
+    let btn = document.getElementById("btnSaAction");
+    btn.innerText = "Saving..."; btn.disabled = true;
+
+    let cat = document.getElementById("saCatDrop").value;
+    let sub = document.getElementById("saSubDrop").value;
+    let semKey = `Semester_${saCurrentSem}`;
+
+    let studentsToProcess = saIsRemoveMode ? Array.from(saSelectedAssigned) : Array.from(saSelectedUnassigned);
+    let wb = writeBatch(db);
+    let ops = 0;
+
+    for (let i = 0; i < studentsToProcess.length; i++) {
+        let sid = studentsToProcess[i];
+        let stuRef = doc(db, "colleges", currentCollegeID, "students", sid);
+        let updates = {};
+
+        if (saIsRemoveMode) {
+            updates[`enrolledSubjects.${semKey}.${cat}`] = deleteField();
+            updates[`assignment_timestamps.${semKey}.${cat}`] = deleteField();
+            updates[`assigned_by.${semKey}.${cat}`] = deleteField();
+        } else {
+            updates[`enrolledSubjects.${semKey}.${cat}`] = sub;
+            updates[`assignment_timestamps.${semKey}.${cat}`] = serverTimestamp();
+            updates[`assigned_by.${semKey}.${cat}`] = "HOD";
+        }
+
+        wb.update(stuRef, updates);
+        ops++;
+
+        if (ops >= 450) {
+            await wb.commit();
+            wb = writeBatch(db); ops = 0;
+        }
+    }
+
+    if (ops > 0) await wb.commit();
+
+    showRcToast(saIsRemoveMode ? `Removed ${studentsToProcess.length} students!` : `Assigned ${studentsToProcess.length} students!`);
+    
+    // Refresh the UI!
+    saLoadStudents();
 }
