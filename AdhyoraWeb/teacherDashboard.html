@@ -342,7 +342,39 @@
                             </div>
                     </div>
                 </div>
-                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Event Attendance</h3></div>
+                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">Event Attendance</h3>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button id="evtDateBtn" style="background:transparent; border:1px solid var(--border-color); padding:5px 15px; border-radius:8px; color:var(--text-dark); font-weight:bold; cursor:pointer; text-align:center;">
+                                <span id="evtDateText" style="font-size:13px; line-height:1.2;">Loading...</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                        <select id="evtPeriodDrop" class="filter-select" style="flex: 1; max-width: 150px;">
+                            <option value="1">Period 1</option><option value="2">Period 2</option><option value="3">Period 3</option>
+                            <option value="4">Period 4</option><option value="5">Period 5</option><option value="6">Period 6</option>
+                        </select>
+                        <input type="text" id="evtNameInput" placeholder="Enter Event Name (e.g., NCC Camp, NSS Duty)" style="flex: 2; padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border-color); outline: none; font-family: 'Poppins'; font-weight: 600; color: var(--text-dark); background: white;">
+                    </div>
+
+                    <div style="padding: 12px 25px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <button id="btnEvtOpenSearch" style="background: var(--brand-red); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 5px rgba(220,38,38,0.2);"><i class="fas fa-search" style="margin-right: 5px;"></i> Find Students</button>
+                        <span id="evtLockStatusText" style="color: var(--brand-red); font-size: 13px; font-weight: bold;"></span>
+                    </div>
+
+                    <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
+                        <div id="evtEmptyCartMsg" class="no-data-text">No event attendance marked for this period.</div>
+                        <div id="evtCartContainer" style="display:flex; flex-direction:column; gap:10px;">
+                            </div>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: var(--card-bg); border-top: 1px solid var(--border-color); flex-shrink: 0;">
+                        <button id="btnEvtSave" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Send to Principal</button>
+                    </div>
+                </div>
                 
                 <div id="notificationsView" class="dashboard-view hidden-view" style="width: 100%; height: 100%; padding: 25px; display: flex; flex-direction: column;">
                     <div style="display: flex; flex-shrink: 0; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -478,6 +510,22 @@
                 <button onclick="document.getElementById('saConfirmModal').classList.remove('active')" style="flex:1; padding:12px; border-radius:10px; border:1px solid #cbd5e1; background:white; color:#64748b; font-weight:bold; cursor:pointer;">Cancel</button>
                 <button id="saConfirmYesBtn" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--brand-red); color:white; font-weight:bold; cursor:pointer;">Confirm</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="evtSearchModal">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; border-radius: 20px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column; max-height: 80vh;">
+            <button class="close-settings" onclick="document.getElementById('evtSearchModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="color: var(--brand-red); margin-bottom: 15px; font-size: 20px;"><i class="fas fa-user-plus"></i> Add to Event</h3>
+            
+            <input type="text" id="evtSearchInput" placeholder="Type name or roll number..." style="width: 100%; padding: 12px 15px; border-radius: 12px; border: 1px solid #cbd5e1; outline: none; font-family: 'Poppins'; margin-bottom: 15px; flex-shrink: 0;">
+            
+            <div id="evtSearchMsg" style="text-align: center; color: var(--text-muted); font-size: 13px; font-weight: bold; margin-bottom: 10px;">Type to search...</div>
+            
+            <div id="evtSearchResultContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; margin-bottom: 15px; min-height: 150px;">
+                </div>
+
+            <button id="btnEvtAddSelected" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);">Add Selected to Event</button>
         </div>
     </div>
 
