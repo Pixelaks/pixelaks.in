@@ -5159,36 +5159,145 @@ async function asnConfirmDeptSplit(subject, uniqueDepts, studentToDept) {
 }
 
 async function asnSaveTimetable() {
-    let btn = document.getElementById("btnAsnSave"); btn.innerText = "Saving..."; btn.disabled = true;
-    let tMap = {}; let conflict = false;
+    let btn = document.getElementById("btnAsnSave"); 
+    btn.innerText = "Saving..."; 
+    btn.disabled = true;
     
+    let tMap = {}; 
+    let conflict = false;
+    
+    // 1. Conflict Checker mirroring C# logic
     asnActiveRows.forEach(r => {
-        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
+        // Grab the elements securely from the DOM to inspect what the user selected
+        let elTea = document.getElementById(`tea_${r.id}`);
+        let elSub = document.getElementById(`sub_${r.id}`);
+        let elCat = document.getElementById(`cat_${r.id}`);
+        
+        let currentTeachVal = elTea ? elTea.value : "";
+        let currentSubject = elSub ? elSub.value : r.subject;
+        let currentCategory = elCat ? elCat.value : r.category;
+        
+        if(currentSubject && currentTeachVal && currentTeachVal !== "Unassigned") {
+            let tName = currentTeachVal.split('|')[1];
             if(!tMap[r.period]) tMap[r.period] = {};
-            if(tMap[r.period][r.teacher]) { let eSub = tMap[r.period][r.teacher]; let isVac3 = r.subject.toUpperCase().includes("VAC3") || r.category.toUpperCase().includes("VAC3"); if(!isVac3 || eSub !== r.subject) conflict = true; }
-            else tMap[r.period][r.teacher] = r.subject;
-        }
-    });
-    
-    if(conflict) { showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); btn.innerText = "Save Timetable"; btn.disabled = false; return; }
-
-    let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
-    const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", safeHodDept)));
-    const wb = writeBatch(db); snap.forEach(d => wb.delete(d.ref));
-
-    asnActiveRows.forEach(r => {
-        if(r.subject && r.teacher && r.teacher !== "Unassigned") {
-            let safeSubj = r.subject.replace(/\s+/g, '').replace(/\//g, ''); let sIdx = r.isSplit ? r.splitIndex.toString() : "0";
-            let isCom = !asnActiveRows.some(x => x.period === r.period && x.isSplit);
             
-            wb.set(doc(db, "colleges", currentCollegeID, "timetable_allocations", `Sem${asnCurrentSem}_${asnSelectedDay}_P${r.period}_${sIdx}_${safeSubj}`), {
-                semester: asnCurrentSem, day: asnSelectedDay, period: r.period.toString(), category: r.category, subjectName: r.subject, teacherName: r.teacher, teacherID: r.teacherID, departmentID: safeHodDept, room: r.room, isCommon: isCom, splitIndex: isCom ? null : sIdx
-            }, {merge:true});
+            if(tMap[r.period][tName]) { 
+                let eSub = tMap[r.period][tName]; 
+                let cleanCat = currentCategory.toUpperCase().replace(/\s+/g,"");
+                let cleanSubj = currentSubject.toUpperCase().replace(/\s+/g,"");
+                let isVac3 = cleanCat.includes("VAC3") || cleanSubj.includes("VAC3"); 
+                
+                if(!isVac3 || eSub !== currentSubject) conflict = true; 
+            } else {
+                tMap[r.period][tName] = currentSubject;
+            }
         }
     });
     
-    await wb.commit(); 
-    showRcToast("Successfully Saved Timetable!"); 
-    btn.innerText = "Save Timetable"; btn.disabled = false;
-    switchView(views.timetable); 
+    if(conflict) { 
+        showRcToast("⚠️ Save Failed: Teacher assigned multiple times in same period!"); 
+        btn.innerText = "Save Timetable"; 
+        btn.disabled = false; 
+        return; 
+    }
+
+    // 🚨 FIX 1: Prevent prefix duplication (DEPT_DEPT_ check)
+    let safeHodDept = teacherDeptRaw.startsWith("DEPT_") ? teacherDeptRaw : `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+    
+    showRcToast("Cleaning old timetable data...");
+    
+    try {
+        // 2. Perform Clean Slate Wipe matching Unity C# implementation
+        const snap = await getDocs(query(
+            collection(db, "colleges", currentCollegeID, "timetable_allocations"), 
+            where("semester", "==", asnCurrentSem), 
+            where("day", "==", asnSelectedDay), 
+            where("departmentID", "==", safeHodDept)
+        ));
+        
+        let wipeBatch = writeBatch(db); 
+        snap.forEach(d => wipeBatch.delete(d.ref));
+        await wipeBatch.commit();
+
+        // 3. Prepare fresh batch save
+        let saveBatch = writeBatch(db);
+        let entriesSaved = 0;
+
+        for (let r of asnActiveRows) {
+            let elCat = document.getElementById(`cat_${r.id}`);
+            let elSub = document.getElementById(`sub_${r.id}`);
+            let elTea = document.getElementById(`tea_${r.id}`);
+            let elRoom = document.getElementById(`rm_${r.id}`);
+
+            let category = elCat ? elCat.value : r.category;
+            let subjectName = elSub ? elSub.value : r.subject;
+            let teacherVal = elTea ? elTea.value : "";
+            let room = elRoom ? elRoom.value.trim() : r.room;
+
+            if (subjectName && teacherVal && teacherVal !== "Unassigned") {
+                let parts = teacherVal.split('|');
+                let teacherID = parts[0];
+                let teacherName = parts[1];
+
+                let safeSubj = subjectName.replace(/\s+/g, '').replace(/\//g, ''); 
+                let isCom = !asnActiveRows.any(x => x.period === r.period && x.isSplit);
+                let sIdxStr = !isCom ? r.splitIndex.toString() : "0";
+
+                // Map document identifiers precisely to match Unity formatting requirements
+                let docID = `Sem${asnCurrentSem}_${asnSelectedDay}_P${r.period}_${sIdxStr}_${safeSubj}`;
+                let docRef = doc(db, "colleges", currentCollegeID, "timetable_allocations", docID);
+
+                let saveData = {
+                    semester: asnCurrentSem, 
+                    day: asnSelectedDay, 
+                    period: r.period.toString(), // Strictly stored as string representation of index
+                    category: category, 
+                    subjectName: subjectName, 
+                    teacherName: teacherName, 
+                    teacherID: teacherID, 
+                    departmentID: safeHodDept, 
+                    room: room
+                };
+
+                if (isCom) {
+                    saveData.isCommon = true;
+                } else {
+                    saveData.isCommon = false;
+                    saveData.splitIndex = sIdxStr; // Saved as string matching C# implementation
+                }
+
+                saveBatch.set(docRef, saveData, { merge: true });
+                entriesSaved++;
+
+                // If handling split batches, sync data directly to company metadata collections
+                if (!isCom) {
+                    let batchNumber = parseInt(sIdxStr) + 1;
+                    let bDoc = `BATCH_Sem${asnCurrentSem}_${safeSubj}_Batch${batchNumber}`;
+                    let batchRef = doc(db, "colleges", currentCollegeID, "subject_batches", bDoc);
+                    
+                    saveBatch.set(batchRef, {
+                        teacherName: teacherName,
+                        teacherID: teacherID,
+                        room: room
+                    }, { merge: true });
+                    entriesSaved++;
+                }
+            }
+        }
+
+        if (entriesSaved > 0) {
+            await saveBatch.commit();
+            showRcToast("Successfully Saved Timetable!");
+        } else {
+            showRcToast("No active schedules found to register.");
+        }
+        
+        switchView(views.timetable); 
+    } catch(e) {
+        console.error("Timetable Batch Commit Failed:", e);
+        showRcToast("Database write rejection. Verify permissions.");
+    } finally {
+        btn.innerText = "Save Timetable"; 
+        btn.disabled = false;
+    }
 }
