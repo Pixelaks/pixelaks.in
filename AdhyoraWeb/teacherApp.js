@@ -4613,30 +4613,30 @@ function ttRenderDay(periodData) {
         let pNum = i + 1;
         let idBase = `my_tt_${i}`;
         
-        let catText = hasClass ? periodData[i].category : "LEISURE";
-        let subText = hasClass ? periodData[i].subject : "No Class";
+        let catText = hasClass ? periodData[i].category : "-";
+        let subText = hasClass ? periodData[i].subject : "Free Period";
         let semText = hasClass ? periodData[i].semester : "-";
         let roomText = hasClass ? periodData[i].room : "-";
         
-        // Match screenshot logic: Dashed borders for unassigned, solid for assigned, hidden for empty
-        let borderStyle = hasClass ? "2px solid var(--brand-red)" : "2px solid transparent";
-        let bgStyle = hasClass ? "white" : "transparent";
+        // 🚨 Exact Match to Reference UI: Dashed for empty, solid red + tinted bg for active
+        let borderStyle = hasClass ? "1px solid var(--brand-red)" : "1px dashed var(--border-color)";
+        let bgStyle = hasClass ? "var(--bg-grid-color)" : "transparent"; 
 
         html += `
         <div class="tt-row" id="row_${idBase}">
             <div class="tt-timeline-col">
-                <div class="tt-node" id="node_${idBase}" style="border-color:${hasClass ? 'var(--brand-red)' : '#cbd5e1'}; color:${hasClass ? 'var(--brand-red)' : '#94a3b8'};">${pNum}</div>
-                ${i < 5 ? `<div class="tt-line-bg"><div class="tt-line-fill" id="fill_${idBase}" style="background:var(--brand-red);"></div></div>` : ''}
+                <div class="tt-node" id="node_${idBase}" data-has-class="${hasClass}" style="border-color:${hasClass ? 'var(--brand-red)' : '#cbd5e1'}; color:${hasClass ? 'white' : '#94a3b8'}; background:${hasClass ? 'var(--brand-red)' : 'var(--bg-base)'};">${pNum}</div>
+                ${i < 5 ? `<div class="tt-line-bg" style="background:var(--border-color);"><div class="tt-line-fill" id="fill_${idBase}" style="background:var(--brand-red);"></div></div>` : ''}
             </div>
             
             <div class="tt-card" style="background:${bgStyle}; border:${borderStyle};">
-                <div style="display:flex; flex-direction:column; justify-content:center;">
-                    <div style="font-size:12px; font-weight:800; color:${hasClass ? 'var(--brand-red)' : 'var(--text-muted)'}; text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">${catText}</div>
-                    <div style="font-size:15px; font-weight:bold; color:var(--text-dark);">${subText}</div>
+                <div class="tt-pill-grid">
+                    <div class="tt-pill primary">${catText}</div>
+                    <div class="tt-pill">${subText}</div>
                 </div>
-                <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
-                    <div style="font-size:14px; font-weight:bold; color:var(--text-dark); margin-bottom:5px;">${roomText}</div>
-                    <div style="font-size:12px; font-weight:600; color:var(--text-muted);">${semText}</div>
+                <div class="tt-pill-grid">
+                    <div class="tt-pill">${semText}</div>
+                    <div class="tt-pill">${roomText}</div>
                 </div>
             </div>
         </div>`;
@@ -4659,9 +4659,35 @@ function ttUpdateVisuals() {
         let startTime = endTime - 1.0;
         
         if (nodeEl) {
-            if (currentHour >= endTime) { nodeEl.style.background = "var(--border-color)"; nodeEl.style.color = "white"; }
-            else if (currentHour >= startTime && currentHour < endTime) { nodeEl.style.background = "var(--brand-red)"; nodeEl.style.color = "white"; }
-            else { nodeEl.style.background = "white"; }
+            let hasClass = nodeEl.getAttribute("data-has-class") === "true";
+            
+            if (currentHour >= endTime) { 
+                // Passed: Gray out
+                nodeEl.style.background = "var(--border-color)"; 
+                nodeEl.style.borderColor = "var(--border-color)";
+                nodeEl.style.color = "white"; 
+                nodeEl.style.boxShadow = "none";
+            }
+            else if (currentHour >= startTime && currentHour < endTime) { 
+                // Active: Glow Red
+                nodeEl.style.background = "var(--brand-red)"; 
+                nodeEl.style.borderColor = "var(--brand-red)";
+                nodeEl.style.color = "white"; 
+                nodeEl.style.boxShadow = "0 0 10px rgba(220,38,38,0.4)";
+            }
+            else { 
+                // Upcoming
+                if (hasClass) {
+                    nodeEl.style.background = "var(--brand-red)"; 
+                    nodeEl.style.borderColor = "var(--brand-red)";
+                    nodeEl.style.color = "white"; 
+                } else {
+                    nodeEl.style.background = "var(--bg-base)"; 
+                    nodeEl.style.borderColor = "var(--border-color)";
+                    nodeEl.style.color = "var(--text-muted)"; 
+                }
+                nodeEl.style.boxShadow = "none";
+            }
         }
         
         if (fillEl && i < 5) {
