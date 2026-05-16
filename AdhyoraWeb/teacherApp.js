@@ -1493,6 +1493,7 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
     // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
+    // Inside switchView(targetView, clickedBtn)...
     let topActionBtn = document.getElementById("btnOpenCompose");
     if (topActionBtn) {
         if (targetView === views.assignments) {
