@@ -151,7 +151,24 @@
                 </div>
 
                 <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Timetable</h3></div>
-                <div id="internalMarksView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Internal Marks</h3></div>
+                <div id="internalMarksView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">Internal Marks</h3>
+                        <div id="imTotalCount" style="font-weight: bold; color: var(--brand-red); font-size: 14px; background: var(--bg-grid-color); padding: 5px 15px; border-radius: 20px; display: none;">Total: 0</div>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                        <select id="imYearDrop" class="filter-select"></select>
+                        <select id="imSemDrop" class="filter-select"></select>
+                        <select id="imSubDrop" class="filter-select" style="flex: 2;"></select>
+                    </div>
+
+                    <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
+                        <div id="imEmptyMsg" class="no-data-text">Loading configuration...</div>
+                        <div id="imListContainer" style="display:flex; flex-direction:column; gap:10px;">
+                            </div>
+                    </div>
+                </div>
                 
                 <div id="subjectsView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%;">
                     <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
@@ -526,6 +543,25 @@
                 </div>
 
             <button id="btnEvtAddSelected" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);">Add Selected to Event</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="imMarksModal">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; border-radius: 20px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column; max-height: 85vh;">
+            <button class="close-settings" onclick="document.getElementById('imMarksModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            
+            <div style="margin-bottom: 20px; padding-right: 30px;">
+                <h3 id="imStudentNameText" style="color: var(--text-dark); margin-bottom: 5px; font-size: 20px; font-weight: 800;">Student Name</h3>
+                <div id="imSubjectSubtitle" style="font-size: 13px; color: var(--brand-red); font-weight: bold;">Subject Name</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: var(--text-muted); font-size: 14px;">Exam Records</h4>
+                <button id="btnImAddExam" style="background: var(--bg-grid-color); color: var(--brand-red); border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;"><i class="fas fa-plus"></i> Add Exam</button>
+            </div>
+
+            <div id="imAccordionsContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
+                </div>
         </div>
     </div>
 
