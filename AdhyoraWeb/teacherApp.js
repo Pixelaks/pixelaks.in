@@ -2598,12 +2598,13 @@ function asnRenderList(dataList) {
 }
 
 // ==========================================
-// 🚨 STUDENT LIST & DASHBOARD ENGINE
+// 🚨 STUDENT LIST & DASHBOARD ENGINE (DOM Virtualization)
 // ==========================================
 let slLoaded = false; 
 let cachedStudents = [];
-let studentRenderLimit = 50; 
-let isFetchingStudents = false; // 🚨 Added to prevent scroll lag!
+let currentFilteredList = []; // Caches search results
+let currentRenderedCount = 0; // Tracks how many cards are currently on screen
+let isFetchingStudents = false;
 
 function startStudentListListener() {
     if (slLoaded) return;
@@ -2612,41 +2613,44 @@ function startStudentListListener() {
         cachedStudents = []; 
         snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
         document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; 
-        renderStudentList(document.getElementById("slSearchInput").value);
+        renderStudentList(document.getElementById("slSearchInput").value, false);
     });
 }
 
-function renderStudentList(searchTerm = "") {
+function renderStudentList(searchTerm = "", isAppending = false) {
     const listEl = document.getElementById("studentListContainer"); 
     const noData = document.getElementById("slNoDataText");
-    let filtered = cachedStudents;
     
-    if (searchTerm) { 
-        let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); 
-        filtered = cachedStudents.filter(s => { 
-            let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); 
-            return terms.every(term => sStr.includes(term)); 
-        }); 
+    // 1. If this is a fresh search or initial load, wipe the list and reset count
+    if (!isAppending) {
+        currentFilteredList = cachedStudents;
+        if (searchTerm) { 
+            let terms = searchTerm.toLowerCase().split(':').map(t => t.trim()); 
+            currentFilteredList = cachedStudents.filter(s => { 
+                let sStr = `${s.Name || ""} ${s.RollNumber || ""} ${s.Department || ""} year ${s.Year || ""}`.toLowerCase(); 
+                return terms.every(term => sStr.includes(term)); 
+            }); 
+        }
+        currentRenderedCount = 0;
+        listEl.innerHTML = ""; // Only wipe HTML on a fresh search
     }
     
-    if (filtered.length === 0) { 
+    if (currentFilteredList.length === 0) { 
         noData.style.display = "block"; 
         noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; 
-        listEl.innerHTML = ""; 
         listEl.appendChild(noData); 
         return; 
     }
     noData.style.display = "none";
     
-    // RAM SCROLL: Slice the array based on the current limit
-    let renderBatch = filtered.slice(0, studentRenderLimit);
-    let oldScroll = listEl.scrollTop;
+    // 2. 🚀 DOM POOLING: Slice ONLY the next 50 students that need to be built
+    let nextBatch = currentFilteredList.slice(currentRenderedCount, currentRenderedCount + 50);
+    if (nextBatch.length === 0) return; // Nothing left to load
 
-    listEl.innerHTML = renderBatch.map(s => {
+    let html = nextBatch.map(s => {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); 
         let status = s.status || "Approved";
         
-        // 🚨 UI FIX: Match Principal Layout exactly!
         let statusLabel = status === "Approved" ? "Active" : status;
         let statusColor = status === "Approved" ? "var(--brand-red)" : "var(--text-muted)";
         
@@ -2673,31 +2677,33 @@ function renderStudentList(searchTerm = "") {
         </div>`;
     }).join('');
     
-    listEl.appendChild(noData); 
-    
-    // Smooth scroll restore
-    requestAnimationFrame(() => { listEl.scrollTop = oldScroll; });
+    // 3. 🚨 CRITICAL FIX: Append the new cards to the bottom WITHOUT destroying the existing ones!
+    listEl.insertAdjacentHTML('beforeend', html);
+    currentRenderedCount += nextBatch.length;
 }
 
 document.getElementById("slSearchInput").addEventListener("input", debounce((e) => {
-    studentRenderLimit = 50; 
-    renderStudentList(e.target.value.trim());
+    // False indicates this is a fresh search, so wipe the list
+    renderStudentList(e.target.value.trim(), false); 
 }, 250));
 
 document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
     let el = e.target;
-    // 🚨 LAG FIX: Added a throttle so it doesn't fire 100x a second!
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
-        if (!isFetchingStudents && studentRenderLimit < cachedStudents.length) {
+    // When the user scrolls within 150px of the bottom...
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 150) {
+        // If there are more students to load, and we aren't currently loading...
+        if (!isFetchingStudents && currentRenderedCount < currentFilteredList.length) {
             isFetchingStudents = true;
             let searchTerm = document.getElementById("slSearchInput").value.trim();
-            studentRenderLimit += 50;
-            renderStudentList(searchTerm);
             
-            setTimeout(() => { isFetchingStudents = false; }, 200); // 200ms Cooldown
+            // True indicates we are APPENDING to the bottom, not wiping!
+            renderStudentList(searchTerm, true); 
+            
+            setTimeout(() => { isFetchingStudents = false; }, 150); // Small cooldown lock
         }
     }
 });
+
 
 // ==========================================
 // STUDENT DASHBOARD DETAILS
