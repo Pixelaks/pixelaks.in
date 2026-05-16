@@ -5785,11 +5785,21 @@ let composeFCMTokens = [];
 document.getElementById("btnOpenCompose")?.addEventListener("click", () => window.OpenCompose(false));
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
-// Dynamic Dropdown Toggle
-document.getElementById("chkSendStudents")?.addEventListener("change", (e) => {
+// Dynamic Dropdown Toggle (Matches C# OnToggleChanged)
+function updateComposeUI() {
+    let sendT = document.getElementById("chkSendTeachers").checked;
+    let sendS = document.getElementById("chkSendStudents").checked;
+    
+    let deptDrop = document.getElementById("composeDeptDrop");
     let yearDrop = document.getElementById("composeYearDrop");
-    if (yearDrop) yearDrop.style.display = e.target.checked ? "block" : "none";
-});
+
+    deptDrop.style.display = (sendT || sendS) ? "block" : "none";
+    yearDrop.style.display = sendS ? "block" : "none";
+}
+
+document.getElementById("chkSendTeachers")?.addEventListener("change", updateComposeUI);
+document.getElementById("chkSendStudents")?.addEventListener("change", updateComposeUI);
+document.getElementById("chkSendPrincipal")?.addEventListener("change", updateComposeUI);
 
 // 2. Open Modal Logic
 window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID = "") => {
@@ -5799,7 +5809,6 @@ window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID
 
     let broadcastUI = document.getElementById("composeBroadcastUI");
     let privateTarget = document.getElementById("composePrivateTarget");
-    let yearDrop = document.getElementById("composeYearDrop");
     
     document.getElementById("composeTitle").value = "";
     document.getElementById("composeBody").value = "";
@@ -5814,10 +5823,11 @@ window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID
         broadcastUI.style.display = "block";
         privateTarget.style.display = "none";
         
-        // Reset Checkboxes
-        document.getElementById("chkSendTeachers").checked = true;
-        document.getElementById("chkSendStudents").checked = true;
-        yearDrop.style.display = "block"; // Show because students is checked
+        // Reset Checkboxes (Default Off)
+        document.getElementById("chkSendPrincipal").checked = false;
+        document.getElementById("chkSendTeachers").checked = false;
+        document.getElementById("chkSendStudents").checked = false;
+        updateComposeUI();
         
         // Dynamically adjust the "My Department" option text
         let deptDrop = document.getElementById("composeDeptDrop");
@@ -5847,16 +5857,23 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 
     try {
         if (composeIsPrivate && composeRecipientID) {
+            // ==========================================
             // 🚨 PRIVATE CHAT ROUTING
+            // ==========================================
             let chatRoomID = [currentUserID, composeRecipientID].sort().join("_");
             let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
             
-            await setDoc(chatRef, {
+            // Meta & Message
+            let batch = writeBatch(db);
+            batch.set(chatRef, {
                 participants: [currentUserID, composeRecipientID],
-                lastUpdated: serverTimestamp()
+                lastMessage: body,
+                lastUpdated: serverTimestamp(),
+                receiverName: privateTarget.value // Uses modal input
             }, { merge: true });
 
-            await addDoc(collection(chatRef, "messages"), {
+            let msgRef = doc(collection(chatRef, "messages"));
+            batch.set(msgRef, {
                 title: title,
                 body: body,
                 senderID: currentUserID,
@@ -5867,14 +5884,36 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 status: "sent"
             });
 
-        } else {
-            // 🚨 BROADCAST ROUTING WITH ADVANCED FILTERING
-            let sendToTeachers = document.getElementById("chkSendTeachers").checked;
-            let sendToStudents = document.getElementById("chkSendStudents").checked;
-            let deptSelection = document.getElementById("composeDeptDrop").value;
-            let yearSelection = document.getElementById("composeYearDrop").value;
+            // Sent History Log
+            let historyRef = doc(collection(db, "colleges", currentCollegeID, "sent_messages"));
+            batch.set(historyRef, {
+                title: title, body: body,
+                targetSummary: `Personal: ${privateTarget.value}`,
+                timestamp: serverTimestamp(),
+                type: "personal", status: "sent",
+                linkedChatID: chatRoomID,
+                linkedMessageID: msgRef.id,
+                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                senderID: currentUserID,
+                senderName: currentTeacherName
+            });
 
-            if (!sendToTeachers && !sendToStudents) {
+            await batch.commit();
+
+            // Push Notification (Tokens)
+            if (composeFCMTokens && composeFCMTokens.length > 0) {
+                sendPushNotification(title, body, composeFCMTokens, null);
+            }
+
+        } else {
+            // ==========================================
+            // 🚨 BROADCAST ROUTING (Matches C# Logic)
+            // ==========================================
+            let sendP = document.getElementById("chkSendPrincipal").checked;
+            let sendT = document.getElementById("chkSendTeachers").checked;
+            let sendS = document.getElementById("chkSendStudents").checked;
+
+            if (!sendP && !sendT && !sendS) {
                 showRcToast("Please select at least one recipient group!");
                 btn.innerText = "Send Message";
                 btn.disabled = false;
@@ -5882,59 +5921,61 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 return;
             }
 
-            let actualDept = deptSelection === "My Dept" ? teacherDeptRaw : "All Depts";
-            let actualYear = yearSelection;
+            let deptVal = document.getElementById("composeDeptDrop").value;
+            let yearVal = document.getElementById("composeYearDrop").value;
 
-            let targetSummary = "";
-            let targetTopic = "";
+            let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : "All";
+            let actualYear = yearVal;
+
             let safeColID = getSafeTopic(currentCollegeID);
-            let safeDept = getSafeTopic(teacherDeptRaw);
+            let safeDept = getSafeTopic(deptVal === "My Dept" ? teacherDeptRaw : "All");
+            let safeYear = getSafeTopic(yearVal);
 
-            // 🧠 Magic String Formatting: Maps EXACTLY to Unity C# `.Contains()` checks
-            if (sendToTeachers && sendToStudents && actualDept === "All Depts" && actualYear === "All Years") {
-                targetSummary = "Everyone";
-                targetTopic = `${safeColID}_ALL`;
-            } else {
-                let parts = [];
-                if (sendToTeachers) {
-                    if (actualDept === "All Depts") {
-                        parts.push("Teachers (All)");
-                        targetTopic = `${safeColID}_TEACHERS_ALL`;
-                    } else {
-                        parts.push(`Teachers (${actualDept})`);
-                        targetTopic = `${safeColID}_TEACHERS_${safeDept}`;
-                    }
-                }
-                if (sendToStudents) {
-                    if (actualDept === "All Depts" && actualYear === "All Years") {
-                        parts.push("All Students");
-                        if (!targetTopic) targetTopic = `${safeColID}_STUDENTS_ALL`;
-                    } else {
-                        // C# looks for "All Depts" or specific dept, AND "All Years" or specific year
-                        parts.push(`Students (${actualDept} - ${actualYear})`);
-                        if (!targetTopic) targetTopic = `${safeColID}_STUDENTS_${safeDept}`;
-                    }
-                }
-                targetSummary = parts.join(" & ");
-                
-                // Fallback for multi-target FCM topics
-                if (sendToTeachers && sendToStudents) targetTopic = `${safeColID}_ALL`;
+            let targetDescription = "";
+            let topicsToPing = [];
+
+            // 1. ROUTE TO PRINCIPAL
+            if (sendP) {
+                topicsToPing.push(`${safeColID}_PRINCIPAL`);
+                targetDescription += "Principal";
+            }
+
+            // 2. ROUTE TO TEACHERS
+            if (sendT) {
+                topicsToPing.push(`${safeColID}_TEACHERS_${safeDept}`);
+                if (targetDescription !== "") targetDescription += " & ";
+                targetDescription += (actualDeptName === "All") ? "Teachers (All)" : `Teachers (${actualDeptName})`;
+            }
+
+            // 3. ROUTE TO STUDENTS
+            if (sendS) {
+                topicsToPing.push(`${safeColID}_STUDENTS_${safeDept}_${safeYear}`);
+                if (targetDescription !== "") targetDescription += " & ";
+
+                if (actualDeptName === "All" && actualYear === "All") targetDescription += "All Students";
+                else if (actualDeptName === "All") targetDescription += `Students (All Depts - ${actualYear})`;
+                else if (actualYear === "All") targetDescription += `Students (${actualDeptName} - All Years)`;
+                else targetDescription += `Students (${actualDeptName} - ${actualYear})`;
             }
 
             let payload = {
                 title: title,
                 body: body,
-                targetSummary: targetSummary,
-                targetTopic: targetTopic,
-                senderID: currentUserID,
-                senderName: currentTeacherName,
-                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                targetSummary: targetDescription,
+                timestamp: serverTimestamp(),
                 type: "broadcast",
                 status: "sent",
-                timestamp: serverTimestamp()
+                senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
+                senderID: currentUserID,
+                senderName: currentTeacherName
             };
 
             await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
+
+            // Push Notification (Topics)
+            if (topicsToPing.length > 0) {
+                sendPushNotification(title, body, null, topicsToPing);
+            }
         }
 
         showRcToast("Message Sent Successfully!");
@@ -5949,3 +5990,28 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
         btn.style.opacity = "1";
     }
 });
+
+// 4. WEBHOOK EXECUTOR (Matches C# PostNotification Coroutine)
+function sendPushNotification(title, body, tokens, topics) {
+    let finalTitle = `${title} • ${currentTeacherName} (Teacher)`;
+    let iconUrl = "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/80f18d76be90054cccf1b1ddd5d04d8282635b59/AdhyoraRedSplashIcon.png";
+    let messageType = "chat";
+
+    let payload = {
+        title: finalTitle,
+        body: body,
+        image: iconUrl,
+        type: messageType,
+        priority: "high"
+    };
+
+    if (tokens && tokens.length > 0) payload.tokens = tokens;
+    else if (topics && topics.length > 0) payload.topics = topics;
+
+    fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).catch(e => console.log("Push notification ping skipped/failed.", e));
+}
