@@ -251,6 +251,7 @@ signInBtn.addEventListener("click", async (e) => {
                   // 🚨 ADD THESE BREADCRUMBS
                     localStorage.setItem("adhyora_role", "Teacher");
                     localStorage.setItem("adhyora_college", selectedCollegeID);
+                   localStorage.setItem("adhyora_roomcode", roomCode.toUpperCase());
                   
                     window.location.href = `teacherDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
                 } else {
