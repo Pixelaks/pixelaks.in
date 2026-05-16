@@ -1423,6 +1423,11 @@ document.getElementById("btnNavBatch")?.addEventListener("click", () => {
     switchView(views.batch, document.getElementById("btnNavBatch"));
     initBatchEngine(); 
 });
+
+document.getElementById("btnNavEventAttendance")?.addEventListener("click", () => {
+    switchView(views.eventAttendance, document.getElementById("btnNavEventAttendance"));
+    initEventAttendanceEngine(); 
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -3576,3 +3581,358 @@ window.bchToggleGroup = async (bodyId, iconId, sids) => {
         icon.style.transform = "rotate(0deg)";
     }
 };
+
+// ==========================================
+// 🚨 EVENT ATTENDANCE ENGINE
+// ==========================================
+let evtLoaded = false;
+let evtCurrentDate = new Date();
+let evtAllCollegeStudentsCache = [];
+let evtIsCacheLoaded = false;
+let evtCachedTeacherID = "";
+
+let evtCartStudents = new Map(); // K: studentID, V: student data
+let evtPendingStudentIDs = new Set();
+let evtCurrentRequestID = "";
+let evtIsLocked = false;
+let evtListenerUnsub = null;
+
+function initEventAttendanceEngine() {
+    if (evtLoaded) return;
+    evtLoaded = true;
+
+    document.getElementById("evtDateBtn").addEventListener("click", () => {
+        // Recycle the same Jump Date modal from the Attendance engine!
+        document.getElementById("jumpDateModal").classList.add("active");
+        document.getElementById("jumpSubmitBtn").onclick = () => {
+            let d = parseInt(document.getElementById("jumpDayDropdown").value) + 1;
+            let m = parseInt(document.getElementById("jumpMonthDropdown").value);
+            let y = parseInt(document.getElementById("jumpYearDropdown").value);
+            evtCurrentDate = new Date(y, m, d);
+            evtUpdateDateUI();
+            evtLoadDataForPeriod();
+            document.getElementById("jumpDateModal").classList.remove("active");
+        };
+    });
+
+    document.getElementById("evtPeriodDrop").addEventListener("change", evtLoadDataForPeriod);
+    document.getElementById("btnEvtOpenSearch").addEventListener("click", evtOpenSearchPanel);
+    document.getElementById("evtSearchInput").addEventListener("input", debounce((e) => evtOnSearchTyped(e.target.value), 250));
+    document.getElementById("btnEvtAddSelected").addEventListener("click", evtAddSelectedToCart);
+    document.getElementById("btnEvtSave").addEventListener("click", evtSaveEventAttendance);
+
+    evtUpdateDateUI();
+    evtLoadAllStudentsIntoRAM();
+}
+
+function evtUpdateDateUI() {
+    let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let dName = days[evtCurrentDate.getDay()];
+    let yyyy = evtCurrentDate.getFullYear();
+    let mm = String(evtCurrentDate.getMonth() + 1).padStart(2, '0');
+    let dd = String(evtCurrentDate.getDate()).padStart(2, '0');
+    document.getElementById("evtDateText").innerHTML = `${dName}<br>${yyyy}-${mm}-${dd}`;
+}
+
+async function evtLoadAllStudentsIntoRAM() {
+    if (currentUserID !== evtCachedTeacherID) {
+        evtAllCollegeStudentsCache = [];
+        evtIsCacheLoaded = false;
+        evtCachedTeacherID = currentUserID;
+    }
+
+    if (evtIsCacheLoaded && evtAllCollegeStudentsCache.length > 0) {
+        evtLoadDataForPeriod();
+        return;
+    }
+
+    showRcToast("Syncing College Database...");
+    try {
+        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "students"));
+        evtAllCollegeStudentsCache = [];
+        snap.forEach(doc => evtAllCollegeStudentsCache.push({ id: doc.id, ...doc.data() }));
+        
+        evtIsCacheLoaded = true;
+        evtLoadDataForPeriod();
+    } catch(e) {
+        console.error("Failed to load students cache", e);
+        showRcToast("Error syncing students.");
+    }
+}
+
+function evtLoadDataForPeriod() {
+    if (evtListenerUnsub) { evtListenerUnsub(); evtListenerUnsub = null; }
+
+    evtCartStudents.clear();
+    evtCurrentRequestID = "";
+    evtIsLocked = false;
+    
+    let nameInput = document.getElementById("evtNameInput");
+    let searchBtn = document.getElementById("btnEvtOpenSearch");
+    let saveBtn = document.getElementById("btnEvtSave");
+    let lockText = document.getElementById("evtLockStatusText");
+
+    nameInput.value = "";
+    nameInput.disabled = false;
+    searchBtn.style.display = "block";
+    saveBtn.style.display = "block";
+    saveBtn.innerText = "Send to Principal";
+    lockText.innerText = "";
+    
+    evtRebuildCartUI();
+
+    let dateStr = `${evtCurrentDate.getFullYear()}-${String(evtCurrentDate.getMonth() + 1).padStart(2, '0')}-${String(evtCurrentDate.getDate()).padStart(2, '0')}`;
+    let pIndex = document.getElementById("evtPeriodDrop").value;
+
+    const q = query(
+        collection(db, "colleges", currentCollegeID, "event_requests"),
+        where("teacherID", "==", currentUserID),
+        where("date", "==", dateStr),
+        where("period", "==", pIndex)
+    );
+
+    evtListenerUnsub = onSnapshot(q, (snapshot) => {
+        evtCartStudents.clear();
+        
+        if (!snapshot.empty) {
+            let docSnap = snapshot.docs[0];
+            let data = docSnap.data();
+            evtCurrentRequestID = docSnap.id;
+
+            nameInput.value = data.eventName || "";
+            let status = data.status || "Pending";
+            evtIsLocked = (status === "Accepted");
+
+            // 🚨 24-HOUR LOCK SHIELD
+            if (!evtIsLocked && data.submittedAt) {
+                let submittedTime = data.submittedAt.toDate ? data.submittedAt.toDate() : new Date();
+                let hoursPassed = (new Date() - submittedTime) / (1000 * 60 * 60);
+                if (hoursPassed >= 24) evtIsLocked = true;
+            }
+
+            if (data.studentIDs && Array.isArray(data.studentIDs)) {
+                data.studentIDs.forEach(sid => {
+                    let sDoc = evtAllCollegeStudentsCache.find(s => s.id === sid);
+                    if (sDoc) {
+                        evtCartStudents.set(sid, {
+                            id: sid,
+                            name: sDoc.Name || sDoc.studentName || "Unknown",
+                            roll: sDoc.RollNumber || sDoc.rollNumber || "",
+                            dept: (sDoc.Department || sDoc.department || "").replace("DEPT_", ""),
+                            year: sDoc.Year || "1"
+                        });
+                    }
+                });
+            }
+        }
+
+        nameInput.disabled = evtIsLocked;
+        searchBtn.style.display = evtIsLocked ? "none" : "block";
+        saveBtn.style.display = evtIsLocked ? "none" : "block";
+        lockText.innerText = evtIsLocked ? "Locked (Cannot be edited)" : "";
+        
+        evtRebuildCartUI();
+    });
+}
+
+function evtRebuildCartUI() {
+    let container = document.getElementById("evtCartContainer");
+    let emptyMsg = document.getElementById("evtEmptyCartMsg");
+
+    if (evtCartStudents.size === 0) {
+        emptyMsg.style.display = "block";
+        container.innerHTML = "";
+    } else {
+        emptyMsg.style.display = "none";
+        let html = "";
+        
+        evtCartStudents.forEach((s) => {
+            html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid var(--border-color); border-radius:12px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                <div>
+                    <div style="font-size:14px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${s.name}</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:600;">${s.roll} - ${s.dept} - Year ${s.year}</div>
+                </div>
+                ${!evtIsLocked ? `<button onclick="evtRemoveFromCart('${s.id}')" style="background:#fef2f2; color:var(--brand-red); border:none; width:34px; height:34px; border-radius:8px; cursor:pointer; transition:0.2s;"><i class="fas fa-trash"></i></button>` : ''}
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+    }
+}
+
+window.evtRemoveFromCart = (id) => {
+    if (evtIsLocked) { showRcToast("Cannot edit a locked request!"); return; }
+    evtCartStudents.delete(id);
+    evtRebuildCartUI();
+};
+
+function evtOpenSearchPanel() {
+    if (!evtIsCacheLoaded) { showRcToast("Still loading students..."); return; }
+    
+    document.getElementById("evtSearchInput").value = "";
+    evtPendingStudentIDs.clear();
+    document.getElementById("evtSearchResultContainer").innerHTML = "";
+    
+    document.getElementById("evtSearchMsg").style.display = "block";
+    document.getElementById("evtSearchMsg").innerText = "Type a name or roll number to search...";
+    
+    document.getElementById("evtSearchModal").classList.add("active");
+}
+
+function evtOnSearchTyped(queryStr) {
+    let container = document.getElementById("evtSearchResultContainer");
+    let msgObj = document.getElementById("evtSearchMsg");
+
+    if (!queryStr || queryStr.length < 2) {
+        container.innerHTML = "";
+        msgObj.style.display = "block";
+        msgObj.innerText = "Type a name or roll number to search...";
+        return;
+    }
+
+    let cleanQuery = queryStr.trim().toLowerCase();
+    let matches = evtAllCollegeStudentsCache.filter(s => {
+        let n = (s.Name || "").toLowerCase();
+        let r = (s.RollNumber || "").toLowerCase();
+        return n.includes(cleanQuery) || r.includes(cleanQuery);
+    });
+
+    if (matches.length === 0) {
+        container.innerHTML = "";
+        msgObj.style.display = "block";
+        msgObj.innerText = `No students found matching '${queryStr}'!`;
+        return;
+    }
+
+    msgObj.style.display = "none";
+    let html = "";
+    
+    // Hard limit for smooth UI
+    let renderBatch = matches.slice(0, 20);
+
+    renderBatch.forEach(s => {
+        let name = s.Name || s.studentName || "Unknown";
+        let roll = s.RollNumber || s.rollNumber || "";
+        let dept = (s.Department || s.department || "").replace("DEPT_", "");
+        let year = s.Year || "1";
+        
+        let isAlreadyInCart = evtCartStudents.has(s.id);
+        let isPending = evtPendingStudentIDs.has(s.id);
+
+        let chkHtml = "";
+        if (isAlreadyInCart) {
+            chkHtml = `<input type="checkbox" checked disabled style="width:18px; height:18px; accent-color:var(--text-muted);">`;
+        } else {
+            chkHtml = `<input type="checkbox" id="pend_chk_${s.id}" ${isPending ? 'checked' : ''} onchange="evtTogglePending('${s.id}', this.checked)" style="width:18px; height:18px; accent-color:var(--brand-red); cursor:pointer;">`;
+        }
+
+        html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:5px;">
+            <div>
+                <div style="font-size:13px; font-weight:bold; color:var(--text-dark); margin-bottom:2px;">${name}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:600;">${roll} - ${dept} - Year ${year}</div>
+            </div>
+            ${chkHtml}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+window.evtTogglePending = (id, isSelected) => {
+    if (isSelected) evtPendingStudentIDs.add(id);
+    else evtPendingStudentIDs.delete(id);
+};
+
+function evtAddSelectedToCart() {
+    let added = 0;
+    evtPendingStudentIDs.forEach(id => {
+        if (!evtCartStudents.has(id)) {
+            let sDoc = evtAllCollegeStudentsCache.find(s => s.id === id);
+            if (sDoc) {
+                evtCartStudents.set(id, {
+                    id: id,
+                    name: sDoc.Name || sDoc.studentName || "Unknown",
+                    roll: sDoc.RollNumber || sDoc.rollNumber || "",
+                    dept: (sDoc.Department || sDoc.department || "").replace("DEPT_", ""),
+                    year: sDoc.Year || "1"
+                });
+                added++;
+            }
+        }
+    });
+
+    if (added > 0) showRcToast(`Added ${added} students to cart!`);
+    evtPendingStudentIDs.clear();
+    evtRebuildCartUI();
+    document.getElementById("evtSearchModal").classList.remove("active");
+}
+
+async function evtSaveEventAttendance() {
+    if (evtIsLocked) return;
+
+    let eventName = document.getElementById("evtNameInput").value.trim();
+    if (!eventName) { showRcToast("Please enter the Event Name!"); return; }
+    if (evtCartStudents.size === 0) { showRcToast("Cart is empty!"); return; }
+
+    let saveBtn = document.getElementById("btnEvtSave");
+    saveBtn.innerText = "Sending..."; saveBtn.disabled = true;
+
+    let dateStr = `${evtCurrentDate.getFullYear()}-${String(evtCurrentDate.getMonth() + 1).padStart(2, '0')}-${String(evtCurrentDate.getDate()).padStart(2, '0')}`;
+    let pStr = document.getElementById("evtPeriodDrop").value;
+    let sids = Array.from(evtCartStudents.keys());
+
+    let involvedSemesters = new Set();
+    evtCartStudents.forEach(s => {
+        // Use SemesterManager logic
+        let yearNum = parseInt(s.year.replace(/\D/g, '')) || 1;
+        let semNum = (currentSemesterType === "Odd") ? (yearNum * 2) - 1 : (yearNum * 2);
+        involvedSemesters.add(semNum.toString());
+    });
+
+    let payload = {
+        teacherID: currentUserID,
+        teacherName: currentTeacherName,
+        eventName: eventName,
+        date: dateStr,
+        period: pStr,
+        semester: Array.from(involvedSemesters).join(", "),
+        studentIDs: sids,
+        status: "Pending"
+    };
+
+    try {
+        let docRef;
+        if (evtCurrentRequestID) {
+            docRef = doc(db, "colleges", currentCollegeID, "event_requests", evtCurrentRequestID);
+            await setDoc(docRef, payload, { merge: true });
+        } else {
+            payload.submittedAt = serverTimestamp();
+            docRef = await addDoc(collection(db, "colleges", currentCollegeID, "event_requests"), payload);
+            evtCurrentRequestID = docRef.id;
+        }
+
+        showRcToast("Event sent to Principal!");
+        
+        // 🚨 WEBOOK: Blast notification to Principal safely via Google Script
+        const safeCol = currentCollegeID.replace(/[^a-zA-Z0-9]/g, '');
+        fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", {
+            method: "POST", mode: "no-cors",
+            body: JSON.stringify({
+                title: "New Event Request 📅",
+                body: `${currentTeacherName} has requested attendance approval for '${eventName}'.`,
+                image: "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/4c9dc43b4b3fd2c66679498581de26d690053f61/AdhyoraSplashLogo5.png",
+                type: "event_request",
+                priority: "high",
+                topics: [`${safeCol}_PRINCIPAL`]
+            })
+        });
+
+    } catch (e) {
+        console.error(e);
+        showRcToast("Failed to Send!");
+    } finally {
+        saveBtn.innerText = "Send to Principal"; saveBtn.disabled = false;
+    }
+}
