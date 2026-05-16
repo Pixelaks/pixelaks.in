@@ -493,63 +493,36 @@ let isComplete = false;
 
 function updateText() {
     if (isComplete) return;
-    let output = "";
     
-    for (let i = 0; i < TARGET_TEXT.length; i++) {
-        if (i < lockIndex) {
-            output += TARGET_TEXT[i];
-        } else {
-            output += CHAOS_CHARS[Math.floor(Math.random() * CHAOS_CHARS.length)];
+    if (frame % 3 === 0) {
+        let output = "";
+        for (let i = 0; i < TARGET_TEXT.length; i++) {
+            output += (i < lockIndex) ? TARGET_TEXT[i] : CHAOS_CHARS[Math.floor(Math.random() * CHAOS_CHARS.length)];
         }
-    }
-
-    elMain.innerText = output;
-    elRed.innerText = output;
-    elBlue.innerText = output;
-
-    if (Math.random() > 0.8) {
-        elRed.style.transform = `translate(${Math.random()*4 - 2}px, ${Math.random()*4 - 2}px)`;
-        elBlue.style.transform = `translate(${Math.random()*4 - 2}px, ${Math.random()*4 - 2}px)`;
-        elRed.style.opacity = 0.8;
-        elBlue.style.opacity = 0.8;
-    } else {
-        elRed.style.transform = "translate(0,0)";
-        elBlue.style.transform = "translate(0,0)";
-        elRed.style.opacity = 0;
-        elBlue.style.opacity = 0;
+        
+        // Single DOM write
+        elMain.innerText = output;
+        elRed.innerText = output;
+        elBlue.innerText = output;
     }
 
     if (frame % DECODE_SPEED === 0) {
         lockIndex++;
         if (lockIndex > TARGET_TEXT.length) {
             isComplete = true;
-            finishSequence();
+            elMain.innerText = TARGET_TEXT;
+            elRed.innerText = TARGET_TEXT;
+            elBlue.innerText = TARGET_TEXT;
+            
+            // Trigger the pure CSS glitch after decoding finishes
+            elRed.classList.add('css-glitch-active');
+            elBlue.classList.add('css-glitch-active');
+            return; // Kills the loop, freeing up the CPU entirely!
         }
     }
     
     frame++;
     requestAnimationFrame(updateText);
-}
-
-function finishSequence() {
-    elMain.innerText = TARGET_TEXT;
-    elRed.innerText = TARGET_TEXT;
-    elBlue.innerText = TARGET_TEXT;
-    elRed.style.opacity = 0;
-    elBlue.style.opacity = 0;
-    setInterval(subtleGlitch, 2500);
-}
-
-function subtleGlitch() {
-    if(Math.random() > 0.4) return;
-    elRed.style.opacity = 1;
-    elBlue.style.opacity = 1;
-    elRed.style.transform = `translate(-3px, 0)`;
-    elBlue.style.transform = `translate(3px, 0)`;
-    setTimeout(() => {
-        elRed.style.opacity = 0;
-        elBlue.style.opacity = 0;
-    }, 100);
 }
 
 setTimeout(updateText, 500);
