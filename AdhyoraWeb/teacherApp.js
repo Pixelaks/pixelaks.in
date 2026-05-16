@@ -1397,10 +1397,20 @@ async function saveAttendance() {
 // 🚨 UI NAVIGATION ROUTER (Intact)
 // ==========================================
 const views = {
-    welcome: document.getElementById("welcomeView"), attendance: document.getElementById("attendanceView"), timetable: document.getElementById("timetableView"),
-    internalMarks: document.getElementById("internalMarksView"), subjects: document.getElementById("subjectsView"), calendar: document.getElementById("calendarView"),
-    assignments: document.getElementById("assignmentsView"), studentList: document.getElementById("studentListView"), studentDashboard: document.getElementById("studentDashboardView"), subjectAssign: document.getElementById("subjectAssignView"),
-    batch: document.getElementById("batchView"), eventAttendance: document.getElementById("eventAttendanceView"), notifications: document.getElementById("notificationsView"),
+    welcome: document.getElementById("welcomeView"), 
+    attendance: document.getElementById("attendanceView"), 
+    timetable: document.getElementById("timetableView"),
+    assign: document.getElementById("assignView"), // 🚨 THE MISSING PIECE!
+    internalMarks: document.getElementById("internalMarksView"), 
+    subjects: document.getElementById("subjectsView"), 
+    calendar: document.getElementById("calendarView"),
+    assignments: document.getElementById("assignmentsView"), 
+    studentList: document.getElementById("studentListView"), 
+    studentDashboard: document.getElementById("studentDashboardView"), 
+    subjectAssign: document.getElementById("subjectAssignView"),
+    batch: document.getElementById("batchView"), 
+    eventAttendance: document.getElementById("eventAttendanceView"), 
+    notifications: document.getElementById("notificationsView"),
     messages: document.getElementById("messagesView")
 };
 
