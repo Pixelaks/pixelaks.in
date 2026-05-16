@@ -1608,22 +1608,6 @@ window.addEventListener("popstate", (e) => {
     }
 });
 
-function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
-
-attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
-attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
-attachSafeClick("btnNotifications", (e) => { switchView(views.notifications, e.currentTarget); document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); });
-attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
-attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
-attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
-attachSafeClick("btnNavSubjects", (e) => switchView(views.subjects, e.currentTarget));
-attachSafeClick("btnNavCalendar", (e) => switchView(views.calendar, e.currentTarget));
-attachSafeClick("btnNavAssignments", (e) => switchView(views.assignments, e.currentTarget));
-attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.currentTarget));
-attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
-attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
-attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
-
 // ==========================================
 // 🚨 SETTINGS DRAWER ACTIONS
 // ==========================================
