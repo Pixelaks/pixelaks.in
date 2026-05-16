@@ -111,12 +111,12 @@ async function finalizeProfileUI(rawName, email, deptName) {
         startInboxListener();
         hasStartedInbox = true;
 
-        // 🚨 THE RACE CONDITION FIX
         await syncSemesterWithDatabase();
 
         initAttendanceEngine(); 
         initSubjectDeclarationEngine(); 
-        initCalendarEngine(); // 🚨 Added Calendar Init!
+        initCalendarEngine(); 
+        initAssignmentsEngine(); // 🚨 Added Assignments Init!
     }
 }
 
@@ -1422,9 +1422,14 @@ function switchView(targetView, clickedBtn) {
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
     
-    // 🚨 Clean up the heavy listeners and unsaved data if we navigate away
+    // Clean up the heavy listeners and unsaved data if we navigate away
     if (targetView !== views.attendance) cleanupAttendanceView();
-    if (targetView !== views.subjects) subjPurgeUnsavedPending();
+    if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
+
+    // 🚨 Render Assignments instantly from cache when tab opens
+    if (targetView === views.assignments && asnIsInit) {
+        asnRenderList(asnCachedData);
+    }
 
     if (targetView === "HOME") {
         if(sidebar) sidebar.classList.remove("mobile-hidden"); 
@@ -2451,4 +2456,124 @@ function calShowPopup(reason) {
         popup.style.bottom = "80px";
         popup.style.opacity = "0";
     }, 2000);
+}
+
+// ==========================================
+// 🚨 ASSIGNMENTS ENGINE
+// ==========================================
+let asnCachedTeacherID = "";
+let asnListenerUnsub = null;
+let asnCachedData = [];
+let asnIsInit = false;
+
+async function initAssignmentsEngine() {
+    // 🚨 SECURITY WIPE: If a different teacher logs in, clear the RAM!
+    if (currentUserID !== asnCachedTeacherID) {
+        if (asnListenerUnsub) { asnListenerUnsub(); asnListenerUnsub = null; }
+        asnCachedData = [];
+        asnIsInit = false;
+        asnCachedTeacherID = currentUserID;
+    }
+
+    if (asnIsInit) {
+        // Zero Cost Trap: Already listening in the background
+        if (document.getElementById("assignmentsView").classList.contains("active")) {
+            asnRenderList(asnCachedData);
+        }
+        return;
+    }
+
+    let emptyMsg = document.getElementById("asnEmptyMessage");
+    if (emptyMsg) {
+        emptyMsg.innerText = "Loading Assignments...";
+        emptyMsg.style.display = "block";
+    }
+    document.getElementById("asnItemsArea").innerHTML = "";
+
+    try {
+        const q = query(
+            collection(db, "colleges", currentCollegeID, "assignments"),
+            where("teacherID", "==", currentUserID),
+            orderBy("createdAt", "desc"),
+            limit(50)
+        );
+
+        asnListenerUnsub = onSnapshot(q, (snapshot) => {
+            asnCachedData = [];
+            snapshot.forEach(doc => {
+                let d = doc.data();
+                d.id = doc.id;
+                asnCachedData.push(d);
+            });
+            
+            asnIsInit = true;
+
+            // Only redraw the UI if the panel is actively on the screen
+            if (document.getElementById("assignmentsView").classList.contains("active")) {
+                asnRenderList(asnCachedData);
+            }
+        }, (error) => {
+            console.error("Error fetching assignments:", error);
+            if (emptyMsg) emptyMsg.innerText = "Error loading assignments.";
+        });
+    } catch(e) { console.error("Failed to start assignment listener", e); }
+}
+
+function asnRenderList(dataList) {
+    let listArea = document.getElementById("asnItemsArea");
+    let emptyMsg = document.getElementById("asnEmptyMessage");
+
+    if (dataList.length === 0) {
+        emptyMsg.innerText = "No assignments found.";
+        emptyMsg.style.display = "block";
+        listArea.innerHTML = "";
+        return;
+    }
+
+    emptyMsg.style.display = "none";
+    let html = "";
+    let now = new Date();
+
+    dataList.forEach(d => {
+        let topic = d.topic || "Unknown Topic";
+        let subject = d.subject || "Unknown Subject";
+        let semester = d.semester || "";
+        let desc = d.description || "";
+        let dateStr = d.dueDate || d.dueDateISO || "";
+
+        let dateColor = "var(--text-dark)";
+        let dateSuffix = "";
+
+        // 🚨 Exact C# Logic translation for Expiry & Urgency
+        if (d.dueDateISO) {
+            let parsedDate = new Date(d.dueDateISO);
+            if (!isNaN(parsedDate.getTime())) {
+                // Set to exactly 23:59:59 of that day
+                parsedDate.setHours(23, 59, 59, 999);
+                
+                let timeDiff = parsedDate.getTime() - now.getTime();
+                let daysDiff = timeDiff / (1000 * 3600 * 24);
+
+                if (timeDiff < 0) {
+                    // 🔴 EXPIRED
+                    dateColor = "#ef4444"; // Red
+                    dateSuffix = " (Closed)";
+                } else if (daysDiff <= 2) {
+                    // 🟡 URGENT
+                    dateColor = "#d97706"; // Amber
+                }
+            }
+        }
+
+        html += `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: 0.2s;">
+                <div style="font-size: 18px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">${topic}</div>
+                <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 15px; letter-spacing: 0.5px;">${subject} | ${semester}</div>
+                <div style="font-size: 14px; color: var(--text-dark); line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap;">${desc}</div>
+                <div style="text-align: right; font-size: 13px; font-weight: bold; color: ${dateColor};">Due: ${dateStr}${dateSuffix}</div>
+            </div>
+        `;
+    });
+
+    listArea.innerHTML = html;
 }
