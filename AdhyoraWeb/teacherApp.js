@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
 function debounce(func, wait = 300) {
@@ -43,6 +44,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const messaging = getMessaging(app); // 🚨 ADDED THIS LINE
+
+let myCurrentPushToken = ""; // 🚨 ADDED TO TRACK ACTIVE SESSION
 
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
@@ -125,8 +129,11 @@ async function finalizeProfileUI(rawName, email, deptName) {
         initAttendanceEngine(); 
         initSubjectDeclarationEngine(); 
         initCalendarEngine(); 
-        initAssignmentsEngine(); // 🚨 Added Assignments Init!
+        initAssignmentsEngine(); 
         if (isHOD) setupExportEngine();
+        
+        // 🚨 ADD THIS TO INITIALIZE THE TOGGLE SWITCH VISUALS
+        updateNotificationToggleUI(); 
     }
 }
 
@@ -1534,7 +1541,30 @@ attachSafeClick("btnContactUs", () => {
 attachSafeClick("btnWebsite", () => window.open("https://pixelaks.in/", "_blank"));
 attachSafeClick("btnPrivacy", () => window.open("https://pixelaks.in/privacy", "_blank"));
 attachSafeClick("btnTerms", () => window.open("https://pixelaks.in/terms", "_blank"));
-attachSafeClick("btnSignOut", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
+// ==========================================
+// 🚨 SMART SIGN OUT (CLEARS TOKENS)
+// ==========================================
+async function handleSignOut() {
+    try {
+        // If we have a token in RAM, delete it from the database!
+        if (myCurrentPushToken && currentUserID && currentCollegeID) {
+            const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
+            await setDoc(teacherRef, {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }, { merge: true });
+            console.log("Push Token cleanly removed from database!");
+        }
+    } catch(e) { 
+        console.error("Error removing token", e); 
+    }
+    
+    // Now log them out!
+    signOut(auth).then(() => window.location.href = "index.html");
+}
+
+attachSafeClick("btnSignOut", () => {
+    if (confirm("Sign out of Adhyora?")) handleSignOut();
+});
 
 // ==========================================
 // 🚨 THEME MANAGER
@@ -6096,3 +6126,180 @@ function sendPushNotification(title, body, tokens, topics) {
         body: JSON.stringify(payload)
     }).catch(e => console.log("Push notification ping skipped/failed.", e));
 }
+
+// ==========================================
+// 🚨 NOTIFICATION PERMISSIONS & TOGGLE
+// ==========================================
+
+// 1. Update Visual Switch
+function updateNotificationToggleUI() {
+    const toggle = document.getElementById("notifToggleSwitch");
+    if (!toggle) return;
+    
+    if (Notification.permission === "granted" && myCurrentPushToken !== "") {
+        toggle.classList.add("active");
+    } else {
+        toggle.classList.remove("active");
+    }
+}
+
+// 2. Safely Destroy Token (Opt-Out)
+async function unsubscribePushNotifications() {
+    try {
+        const toggle = document.getElementById("notifToggleSwitch");
+        toggle.style.opacity = "0.5"; 
+
+        // Tell Firebase to delete this browser's notification link
+        await deleteToken(messaging);
+
+        // Remove the token from Firestore Database
+        if (myCurrentPushToken && currentUserID && currentCollegeID) {
+            const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
+            await setDoc(teacherRef, {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }, { merge: true });
+        }
+        
+        myCurrentPushToken = ""; 
+        console.log("Successfully unsubscribed from notifications.");
+        
+        toggle.style.opacity = "1";
+        updateNotificationToggleUI();
+    } catch (e) {
+        console.error("Error unsubscribing:", e);
+        alert("Failed to turn off notifications. Please try again.");
+    }
+}
+
+// 3. UI Click Handler
+document.getElementById("btnToggleNotifications")?.addEventListener("click", async () => {
+    if (Notification.permission === "denied") {
+        alert("Notifications are blocked by your browser. Please click the lock icon in your address bar to allow them.");
+        return;
+    }
+
+    const toggle = document.getElementById("notifToggleSwitch");
+    
+    if (toggle.classList.contains("active")) {
+        if (confirm("Are you sure you want to disable notifications for this device?")) {
+            await unsubscribePushNotifications();
+        }
+    } else {
+        toggle.style.opacity = "0.5";
+        await requestPushPermissions();
+        toggle.style.opacity = "1";
+    }
+});
+
+// 4. Permission Request & Webhook Registration (Matches Student Logic)
+async function requestPushPermissions() {
+    try {
+        console.log('Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            console.log('Notification permission granted.');
+            
+            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            
+            const currentToken = await getToken(messaging, { 
+                vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
+                serviceWorkerRegistration: swRegistration 
+            });
+
+            if (currentToken) {
+                console.log("Web Push Token Generated!");
+                myCurrentPushToken = currentToken; 
+
+                // Fetch Teacher Doc to check existing tokens
+                const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
+                const tSnap = await getDoc(teacherRef);
+                
+                let activeTokens = [];
+                if (tSnap.exists() && tSnap.data().webFcmTokens) {
+                    activeTokens = tSnap.data().webFcmTokens;
+                }
+
+                // Clean duplicates and enforce 3-device limit
+                activeTokens = activeTokens.filter(t => t !== currentToken);
+                activeTokens.push(currentToken);
+                if (activeTokens.length > 3) {
+                    activeTokens = activeTokens.slice(activeTokens.length - 3);
+                }
+
+                await setDoc(teacherRef, { 
+                    webFcmTokens: activeTokens,
+                    lastWebLogin: serverTimestamp()
+                }, { merge: true });
+                
+                console.log("Token saved and array cleaned safely.");
+
+                // 🚨 THE LOOPHOLE: Force-Subscribe Web Browser to Native Topics
+                let safeCol = getSafeTopic(currentCollegeID);
+                let safeDept = getSafeTopic(teacherDeptRaw);
+
+                let topicsToJoin = [
+                    `${safeCol}_ALL`, 
+                    `${safeCol}_TEACHERS_ALL`, 
+                    `${safeCol}_TEACHERS_${safeDept}`, 
+                    `ADHYORA_GLOBAL_USERS`
+                ];
+
+                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec";
+
+                fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    body: JSON.stringify({
+                        action: "subscribe",
+                        token: currentToken,
+                        topics: topicsToJoin
+                    })
+                }).then(() => {
+                    console.log("✅ Loophole Complete: Teacher Browser synced with Native Topics!");
+                    updateNotificationToggleUI();
+                }).catch(err => console.log("Subscription Fetch Error:", err));
+            }
+        } else {
+            console.log('Unable to get permission to notify.');
+        }
+    } catch (error) {
+        console.error('Error getting push token:', error);
+    }
+}
+
+// ==========================================
+// 🚨 NOTIFICATION CLICK ROUTER 🚨
+// ==========================================
+
+// 1. If the app is open in the background (Service Worker message handler):
+navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'openMessages') {
+        document.getElementById("btnMessages")?.click();
+    } 
+    else if (event.data && event.data.action === 'openNotifications') {
+        document.getElementById("btnNotifications")?.click();
+    }
+    else if (event.data && event.data.action === 'openEventReq') {
+        document.getElementById("btnNavEventAttendance")?.click();
+    }
+});
+
+// 2. If the app was completely closed (Hash router on boot):
+window.addEventListener('load', () => {
+    // Check for Inbox requests
+    if (window.location.hash === "#inbox" || localStorage.getItem("pendingInboxOpen") === "true") {
+        localStorage.removeItem("pendingInboxOpen");
+        setTimeout(() => document.getElementById("btnMessages")?.click(), 1500); 
+    }
+    // Check for Admin Notification requests
+    if (window.location.hash === "#notifications" || localStorage.getItem("pendingNotifOpen") === "true") {
+        localStorage.removeItem("pendingNotifOpen");
+        setTimeout(() => document.getElementById("btnNotifications")?.click(), 1500); 
+    }
+    // Check for Event requests
+    if (window.location.hash === "#events" || localStorage.getItem("pendingEventOpen") === "true") {
+        localStorage.removeItem("pendingEventOpen");
+        setTimeout(() => document.getElementById("btnNavEventAttendance")?.click(), 1500); 
+    }
+});
