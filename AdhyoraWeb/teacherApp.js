@@ -1493,25 +1493,16 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
     // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
-    // Inside switchView(targetView, clickedBtn)...
-    let topActionBtn = document.getElementById("btnOpenCompose");
-    if (topActionBtn) {
-        if (targetView === views.assignments) {
-            topActionBtn.title = "Add Assignment";
-            topActionBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.OpenAssignmentPanel(); // Directly runs your assignment view modal!
-            };
-        } else {
-            topActionBtn.title = "Add Announcement";
-            topActionBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.OpenCompose(false); // Runs the normal announcement modal!
-            };
-        }
-    }
+    // 🚨 STATIC ENGINE: Force the + button to always act as the Assignment Panel trigger
+    let topActionBtn = document.getElementById("btnOpenCompose");
+    if (topActionBtn) {
+        topActionBtn.title = "Add Assignment";
+        topActionBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.OpenAssignmentPanel(); 
+        };
+    }
 
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
