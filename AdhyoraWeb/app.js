@@ -1,6 +1,6 @@
 // Import Firebase functions directly from CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚨 ADDED: setDoc and serverTimestamp for Teacher registration
 import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -432,6 +432,46 @@ registerBtn.addEventListener("click", async (e) => {
         showToast(getErrorMessage(error.code));
     } finally {
         resetRegBtn();
+    }
+});
+
+// --- 5. FORGOT PASSWORD LOGIC ---
+const resetPasswordBtn = document.getElementById("resetPasswordBtn");
+
+resetPasswordBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    
+    // Exactly like your C#: trim and enforce lowercase
+    const emailInput = document.getElementById("forgotEmail").value.trim().toLowerCase();
+
+    if (!emailInput) {
+        showToast("Enter your email address.");
+        return;
+    }
+
+    resetPasswordBtn.disabled = true;
+    resetPasswordBtn.innerText = "Sending...";
+    showToast("Sending reset email..."); // Match C# feedback
+
+    try {
+        await sendPasswordResetEmail(auth, emailInput);
+        
+        showToast("Reset email sent! Check your inbox.");
+        document.getElementById("forgotEmail").value = ""; // Clear the input
+        window.switchPanel('signInPanel'); // Automatically send them back to login
+        
+    } catch (error) {
+        // Translate Firebase Web error codes to clean messages
+        let errorMessage = "An error occurred.";
+        if (error.code === 'auth/user-not-found') errorMessage = "No account found with this email.";
+        else if (error.code === 'auth/invalid-email') errorMessage = "Invalid email format.";
+        else errorMessage = error.message; 
+
+        showToast("Error: " + errorMessage);
+    } finally {
+        // Always unlock the button
+        resetPasswordBtn.disabled = false;
+        resetPasswordBtn.innerText = "Send Reset Link";
     }
 });
 
