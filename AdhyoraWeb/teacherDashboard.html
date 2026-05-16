@@ -720,6 +720,52 @@
     </div>
 </div>
 
+    <div class="modal-overlay" id="createAssignmentModal">
+    <div class="compose-modal" style="background: white; width: 90%; max-width: 480px; margin: auto; border-radius: 20px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column; max-height: 90vh;">
+        <button class="close-settings" onclick="document.getElementById('createAssignmentModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+        <h3 style="color: var(--brand-red); margin-bottom: 15px; font-size: 20px;"><i class="fas fa-plus-circle"></i> New Assignment</h3>
+        
+        <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Target Year</label>
+                    <select id="asgnYearDrop" class="filter-select" style="width: 100%; margin-top: 5px;"></select>
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Semester</label>
+                    <select id="asgnSemDrop" class="filter-select" style="width: 100%; margin-top: 5px;"></select>
+                </div>
+            </div>
+
+            <div>
+                <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Subject</label>
+                <select id="asgnSubDrop" class="filter-select" style="width: 100%; margin-top: 5px;"></select>
+            </div>
+
+            <div>
+                <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Topic Title</label>
+                <input type="text" id="asgnTopicInput" placeholder="e.g., Matrix Multiplication Lab" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 5px; outline: none; font-family: 'Poppins'; color: var(--text-dark);">
+            </div>
+
+            <div>
+                <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Description / Instructions</label>
+                <textarea id="asgnDescInput" placeholder="Provide assignment constraints, link guidelines, etc..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 5px; height: 80px; resize: none; outline: none; font-family: 'Poppins'; color: var(--text-dark);"></textarea>
+            </div>
+
+            <div>
+                <label style="font-size: 11px; font-weight: bold; color: var(--text-muted);">Due Date</label>
+                <div style="display: grid; grid-template-columns: 1fr 2fr 1.2fr; gap: 8px; margin-top: 5px;">
+                    <select id="asgnDateDay" class="filter-select" style="min-width: 0;"></select>
+                    <select id="asgnDateMonth" class="filter-select" style="min-width: 0;"></select>
+                    <select id="asgnDateYear" class="filter-select" style="min-width: 0;"></select>
+                </div>
+            </div>
+        </div>
+
+        <button id="btnPostAssignment" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); transition: 0.2s; margin-top: 15px; flex-shrink: 0;">Post Assignment</button>
+    </div>
+</div>
+
     <script type="module" src="teacherApp.js"></script>
 </body>
 </html>
