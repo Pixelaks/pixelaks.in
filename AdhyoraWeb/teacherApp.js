@@ -1493,22 +1493,6 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
     // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
-    // 🚨 STATIC ENGINE: Force the + button to always act as the Assignment Panel trigger
-    // 🚨 GLOBAL FORCE ENGINE: Plus button brings view focus to assignments and pops the modal instantly
-    let topActionBtn = document.getElementById("btnOpenCompose");
-    if (topActionBtn) {
-        topActionBtn.title = "Add Assignment";
-        topActionBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Force interface state router focus change instantly
-            let assignmentsTabBtn = document.getElementById("btnNavAssignments");
-            switchView(views.assignments, assignmentsTabBtn);
-            
-            window.OpenAssignmentPanel(); 
-        };
-    }
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
@@ -6591,3 +6575,22 @@ function resetAsgnBtn(btn) {
     btn.disabled = false;
     btn.style.opacity = "1";
 }
+
+// ==========================================
+// 🚨 GLOBAL FORCE COMPOSITION BAR ENGINE
+// ==========================================
+document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 1. Force the dashboard navigation layer to slide view focus onto assignments
+    let assignmentsTabBtn = document.getElementById("btnNavAssignments");
+    if (assignmentsTabBtn && typeof switchView === "function") {
+        switchView(views.assignments, assignmentsTabBtn);
+    }
+    
+    // 2. Open up the newly designed modular creation template form sheet overlay
+    if (typeof window.OpenAssignmentPanel === "function") {
+        window.OpenAssignmentPanel();
+    }
+});
