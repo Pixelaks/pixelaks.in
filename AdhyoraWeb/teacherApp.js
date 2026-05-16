@@ -4332,7 +4332,9 @@ function imRenderAccordions() {
             <div id="${bodyId}" style="padding:15px; display:none; background:white; border-top:1px solid var(--border-color);">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
                     <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Test Marks</label><input type="number" id="${inTestId}" class="filter-select" style="width:100%; margin-top:5px;"></div>
-                    <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Attendance</label><input type="number" id="${inAttId}" class="filter-select" style="width:100%; margin-top:5px;" value="${imCurrentAutoAttMark}"></div>
+                    
+                    <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Attendance <i class="fas fa-lock" style="font-size:9px; color:var(--brand-red);"></i></label><input type="number" id="${inAttId}" class="filter-select" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.03); cursor:not-allowed;" value="${imCurrentAutoAttMark}" disabled></div>
+                    
                     <div><label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Assignment</label><input type="number" id="${inAsgnId}" class="filter-select" style="width:100%; margin-top:5px;"></div>
                     <div><label style="font-size:11px; font-weight:bold; color:var(--brand-red);">Max Marks</label><input type="number" id="${inMaxId}" class="filter-select" style="width:100%; margin-top:5px; border-color:var(--brand-red);"></div>
                 </div>
@@ -4459,4 +4461,7 @@ window.imSaveMarks = async (examName, idx) => {
     if (head) {
         head.innerHTML = `${examName} <span style="color:var(--brand-red); font-weight:800;">(${total}${maxMark > 0 ? ` / ${maxMark}` : ''})</span>`;
     }
+    
+    // 🚨 THE FIX: Instantly refresh the badge on the background card!
+    imPopulateMarksPreview(imCurrentStudent.id, semester, subject);
 };
