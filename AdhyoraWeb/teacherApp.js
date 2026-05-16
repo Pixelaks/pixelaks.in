@@ -5902,63 +5902,22 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
-    // 🚨 COLOR FIX: Ensure the Unity C# script reads this strictly as "Teacher"
     let safeSenderRole = "Teacher"; 
     let displaySenderName = isHOD ? `${currentTeacherName} (HOD)` : currentTeacherName;
 
     try {
         if (composeIsPrivate && composeRecipientID) {
             // ==========================================
-            // 🚨 PRIVATE CHAT ROUTING
+            // 🚨 1. DIRECT PRIVATE CHAT (From Student List)
             // ==========================================
-            let chatRoomID = [currentUserID, composeRecipientID].sort().join("_");
-            let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
+            let targetName = document.getElementById("composePrivateTarget").value;
+            await sendPrivateMessageToDatabase(title, body, composeRecipientID, targetName, safeSenderRole, displaySenderName);
             
-            let batch = writeBatch(db);
-            batch.set(chatRef, {
-                participants: [currentUserID, composeRecipientID],
-                lastMessage: body,
-                lastUpdated: serverTimestamp(),
-                receiverName: privateTarget.value 
-            }, { merge: true });
-
-            let msgRef = doc(collection(chatRef, "messages"));
-            batch.set(msgRef, {
-                title: title,
-                body: body,
-                senderID: currentUserID,
-                senderName: displaySenderName,
-                senderRole: safeSenderRole,
-                timestamp: serverTimestamp(),
-                type: "incoming",
-                status: "sent"
-            });
-
-            // Sent History Log
-            let historyRef = doc(collection(db, "colleges", currentCollegeID, "sent_messages"));
-            batch.set(historyRef, {
-                title: title, body: body,
-                targetSummary: `Personal: ${privateTarget.value}`,
-                timestamp: serverTimestamp(),
-                type: "personal", status: "sent",
-                linkedChatID: chatRoomID,
-                linkedMessageID: msgRef.id,
-                senderRole: safeSenderRole,
-                senderID: currentUserID,
-                senderName: displaySenderName
-            });
-
-            await batch.commit();
-
-            // Push Notification (Tokens)
             if (composeFCMTokens && composeFCMTokens.length > 0) {
                 sendPushNotification(title, body, composeFCMTokens, null);
             }
 
         } else {
-            // ==========================================
-            // 🚨 BROADCAST ROUTING
-            // ==========================================
             let sendP = document.getElementById("chkSendPrincipal").checked;
             let sendT = document.getElementById("chkSendTeachers").checked;
             let sendS = document.getElementById("chkSendStudents").checked;
@@ -5971,60 +5930,85 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 return;
             }
 
-            let deptVal = document.getElementById("composeDeptDrop").value;
-            let yearVal = document.getElementById("composeYearDrop").value;
+            // ==========================================
+            // 🚨 2. C# LOGIC MATCH: ONLY PRINCIPAL = PERSONAL CHAT
+            // ==========================================
+            if (sendP && !sendT && !sendS) {
+                
+                // Fetch the Principal's User ID from the database
+                const prinSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "principals"), limit(1)));
+                
+                if (prinSnap.empty) {
+                    showRcToast("Error: Principal profile not found.");
+                    btn.innerText = "Send Message"; btn.disabled = false; btn.style.opacity = "1";
+                    return;
+                }
+                
+                let prinID = prinSnap.docs[0].id;
+                let prinName = prinSnap.docs[0].data().name || "Principal";
 
-            let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : deptVal;
-            let actualYear = yearVal;
+                // Route as a private message!
+                await sendPrivateMessageToDatabase(title, body, prinID, prinName, safeSenderRole, displaySenderName);
 
-            let safeColID = getSafeTopic(currentCollegeID);
-            let safeDept = getSafeTopic(actualDeptName);
-            let safeYear = getSafeTopic(yearVal);
+                // Ping the Principal Fallback Topic for push notifications
+                let safeColID = getSafeTopic(currentCollegeID);
+                sendPushNotification(title, body, null, [`${safeColID}_PRINCIPAL`]);
 
-            let targetDescription = "";
-            let topicsToPing = [];
+            } else {
+                // ==========================================
+                // 🚨 3. TRUE BROADCAST ROUTING (Groups)
+                // ==========================================
+                let deptVal = document.getElementById("composeDeptDrop").value;
+                let yearVal = document.getElementById("composeYearDrop").value;
 
-            // 1. ROUTE TO PRINCIPAL
-            if (sendP) {
-                topicsToPing.push(`${safeColID}_PRINCIPAL`);
-                targetDescription += "Principal";
-            }
+                let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : deptVal;
+                let actualYear = yearVal;
 
-            // 2. ROUTE TO TEACHERS
-            if (sendT) {
-                topicsToPing.push(`${safeColID}_TEACHERS_${safeDept}`);
-                if (targetDescription !== "") targetDescription += " & ";
-                targetDescription += (actualDeptName === "All") ? "Teachers (All)" : `Teachers (${actualDeptName})`;
-            }
+                let safeColID = getSafeTopic(currentCollegeID);
+                let safeDept = getSafeTopic(actualDeptName);
+                let safeYear = getSafeTopic(yearVal);
 
-            // 3. ROUTE TO STUDENTS
-            if (sendS) {
-                topicsToPing.push(`${safeColID}_STUDENTS_${safeDept}_${safeYear}`);
-                if (targetDescription !== "") targetDescription += " & ";
+                let targetDescription = "";
+                let topicsToPing = [];
 
-                if (actualDeptName === "All" && actualYear === "All") targetDescription += "All Students";
-                else if (actualDeptName === "All") targetDescription += `Students (All Depts - ${actualYear})`;
-                else if (actualYear === "All") targetDescription += `Students (${actualDeptName} - All Years)`;
-                else targetDescription += `Students (${actualDeptName} - ${actualYear})`;
-            }
+                if (sendP) {
+                    topicsToPing.push(`${safeColID}_PRINCIPAL`);
+                    targetDescription += "Principal";
+                }
 
-            let payload = {
-                title: title,
-                body: body,
-                targetSummary: targetDescription,
-                timestamp: serverTimestamp(),
-                type: "broadcast",
-                status: "sent",
-                senderRole: safeSenderRole,
-                senderID: currentUserID,
-                senderName: displaySenderName
-            };
+                if (sendT) {
+                    topicsToPing.push(`${safeColID}_TEACHERS_${safeDept}`);
+                    if (targetDescription !== "") targetDescription += " & ";
+                    targetDescription += (actualDeptName === "All") ? "Teachers (All)" : `Teachers (${actualDeptName})`;
+                }
 
-            await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
+                if (sendS) {
+                    topicsToPing.push(`${safeColID}_STUDENTS_${safeDept}_${safeYear}`);
+                    if (targetDescription !== "") targetDescription += " & ";
 
-            // Push Notification (Topics)
-            if (topicsToPing.length > 0) {
-                sendPushNotification(title, body, null, topicsToPing);
+                    if (actualDeptName === "All" && actualYear === "All") targetDescription += "All Students";
+                    else if (actualDeptName === "All") targetDescription += `Students (All Depts - ${actualYear})`;
+                    else if (actualYear === "All") targetDescription += `Students (${actualDeptName} - All Years)`;
+                    else targetDescription += `Students (${actualDeptName} - ${actualYear})`;
+                }
+
+                let payload = {
+                    title: title,
+                    body: body,
+                    targetSummary: targetDescription,
+                    timestamp: serverTimestamp(),
+                    type: "broadcast",
+                    status: "sent",
+                    senderRole: safeSenderRole,
+                    senderID: currentUserID,
+                    senderName: displaySenderName
+                };
+
+                await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
+
+                if (topicsToPing.length > 0) {
+                    sendPushNotification(title, body, null, topicsToPing);
+                }
             }
         }
 
@@ -6040,6 +6024,53 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
         btn.style.opacity = "1";
     }
 });
+
+// 🚨 NEW HELPER: Reusable Private Message Writer
+async function sendPrivateMessageToDatabase(title, body, targetID, targetName, safeSenderRole, displaySenderName) {
+    let chatRoomID = [currentUserID, targetID].sort().join("_");
+    let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
+    
+    let batch = writeBatch(db);
+    
+    // Update Chat Meta
+    batch.set(chatRef, {
+        participants: [currentUserID, targetID],
+        lastMessage: body,
+        lastUpdated: serverTimestamp(),
+        receiverName: targetName 
+    }, { merge: true });
+
+    // Insert Chat Message
+    let msgRef = doc(collection(chatRef, "messages"));
+    batch.set(msgRef, {
+        title: title,
+        body: body,
+        senderID: currentUserID,
+        senderName: displaySenderName,
+        senderRole: safeSenderRole,
+        timestamp: serverTimestamp(),
+        type: "incoming",
+        status: "sent"
+    });
+
+    // Insert Sent History Log (Notice the type is "personal")
+    let historyRef = doc(collection(db, "colleges", currentCollegeID, "sent_messages"));
+    batch.set(historyRef, {
+        title: title, 
+        body: body,
+        targetSummary: `Personal: ${targetName}`,
+        timestamp: serverTimestamp(),
+        type: "personal", 
+        status: "sent",
+        linkedChatID: chatRoomID,
+        linkedMessageID: msgRef.id,
+        senderRole: safeSenderRole,
+        senderID: currentUserID,
+        senderName: displaySenderName
+    });
+
+    await batch.commit();
+}
 
 // 4. WEBHOOK EXECUTOR
 function sendPushNotification(title, body, tokens, topics) {
