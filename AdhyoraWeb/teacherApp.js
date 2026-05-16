@@ -2346,12 +2346,12 @@ function calGenerateGrid() {
         let isToday = (calTodayDate.getFullYear() === y && calTodayDate.getMonth() === m && calTodayDate.getDate() === day);
 
         let cell = document.createElement("button");
-        // 🚨 STYLING UPDATE: Aspect ratio 1 creates the perfect squares from your image!
+        // 🚨 STYLING UPDATE: Replaced aspect-ratio with 100% height to fit inside the parent grid without stretching!
         cell.style.cssText = `
-            width: 100%; aspect-ratio: 1; border: none; border-radius: 12px; cursor: pointer;
+            width: 100%; height: 100%; min-height: 0; border: none; border-radius: 12px; cursor: pointer;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-size: 15px; font-weight: 800; background: transparent; color: var(--text-dark);
-            transition: 0.2s; padding: 0;
+            transition: 0.2s; padding: 0; box-sizing: border-box;
         `;
 
         let subText = "";
