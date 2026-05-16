@@ -272,3 +272,30 @@ body.dark-mode .settings-btn:hover { background: #1e293b; border-color: var(--br
         box-shadow: 0 5px 20px rgba(220, 38, 38, 0.2); 
     }
 }
+
+/* =========================================
+   🚨 STUDENT DASHBOARD UI ELEMENTS
+   ========================================= */
+.status-pending { background-color: #fffbeb; border-color: #fcd34d; color: #b45309; }
+.status-approved { background-color: #f0fdf4; border-color: #86efac; color: #166534; }
+.status-declined { background-color: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+.hod-badge { background-color: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; margin-left: 8px; vertical-align: middle; border: 1px solid #bfdbfe; }
+
+.circle-wave-wrap { width: 140px; height: 140px; border-radius: 50%; border: 6px solid var(--bg-surface); position: relative; overflow: hidden; background: var(--bg-base); display: flex; justify-content: center; align-items: center; margin: 0 auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+.circle-wave-fill { position: absolute; left: -50%; width: 200%; height: 200%; top: var(--wave-height, 105%); background: var(--wave-color, var(--brand-red)); z-index: 0; transition: top 0.5s ease-out, background-color 0.5s; border-radius: 40%; animation: waveSpin 6s linear infinite; }
+@keyframes waveSpin { 100% { transform: rotate(360deg); } }
+.circle-wave-text { position: relative; z-index: 1; font-size: 28px; font-weight: bold; color: var(--text-dark); text-shadow: 0px 0px 8px rgba(255,255,255,0.9); }
+
+.wavy-row { position: relative; background: var(--bg-surface); text-align: center; padding: 12px; border-bottom: 1px solid var(--border-color); overflow: hidden; margin: 5px 0; border-radius: 8px; }
+.wavy-row-fill { position: absolute; left: 0; bottom: 0; width: 100%; height: var(--wave-percent, 0%); background: var(--wave-color, var(--brand-red)); z-index: 0; transition: height 0.5s ease-out, background-color 0.5s; }
+.wavy-row-fill::before { content: ''; position: absolute; left: 0; top: -10px; width: 200%; height: 10px; background: inherit; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q50,0 100,10 T200,10 V20 H0 Z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q50,0 100,10 T200,10 V20 H0 Z'/%3E%3C/svg%3E"); -webkit-mask-size: 100px 10px; mask-size: 100px 10px; animation: waveSlide 2s linear infinite; }
+@keyframes waveSlide { 0% { transform: translateX(0); } 100% { transform: translateX(-100px); } }
+.wavy-text { position: relative; z-index: 1; font-weight: bold; color: var(--text-dark); font-size: 14px; text-shadow: 0px 0px 5px rgba(255,255,255,0.8); }
+
+.stat-row { padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: flex-start; gap: 15px; font-size: 13px; color: var(--text-muted); }
+.stat-label { width: 120px; font-weight: 600; }
+.stat-value { font-weight: bold; color: var(--text-dark); }
+
+body.dark-mode .circle-wave-text { text-shadow: 0px 0px 8px rgba(0,0,0,0.9); }
+body.dark-mode .wavy-text { text-shadow: 0px 0px 5px rgba(0,0,0,0.8); }
+body.dark-mode .circle-wave-wrap { border-color: #334155; }
