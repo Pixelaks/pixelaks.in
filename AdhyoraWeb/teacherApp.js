@@ -2656,16 +2656,19 @@ function renderStudentList(searchTerm = "") {
         else if (s.fcmToken) tokensArr = [s.fcmToken];
         let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
         
-        // 🚨 THE FIX: Let your teacher.css .data-card properties handle the heavy lifting!
+        // 🚨 THE FIX: Restored explicit background, margins, padding, and shadows to create floating cards!
         return `
-        <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-left-color: ${status === "Approved" ? "var(--brand-red)" : "var(--text-muted)"};">
-            <div style="flex:1; cursor:pointer;" onclick="window.SL_OpenDashboard('${s.id}')">
-                <div class="card-title" style="margin-bottom:2px; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--bg-base); border-left: 6px solid ${statusColor}; border-radius: 14px; margin-bottom: 12px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: transform 0.2s;" onclick="window.SL_OpenDashboard('${s.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="flex:1;">
+                <div style="margin-bottom:4px;">
+                    <span style="font-weight:800; font-size:15px; color:var(--text-dark);">${s.Name || "Unknown"}</span> 
+                    <span style="font-size:12px; color:var(--text-muted); margin-left:4px;">(${s.RollNumber || "N/A"})</span>
+                </div>
                 <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-top:4px;">${cleanDept} - Year ${s.Year || "1"}</div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <span class="hod-badge" style="background:transparent; border:none; color:${statusColor}; opacity:0.8;">${statusLabel}</span>
-                <button title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" class="action-icon-btn">
+            <div style="display:flex; gap:15px; align-items:center;">
+                <span style="font-size:12px; font-weight:800; color:${statusColor};">${statusLabel}</span>
+                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" style="background:var(--bg-surface); border:1px solid var(--border-color); width:36px; height:36px; border-radius:10px; color:var(--text-muted); display:flex; justify-content:center; align-items:center; transition:0.2s; cursor:pointer;" onmouseover="this.style.color='var(--brand-red)'" onmouseout="this.style.color='var(--text-muted)'">
                     <i class="fas fa-comment-dots"></i>
                 </button>
             </div>
@@ -2674,7 +2677,7 @@ function renderStudentList(searchTerm = "") {
     
     listEl.appendChild(noData); 
     
-    // Exact Principal Script Trick: Restore scroll instantly
+    // Restore scroll instantly so it doesn't snap to top
     listEl.scrollTop = oldScroll;
 }
 
