@@ -198,24 +198,24 @@
                         <button id="subjSaveBtn" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Save Selections</button>
                     </div>
                 </div>
-                <div id="calendarView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; align-items: center; height: 100%; background: transparent; padding: 20px; overflow-y: auto;">
+                <div id="calendarView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; background: transparent; padding: 20px; box-sizing: border-box; overflow: hidden;">
                     
-                    <div id="calViewCard" style="width: 100%; max-width: 480px; background: white; border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; padding: 30px 25px; margin: auto 0; flex-shrink: 0; position: relative;">
+                    <div id="calViewCard" style="width: 100%; max-width: 480px; height: 100%; max-height: 600px; background: white; border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; position: relative;">
                         
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                            <button id="calPrevMonthBtn" style="background:#ecfdf5; border:none; border-radius:12px; width:40px; height:40px; color:#10b981; cursor:pointer; font-size:16px; transition:0.2s;"><i class="fas fa-chevron-left"></i></button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
+                            <button id="calPrevMonthBtn" style="background:#ecfdf5; border:none; border-radius:12px; width:40px; height:40px; color:#10b981; cursor:pointer; font-size:16px; transition:0.2s; display:flex; justify-content:center; align-items:center;"><i class="fas fa-chevron-left"></i></button>
                             <h2 id="calMonthYearText" style="margin:0; font-size:22px; color:var(--text-dark); font-weight:800; font-family:'Poppins', sans-serif;">Loading...</h2>
-                            <button id="calNextMonthBtn" style="background:#ecfdf5; border:none; border-radius:12px; width:40px; height:40px; color:#10b981; cursor:pointer; font-size:16px; transition:0.2s;"><i class="fas fa-chevron-right"></i></button>
+                            <button id="calNextMonthBtn" style="background:#ecfdf5; border:none; border-radius:12px; width:40px; height:40px; color:#10b981; cursor:pointer; font-size:16px; transition:0.2s; display:flex; justify-content:center; align-items:center;"><i class="fas fa-chevron-right"></i></button>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 12px; text-align: center; font-weight: 700; font-size: 13px; color: #94a3b8;">
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 10px; text-align: center; font-weight: 700; font-size: 13px; color: #94a3b8; flex-shrink: 0;">
                             <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                         </div>
 
-                        <div id="calGridContainer" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 25px;">
+                        <div id="calGridContainer" style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr); gap: 6px; margin-bottom: 20px;">
                             </div>
                         
-                        <div id="calUpcomingEventBanner" style="background: #ecfdf5; color: #059669; border-radius: 14px; padding: 16px; text-align: center; font-weight: bold; font-size: 14px; margin-top: auto; flex-shrink: 0;">
+                        <div id="calUpcomingEventBanner" style="background: #ecfdf5; color: #059669; border-radius: 14px; padding: 16px; text-align: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">
                             Loading Upcoming...
                         </div>
 
