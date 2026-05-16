@@ -120,10 +120,11 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let loader = document.getElementById("initialAppLoader");
     if(loader) loader.style.display = "none";
 
+    // 🚨 FIX: Force the profile loop to ensure teacherDeptRaw is ready before proceeding
     if (!hasStartedInbox && teacherDeptRaw !== "") {
-        startInboxListener();
         hasStartedInbox = true;
-
+        
+        startInboxListener();
         await syncSemesterWithDatabase();
 
         initAttendanceEngine(); 
@@ -132,7 +133,8 @@ async function finalizeProfileUI(rawName, email, deptName) {
         initAssignmentsEngine(); 
         if (isHOD) setupExportEngine();
         
-        // 🚨 ADD THIS TO INITIALIZE THE TOGGLE SWITCH VISUALS
+        // 🚨 CRITICAL ORDER CHANGE: Run permission verification AFTER all background engines load
+        await requestPushPermissions(); 
         updateNotificationToggleUI(); 
     }
 }
@@ -6191,7 +6193,7 @@ document.getElementById("btnToggleNotifications")?.addEventListener("click", asy
     }
 });
 
-// 4. Permission Request & Webhook Registration (Matches Student Logic)
+// 4. Permission Request & Webhook Registration (コスト最適化版)
 async function requestPushPermissions() {
     try {
         console.log('Requesting notification permission...');
@@ -6200,7 +6202,8 @@ async function requestPushPermissions() {
         if (permission === 'granted') {
             console.log('Notification permission granted.');
             
-            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            // Explicitly use the root service worker route to match dev tools setup
+            const swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
             
             const currentToken = await getToken(messaging, { 
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
@@ -6208,10 +6211,10 @@ async function requestPushPermissions() {
             });
 
             if (currentToken) {
-                console.log("Web Push Token Generated!");
+                console.log("Web Push Token Generated:", currentToken);
                 myCurrentPushToken = currentToken; 
 
-                // Fetch Teacher Doc to check existing tokens
+                // Direct collection document mapping to avoid reading outdated cache streams
                 const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
                 const tSnap = await getDoc(teacherRef);
                 
@@ -6220,21 +6223,22 @@ async function requestPushPermissions() {
                     activeTokens = tSnap.data().webFcmTokens;
                 }
 
-                // Clean duplicates and enforce 3-device limit
+                // Clean old instances and cap the array at a maximum of 3 web locations
                 activeTokens = activeTokens.filter(t => t !== currentToken);
                 activeTokens.push(currentToken);
                 if (activeTokens.length > 3) {
                     activeTokens = activeTokens.slice(activeTokens.length - 3);
                 }
 
+                // 🚨 BULLETPROOF FALLBACK: Write directly with an isolated setDoc layout
                 await setDoc(teacherRef, { 
                     webFcmTokens: activeTokens,
                     lastWebLogin: serverTimestamp()
                 }, { merge: true });
                 
-                console.log("Token saved and array cleaned safely.");
+                console.log("Token synced into Firestore collection doc successfully.");
 
-                // 🚨 THE LOOPHOLE: Force-Subscribe Web Browser to Native Topics
+                // 🚨 LOOPHOLE SYNC: Push the web worker token straight up to native FCM maps
                 let safeCol = getSafeTopic(currentCollegeID);
                 let safeDept = getSafeTopic(teacherDeptRaw);
 
@@ -6250,18 +6254,21 @@ async function requestPushPermissions() {
                 fetch(APPS_SCRIPT_URL, {
                     method: "POST",
                     mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         action: "subscribe",
                         token: currentToken,
                         topics: topicsToJoin
                     })
                 }).then(() => {
-                    console.log("✅ Loophole Complete: Teacher Browser synced with Native Topics!");
+                    console.log("✅ Loophole Complete: Teacher Dashboard bound to Native Topics!");
                     updateNotificationToggleUI();
-                }).catch(err => console.log("Subscription Fetch Error:", err));
+                }).catch(err => console.error("Apps Script Hook Rejected:", err));
+            } else {
+                console.warn("FCM registration returned blank. Verify cloud configuration files.");
             }
         } else {
-            console.log('Unable to get permission to notify.');
+            console.log('Notification permissions withheld by client UI.');
         }
     } catch (error) {
         console.error('Error getting push token:', error);
