@@ -665,21 +665,24 @@
             <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">To:</label>
             
             <div id="composeBroadcastUI">
-                <div style="display: flex; gap: 15px; margin-bottom: 10px; margin-top: 5px;">
+                <div style="display: flex; gap: 15px; margin-bottom: 10px; margin-top: 5px; flex-wrap: wrap;">
                     <label style="font-size: 13px; color: var(--text-dark); display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                        <input type="checkbox" id="chkSendTeachers" style="width:16px; height:16px; accent-color:var(--brand-red);" checked> Send to Teachers
+                        <input type="checkbox" id="chkSendPrincipal" style="width:16px; height:16px; accent-color:var(--brand-red);"> Send to Principal
                     </label>
                     <label style="font-size: 13px; color: var(--text-dark); display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                        <input type="checkbox" id="chkSendStudents" style="width:16px; height:16px; accent-color:var(--brand-red);" checked> Send to Students
+                        <input type="checkbox" id="chkSendTeachers" style="width:16px; height:16px; accent-color:var(--brand-red);"> Send to Teachers
+                    </label>
+                    <label style="font-size: 13px; color: var(--text-dark); display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" id="chkSendStudents" style="width:16px; height:16px; accent-color:var(--brand-red);"> Send to Students
                     </label>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <select id="composeDeptDrop" class="filter-select" style="flex: 1;">
-                        <option value="All Depts">All Departments</option>
+                <div style="display: flex; gap: 10px;" id="composeDropdownsRow">
+                    <select id="composeDeptDrop" class="filter-select" style="flex: 1; display: none;">
+                        <option value="All">All Departments</option>
                         <option value="My Dept">My Department</option>
                     </select>
-                    <select id="composeYearDrop" class="filter-select" style="flex: 1;">
-                        <option value="All Years">All Years</option>
+                    <select id="composeYearDrop" class="filter-select" style="flex: 1; display: none;">
+                        <option value="All">All Years</option>
                         <option value="Year 1">Year 1</option>
                         <option value="Year 2">Year 2</option>
                         <option value="Year 3">Year 3</option>
