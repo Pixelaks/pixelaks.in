@@ -1407,13 +1407,13 @@ async function saveAttendance() {
 }
 
 // ==========================================
-// 🚨 UI NAVIGATION ROUTER (Intact)
+// 🚨 UI NAVIGATION ROUTER (WITH BACK BUTTON SUPPORT)
 // ==========================================
 const views = {
     welcome: document.getElementById("welcomeView"), 
     attendance: document.getElementById("attendanceView"), 
     timetable: document.getElementById("timetableView"),
-    assign: document.getElementById("assignView"), // 🚨 THE MISSING PIECE!
+    assign: document.getElementById("assignView"), 
     internalMarks: document.getElementById("internalMarksView"), 
     subjects: document.getElementById("subjectsView"), 
     calendar: document.getElementById("calendarView"),
@@ -1426,6 +1426,8 @@ const views = {
     notifications: document.getElementById("notificationsView"),
     messages: document.getElementById("messagesView")
 };
+
+let lastPushedView = "HOME"; // Tracker to prevent duplicate history entries
 
 // Also update the button listener below it to trigger the listener
 document.getElementById("btnNavStudentList")?.addEventListener("click", () => {
@@ -1461,6 +1463,7 @@ document.getElementById("btnNavTimetable")?.addEventListener("click", () => {
     switchView(views.timetable, document.getElementById("btnNavTimetable"));
     initTimetableEngine();
 });
+
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -1484,7 +1487,8 @@ function cleanupAttendanceView() {
     if (recScr) recScr.style.display = "none";
 }
 
-function switchView(targetView, clickedBtn) {
+// 🚨 UPDATED: SwitchView now accepts a 3rd parameter to handle history states
+function switchView(targetView, clickedBtn, isHistoryNav = false) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
@@ -1513,7 +1517,71 @@ function switchView(targetView, clickedBtn) {
         if (targetView) { targetView.classList.remove("hidden-view"); targetView.style.opacity = 0; setTimeout(() => targetView.style.opacity = 1, 50); } 
         else showRcToast("This module is under construction.");
     }
+
+    // 🚨 ADDED: Push the current panel into the browser/phone history stack
+    if (!isHistoryNav) {
+        let vName = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
+        if (vName !== lastPushedView) {
+            let btnId = clickedBtn ? clickedBtn.id : "";
+            history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
+            lastPushedView = vName;
+        }
+    } else {
+        // Update the tracker if we are actively navigating backwards
+        lastPushedView = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
+    }
 }
+
+// ==========================================
+// 🚨 SMART BACK BUTTON LISTENER
+// ==========================================
+
+// Set the baseline history state on initial app load
+window.addEventListener("load", () => {
+    history.replaceState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
+});
+
+// Listen for the physical phone back button or browser back arrow
+window.addEventListener("popstate", (e) => {
+    // 1. SMART FIX: Close open Modals/Settings FIRST without changing the actual view!
+    let activeModals = document.querySelectorAll(".modal-overlay.active, .settings-drawer.active");
+    if (activeModals.length > 0) {
+        activeModals.forEach(m => m.classList.remove("active"));
+        
+        // Re-push the current state so the back button doesn't break the view order
+        let vName = e.state ? e.state.viewId : "HOME";
+        let btnId = e.state ? e.state.btnId : "btnHome";
+        history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
+        return;
+    }
+
+    // 2. Handle actual View Panel Navigation
+    if (e.state && e.state.viewId) {
+        let vName = e.state.viewId;
+        let btnId = e.state.btnId;
+        let btn = btnId ? document.getElementById(btnId) : null;
+
+        if (vName === "HOME") {
+            switchView("HOME", btn || document.getElementById("btnHome"), true);
+        } else {
+            let targetView = document.getElementById(vName);
+            if (targetView) {
+                switchView(targetView, btn, true);
+            } else {
+                switchView("HOME", document.getElementById("btnHome"), true);
+            }
+        }
+    } else {
+        // 3. User reached the absolute beginning of the history (HOME) and clicked back again!
+        if (confirm("Do you want to sign out of Adhyora?")) {
+            handleSignOut();
+        } else {
+            // User canceled sign-out. Push HOME state back so they don't exit the app
+            history.pushState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
+            lastPushedView = "HOME";
+        }
+    }
+});
 
 function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
 
