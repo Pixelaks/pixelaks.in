@@ -5785,33 +5785,45 @@ let composeFCMTokens = [];
 document.getElementById("btnOpenCompose")?.addEventListener("click", () => window.OpenCompose(false));
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
+// Dynamic Dropdown Toggle
+document.getElementById("chkSendStudents")?.addEventListener("change", (e) => {
+    let yearDrop = document.getElementById("composeYearDrop");
+    if (yearDrop) yearDrop.style.display = e.target.checked ? "block" : "none";
+});
+
 // 2. Open Modal Logic
 window.OpenCompose = (isPrivate, recipientName = "", fcmTokens = [], recipientID = "") => {
     composeIsPrivate = isPrivate;
     composeFCMTokens = fcmTokens;
     composeRecipientID = recipientID;
 
-    let targetDrop = document.getElementById("composeTargetDrop");
+    let broadcastUI = document.getElementById("composeBroadcastUI");
     let privateTarget = document.getElementById("composePrivateTarget");
+    let yearDrop = document.getElementById("composeYearDrop");
     
     document.getElementById("composeTitle").value = "";
     document.getElementById("composeBody").value = "";
 
     if (isPrivate) {
         // Locked to private chat UI
-        targetDrop.style.display = "none";
+        broadcastUI.style.display = "none";
         privateTarget.style.display = "block";
         privateTarget.value = recipientName;
     } else {
         // Standard Broadcast UI
-        targetDrop.style.display = "block";
+        broadcastUI.style.display = "block";
         privateTarget.style.display = "none";
         
-        // Dynamically adjust the "My Department" option
-        let optDept = targetDrop.querySelector("option[value='My Department']");
+        // Reset Checkboxes
+        document.getElementById("chkSendTeachers").checked = true;
+        document.getElementById("chkSendStudents").checked = true;
+        yearDrop.style.display = "block"; // Show because students is checked
+        
+        // Dynamically adjust the "My Department" option text
+        let deptDrop = document.getElementById("composeDeptDrop");
+        let optDept = deptDrop.querySelector("option[value='My Dept']");
         if (optDept && teacherDeptRaw) {
-            optDept.text = `Teachers (${teacherDeptRaw.replace("DEPT_", "")})`;
-            optDept.value = `Teachers (${teacherDeptRaw})`;
+            optDept.text = `My Dept (${teacherDeptRaw.replace("DEPT_", "")})`;
         }
     }
 
@@ -5835,18 +5847,15 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 
     try {
         if (composeIsPrivate && composeRecipientID) {
-            // 🚨 PRIVATE CHAT ROUTING (colleges/{id}/chats/{roomID}/messages)
-            // Generate a consistent Room ID by sorting the two user IDs
+            // 🚨 PRIVATE CHAT ROUTING
             let chatRoomID = [currentUserID, composeRecipientID].sort().join("_");
             let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
             
-            // Ensure the room exists and participants are registered
             await setDoc(chatRef, {
                 participants: [currentUserID, composeRecipientID],
                 lastUpdated: serverTimestamp()
             }, { merge: true });
 
-            // Push the message payload
             await addDoc(collection(chatRef, "messages"), {
                 title: title,
                 body: body,
@@ -5854,22 +5863,64 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 senderName: currentTeacherName,
                 senderRole: isHOD ? "Teacher (HOD)" : "Teacher",
                 timestamp: serverTimestamp(),
-                type: "incoming", // Unity reads this as an incoming private message
+                type: "incoming",
                 status: "sent"
             });
 
         } else {
-            // 🚨 BROADCAST ROUTING (colleges/{id}/sent_messages)
-            let targetSummary = document.getElementById("composeTargetDrop").value;
+            // 🚨 BROADCAST ROUTING WITH ADVANCED FILTERING
+            let sendToTeachers = document.getElementById("chkSendTeachers").checked;
+            let sendToStudents = document.getElementById("chkSendStudents").checked;
+            let deptSelection = document.getElementById("composeDeptDrop").value;
+            let yearSelection = document.getElementById("composeYearDrop").value;
+
+            if (!sendToTeachers && !sendToStudents) {
+                showRcToast("Please select at least one recipient group!");
+                btn.innerText = "Send Message";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                return;
+            }
+
+            let actualDept = deptSelection === "My Dept" ? teacherDeptRaw : "All Depts";
+            let actualYear = yearSelection;
+
+            let targetSummary = "";
             let targetTopic = "";
             let safeColID = getSafeTopic(currentCollegeID);
-            
-            // Setup FCM Topics for Push Notifications (if implemented later)
-            if (targetSummary === "Everyone") targetTopic = `${safeColID}_ALL`;
-            else if (targetSummary === "All Students") targetTopic = `${safeColID}_STUDENTS_ALL`;
-            else if (targetSummary === "Teachers (All)") targetTopic = `${safeColID}_TEACHERS_ALL`;
-            else if (targetSummary.startsWith("Teachers (DEPT_")) targetTopic = `${safeColID}_TEACHERS_${getSafeTopic(teacherDeptRaw)}`;
-            
+            let safeDept = getSafeTopic(teacherDeptRaw);
+
+            // 🧠 Magic String Formatting: Maps EXACTLY to Unity C# `.Contains()` checks
+            if (sendToTeachers && sendToStudents && actualDept === "All Depts" && actualYear === "All Years") {
+                targetSummary = "Everyone";
+                targetTopic = `${safeColID}_ALL`;
+            } else {
+                let parts = [];
+                if (sendToTeachers) {
+                    if (actualDept === "All Depts") {
+                        parts.push("Teachers (All)");
+                        targetTopic = `${safeColID}_TEACHERS_ALL`;
+                    } else {
+                        parts.push(`Teachers (${actualDept})`);
+                        targetTopic = `${safeColID}_TEACHERS_${safeDept}`;
+                    }
+                }
+                if (sendToStudents) {
+                    if (actualDept === "All Depts" && actualYear === "All Years") {
+                        parts.push("All Students");
+                        if (!targetTopic) targetTopic = `${safeColID}_STUDENTS_ALL`;
+                    } else {
+                        // C# looks for "All Depts" or specific dept, AND "All Years" or specific year
+                        parts.push(`Students (${actualDept} - ${actualYear})`);
+                        if (!targetTopic) targetTopic = `${safeColID}_STUDENTS_${safeDept}`;
+                    }
+                }
+                targetSummary = parts.join(" & ");
+                
+                // Fallback for multi-target FCM topics
+                if (sendToTeachers && sendToStudents) targetTopic = `${safeColID}_ALL`;
+            }
+
             let payload = {
                 title: title,
                 body: body,
