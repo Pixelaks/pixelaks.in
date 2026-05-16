@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+// 🚨 ADDED: initializeFirestore, persistentLocalCache, persistentMultipleTabManager
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
@@ -44,8 +45,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
-const messaging = getMessaging(app); // 🚨 ADDED THIS LINE
+
+// 🚨 REPLACED: const db = getFirestore(app); with Cost-Optimized Cache
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+    })
+});
+
+const messaging = getMessaging(app);
 
 let myCurrentPushToken = ""; // 🚨 ADDED TO TRACK ACTIVE SESSION
 
@@ -59,6 +67,16 @@ if (!currentCollegeID) {
         if (user) { 
             currentUserID = user.uid; 
             ListenToProfile(); 
+            
+            // 🚨 ADDED: Hash Router Recovery (Restores panel instantly if they press F5/Refresh)
+            const currentHash = window.location.hash.replace("#", "");
+            if (currentHash && currentHash !== "HOME" && views[currentHash]) {
+                setTimeout(() => {
+                    let btnId = "btnNav" + currentHash.charAt(0).toUpperCase() + currentHash.slice(1);
+                    let targetBtn = document.getElementById(btnId);
+                    switchView(views[currentHash], targetBtn || null, true);
+                }, 1000); // Waits 1s for backend engines to boot
+            }
         } else { 
             window.location.href = "index.html"; 
         }
@@ -1413,7 +1431,7 @@ const views = {
     welcome: document.getElementById("welcomeView"), 
     attendance: document.getElementById("attendanceView"), 
     timetable: document.getElementById("timetableView"),
-    assign: document.getElementById("assignView"), 
+    assign: document.getElementById("assignView"),
     internalMarks: document.getElementById("internalMarksView"), 
     subjects: document.getElementById("subjectsView"), 
     calendar: document.getElementById("calendarView"),
@@ -1429,7 +1447,6 @@ const views = {
 
 let lastPushedView = "HOME"; // Tracker to prevent duplicate history entries
 
-// Also update the button listener below it to trigger the listener
 document.getElementById("btnNavStudentList")?.addEventListener("click", () => {
     switchView(views.studentList, document.getElementById("btnNavStudentList"));
     if (!slLoaded) startStudentListListener();
@@ -1478,7 +1495,6 @@ function cleanupAttendanceView() {
         if(subDrop) subDrop.value = "Select Subject";
     }
 
-    // 🚨 Always reset the view back to Main when clicking out of Attendance
     let mainScr = document.getElementById("attMainScreen");
     let histScr = document.getElementById("attHistoryScreen");
     let recScr = document.getElementById("attRecordScreen");
@@ -1493,12 +1509,9 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
     
-    // Clean up the heavy listeners and unsaved data if we navigate away
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
-    // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
-    // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
     }
@@ -1527,23 +1540,36 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
             lastPushedView = vName;
         }
     } else {
-        // Update the tracker if we are actively navigating backwards
         lastPushedView = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
     }
 }
+
+function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
+
+attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
+attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
+attachSafeClick("btnNotifications", (e) => { switchView(views.notifications, e.currentTarget); document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); });
+attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
+attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
+attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
+attachSafeClick("btnNavSubjects", (e) => switchView(views.subjects, e.currentTarget));
+attachSafeClick("btnNavCalendar", (e) => switchView(views.calendar, e.currentTarget));
+attachSafeClick("btnNavAssignments", (e) => switchView(views.assignments, e.currentTarget));
+attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.currentTarget));
+attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
+attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
+attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
 
 // ==========================================
 // 🚨 SMART BACK BUTTON LISTENER
 // ==========================================
 
-// Set the baseline history state on initial app load
 window.addEventListener("load", () => {
     history.replaceState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
 });
 
-// Listen for the physical phone back button or browser back arrow
 window.addEventListener("popstate", (e) => {
-    // 1. SMART FIX: Close open Modals/Settings FIRST without changing the actual view!
+    // 1. Close open Modals/Settings FIRST without changing the actual view!
     let activeModals = document.querySelectorAll(".modal-overlay.active, .settings-drawer.active");
     if (activeModals.length > 0) {
         activeModals.forEach(m => m.classList.remove("active"));
@@ -1576,7 +1602,6 @@ window.addEventListener("popstate", (e) => {
         if (confirm("Do you want to sign out of Adhyora?")) {
             handleSignOut();
         } else {
-            // User canceled sign-out. Push HOME state back so they don't exit the app
             history.pushState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
             lastPushedView = "HOME";
         }
