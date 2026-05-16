@@ -21,6 +21,7 @@ let currentTeacherName = "Unknown";
 let isHOD = false;
 let profileListener = null;
 let teacherDeptRaw = ""; 
+let currentDeptName = "Unknown Dept"; // 🚨 ADD THIS
 let hasStartedInbox = false;
 
 // Notification Variables
@@ -85,24 +86,24 @@ function ListenToProfile() {
         const email = auth.currentUser ? auth.currentUser.email : data.email;
         let deptName = "Unknown Dept";
 
-        if (data.department) {
-            deptName = data.department;
-            // 🚨 Standardize the raw ID right here!
-            teacherDeptRaw = "DEPT_" + deptName.replace(/ /g, ""); 
-        } else if (data.departmentID) {
+        // 🚨 FIX: Prioritize departmentID like C# to prevent Security Rule rejection!
+        if (data.departmentID) {
+            teacherDeptRaw = data.departmentID; 
             try {
                 const deptSnap = await getDoc(doc(db, "colleges", currentCollegeID, "departments", data.departmentID));
                 if (deptSnap.exists()) {
                     deptName = deptSnap.data().name || data.departmentID;
-                    // 🚨 Keep the raw ID exactly as it is in the database
-                    teacherDeptRaw = data.departmentID; 
                 } else {
-                    teacherDeptRaw = data.departmentID;
                     deptName = data.departmentID.replace("DEPT_", "").replace(/_/g, " ");
                 }
             } catch (e) {
-                teacherDeptRaw = data.departmentID;
+                deptName = data.departmentID;
             }
+            currentDeptName = deptName; // Save globally
+        } else if (data.department) {
+            deptName = data.department;
+            currentDeptName = deptName; // Save globally
+            teacherDeptRaw = "DEPT_" + deptName.replace(/ /g, ""); 
         }
         finalizeProfileUI(currentTeacherName, email, deptName);
     });
@@ -6464,7 +6465,8 @@ async function executeCreateAssignment() {
 
     try {
         let isMjdOrCore = false;
-        let targetDeptName = expDeptName; 
+        // 🚨 FIX: Use currentDeptName instead of the HOD-exclusive expDeptName
+        let targetDeptName = currentDeptName; 
 
         const subSnap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         for (let docObj of subSnap.docs) {
@@ -6480,9 +6482,10 @@ async function executeCreateAssignment() {
                 let fetchedDept = data.Department || data.department || "";
                 if (fetchedDept) {
                     let safeFetch = fetchedDept.replace(/\s+/g, "").toLowerCase();
-                    let safeCurrent = expDeptName.replace(/\s+/g, "").toLowerCase();
+                    let safeCurrent = currentDeptName.replace(/\s+/g, "").toLowerCase();
+                    
                     if (safeCurrent.includes(safeFetch) || safeFetch.includes(safeCurrent)) {
-                        targetDeptName = expDeptName; 
+                        targetDeptName = currentDeptName; 
                     } else {
                         targetDeptName = fetchedDept; 
                     }
