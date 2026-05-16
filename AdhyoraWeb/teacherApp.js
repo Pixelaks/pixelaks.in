@@ -2583,6 +2583,8 @@ async function initAssignmentsEngine() {
     }
     document.getElementById("asnItemsArea").innerHTML = "";
 
+    document.getElementById("btnPostAssignment").onclick = executeCreateAssignment;
+
     try {
         const q = query(
             collection(db, "colleges", currentCollegeID, "assignments"),
@@ -6434,3 +6436,269 @@ window.kickActiveSession = async function(sessionID) {
         showRcToast("Error revoking session."); 
     }
 };
+
+// ==========================================
+// 🚨 NEP ASSIGNMENT ENGINE (C# TRANSLATION)
+// ==========================================
+let asgnSubjectsMap = new Map();
+let asgnIsProcessing = false;
+const asgnMonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// 1. Hook the Plus Button Icon inside Navigation Header to trigger modal setup
+document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
+    // Check if assignments page view is active. If yes, divert the button layout to build assignments!
+    if (document.getElementById("assignmentsView").classList.contains("active")) {
+        e.stopPropagation();
+        window.OpenAssignmentPanel();
+    }
+});
+
+window.OpenAssignmentPanel = () => {
+    document.getElementById("asgnTopicInput").value = "";
+    document.getElementById("asgnDescInput").value = "";
+    
+    let btn = document.getElementById("btnPostAssignment");
+    btn.innerText = "Post Assignment";
+    btn.disabled = false;
+    btn.style.opacity = "1";
+
+    setupAsgnDateDropdowns();
+    fetchAsgnTeacherSubjects();
+    document.getElementById("createAssignmentModal").classList.add("active");
+};
+
+// 2. Wheel Date Population Logic
+function setupAsgnDateDropdowns() {
+    let dayDrop = document.getElementById("asgnDateDay");
+    let monthDrop = document.getElementById("asgnDateMonth");
+    let yearDrop = document.getElementById("asgnDateYear");
+
+    let now = new Date();
+    
+    monthDrop.innerHTML = asgnMonthNames.map((m, i) => `<option value="${i + 1}" ${i === now.getMonth() ? 'selected' : ''}>${m}</option>`).join('');
+    yearDrop.innerHTML = [0, 1].map(i => `<option value="${now.getFullYear() + i}">${now.getFullYear() + i}</option>`).join('');
+
+    const updateDays = () => {
+        let currentDayVal = parseInt(dayDrop.value) || now.getDate();
+        let m = parseInt(monthDrop.value);
+        let y = parseInt(yearDrop.value);
+        let daysInMonth = new Date(y, m, 0).getDate();
+
+        let dayOpts = "";
+        for (let i = 1; i <= daysInMonth; i++) {
+            dayOpts += `<option value="${i}" ${i === currentDayVal ? 'selected' : ''}>${i}</option>`;
+        }
+        dayDrop.innerHTML = dayOpts;
+    };
+
+    monthDrop.onchange = updateDays;
+    yearDrop.onchange = updateDays;
+    updateDays();
+}
+
+// 3. Dynamic Filtering Core Maps
+function fetchAsgnTeacherSubjects() {
+    let subDrop = document.getElementById("asgnSubDrop");
+    subDrop.innerHTML = `<option value="">Loading Subjects...</option>`;
+
+    onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID), where("isActive", "==", true)), (snap) => {
+        asgnSubjectsMap.clear();
+        
+        snap.forEach(docSnap => {
+            let d = docSnap.data();
+            let sName = d.subjectName;
+            let sSemStr = d.semester !== undefined ? d.semester.toString() : "1";
+            let semArray = sSemStr.split(',');
+
+            semArray.forEach(s => {
+                let cleanSem = s.trim();
+                if (!cleanSem) return;
+                let semKey = `Semester ${cleanSem}`;
+
+                if (!asgnSubjectsMap.has(semKey)) asgnSubjectsMap.set(semKey, []);
+                if (!asgnSubjectsMap.get(semKey).includes(sName)) asgnSubjectsMap.get(semKey).push(sName);
+            });
+        });
+
+        // Initialize Year View Selection Wheel
+        let yearDrop = document.getElementById("asgnYearDrop");
+        yearDrop.innerHTML = `<option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option>`;
+        
+        yearDrop.onchange = (e) => {
+            let selectedYear = parseInt(e.target.value);
+            let currentActiveSem = (currentSemesterType === "Odd") ? (selectedYear * 2) - 1 : (selectedYear * 2);
+            
+            let semDrop = document.getElementById("asgnSemDrop");
+            semDrop.innerHTML = `<option value="${currentActiveSem}">Semester ${currentActiveSem}</option>`;
+            semDrop.dispatchEvent(new Event("change"));
+        };
+
+        document.getElementById("asgnSemDrop").onchange = (e) => {
+            let selectedSemText = `Semester ${e.target.value}`;
+            subDrop.innerHTML = "";
+
+            if (asgnSubjectsMap.has(selectedSemText) && asgnSubjectsMap.get(selectedSemText).length > 0) {
+                let subs = asgnSubjectsMap.get(selectedSemText).sort();
+                subDrop.innerHTML = `<option value="">Select Subject</option>` + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+                subDrop.disabled = false;
+            } else {
+                subDrop.innerHTML = `<option value="None">No Subjects Allocated</option>`;
+                subDrop.disabled = true;
+            }
+        };
+
+        yearDrop.dispatchEvent(new Event("change"));
+    });
+}
+
+// 4. Execution Core Logic (Target Audience Analysis + Reminder Queue + Push Delivery)
+async function executeCreateAssignment() {
+    if (asgnIsProcessing) return;
+
+    let btn = document.getElementById("btnPostAssignment");
+    let topic = document.getElementById("asgnTopicInput").value.trim();
+    let desc = document.getElementById("asgnDescInput").value.trim();
+    let selectedSubject = document.getElementById("asgnSubDrop").value;
+    let semNum = document.getElementById("asgnSemDrop").value;
+
+    if (!topic) { showRcToast("Topic Title is required!"); return; }
+    if (!selectedSubject || selectedSubject === "None") { showRcToast("Select a valid allocated subject."); return; }
+
+    let d = parseInt(document.getElementById("asgnDateDay").value);
+    let m = parseInt(document.getElementById("asgnDateMonth").value);
+    let y = parseInt(document.getElementById("asgnDateYear").value);
+
+    let selectedDate = new Date(y, m - 1, d, 23, 59, 59);
+    let today = new Date(); today.setHours(0,0,0,0);
+    if (selectedDate < today) { showRcToast("Due date cannot be in the past!"); return; }
+
+    asgnIsProcessing = true;
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+
+    showRcToast("Analyzing Audience Group...");
+
+    let dueDateDisplay = `${d} ${asgnMonthNames[m - 1]} ${y}`;
+    let standardizedDateISO = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}T23:59:59Z`;
+
+    try {
+        // Evaluate Category Layer (Fuzzy check for Core vs Elective exactly matching Unity)
+        let isMjdOrCore = false;
+        let targetDeptName = expDeptName; // Use current department display name from settings loader cache
+
+        const subSnap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
+        for (let docObj of subSnap.docs) {
+            let data = docObj.data();
+            let dName = data.name || data.Name || "";
+
+            if (dName.replace(/\s+/g, "").toLowerCase() === selectedSubject.replace(/\s+/g, "").toLowerCase()) {
+                let type = (data.type || data.Type || "").toUpperCase();
+                if (type.includes("MJD") || type.includes("CORE") || type.includes("MAJOR")) {
+                    isMjdOrCore = true;
+                }
+                
+                let fetchedDept = data.Department || data.department || "";
+                if (fetchedDept) {
+                    let safeFetch = fetchedDept.replace(/\s+/g, "").toLowerCase();
+                    let safeCurrent = expDeptName.replace(/\s+/g, "").toLowerCase();
+                    if (safeCurrent.includes(safeFetch) || safeFetch.includes(safeCurrent)) {
+                        targetDeptName = expDeptName; // Auto-correct matching
+                    } else {
+                        targetDeptName = fetchedDept; // Cross-Department Elective
+                    }
+                }
+                break;
+            }
+        }
+
+        // A. Document Allocation Save
+        showRcToast("Posting Assignment Document...");
+        let assignmentPayload = {
+            teacherID: currentUserID,
+            teacherName: currentTeacherName,
+            teacherDeptID: teacherDeptRaw,
+            subject: selectedSubject,
+            semester: `Semester ${semNum}`,
+            topic: topic,
+            description: desc,
+            dueDate: dueDateDisplay,
+            dueDateISO: standardizedDateISO,
+            createdAt: serverTimestamp()
+        };
+
+        await addDoc(collection(db, "colleges", currentCollegeID, "assignments"), assignmentPayload);
+
+        // B. Dynamic Push Router Engine
+        let pushTopic = "";
+        let targetTokens = [];
+        let pushTitle = `New Assignment • ${currentTeacherName}`;
+        let pushBody = `A new assignment has been posted for ${selectedSubject}.`;
+
+        if (isMjdOrCore) {
+            // ROUTE A: Broad Topic Pipeline
+            pushTopic = `${getSafeTopic(currentCollegeID)}_STUDENTS_${getSafeTopic(targetDeptName)}_${getSafeTopic("Year" + Math.ceil(parseInt(semNum) / 2))}`;
+            sendPushNotification(pushTitle, pushBody, null, [pushTopic]);
+        } else {
+            // ROUTE B: Targeted Token Interception 
+            let targetYearStr = Math.ceil(parseInt(semNum) / 2).toString();
+            const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYearStr)));
+            
+            stuSnap.forEach(docObj => {
+                let sData = docObj.data();
+                let isEnrolled = false;
+
+                if (sData.enrolledSubjects) {
+                    let semKey = `Semester ${semNum}`;
+                    let semMap = sData.enrolledSubjects[semKey] || sData.enrolledSubjects[`Semester_${semNum}`] || sData.enrolledSubjects[semNum] || {};
+                    
+                    if (Object.values(semMap).some(v => v.toString().trim().toLowerCase() === selectedSubject.trim().toLowerCase())) {
+                        isEnrolled = true;
+                    }
+                }
+
+                if (isEnrolled) {
+                    // Extract Mobile and Web push registration vectors safely
+                    if (sData.fcmTokens) sData.fcmTokens.forEach(t => { if(t && !targetTokens.includes(t)) targetTokens.push(t); });
+                    else if (sData.fcmToken && !targetTokens.includes(sData.fcmToken)) targetTokens.push(sData.fcmToken);
+
+                    if (sData.webFcmTokens) sData.webFcmTokens.forEach(t => { if(t && !targetTokens.includes(t)) targetTokens.push(t); });
+                    else if (sData.webFcmToken && !targetTokens.includes(sData.webFcmToken)) targetTokens.push(sData.webFcmToken);
+                }
+            });
+
+            if (targetTokens.length > 0) {
+                sendPushNotification(pushTitle, pushBody, targetTokens, null);
+            }
+        }
+
+        // C. Queue Automation Reminders Token Map
+        let reminderPayload = {
+            topic: pushTopic || "",
+            tokens: targetTokens,
+            subject: selectedSubject,
+            dueDateISO: standardizedDateISO,
+            teacherName: currentTeacherName
+        };
+        await setDoc(doc(collection(db, "adhyora_reminders")), reminderPayload);
+
+        showRcToast("Assignment Posted Successfully!");
+        setTimeout(() => {
+            document.getElementById("createAssignmentModal").classList.remove("active");
+            if (typeof initAssignmentsEngine === "function") initAssignmentsEngine(); // Refresh active cache list
+        }, 1200);
+
+    } catch(e) {
+        console.error("Assignment Engine Crash:", e);
+        showRcToast("Database Error. Check configurations.");
+    } finally {
+        resetAsgnBtn(btn);
+    }
+}
+
+function resetAsgnBtn(btn) {
+    asgnIsProcessing = false;
+    btn.innerText = "Post Assignment";
+    btn.disabled = false;
+    btn.style.opacity = "1";
+}
