@@ -62,6 +62,16 @@ let savedStrictTotal = 0;
 let savedRemainingDays = 0;
 let isStrictCollege = true;
 
+function hideAppLoader() {
+    const loader = document.getElementById("initialAppLoader");
+    if (loader && !loader.classList.contains("hidden")) {
+        // Add a tiny 800ms delay so the loading screen feels smooth
+        setTimeout(() => {
+            loader.classList.add("hidden");
+        }, 800);
+    }
+}
+
 // ==========================================
 // DOM ELEMENTS
 // ==========================================
@@ -209,6 +219,9 @@ async function syncCollegeAndListen() {
 
         processStudentData(docSnap.data());
         loadDailyAttendance(); 
+
+      // 🚨 ADD THIS LINE RIGHT HERE! 🚨
+        hideAppLoader();
         
         if (!isDataListening) {
             isDataListening = true;
