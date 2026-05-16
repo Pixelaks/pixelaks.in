@@ -20,29 +20,58 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ==========================================
-// AUTO-LOGIN ROUTING LOGIC
+// AUTO-LOGIN ROUTING & SPLASH SCREEN LOGIC
 // ==========================================
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // Prevent auto-login if they haven't verified their email yet!
-        if (!user.emailVerified) return;
+const splashScreen = document.getElementById("splashScreen");
 
-        // Read the breadcrumbs we left behind
+function hideSplash() {
+    if (splashScreen) {
+        // Add a tiny 800ms delay so it feels like a real app loading screen 
+        // even if their internet is blazing fast!
+        setTimeout(() => {
+            splashScreen.classList.add("hidden");
+        }, 800);
+    }
+}
+
+onAuthStateChanged(auth, async (user) => {
+    if (user && user.emailVerified) {
         const savedRole = localStorage.getItem("adhyora_role");
         const savedCollegeID = localStorage.getItem("adhyora_college");
         const savedRollNo = localStorage.getItem("adhyora_roll");
+        const savedRoomCode = localStorage.getItem("adhyora_roomcode");
 
         if (savedRole && savedCollegeID) {
-            // Instantly redirect them based on their saved role!
             if (savedRole === "Student") {
                 window.location.href = `studentDashboard.html?college=${savedCollegeID}&uid=${user.uid}&roll=${savedRollNo}`;
-            } else if (savedRole === "Teacher") {
-                window.location.href = `teacherDashboard.html?college=${savedCollegeID}&uid=${user.uid}`;
-            } else if (savedRole === "Principal") {
+                return; // 🚨 Stop here! Keep the splash screen visible while redirecting!
+            } 
+            else if (savedRole === "Teacher" && savedRoomCode) {
+                try {
+                    const secureID = "TEACHER_" + savedRoomCode;
+                    const lookupRef = doc(db, "colleges", savedCollegeID, "public_lookup", secureID);
+                    const lookupSnap = await getDoc(lookupRef);
+
+                    if (lookupSnap.exists()) {
+                        window.location.href = `teacherDashboard.html?college=${savedCollegeID}&uid=${user.uid}`;
+                        return; // 🚨 Stop here! Keep the splash screen visible!
+                    } else {
+                        localStorage.clear();
+                    }
+                } catch (e) {
+                    console.error("Auto-login validation failed", e);
+                }
+            } 
+            else if (savedRole === "Principal") {
                 window.location.href = `principalDashboard.html?college=${savedCollegeID}`;
+                return; // 🚨 Stop here! Keep the splash screen visible!
             }
         }
     }
+
+    // If we reach this line, it means they are NOT logged in, 
+    // or their auto-login failed. Time to hide the splash screen and show the login page!
+    hideSplash();
 });
 
 // Global State
