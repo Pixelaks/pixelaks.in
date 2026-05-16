@@ -1418,6 +1418,11 @@ document.getElementById("btnNavSubjectAssign")?.addEventListener("click", () => 
     switchView(views.subjectAssign, document.getElementById("btnNavSubjectAssign"));
     initSubjectAssignEngine(); 
 });
+
+document.getElementById("btnNavBatch")?.addEventListener("click", () => {
+    switchView(views.batch, document.getElementById("btnNavBatch"));
+    initBatchEngine(); 
+});
 const sidebar = document.getElementById("mainSidebar");
 const mainContent = document.querySelector(".main-content");
 const navButtons = document.querySelectorAll(".nav-icon-btn, .nav-btn, .menu-btn");
@@ -3318,3 +3323,256 @@ async function saExecuteAction() {
     // Refresh the UI!
     saLoadStudents();
 }
+
+// ==========================================
+// 🚨 HOD BATCH VIEWER ENGINE
+// ==========================================
+let bchLoaded = false;
+let bchCurrentSem = "1";
+let bchTeacherSubjects = [];
+let bchStudentCache = {}; // Cache to prevent re-fetching student profiles
+
+function initBatchEngine() {
+    if (bchLoaded) return;
+    bchLoaded = true;
+
+    let warning = document.getElementById("bchHodWarning");
+    let controls = document.getElementById("bchControls");
+    
+    // 🚨 HOD SECURITY CHECK
+    if (!isHOD) {
+        warning.style.display = "block";
+        controls.style.pointerEvents = "none";
+        controls.style.opacity = "0.5";
+        bchShowEmpty("You do not have HOD privileges to view batches.");
+        return;
+    } else {
+        warning.style.display = "none";
+        controls.style.pointerEvents = "auto";
+        controls.style.opacity = "1";
+    }
+
+    // 1. Setup Semester Dropdown dynamically based on Odd/Even cycle
+    let dropSem = document.getElementById("bchSemDrop"); 
+    let optionsHtml = "";
+    let activeValue = "";
+    for (let i = 1; i <= 8; i++) {
+        let isOdd = (i % 2 !== 0);
+        if ((currentSemesterType === "Odd" && isOdd) || (currentSemesterType === "Even" && !isOdd)) {
+            if (!activeValue) activeValue = i.toString(); 
+            optionsHtml += `<option value="${i}">Semester ${i}</option>`; 
+        }
+    }
+    dropSem.innerHTML = optionsHtml; 
+    bchCurrentSem = activeValue;
+    dropSem.value = bchCurrentSem;
+    
+    dropSem.addEventListener("change", (e) => { bchCurrentSem = e.target.value; bchFilterSubjects(); });
+    document.getElementById("bchSubDrop").addEventListener("change", bchOnSubjectSelected);
+
+    bchFetchTeacherSubjects();
+}
+
+async function bchFetchTeacherSubjects() {
+    let subDrop = document.getElementById("bchSubDrop");
+    subDrop.innerHTML = `<option value="">Loading...</option>`;
+    
+    try {
+        // Fetch subjects assigned ONLY to this specific teacher
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID)));
+        bchTeacherSubjects = [];
+        
+        snap.forEach(doc => {
+            let d = doc.data();
+            if (d.subjectName) {
+                let cat = "MJD"; // Fallback
+                if (d.subjectCategory) cat = d.subjectCategory;
+                else if (d.category) cat = d.category;
+                else if (d.subjectCode) {
+                    if (d.subjectCode.startsWith("AEC")) cat = "AECC";
+                    else if (d.subjectCode.startsWith("VAC")) cat = "VAC";
+                    else if (d.subjectCode.startsWith("SEC")) cat = "SEC";
+                }
+                
+                let sems = d.semester !== undefined ? d.semester.toString() : "1";
+                bchTeacherSubjects.push({ name: d.subjectName, type: cat, semesters: sems });
+            }
+        });
+        
+        bchFilterSubjects();
+    } catch(e) {
+        subDrop.innerHTML = `<option value="">Error Loading</option>`;
+        console.error(e);
+    }
+}
+
+function bchFilterSubjects() {
+    let subDrop = document.getElementById("bchSubDrop");
+    let validSubs = bchTeacherSubjects.filter(s => s.semesters.split(',').map(x=>x.trim()).includes(bchCurrentSem));
+    
+    // Remove duplicates by name in case of overlapping configurations
+    let uniqueNames = new Set();
+    let filteredSubs = [];
+    validSubs.forEach(s => {
+        if (!uniqueNames.has(s.name)) {
+            uniqueNames.add(s.name);
+            filteredSubs.push(s);
+        }
+    });
+
+    if (filteredSubs.length === 0) {
+        subDrop.innerHTML = `<option value="">No Subjects Found</option>`;
+        bchShowEmpty("You have no subjects assigned for this semester.");
+        document.getElementById("bchCategoryText").innerText = "Category: --";
+    } else {
+        subDrop.innerHTML = `<option value="">Select Subject</option>` + filteredSubs.sort((a,b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.name}" data-cat="${s.type}">${s.name}</option>`).join('');
+        bchShowEmpty("Select a subject from the dropdown to view its batches.");
+        document.getElementById("bchCategoryText").innerText = "Category: --";
+    }
+}
+
+function bchOnSubjectSelected() {
+    let subDrop = document.getElementById("bchSubDrop");
+    let subjectName = subDrop.value;
+    let catText = document.getElementById("bchCategoryText");
+    
+    if (!subjectName) {
+        catText.innerText = "Category: --";
+        bchShowEmpty("Select a subject from the dropdown to view its batches.");
+        return;
+    }
+
+    let selectedOption = subDrop.options[subDrop.selectedIndex];
+    catText.innerText = `Category: ${selectedOption.getAttribute("data-cat")}`;
+    
+    bchFetchBatches(subjectName);
+}
+
+function bchShowEmpty(msg) {
+    document.getElementById("bchGroupsContainer").innerHTML = "";
+    let emptyMsg = document.getElementById("bchEmptyMsg");
+    emptyMsg.innerText = msg;
+    emptyMsg.style.display = "block";
+}
+
+async function bchFetchBatches(subjectName) {
+    bchShowEmpty(`Loading batches for ${subjectName}...`);
+    
+    try {
+        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", bchCurrentSem), where("subjectName", "==", subjectName)));
+        if (snap.empty) {
+            bchShowEmpty(`No batches found for ${subjectName}.\n(This is a common class)`);
+            return;
+        }
+        
+        document.getElementById("bchEmptyMsg").style.display = "none";
+        let container = document.getElementById("bchGroupsContainer");
+        
+        let batches = [];
+        snap.forEach(doc => batches.push({ id: doc.id, ...doc.data() }));
+        batches.sort((a, b) => (a.batchName || "").localeCompare(b.batchName || ""));
+        
+        let html = "";
+        batches.forEach((b, idx) => {
+            let tName = b.teacherName || "Unassigned"; 
+            let room = b.room || "TBD"; 
+            let sList = b.studentIDs || [];
+            let sidsJson = JSON.stringify(sList).replace(/"/g, '&quot;');
+            
+            let bodyId = `bch_group_body_${idx}`;
+            let iconId = `bch_group_icon_${idx}`;
+            
+            html += `
+            <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="bchToggleGroup('${bodyId}', '${iconId}', ${sidsJson})">
+                    <div>
+                        <div style="font-weight:bold; color:var(--brand-red); font-size:14px; margin-bottom: 4px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-red); border: 1px solid var(--border-color);">${sList.length} Students</span></div>
+                        <div style="color:var(--text-muted); font-size:12px; font-weight: 600;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div>
+                    </div>
+                    <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(0deg);"></i>
+                </div>
+                <div id="${bodyId}" style="padding:10px 10px 2px 10px; display:none;">
+                    <div style="text-align:center; padding: 15px; color: var(--text-muted); font-size: 13px;"><i>Loading students...</i></div>
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch(e) {
+        bchShowEmpty("Error loading batches.");
+        console.error(e);
+    }
+}
+
+// Lazy Load Students (Matches Unity Coroutine/Batching Logic)
+window.bchToggleGroup = async (bodyId, iconId, sids) => {
+    let body = document.getElementById(bodyId);
+    let icon = document.getElementById(iconId);
+    
+    let isOpening = body.style.display === "none";
+    
+    if (isOpening) {
+        body.style.display = "block";
+        icon.style.transform = "rotate(90deg)";
+        
+        // If it's already loaded, skip fetching!
+        if (body.innerHTML.includes("Loading students")) {
+            if (sids.length === 0) {
+                body.innerHTML = `<div style="padding:10px; text-align:center; color:var(--text-muted); font-size:12px; font-weight:bold;">No students in this batch</div>`;
+                return;
+            }
+            
+            let fetchedStudents = [];
+            let missingSids = [];
+            
+            // 🚨 Use RAM Cache just like the C# Script
+            sids.forEach(sid => {
+                if (bchStudentCache[sid]) fetchedStudents.push(bchStudentCache[sid]);
+                else missingSids.push(sid);
+            });
+            
+            // 🚨 Use WhereIn with 30-item chunks just like Unity!
+            if (missingSids.length > 0) {
+                for (let i = 0; i < missingSids.length; i += 30) {
+                    let chunk = missingSids.slice(i, i + 30);
+                    try {
+                        const sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("__name__", "in", chunk)));
+                        sSnap.forEach(d => {
+                            let data = d.data();
+                            let stuObj = {
+                                id: d.id,
+                                name: data.Name || data.studentName || "Unknown",
+                                roll: data.RollNumber || data.rollNumber || "No Roll",
+                                dept: (data.Department || data.department || "Unknown Dept").replace("DEPT_", "")
+                            };
+                            bchStudentCache[d.id] = stuObj;
+                            fetchedStudents.push(stuObj);
+                        });
+                    } catch(e) { console.error(e); }
+                }
+            }
+            
+            fetchedStudents.sort((a,b) => a.name.localeCompare(b.name));
+            
+            let stuHtml = "";
+            fetchedStudents.forEach(s => {
+                stuHtml += `
+                <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; border-left: 4px solid var(--brand-red); border-radius: 10px; margin-bottom: 8px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.02); cursor: default;">
+                    <div style="flex:1;">
+                        <div style="margin-bottom:2px;">
+                            <span style="font-weight:800; font-size:14px; color:var(--text-dark);">${s.name}</span> 
+                            <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">(${s.roll})</span>
+                        </div>
+                        <div style="font-size:11px; font-weight:600; color:var(--text-muted);">${s.dept}</div>
+                    </div>
+                    <i class="fas fa-lock" style="color:#cbd5e1; font-size:14px;"></i>
+                </div>`;
+            });
+            body.innerHTML = stuHtml;
+        }
+    } else {
+        body.style.display = "none";
+        icon.style.transform = "rotate(0deg)";
+    }
+};
