@@ -2603,6 +2603,7 @@ function asnRenderList(dataList) {
 let slLoaded = false; 
 let cachedStudents = [];
 let studentRenderLimit = 50; 
+let isFetchingStudents = false; // 🚨 Added to prevent scroll lag!
 
 function startStudentListListener() {
     if (slLoaded) return;
@@ -2644,23 +2645,38 @@ function renderStudentList(searchTerm = "") {
     listEl.innerHTML = renderBatch.map(s => {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); 
         let status = s.status || "Approved";
-        let statusClass = status === "Approved" ? "status-approved" : (status === "Declined" ? "status-declined" : "status-pending");
+        
+        // 🚨 UI FIX: Match Principal Layout exactly!
         let statusLabel = status === "Approved" ? "Active" : status;
+        let statusColor = status === "Approved" ? "var(--brand-red)" : "var(--text-muted)";
+        
+        let tokensArr = []; 
+        if (s.fcmTokens) tokensArr = s.fcmTokens; 
+        else if (s.fcmToken) tokensArr = [s.fcmToken];
+        let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
         
         return `
-        <div class="data-card ${statusClass}" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
-            <div style="flex:1; cursor:pointer;" onclick="window.SL_OpenDashboard('${s.id}')">
-                <div class="card-title" style="margin-bottom:2px; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
-                <div style="font-size:12px; font-weight:bold; color:var(--text-muted); margin-top:4px;">${cleanDept} - Year ${s.Year || "1"}</div>
+        <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-left: 5px solid var(--brand-red); border-radius: 12px; margin-bottom: 12px; cursor:pointer; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.02);" onclick="window.SL_OpenDashboard('${s.id}')">
+            <div style="flex:1;">
+                <div style="margin-bottom:4px;">
+                    <span style="font-weight:800; font-size:15px; color:var(--text-dark);">${s.Name || "Unknown"}</span> 
+                    <span style="font-size:12px; color:var(--text-muted); margin-left:4px;">(${s.RollNumber || "N/A"})</span>
+                </div>
+                <div style="font-size:12px; font-weight:600; color:var(--text-muted);">${cleanDept} - Year ${s.Year || "1"}</div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <span class="hod-badge" style="background:transparent; border:none; color:inherit; opacity:0.8;">${statusLabel}</span>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <span style="font-size:12px; font-weight:800; color:${statusColor};">${statusLabel}</span>
+                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" style="background:#f1f5f9; border:none; width:36px; height:36px; border-radius:10px; color:#475569; display:flex; justify-content:center; align-items:center; transition:0.2s; cursor:pointer;">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
             </div>
         </div>`;
     }).join('');
     
     listEl.appendChild(noData); 
-    listEl.scrollTop = oldScroll;
+    
+    // Smooth scroll restore
+    requestAnimationFrame(() => { listEl.scrollTop = oldScroll; });
 }
 
 document.getElementById("slSearchInput").addEventListener("input", debounce((e) => {
@@ -2670,11 +2686,15 @@ document.getElementById("slSearchInput").addEventListener("input", debounce((e) 
 
 document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
     let el = e.target;
+    // 🚨 LAG FIX: Added a throttle so it doesn't fire 100x a second!
     if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
-        let searchTerm = document.getElementById("slSearchInput").value.trim();
-        if (studentRenderLimit < cachedStudents.length) {
+        if (!isFetchingStudents && studentRenderLimit < cachedStudents.length) {
+            isFetchingStudents = true;
+            let searchTerm = document.getElementById("slSearchInput").value.trim();
             studentRenderLimit += 50;
             renderStudentList(searchTerm);
+            
+            setTimeout(() => { isFetchingStudents = false; }, 200); // 200ms Cooldown
         }
     }
 });
