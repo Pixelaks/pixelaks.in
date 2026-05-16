@@ -198,7 +198,41 @@
                         <button id="subjSaveBtn" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Save Selections</button>
                     </div>
                 </div>
-                <div id="calendarView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Academic Calendar</h3></div>
+                <div id="calendarView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">Academic Calendar</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="calPrevMonthBtn" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-dark); cursor:pointer; transition:0.2s;"><i class="fas fa-chevron-left"></i></button>
+                            <button id="calNextMonthBtn" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-dark); cursor:pointer; transition:0.2s;"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px; display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                            <div style="flex: 1; min-width: 200px; background: var(--brand-red); color: white; border-radius: 16px; padding: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(220,38,38,0.2);">
+                                <h2 id="calMonthYearText" style="margin: 0; font-size: 24px; text-align: center;">Loading...</h2>
+                            </div>
+                            <div style="flex: 1; min-width: 200px; background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                                <div id="calUpcomingEventText" style="text-align: center; color: var(--text-dark); font-size: 14px; line-height: 1.5;">Loading Upcoming Events...</div>
+                            </div>
+                        </div>
+
+                        <div style="background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 13px; color: var(--text-muted);">
+                                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                            </div>
+                            <div id="calGridContainer" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+                                </div>
+                        </div>
+
+                    </div>
+                    
+                    <div id="calHolidayPopup" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 25px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: bottom 0.3s, opacity 0.3s; opacity: 0; pointer-events: none; z-index: 1000;">
+                        <span id="calHolidayReasonText">Reason</span>
+                    </div>
+                </div>
                 <div id="assignmentsView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Assignments</h3></div>
                 <div id="studentListView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Students</h3></div>
                 <div id="subjectAssignView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">Subject Assign</h3></div>
