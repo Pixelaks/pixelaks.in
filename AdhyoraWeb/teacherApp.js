@@ -3052,10 +3052,29 @@ async function saLoadStudents() {
     try {
         const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYear)));
         saCachedStudents = [];
-        snap.forEach(doc => saCachedStudents.push({ id: doc.id, ...doc.data() }));
+        
+        snap.forEach(doc => {
+            let d = doc.data();
+            
+            // 🚨 THE FIX: Strictly filter by the Teacher's Department!
+            let rawDept = d.Department || d.department || "";
+            let formattedDept = "DEPT_" + String(rawDept).replace(/ /g, "");
+            
+            // If the student's department matches the teacher's department, add them!
+            if (formattedDept === teacherDeptRaw || rawDept === teacherDeptRaw) {
+                saCachedStudents.push({ id: doc.id, ...d });
+            }
+        });
+
+        if (saCachedStudents.length === 0) {
+            saShowEmpty("No students found in your department for this year.");
+            return;
+        }
+
         saRenderLayout(cat);
     } catch (e) {
         saShowEmpty("Error loading students.");
+        console.error(e);
     }
 }
 
