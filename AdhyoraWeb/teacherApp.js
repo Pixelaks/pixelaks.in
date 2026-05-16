@@ -1862,9 +1862,22 @@ document.getElementById("btnResetPassSettings")?.addEventListener("click", async
 });
 // 5. App Background Visibility Lock
 document.addEventListener("visibilitychange", () => {
+    // When the app comes back to the screen
     if (document.visibilityState === "visible") {
         const isLocked = elLock.screen.style.display === "flex";
+        
         if (!isLocked && !isBiometricPromptActive && cachedTeacherPinHash !== "") {
+            
+            // 🚨 THE FIX: Force-close ANY open popups or settings before locking the app!
+            document.querySelectorAll('.modal-overlay.active, .settings-drawer.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+            
+            // Clear any typed passwords for safety
+            if (elLock.reAuthPass) elLock.reAuthPass.value = "";
+            if (elLock.reAuthStatus) elLock.reAuthStatus.innerText = "";
+            
+            // Lock the DOM instantly!
             document.querySelector(".main-content").style.display = "none";
             document.getElementById("mainSidebar").style.display = "none";
             elLock.screen.style.display = "flex";
@@ -1872,7 +1885,6 @@ document.addEventListener("visibilitychange", () => {
         }
     }
 });
-
 // ==========================================
 // 🚨 UI NAVIGATION ROUTER (WITH BACK BUTTON SUPPORT)
 // ==========================================
