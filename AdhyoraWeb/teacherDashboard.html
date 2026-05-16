@@ -150,7 +150,53 @@
                     </div>
                 </div>
 
-                <div id="timetableView" class="dashboard-view hidden-view" style="padding: 25px;"><h3 style="color:var(--brand-red);">My Timetable</h3></div>
+                <div id="timetableView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">My Timetable</h3>
+                        <button id="btnOpenHodAssign" style="background:var(--brand-red); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 2px 5px rgba(220,38,38,0.2); display:none; transition:0.2s;"><i class="fas fa-tasks"></i> Assign Classes</button>
+                    </div>
+                    
+                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; justify-content: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                        <div class="tt-days-container" id="ttMyDaysContainer">
+                            <button class="tt-day-btn active" data-day="Monday">Mon</button>
+                            <button class="tt-day-btn" data-day="Tuesday">Tue</button>
+                            <button class="tt-day-btn" data-day="Wednesday">Wed</button>
+                            <button class="tt-day-btn" data-day="Thursday">Thu</button>
+                            <button class="tt-day-btn" data-day="Friday">Fri</button>
+                        </div>
+                    </div>
+
+                    <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
+                        <div class="tt-main-wrapper" id="ttMyWrapper">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="assignView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                    <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; flex-wrap: wrap; gap: 10px;">
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <button id="btnBackFromAssign" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-dark); cursor:pointer; font-weight:bold; transition:0.2s;"><i class="fas fa-arrow-left"></i></button>
+                            <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:20px;">Assign Classes (HOD)</h3>
+                        </div>
+                        <button id="btnAsnSave" class="asn-save-btn" style="background:var(--brand-red); color:white; border:none; padding:10px 25px; border-radius:20px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 10px rgba(220,38,38,0.2); transition:0.2s;">Save Timetable</button>
+                    </div>
+
+                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 15px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center;">
+                        <div class="asn-days-container" id="asnDaysContainer">
+                            <button class="asn-day-btn active" data-day="Monday">Mon</button>
+                            <button class="asn-day-btn" data-day="Tuesday">Tue</button>
+                            <button class="asn-day-btn" data-day="Wednesday">Wed</button>
+                            <button class="asn-day-btn" data-day="Thursday">Thu</button>
+                            <button class="asn-day-btn" data-day="Friday">Fri</button>
+                        </div>
+                        <select id="asnSemDrop" class="asn-select-pill" style="width: 100%; max-width: 350px; text-align: center; border-color:var(--brand-red); color:var(--brand-red); background:var(--card-bg);"></select>
+                    </div>
+
+                    <div id="asnListContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
+                        <div class="no-data-text">Loading Assign Panel...</div>
+                    </div>
+                </div>
+                
                 <div id="internalMarksView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
                     <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <h3 style="color:var(--brand-red); font-family: 'Yatra One', cursive; margin:0; font-size:24px;">Internal Marks</h3>
@@ -562,6 +608,23 @@
 
             <div id="imAccordionsContainer" class="scrollable-list" style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
                 </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deptSplitOverlay">
+        <div class="compose-modal" style="background: white; width: 90%; max-width: 500px; margin: auto; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 2px solid var(--border-color); max-height: 80vh; display: flex; flex-direction: column;">
+            <button class="close-settings" onclick="document.getElementById('deptSplitOverlay').classList.remove('active')"><i class="fas fa-times"></i></button>
+            <h3 style="color: var(--brand-red); margin-bottom: 15px; font-size: 20px;"><i class="fas fa-layer-group"></i> Split by Department</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Divide students based on their enrolled departments.</p>
+            
+            <div style="background: var(--bg-grid-color); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
+                <span style="font-weight: bold; color: var(--brand-red); font-size: 14px;">Total Batches:</span>
+                <select id="dsBatchCount" style="padding: 8px 15px; border-radius: 10px; border: 1px solid var(--brand-red); font-weight: bold; color: var(--brand-red); outline: none; background:white;"></select>
+            </div>
+
+            <div id="dsDeptList" class="scrollable-list" style="display: flex; flex-direction: column; gap: 10px; flex:1; overflow-y: auto; padding-right: 5px; margin-bottom: 20px;"></div>
+            
+            <button id="btnConfirmDeptSplit" style="width: 100%; background: var(--brand-red); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); flex-shrink:0;">Confirm Split</button>
         </div>
     </div>
 
