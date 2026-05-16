@@ -2648,7 +2648,6 @@ function renderStudentList(searchTerm = "") {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); 
         let status = s.status || "Approved";
         
-        // Match Principal Layout exactly!
         let statusLabel = status === "Approved" ? "Active" : status;
         let statusColor = status === "Approved" ? "var(--brand-red)" : "var(--text-muted)";
         
@@ -2657,18 +2656,16 @@ function renderStudentList(searchTerm = "") {
         else if (s.fcmToken) tokensArr = [s.fcmToken];
         let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
         
+        // 🚨 THE FIX: Let your teacher.css .data-card properties handle the heavy lifting!
         return `
-        <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-left: 5px solid var(--brand-red); border-radius: 12px; margin-bottom: 12px; cursor:pointer; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.02);" onclick="window.SL_OpenDashboard('${s.id}')">
-            <div style="flex:1;">
-                <div style="margin-bottom:4px;">
-                    <span style="font-weight:800; font-size:15px; color:var(--text-dark);">${s.Name || "Unknown"}</span> 
-                    <span style="font-size:12px; color:var(--text-muted); margin-left:4px;">(${s.RollNumber || "N/A"})</span>
-                </div>
-                <div style="font-size:12px; font-weight:600; color:var(--text-muted);">${cleanDept} - Year ${s.Year || "1"}</div>
+        <div class="data-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-left-color: ${status === "Approved" ? "var(--brand-red)" : "var(--text-muted)"};">
+            <div style="flex:1; cursor:pointer;" onclick="window.SL_OpenDashboard('${s.id}')">
+                <div class="card-title" style="margin-bottom:2px; color:var(--text-dark);">${s.Name || "Unknown"} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${s.RollNumber || "N/A"})</span></div>
+                <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-top:4px;">${cleanDept} - Year ${s.Year || "1"}</div>
             </div>
-            <div style="display:flex; gap:15px; align-items:center;">
-                <span style="font-size:12px; font-weight:800; color:${statusColor};">${statusLabel}</span>
-                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" style="background:#f1f5f9; border:none; width:36px; height:36px; border-radius:10px; color:#475569; display:flex; justify-content:center; align-items:center; transition:0.2s; cursor:pointer;">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="hod-badge" style="background:transparent; border:none; color:${statusColor}; opacity:0.8;">${statusLabel}</span>
+                <button title="Message" onclick="window.OpenCompose(true, '${s.Name || ""}', ${tokensJson})" class="action-icon-btn">
                     <i class="fas fa-comment-dots"></i>
                 </button>
             </div>
@@ -2677,7 +2674,7 @@ function renderStudentList(searchTerm = "") {
     
     listEl.appendChild(noData); 
     
-    // 🚨 EXACT PRINCIPAL SCRIPT TRICK: Restore scroll instantly so it doesn't snap to top
+    // Exact Principal Script Trick: Restore scroll instantly
     listEl.scrollTop = oldScroll;
 }
 
