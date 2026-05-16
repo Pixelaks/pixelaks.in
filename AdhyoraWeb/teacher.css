@@ -4,7 +4,10 @@
 /* =========================================
    🚀 DOM VIRTUALIZATION & RED COLOR PALETTE
    ========================================= */
-.data-card, .sub-card, .ss-stu-card, .evt-card, .asn-card, .attd-row {
+/* BEFORE: .data-card, .sub-card, .ss-stu-card, .evt-card, .asn-card, .attd-row { */
+
+/* AFTER: Removed .asn-card so the badge can overflow the top freely! */
+.data-card, .sub-card, .ss-stu-card, .evt-card, .attd-row {
     content-visibility: auto;
     contain-intrinsic-size: 120px; 
     will-change: transform; 
@@ -252,7 +255,7 @@ body {
 .asn-period-header { text-align: center; font-weight: 800; color: var(--brand-red); font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
 
 .asn-card { width: 100%; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px 15px 15px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); position: relative; margin-top: 15px; }
-.asn-card.split { border-color: #fca5a5; background: #fff5f5; }
+.asn-card.split { border-color: #fca5a5; background: #fff5f5; margin-top: 15px; }
 .asn-batch-badge { position: absolute; top: -12px; left: 15px; background: var(--brand-red); color: white; font-size: 11px; padding: 4px 12px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-transform: uppercase; }
 
 .asn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
