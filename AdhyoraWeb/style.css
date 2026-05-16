@@ -65,6 +65,8 @@ body {
     margin-bottom: 30px;
     margin-top: 5px;
     position: relative;
+
+    contain: layout paint;
 }
 
 /* --- GLITCH TEXT STYLES --- */
@@ -105,8 +107,44 @@ body {
 
 .main-text { position: relative; z-index: 2; color: var(--primary-green); }
 .glitch-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
-.layer-red { color: #ff0055; z-index: 1; mix-blend-mode: screen; }
-.layer-blue { color: #00ccff; z-index: 1; mix-blend-mode: screen; }
+/* Update your existing layer classes */
+.layer-red, .layer-blue {
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    opacity: 0; 
+    /* Force GPU acceleration for these specific layers */
+    transform: translateZ(0);
+    will-change: transform, opacity;
+}
+
+/* 
+  The JS will add this class once the decoding is done.
+  This handles the random "subtle glitch" popping in and out.
+*/
+.layer-red.css-glitch-active {
+    animation: pure-glitch-red 3s infinite linear alternate-reverse;
+}
+.layer-blue.css-glitch-active {
+    animation: pure-glitch-blue 2.5s infinite linear alternate-reverse;
+}
+
+/* The Keyframes simulate the random JS math we removed */
+@keyframes pure-glitch-red {
+    0%, 90%, 100% { transform: translate(0, 0); opacity: 0; }
+    92% { transform: translate(-3px, 1px); opacity: 0.8; }
+    94% { transform: translate(2px, -2px); opacity: 0.8; }
+    96% { transform: translate(-1px, 0px); opacity: 0; }
+}
+
+@keyframes pure-glitch-blue {
+    0%, 85%, 100% { transform: translate(0, 0); opacity: 0; }
+    87% { transform: translate(3px, -1px); opacity: 0.8; }
+    89% { transform: translate(-2px, 2px); opacity: 0.8; }
+    91% { transform: translate(1px, 0px); opacity: 0; }
+}
 
 .subtitle {
     color: #fff;
