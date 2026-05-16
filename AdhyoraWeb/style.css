@@ -44,7 +44,7 @@
 .splash-content {
     text-align: center;
     position: relative;
-    animation: splashFloat 3s ease-in-out infinite;
+    /* Removed the animation line from here */
 }
 
 .splash-subtitle {
@@ -78,11 +78,6 @@
     filter: blur(60px);
     opacity: 0.3;
     z-index: 1;
-}
-
-@keyframes splashFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
 }
 
 body {
