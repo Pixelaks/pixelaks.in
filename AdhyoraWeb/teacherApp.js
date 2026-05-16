@@ -1492,6 +1492,26 @@ function switchView(targetView, clickedBtn) {
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
+    // 🚨 CONTEXT ENGINE: Explicitly re-route the + button handler based on current tab view!
+    let topActionBtn = document.getElementById("btnOpenCompose");
+    if (topActionBtn) {
+        if (targetView === views.assignments) {
+            topActionBtn.title = "Add Assignment";
+            topActionBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.OpenAssignmentPanel(); // Directly runs your assignment view modal!
+            };
+        } else {
+            topActionBtn.title = "Add Announcement";
+            topActionBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.OpenCompose(false); // Runs the normal announcement modal!
+            };
+        }
+    }
+
     // 🚨 Render Assignments instantly from cache when tab opens
     if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
@@ -5820,21 +5840,7 @@ let composeFCMTokens = [];
 // RAM Cache for Departments (Matches C# cachedDepartments)
 let composeCachedDepartments = [];
 
-// 1. Universal Smart Click Router (Parity with Unity Panel Logic)
-document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    let assignmentsPanel = document.getElementById("assignmentsView");
-    
-    // 🧠 The Context Check: If the assignment view is active, open the Assignment engine!
-    if (assignmentsPanel && !assignmentsPanel.classList.contains("hidden-view")) {
-        window.OpenAssignmentPanel();
-    } else {
-        window.OpenCompose(false); // Otherwise, default to announcement engine
-    }
-});
-
+// 1. Bind Buttons (Clean contextual binding for Inbox sub-items only)
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
 // Dynamic UI Toggles (Matches C# OnToggleChanged)
@@ -5951,22 +5957,17 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
-    // 🚨 COLOR SYNC FIX: Strictly must be "Teacher" so Unity applies Pink panel styles
     let safeSenderRole = "Teacher"; 
     let displaySenderName = isHOD ? `${currentTeacherName} (HOD)` : currentTeacherName;
 
     try {
         if (composeIsPrivate && composeRecipientID) {
-            // ==========================================
-            // 🚨 1. DIRECT PRIVATE CHAT (From Student List)
-            // ==========================================
+            // Private message implementation
             let targetName = document.getElementById("composePrivateTarget").value;
             await sendPrivateMessageToDatabase(title, body, composeRecipientID, targetName, safeSenderRole, displaySenderName);
-            
             if (composeFCMTokens && composeFCMTokens.length > 0) {
                 sendPushNotification(title, body, composeFCMTokens, null);
             }
-
         } else {
             let sendP = document.getElementById("chkSendPrincipal").checked;
             let sendT = document.getElementById("chkSendTeachers").checked;
@@ -5974,68 +5975,42 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 
             if (!sendP && !sendT && !sendS) {
                 showRcToast("Please select at least one recipient group!");
-                btn.innerText = "Send Message";
-                btn.disabled = false;
-                btn.style.opacity = "1";
+                btn.innerText = "Send Message"; btn.disabled = false; btn.style.opacity = "1";
                 return;
             }
 
-            // ==========================================
-            // 🚨 2. C# LOGIC MATCH: ONLY PRINCIPAL = PERSONAL CHAT
-            // ==========================================
             if (sendP && !sendT && !sendS) {
-                
-                // Fetch the Principal's User ID from the database
                 const prinSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "principals"), limit(1)));
-                
                 if (prinSnap.empty) {
                     showRcToast("Error: Principal profile not found.");
                     btn.innerText = "Send Message"; btn.disabled = false; btn.style.opacity = "1";
                     return;
                 }
-                
                 let prinID = prinSnap.docs[0].id;
                 let prinName = prinSnap.docs[0].data().name || "Principal";
-
-                // Route as a private message!
                 await sendPrivateMessageToDatabase(title, body, prinID, prinName, safeSenderRole, displaySenderName);
-
-                // Ping the Principal Fallback Topic for push notifications
                 let safeColID = getSafeTopic(currentCollegeID);
                 sendPushNotification(title, body, null, [`${safeColID}_PRINCIPAL`]);
-
             } else {
-                // ==========================================
-                // 🚨 3. TRUE BROADCAST ROUTING (Groups Notice Board)
-                // ==========================================
                 let deptVal = document.getElementById("composeDeptDrop").value;
                 let yearVal = document.getElementById("composeYearDrop").value;
-
                 let actualDeptName = deptVal === "My Dept" ? teacherDeptRaw.replace("DEPT_", "") : deptVal;
                 let actualYear = yearVal;
-
                 let safeColID = getSafeTopic(currentCollegeID);
                 let safeDept = getSafeTopic(actualDeptName);
                 let safeYear = getSafeTopic(yearVal);
-
                 let targetDescription = "";
                 let topicsToPing = [];
 
-                if (sendP) {
-                    topicsToPing.push(`${safeColID}_PRINCIPAL`);
-                    targetDescription += "Principal";
-                }
-
+                if (sendP) { topicsToPing.push(`${safeColID}_PRINCIPAL`); targetDescription += "Principal"; }
                 if (sendT) {
                     topicsToPing.push(`${safeColID}_TEACHERS_${safeDept}`);
                     if (targetDescription !== "") targetDescription += " & ";
                     targetDescription += (actualDeptName === "All") ? "Teachers (All)" : `Teachers (${actualDeptName})`;
                 }
-
                 if (sendS) {
                     topicsToPing.push(`${safeColID}_STUDENTS_${safeDept}_${safeYear}`);
                     if (targetDescription !== "") targetDescription += " & ";
-
                     if (actualDeptName === "All" && actualYear === "All") targetDescription += "All Students";
                     else if (actualDeptName === "All") targetDescription += `Students (All Depts - ${actualYear})`;
                     else if (actualYear === "All") targetDescription += `Students (${actualDeptName} - All Years)`;
@@ -6043,35 +6018,21 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
                 }
 
                 let payload = {
-                    title: title,
-                    body: body,
-                    targetSummary: targetDescription,
-                    timestamp: serverTimestamp(),
-                    type: "broadcast",
-                    status: "sent",
-                    senderRole: safeSenderRole,
-                    senderID: currentUserID,
-                    senderName: displaySenderName
+                    title: title, body: body, targetSummary: targetDescription,
+                    timestamp: serverTimestamp(), type: "broadcast", status: "sent",
+                    senderRole: safeSenderRole, senderID: currentUserID, senderName: displaySenderName
                 };
-
                 await addDoc(collection(db, "colleges", currentCollegeID, "sent_messages"), payload);
-
-                if (topicsToPing.length > 0) {
-                    sendPushNotification(title, body, null, topicsToPing);
-                }
+                if (topicsToPing.length > 0) sendPushNotification(title, body, null, topicsToPing);
             }
         }
-
         showRcToast("Message Sent Successfully!");
         document.getElementById("composeMessageModal").classList.remove("active");
-        
     } catch (e) {
         console.error("Error sending message: ", e);
         showRcToast("Failed to send message.");
-    } finally {
-        btn.innerText = "Send Message";
-        btn.disabled = false;
-        btn.style.opacity = "1";
+    } planetary {
+        btn.innerText = "Send Message"; btn.disabled = false; btn.style.opacity = "1";
     }
 });
 
@@ -6079,46 +6040,12 @@ document.getElementById("btnSendMessage")?.addEventListener("click", async () =>
 async function sendPrivateMessageToDatabase(title, body, targetID, targetName, safeSenderRole, displaySenderName) {
     let chatRoomID = [currentUserID, targetID].sort().join("_");
     let chatRef = doc(db, "colleges", currentCollegeID, "chats", chatRoomID);
-    
     let batch = writeBatch(db);
-    
-    // Update Chat Meta
-    batch.set(chatRef, {
-        participants: [currentUserID, targetID],
-        lastMessage: body,
-        lastUpdated: serverTimestamp(),
-        receiverName: targetName 
-    }, { merge: true });
-
-    // Insert Chat Message
+    batch.set(chatRef, { participants: [currentUserID, targetID], lastMessage: body, lastUpdated: serverTimestamp(), receiverName: targetName }, { merge: true });
     let msgRef = doc(collection(chatRef, "messages"));
-    batch.set(msgRef, {
-        title: title,
-        body: body,
-        senderID: currentUserID,
-        senderName: displaySenderName,
-        senderRole: safeSenderRole,
-        timestamp: serverTimestamp(),
-        type: "incoming",
-        status: "sent"
-    });
-
-    // Insert Sent History Log (Notice the type is "personal")
+    batch.set(msgRef, { title: title, body: body, senderID: currentUserID, senderName: displaySenderName, senderRole: safeSenderRole, timestamp: serverTimestamp(), type: "incoming", status: "sent" });
     let historyRef = doc(collection(db, "colleges", currentCollegeID, "sent_messages"));
-    batch.set(historyRef, {
-        title: title, 
-        body: body,
-        targetSummary: `Personal: ${targetName}`,
-        timestamp: serverTimestamp(),
-        type: "personal", 
-        status: "sent",
-        linkedChatID: chatRoomID,
-        linkedMessageID: msgRef.id,
-        senderRole: safeSenderRole,
-        senderID: currentUserID,
-        senderName: displaySenderName
-    });
-
+    batch.set(historyRef, { title: title, body: body, targetSummary: `Personal: ${targetName}`, timestamp: serverTimestamp(), type: "personal", status: "sent", linkedChatID: chatRoomID, linkedMessageID: msgRef.id, senderRole: safeSenderRole, senderID: currentUserID, senderName: displaySenderName });
     await batch.commit();
 }
 
@@ -6127,24 +6054,10 @@ function sendPushNotification(title, body, tokens, topics) {
     let finalTitle = `${title} • ${currentTeacherName} (Teacher)`;
     let iconUrl = "https://raw.githubusercontent.com/Pixelaks/pixelaks.in/80f18d76be90054cccf1b1ddd5d04d8282635b59/AdhyoraRedSplashIcon.png";
     let messageType = "chat";
-
-    let payload = {
-        title: finalTitle,
-        body: body,
-        image: iconUrl,
-        type: messageType,
-        priority: "high"
-    };
-
+    let payload = { title: finalTitle, body: body, image: iconUrl, type: messageType, priority: "high" };
     if (tokens && tokens.length > 0) payload.tokens = tokens;
     else if (topics && topics.length > 0) payload.topics = topics;
-
-    fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    }).catch(e => console.log("Push notification ping skipped/failed.", e));
+    fetch("https://script.google.com/macros/s/AKfycbxVL1MGATuPxN4cmAkWbd8GsY5YaoWBkyVTkjfDV-f4jJrWBnMvZ-gXdMZU5pnhHmlPHw/exec", { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(e => console.log("Push notification skipped.", e));
 }
 
 // ==========================================
