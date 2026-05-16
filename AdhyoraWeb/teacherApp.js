@@ -5821,7 +5821,20 @@ let composeFCMTokens = [];
 let composeCachedDepartments = [];
 
 // 1. Bind Buttons
-document.getElementById("btnOpenCompose")?.addEventListener("click", () => window.OpenCompose(false));
+// 1. Bind Buttons securely across active screen environments
+document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
+    let assignmentsTab = document.getElementById("assignmentsView");
+    
+    // If the assignments view is actively displayed on the teacher's screen, open the assignment builder!
+    if (assignmentsTab && !assignmentsTab.classList.contains("hidden-view")) {
+        e.stopPropagation(); // Stop click from bleeding into message modals
+        window.OpenAssignmentPanel();
+    } else {
+        window.OpenCompose(false); // Default back to message composer
+    }
+});
+
+document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 document.getElementById("btnOpenInboxCompose")?.addEventListener("click", () => window.OpenCompose(false));
 
 // Dynamic UI Toggles (Matches C# OnToggleChanged)
@@ -6444,15 +6457,6 @@ let asgnSubjectsMap = new Map();
 let asgnIsProcessing = false;
 const asgnMonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-// 1. Hook the Plus Button Icon inside Navigation Header to trigger modal setup
-document.getElementById("btnOpenCompose")?.addEventListener("click", (e) => {
-    // Check if assignments page view is active. If yes, divert the button layout to build assignments!
-    if (document.getElementById("assignmentsView").classList.contains("active")) {
-        e.stopPropagation();
-        window.OpenAssignmentPanel();
-    }
-});
-
 window.OpenAssignmentPanel = () => {
     document.getElementById("asgnTopicInput").value = "";
     document.getElementById("asgnDescInput").value = "";
@@ -6467,7 +6471,7 @@ window.OpenAssignmentPanel = () => {
     document.getElementById("createAssignmentModal").classList.add("active");
 };
 
-// 2. Wheel Date Population Logic
+// Wheel Date Population Logic
 function setupAsgnDateDropdowns() {
     let dayDrop = document.getElementById("asgnDateDay");
     let monthDrop = document.getElementById("asgnDateMonth");
@@ -6496,11 +6500,12 @@ function setupAsgnDateDropdowns() {
     updateDays();
 }
 
-// 3. Dynamic Filtering Core Maps
+// Dynamic Filtering Core Maps
 function fetchAsgnTeacherSubjects() {
     let subDrop = document.getElementById("asgnSubDrop");
     subDrop.innerHTML = `<option value="">Loading Subjects...</option>`;
 
+    // Access real-time mappings matching Unity's FetchTeacherSubjects
     onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID), where("isActive", "==", true)), (snap) => {
         asgnSubjectsMap.clear();
         
@@ -6551,7 +6556,7 @@ function fetchAsgnTeacherSubjects() {
     });
 }
 
-// 4. Execution Core Logic (Target Audience Analysis + Reminder Queue + Push Delivery)
+// Execution Core Logic (Target Audience Analysis + Reminder Queue + Push Delivery)
 async function executeCreateAssignment() {
     if (asgnIsProcessing) return;
 
@@ -6593,7 +6598,7 @@ async function executeCreateAssignment() {
             let dName = data.name || data.Name || "";
 
             if (dName.replace(/\s+/g, "").toLowerCase() === selectedSubject.replace(/\s+/g, "").toLowerCase()) {
-                let type = (data.type || data.Type || "").toUpperCase();
+                let type = (data.type || data.type || "").toUpperCase();
                 if (type.includes("MJD") || type.includes("CORE") || type.includes("MAJOR")) {
                     isMjdOrCore = true;
                 }
@@ -6612,7 +6617,7 @@ async function executeCreateAssignment() {
             }
         }
 
-        // A. Document Allocation Save
+        // A. Save Document to Database
         showRcToast("Posting Assignment Document...");
         let assignmentPayload = {
             teacherID: currentUserID,
@@ -6629,18 +6634,18 @@ async function executeCreateAssignment() {
 
         await addDoc(collection(db, "colleges", currentCollegeID, "assignments"), assignmentPayload);
 
-        // B. Dynamic Push Router Engine
+        // B. Dynamic Push Notification Router Engine
         let pushTopic = "";
         let targetTokens = [];
         let pushTitle = `New Assignment • ${currentTeacherName}`;
         let pushBody = `A new assignment has been posted for ${selectedSubject}.`;
 
         if (isMjdOrCore) {
-            // ROUTE A: Broad Topic Pipeline
+            // ROUTE A: BROADCAST (CORE SUBJECTS)
             pushTopic = `${getSafeTopic(currentCollegeID)}_STUDENTS_${getSafeTopic(targetDeptName)}_${getSafeTopic("Year" + Math.ceil(parseInt(semNum) / 2))}`;
             sendPushNotification(pushTitle, pushBody, null, [pushTopic]);
         } else {
-            // ROUTE B: Targeted Token Interception 
+            // ROUTE B: SAFE ELECTIVE TOKEN INTERCEPTION 
             let targetYearStr = Math.ceil(parseInt(semNum) / 2).toString();
             const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYearStr)));
             
@@ -6658,7 +6663,7 @@ async function executeCreateAssignment() {
                 }
 
                 if (isEnrolled) {
-                    // Extract Mobile and Web push registration vectors safely
+                    // Extract Mobile and Web push token strings securely
                     if (sData.fcmTokens) sData.fcmTokens.forEach(t => { if(t && !targetTokens.includes(t)) targetTokens.push(t); });
                     else if (sData.fcmToken && !targetTokens.includes(sData.fcmToken)) targetTokens.push(sData.fcmToken);
 
@@ -6685,7 +6690,7 @@ async function executeCreateAssignment() {
         showRcToast("Assignment Posted Successfully!");
         setTimeout(() => {
             document.getElementById("createAssignmentModal").classList.remove("active");
-            if (typeof initAssignmentsEngine === "function") initAssignmentsEngine(); // Refresh active cache list
+            if (typeof initAssignmentsEngine === "function") initAssignmentsEngine(); 
         }, 1200);
 
     } catch(e) {
