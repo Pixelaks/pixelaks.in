@@ -4866,7 +4866,6 @@ function asnRenderLayout() {
     });
 }
 
-// 🚨 FIX 4: Replaced C# db.Collection with Web getDocs(query(...))
 async function asnPopulateSubjects(row) {
     let subDrop = document.getElementById(`sub_${row.id}`);
     if (!subDrop) return;
@@ -4879,24 +4878,38 @@ async function asnPopulateSubjects(row) {
     }
 
     subDrop.innerHTML = `<option value="">Loading...</option>`;
-    
+
     try {
-        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subjects"), where("department", "==", teacherDeptRaw)));
+        // 🚨 FIX: Fetch all subjects and filter in RAM to bypass strict Firebase string-matching failures!
+        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
         let subList = [];
         
+        // Clean the HOD department string for fuzzy matching (e.g. "DEPT_BScComputerScience" -> "bsccomputerscience")
+        let safeHodDept = teacherDeptRaw.replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+
         snap.forEach(d => {
             let data = d.data();
-            let docSem = data.semester || data.Semester || "";
-            if (docSem.toString().split(',').some(s => s.trim() == asnCurrentSem)) {
+            let docSem = (data.semester || data.Semester || "").toString();
+            
+            if (docSem.split(',').some(s => s.trim() == asnCurrentSem)) {
                 let docType = (data.type || data.Type || "").trim();
-                if (docType === row.category) subList.push(data.name || data.Name);
+                if (docType === row.category) {
+                    let subDept = (data.department || data.Department || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+                    
+                    // 🚨 Fuzzy match the department! (Catches General, All, or partial matches)
+                    if (subDept === safeHodDept || safeHodDept.includes(subDept) || subDept.includes(safeHodDept) || subDept === "general" || subDept === "all") {
+                        subList.push(data.name || data.Name);
+                    }
+                }
             }
         });
 
         if (subList.length === 0) {
             subDrop.innerHTML = `<option value="">No Subjects</option>`;
+            asnPopulateTeachers(row); // 🚨 THE FIX: Tells Teacher Dropdown to stop loading!
         } else {
             subList.sort();
+            subList = [...new Set(subList)]; // Remove duplicates
             let opts = `<option value="">Select Subject</option>`;
             subList.forEach(s => opts += `<option value="${s}" ${s === row.subject ? 'selected' : ''}>${s}</option>`);
             subDrop.innerHTML = opts;
@@ -4905,15 +4918,16 @@ async function asnPopulateSubjects(row) {
     } catch(e) {
         console.error(e);
         subDrop.innerHTML = `<option value="">Error</option>`;
+        asnPopulateTeachers(row); // Stop loading on error
     }
 }
 
-// 🚨 FIX 5: Replaced C# db.Collection with Web getDocs(query(...))
 async function asnPopulateTeachers(row) {
     let teaDrop = document.getElementById(`tea_${row.id}`);
     if (!teaDrop) return;
     
-    if (!row.subject || row.subject === "Select Subject" || row.subject === "No Subjects") {
+    // 🚨 Safely catch empty subjects!
+    if (!row.subject || row.subject === "Select Subject" || row.subject === "No Subjects" || row.subject === "Loading..." || row.subject === "Error") {
         teaDrop.innerHTML = `<option value="">Unassigned</option>`;
         return;
     }
@@ -4921,10 +4935,11 @@ async function asnPopulateTeachers(row) {
     let isTutorial = row.subject.toLowerCase() === "tutorial" || row.category.toLowerCase().includes("tutorial");
     
     if (isTutorial) {
-        let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+        let safeHodDept = teacherDeptRaw.replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
         let opts = `<option value="">Unassigned</option>`;
         asnCachedTeachers.forEach(t => {
-            if (t.dept === safeHodDept || t.dept === teacherDeptRaw) {
+            let tDept = (t.dept || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+            if (tDept === safeHodDept || safeHodDept.includes(tDept)) {
                 opts += `<option value="${t.id}|${t.name}" ${t.name === row.teacher ? 'selected' : ''}>${t.name}</option>`;
             }
         });
@@ -4949,6 +4964,7 @@ async function asnPopulateTeachers(row) {
             teaDrop.innerHTML = opts;
         } catch(e) {
             console.error(e);
+            teaDrop.innerHTML = `<option value="">Error</option>`;
         }
     }
 }
