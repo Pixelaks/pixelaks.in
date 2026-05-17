@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚨 ADDED: initializeFirestore, persistentLocalCache, persistentMultipleTabManager
-import { getFirestore, enableIndexedDbPersistence, doc, deleteDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
@@ -46,19 +46,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🚨 USE STABLE FIRESTORE ENGINE
-const db = getFirestore(app);
+// 🚨 COST OPTIMIZATION: Native RAM Caching Enabled!
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+    })
+});
 
-// 🚨 ENABLE SAFE OFFLINE CACHE
-try {
-    enableIndexedDbPersistence(db).catch((err) => {
-        console.warn("Firebase Persistence Warning:", err.code);
-    });
-} catch (e) {
-    console.warn("Persistence Init Error:", e);
-}
-
-// 🚨 FIREBASE MESSAGING
 const messaging = getMessaging(app);
 
 let myCurrentPushToken = ""; // Tracks active session
@@ -70,70 +64,24 @@ if (!currentCollegeID) {
     window.location.href = "index.html"; 
 } else {
     onAuthStateChanged(auth, (user) => {
-
-    if (user) {
-
-        currentUserID = user.uid;
-
-        console.log("===== TEACHER AUTH SUCCESS =====");
-        console.log("UID:", currentUserID);
-
-        // 🚨 LOAD PROFILE FIRST
-        ListenToProfile();
-
-        // 🚨 INIT BIOMETRICS AFTER PROFILE STARTS
-        InitBiometricUI();
-
-        // 🚨 SHOW LOCK SCREEN LAST
-        setTimeout(() => {
-
-            CheckSecurityPin();
-
-        }, 500);
-
-    } else {
-
-        console.warn("User not authenticated");
-        window.location.href = "index.html";
-
-    }
-});
-}
-
-// ==========================================
-// 🚨 DYNAMIC PHONE STATUS & NAV BAR CONTROLLER
-// ==========================================
-function updateStatusBar() {
-    const themeMeta = document.querySelector('meta[name="theme-color"]');
-    
-    // Grab our full-screen dark overlays
-    const loader = document.getElementById("initialAppLoader");
-    const lockScreen = document.getElementById("appLockScreen");
-    const paywall = document.getElementById("subBlockPanel") || document.getElementById("subscriptionBlockPanel");
-
-    // Check if any of them are currently visible
-    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
-    const isLockActive = lockScreen && lockScreen.style.display === "flex";
-    const isPaywallActive = paywall && (paywall.style.display === "flex" || paywall.classList.contains("active"));
-
-    if (isLoaderActive || isLockActive || isPaywallActive) {
-        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
-        document.body.style.backgroundColor = "#0b111e";
-    } else {
-        const isDark = document.body.classList.contains("dark-mode");
-        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
-        document.body.style.backgroundColor = "";
-    }
-}
-
-function hideAppLoader() {
-    const loader = document.getElementById("initialAppLoader");
-    if (loader && !loader.classList.contains("hidden")) {
-        setTimeout(() => {
-            loader.classList.add("hidden");
-            updateStatusBar(); 
-        }, 800);
-    }
+        if (user) { 
+            currentUserID = user.uid; 
+            ListenToProfile(); 
+            
+            // 🚨 OPTIMIZATION: Hash Router Recovery
+            // Restores the exact panel if the user presses F5/Refresh
+            const currentHash = window.location.hash.replace("#", "");
+            if (currentHash && currentHash !== "HOME" && views[currentHash]) {
+                setTimeout(() => {
+                    let btnId = "btnNav" + currentHash.charAt(0).toUpperCase() + currentHash.slice(1);
+                    let targetBtn = document.getElementById(btnId);
+                    switchView(views[currentHash], targetBtn || null, true);
+                }, 1000); 
+            }
+        } else { 
+            window.location.href = "index.html"; 
+        }
+    });
 }
 
 // ==========================================
@@ -191,66 +139,26 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    hideAppLoader();
+    let loader = document.getElementById("initialAppLoader");
+    if(loader) loader.style.display = "none";
 
-// 🚨 WAIT UNTIL DEPARTMENT LOADS
-if (!teacherDeptRaw) {
+    // 🚨 FIX: Force the profile loop to ensure teacherDeptRaw is ready before proceeding
+    if (!hasStartedInbox && teacherDeptRaw !== "") {
+        hasStartedInbox = true;
+        
+        startInboxListener();
+        await syncSemesterWithDatabase();
 
-    console.warn("Department not loaded yet");
-    return;
-}
-
-// 🚨 PREVENT DOUBLE INIT
-if (hasStartedInbox) return;
-
-hasStartedInbox = true;
-
-console.log("===== TEACHER DASHBOARD INIT =====");
-console.log("Teacher:", currentTeacherName);
-console.log("Department:", teacherDeptRaw);
-console.log("College:", currentCollegeID);
-
-// 🚨 START CORE SYSTEMS IMMEDIATELY
-startInboxListener();
-
-// 🚨 BACKGROUND TASKS (NON-BLOCKING)
-syncSemesterWithDatabase()
-    .catch(err => console.error("Semester Sync Error:", err));
-
-if (isHOD) {
-
-    try {
-
-        setupExportEngine();
-
-    } catch (e) {
-
-        console.error("Export Engine Error:", e);
+        initAttendanceEngine(); 
+        initSubjectDeclarationEngine(); 
+        initCalendarEngine(); 
+        initAssignmentsEngine(); 
+        if (isHOD) setupExportEngine();
+        
+        // 🚨 CRITICAL ORDER CHANGE: Run permission verification AFTER all background engines load
+        await requestPushPermissions(); 
+        updateNotificationToggleUI(); 
     }
-}
-
-// 🚨 NEVER BLOCK UI WITH NOTIFICATION PERMISSIONS
-requestPushPermissions()
-    .then(() => {
-
-        try {
-
-            updateNotificationToggleUI();
-
-        } catch (e) {
-
-            console.error("Notification UI Error:", e);
-        }
-
-    })
-    .catch(err => {
-
-        console.warn("Push Permission Skipped:", err);
-
-    });
-
-console.log("===== TEACHER INIT COMPLETE =====");
-
 }
 
 // ==========================================
@@ -262,20 +170,6 @@ function getSafeTopic(str) {
 }
 
 function startInboxListener() {
-    setTimeout(() => {
-    const notifList = document.getElementById("notificationsList");
-
-    if(
-        notifList &&
-        notifList.innerHTML.includes("Loading notifications")
-    ){
-        notifList.innerHTML = `
-        <div class="no-data-text" style="text-align:center; color:#94a3b8; margin-top:20px;">
-            No notifications available.
-        </div>`;
-    }
-    }, 5000);
-    
     const sentMessagesRef = collection(db, "colleges", currentCollegeID, "sent_messages");
     onSnapshot(query(sentMessagesRef, orderBy("timestamp", "desc"), limit(30)), (snap) => {
         snap.docChanges().forEach((change) => {
@@ -295,9 +189,6 @@ function startInboxListener() {
         let dot = document.querySelector("#btnMessages .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderMessages();
-    }, (error) => {
-        console.error("Sent Messages Error:", error);
-        document.getElementById("messagesList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     const chatsRef = collection(db, "colleges", currentCollegeID, "chats");
@@ -316,33 +207,13 @@ function startInboxListener() {
                     });
                 });
                 renderMessages();
-            }, (error) => {
-                console.error("Chat Messages Subcollection Error:", error);
             });
         });
-    }, (error) => {
-        console.error("Chats Index Error:", error);
-        document.getElementById("messagesList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     let safeColID = getSafeTopic(currentCollegeID);
-
-let safeDept = getSafeTopic(
-    teacherDeptRaw.replace("DEPT_", "")
-);
-
-let myTopics = [
-`${safeColID}_ALL`,
-`${safeColID}_TEACHERS_ALL`
-];
-
-if (safeDept && safeDept.trim() !== "") {
-    myTopics.push(
-        `${safeColID}_TEACHERS_${safeDept}`
-    );
-}
-
-console.log("Topics:", myTopics);
+    let safeDept = getSafeTopic(teacherDeptRaw);
+    let myTopics = [ `${safeColID}_ALL`, `${safeColID}_TEACHERS_ALL`, `${safeColID}_TEACHERS_${safeDept}` ];
 
     inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         snap.docChanges().forEach(change => {
@@ -358,9 +229,6 @@ console.log("Topics:", myTopics);
         let dot = document.querySelector("#btnNotifications .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
-    }, (error) => {
-        console.error("Inbox Index Error:", error);
-        document.getElementById("notificationsList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     globalListenerUnsub = onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
@@ -377,8 +245,6 @@ console.log("Topics:", myTopics);
         let dot = document.querySelector("#btnNotifications .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
-    }, (error) => {
-        console.error("Global Updates Error:", error);
     });
 }
 
@@ -494,57 +360,21 @@ let attActiveRosterYear = "";
 let attCurrentLoadTicket = 0;
 
 async function initAttendanceEngine() {
-
-    // 🚨 WAIT UNTIL EVERYTHING IS READY
-    while (
-        !currentCollegeID ||
-        !currentUserID ||
-        !teacherDeptRaw
-    ) {
-
-        console.log("Waiting for teacher profile...");
-
-        await new Promise(resolve =>
-            setTimeout(resolve, 300)
-        );
-    }
-
-    console.log("Attendance Engine Ready");
-
     await syncSemesterWithDatabase();
 
     setupJumpDateModals();
+    document.getElementById("attDateBtn").addEventListener("click", () => document.getElementById("jumpDateModal").classList.add("active"));
+    
+    document.getElementById("attSemDropdown").addEventListener("change", filterSubjectsBySemester);
+    document.getElementById("attPeriodDropdown").addEventListener("change", loadSessionData);
+    document.getElementById("attSubjDropdown").addEventListener("change", loadSessionData);
+    
+    document.getElementById("attSaveBtn").addEventListener("click", saveAttendance);
 
-    document.getElementById("attDateBtn")
-    .addEventListener("click", () =>
-        document.getElementById("jumpDateModal")
-        .classList.add("active")
-    );
-
-    document.getElementById("attSemDropdown")
-    .addEventListener("change", filterSubjectsBySemester);
-
-    document.getElementById("attPeriodDropdown")
-    .addEventListener("change", loadSessionData);
-
-    document.getElementById("attSubjDropdown")
-    .addEventListener("change", loadSessionData);
-
-    document.getElementById("attSaveBtn")
-    .addEventListener("click", saveAttendance);
-
-    document.getElementById("subConfirmNoBtn")
-    .addEventListener("click", () =>
-        document.getElementById("subConfirmModal")
-        .classList.remove("active")
-    );
-
-    document.getElementById("subConfirmYesBtn")
-    .addEventListener("click", confirmSubstituteLoad);
+    document.getElementById("subConfirmNoBtn").addEventListener("click", () => document.getElementById("subConfirmModal").classList.remove("active"));
+    document.getElementById("subConfirmYesBtn").addEventListener("click", confirmSubstituteLoad);
 
     resetDateToToday();
-
-    // 🚨 LOAD SUBJECTS ONLY AFTER EVERYTHING READY
     fetchTeacherSubjects();
 }
 
@@ -601,7 +431,7 @@ function fetchTeacherSubjects() {
     if (attSubjectListenerUnsub) attSubjectListenerUnsub();
     document.getElementById("attSubjDropdown").innerHTML = `<option>Loading...</option>`;
     
-    attSubjectListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID),where("isActive", "==", true)), async (snap) => {
+    attSubjectListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID)), async (snap) => {
         attTeacherSubjects = [{ name: "Tutorial", category: "TUTORIAL", semester: "1,2,3,4,5,6,7,8" }];
         
         let autoHealPromises = [];
@@ -654,7 +484,7 @@ function filterSubjectsBySemester() {
     let filteredNames = [];
     
     attTeacherSubjects.forEach(sub => {
-        let semList = String(sub.semester).replace(/Semester/gi, "").split(',').map(s => s.trim());if (semList.includes(currentSem)) {
+        if(sub.semester.split(',').map(s=>s.trim()).includes(currentSem)) {
             if(!filteredNames.includes(sub.name)) {
                 filteredNames.push(sub.name);
                 attSubjectCategories.set(sub.name, sub.category);
@@ -1596,474 +1426,6 @@ async function saveAttendance() {
 }
 
 // ==========================================
-// 🚨 BANK-GRADE ANTI-SNOOPING SHIELD 
-// ==========================================
-if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    console.log = function() {}; console.warn = function() {}; console.error = function() {};
-    document.addEventListener('contextmenu', event => event.preventDefault());
-    document.onkeydown = function(e) {
-        if (e.keyCode === 123) return false; // F12
-        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) return false; // Ctrl+Shift+I/J/C
-        if (e.ctrlKey && e.keyCode === 85) return false; // Ctrl+U
-    };
-}
-
-// 🚨 SECURE HASHING ALGORITHM (SHA-256)
-async function hashText(text) {
-    const msgBuffer = new TextEncoder().encode(text);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// ==========================================
-// 🚨 MASTER SECURITY PIN & BIOMETRIC ENGINE (IIFE & DOM VAULT)
-// ==========================================
-(function SecureEngine() {
-    const elLock = {
-        screen: document.getElementById("appLockScreen"), title: document.getElementById("lockTitle"), status: document.getElementById("lockStatus"),
-        input: document.getElementById("lockPinInput"), btnSubmit: document.getElementById("btnLockSubmit"), btnForgot: document.getElementById("btnLockForgot"),
-        reAuthOverlay: document.getElementById("reAuthOverlay"), reAuthPass: document.getElementById("reAuthPasswordInput"), 
-        reAuthStatus: document.getElementById("reAuthStatus"), btnReAuth: document.getElementById("btnReAuthSubmit"),
-        btnBio: document.getElementById("btnLockBiometrics"), toggleBio: document.getElementById("bioToggleSwitch"), btnToggleWrap: document.getElementById("btnToggleBiometrics")
-    };
-
-    // 🚨 1. DOM VAULT VARIABLES (Invisible to DevTools Console!)
-    let secureDOMVault = null;
-    const navElement = document.querySelector(".icon-nav-container");
-    const dashElement = document.querySelector(".dashboard-wrapper");
-
-    const isBiometricSupported = window.PublicKeyCredential !== undefined;
-    let isBioEnabledLocally = false; 
-    let cachedTeacherPinHash = ""; 
-    let lockMode = "LOGIN"; 
-    let setupTempPin = "";
-    let failedPinAttempts = 0;
-    let securityListener = null;
-    let isFirstSecurityLoad = true;
-    let isBiometricPromptActive = false;
-    let isFirstUnlock = true;
-
-    // 🚨 2. DOM VAULTING FUNCTIONS
-    function VaultDashboard() {
-        if (secureDOMVault) return; // Already vaulted
-        secureDOMVault = document.createDocumentFragment();
-        if (navElement && navElement.parentNode) secureDOMVault.appendChild(navElement);
-        if (dashElement && dashElement.parentNode) secureDOMVault.appendChild(dashElement);
-        document.getElementById("initialAppLoader").style.display = "none"; 
-        elLock.screen.style.display = "flex";
-    }
-
-    function RestoreDashboard() {
-        if (secureDOMVault) {
-            document.body.appendChild(secureDOMVault);
-            secureDOMVault = null; 
-        }
-        elLock.screen.style.display = "none";
-    }
-
-    // 1. Initialization
-    window.InitBiometricUI = function() {
-        isBioEnabledLocally = localStorage.getItem(`adhyora_bio_teacher_${currentUserID}`) === "true";
-        if (!isBiometricSupported) {
-            if(elLock.btnToggleWrap) {
-                elLock.btnToggleWrap.style.opacity = "0.5";
-                elLock.btnToggleWrap.title = "Not supported on this device/browser.";
-            }
-        } else if (isBioEnabledLocally) {
-            if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
-        }
-    };
-
-    window.CheckSecurityPin = function() {
-        VaultDashboard(); // 🚨 VAULT IMMEDIATELY ON BOOT
-
-        if (securityListener) securityListener(); 
-
-        securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), async (snap) => {
-            if (snap.exists() && snap.data().securityPin) {
-                // 🚨 The database now gives us the hash directly!
-                const hashedLivePin = snap.data().securityPin;
-                
-                if (!isFirstSecurityLoad && cachedTeacherPinHash && cachedTeacherPinHash !== hashedLivePin) {
-                    isBioEnabledLocally = false;
-                    localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "false");
-                    localStorage.removeItem(`adhyora_bio_id_teacher_${currentUserID}`);
-                    localStorage.removeItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`);
-                    if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
-                    
-                    VaultDashboard(); // 🚨 VAULT IF CHANGED REMOTELY
-                    showRcToast("Security PIN was changed. Biometrics reset.");
-                    SetLockMode("LOGIN");
-                }
-
-                cachedTeacherPinHash = hashedLivePin;
-
-                if (isFirstSecurityLoad) {
-                    const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`);
-                    if (isBioEnabledLocally && linkedPin && linkedPin !== hashedLivePin) {
-                        isBioEnabledLocally = false;
-                        localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "false");
-                        localStorage.removeItem(`adhyora_bio_id_teacher_${currentUserID}`);
-                        localStorage.removeItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`);
-                        if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
-                    }
-                    SetLockMode("LOGIN");
-                    isFirstSecurityLoad = false;
-                }
-            } else {
-                if (isFirstSecurityLoad) {
-                    SetLockMode("SETUP_1");
-                    isFirstSecurityLoad = false;
-                }
-            }
-        }, (error) => {
-            elLock.status.innerText = "Network error syncing security.";
-            elLock.status.style.color = "#ef4444";
-        });
-    };
-
-    // 2. Settings Menu Biometric Toggle
-    if(elLock.btnToggleWrap) {
-        elLock.btnToggleWrap.addEventListener("click", async () => {
-            if (!isBiometricSupported) return;
-
-            if (isBioEnabledLocally) {
-                isBioEnabledLocally = false;
-                localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "false");
-                localStorage.removeItem(`adhyora_bio_id_teacher_${currentUserID}`); 
-                localStorage.removeItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`);
-                elLock.toggleBio.classList.remove("active");
-                showRcToast("Biometrics disabled for this device.");
-            } else {
-                try {
-                    const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-                    const userIDBuffer = new TextEncoder().encode(currentUserID);
-
-                    const credential = await navigator.credentials.create({
-                        publicKey: {
-                            challenge: challenge,
-                            rp: { name: "Adhyora AMS", id: window.location.hostname },
-                            user: { id: userIDBuffer, name: currentTeacherName, displayName: currentTeacherName },
-                            pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                            timeout: 60000
-                        }
-                    });
-
-                    const credIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-                    localStorage.setItem(`adhyora_bio_id_teacher_${currentUserID}`, credIdBase64);
-                    localStorage.setItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`, cachedTeacherPinHash); 
-                    
-                    localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "true");
-                    isBioEnabledLocally = true;
-                    if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
-                    showRcToast("✅ Biometrics Linked Successfully!");
-                } catch (err) {
-                    showRcToast("❌ Failed to link Biometrics.");
-                }
-            }
-        });
-    }
-
-    // 3. Lock Screen Biometric Prompt
-    if(elLock.btnBio) {
-        elLock.btnBio.addEventListener("click", async () => {
-            elLock.btnBio.innerText = "Scanning...";
-            isBiometricPromptActive = true; 
-            
-            const savedCredIdBase64 = localStorage.getItem(`adhyora_bio_id_teacher_${currentUserID}`);
-            if (!savedCredIdBase64) {
-                elLock.status.innerText = "Biometric data lost. Please set up again.";
-                elLock.status.style.color = "#ef4444";
-                isBiometricPromptActive = false;
-                return;
-            }
-
-            try {
-                const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-                const binary = atob(savedCredIdBase64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-                await navigator.credentials.get({
-                    publicKey: {
-                        challenge: challenge,
-                        rpId: window.location.hostname,
-                        allowCredentials: [{ type: "public-key", id: bytes.buffer }],
-                        userVerification: "required",
-                        timeout: 60000
-                    }
-                });
-
-                isBiometricPromptActive = false;
-                elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!';
-                setTimeout(() => { UnlockSecurityWall(); }, 500);
-            } catch (err) {
-                isBiometricPromptActive = false;
-                elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again';
-                elLock.status.innerText = "Biometric scan failed or cancelled.";
-                elLock.status.style.color = "#ef4444";
-            }
-        });
-    }
-
-    function SetLockMode(mode) {
-        lockMode = mode;
-        elLock.input.value = "";
-        elLock.btnForgot.style.display = "none";
-        elLock.btnForgot.innerText = "Forgot PIN?"; 
-        elLock.input.style.display = "inline-block"; 
-        
-        if (mode !== "SETUP_BIO") elLock.input.focus();
-
-        if (mode === "LOGIN") {
-            elLock.title.innerText = "ENTER SECURE PIN";
-            elLock.status.innerText = "Enter 4-digit PIN to unlock.";
-            elLock.status.style.color = "#94a3b8";
-            elLock.btnSubmit.innerText = "Unlock Dashboard";
-            if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
-            
-            if (isBioEnabledLocally && isBiometricSupported) {
-                elLock.btnBio.style.display = "block";
-                setTimeout(() => elLock.btnBio.click(), 500); 
-            } else {
-                elLock.btnBio.style.display = "none";
-            }
-        } 
-        else if (mode === "SETUP_1" || mode === "RESET_NEW_1") {
-            elLock.title.innerText = "CREATE SECURITY PIN";
-            elLock.status.innerText = "Set a 4-digit PIN to secure your dashboard.";
-            elLock.status.style.color = "var(--brand-red)";
-            elLock.btnSubmit.innerText = "Next Step";
-            elLock.btnBio.style.display = "none";
-        }
-        else if (mode === "SETUP_2" || mode === "RESET_NEW_2") {
-            elLock.title.innerText = "CONFIRM NEW PIN";
-            elLock.status.innerText = "Please re-enter the PIN to confirm.";
-            elLock.status.style.color = "#f59e0b";
-            elLock.btnSubmit.innerText = "Save Security PIN";
-            elLock.btnBio.style.display = "none";
-        }
-        else if (mode === "SETUP_BIO") {
-            elLock.title.innerHTML = '<i class="fas fa-fingerprint" style="color:var(--brand-red); font-size:40px; margin-bottom:10px;"></i><br>ENABLE BIOMETRICS';
-            elLock.status.innerText = "Unlock your dashboard instantly with your Fingerprint or Face ID.";
-            elLock.status.style.color = "var(--brand-red)";
-            elLock.input.style.display = "none"; 
-            elLock.btnSubmit.innerText = "Enable Fingerprint";
-            elLock.btnForgot.innerText = "Skip for now";
-            elLock.btnForgot.style.display = "block";
-        }
-    }
-
-    elLock.btnSubmit.addEventListener("click", async () => {
-        let val = elLock.input.value.trim();
-        
-        if (lockMode !== "SETUP_BIO" && val.length !== 4) {
-            elLock.status.innerText = "PIN must be exactly 4 digits.";
-            elLock.status.style.color = "#ef4444";
-            return;
-        }
-
-        if (lockMode === "LOGIN") {
-            let hashedInput = await hashText(val);
-            if (hashedInput === cachedTeacherPinHash) {
-                UnlockSecurityWall();
-            } else {
-                failedPinAttempts++;
-                elLock.status.innerText = "Incorrect PIN.";
-                elLock.status.style.color = "#ef4444";
-                elLock.input.value = "";
-                if (failedPinAttempts >= 2) elLock.btnForgot.style.display = "block";
-            }
-        } 
-        else if (lockMode === "SETUP_1" || lockMode === "RESET_NEW_1") {
-            setupTempPin = val;
-            SetLockMode(lockMode === "SETUP_1" ? "SETUP_2" : "RESET_NEW_2");
-        }
-        else if (lockMode === "SETUP_2" || lockMode === "RESET_NEW_2") {
-            if (val === setupTempPin) {
-                elLock.btnSubmit.innerText = "Saving...";
-                elLock.btnSubmit.disabled = true;
-                try {
-                    // 🚨 1. Hash the PIN immediately on the device
-                    let hashedPinToSave = await hashText(val);
-                    
-                    // 🚨 2. Send ONLY the hash to Firebase. The plain text never leaves the computer!
-                    await setDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), { securityPin: hashedPinToSave }, { merge: true });
-                    
-                    cachedTeacherPinHash = hashedPinToSave;
-                    
-                    isBioEnabledLocally = false;
-                    localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "false");
-                    localStorage.removeItem(`adhyora_bio_id_teacher_${currentUserID}`);
-                    localStorage.removeItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`);
-                    if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
-                    
-                    elLock.btnSubmit.disabled = false;
-                    
-                    if (isBiometricSupported && !isBioEnabledLocally) {
-                        SetLockMode("SETUP_BIO");
-                    } else {
-                        UnlockSecurityWall();
-                    }
-                } catch(e) {
-                    elLock.status.innerText = "Failed to save PIN.";
-                    elLock.btnSubmit.innerText = "Try Again";
-                    elLock.btnSubmit.disabled = false;
-                }
-            } else {
-                elLock.status.innerText = "PINs do not match. Try again.";
-                elLock.status.style.color = "#ef4444";
-                setTimeout(() => SetLockMode(lockMode === "SETUP_2" ? "SETUP_1" : "RESET_NEW_1"), 1500);
-            }
-        }
-        else if (lockMode === "SETUP_BIO") {
-            elLock.btnSubmit.innerText = "Scanning...";
-            try {
-                const challenge = window.crypto.getRandomValues(new Uint8Array(32));
-                const userIDBuffer = new TextEncoder().encode(currentUserID);
-
-                const credential = await navigator.credentials.create({
-                    publicKey: {
-                        challenge: challenge,
-                        rp: { name: "Adhyora AMS", id: window.location.hostname },
-                        user: { id: userIDBuffer, name: currentTeacherName, displayName: currentTeacherName },
-                        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                        timeout: 60000
-                    }
-                });
-
-                const credIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-                localStorage.setItem(`adhyora_bio_id_teacher_${currentUserID}`, credIdBase64);
-                localStorage.setItem(`adhyora_bio_linked_pin_teacher_${currentUserID}`, cachedTeacherPinHash); 
-                
-                localStorage.setItem(`adhyora_bio_teacher_${currentUserID}`, "true");
-                isBioEnabledLocally = true;
-                if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
-
-                elLock.btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Linked!';
-                setTimeout(() => { UnlockSecurityWall(); }, 800);
-
-            } catch (err) {
-                elLock.status.innerText = "Scan failed or cancelled. You can enable it later in settings.";
-                elLock.status.style.color = "#ef4444";
-                elLock.btnSubmit.innerText = "Try Again";
-            }
-        }
-    });
-
-    function UnlockSecurityWall() {
-        RestoreDashboard(); // 🚨 BRING UI OUT OF VAULT
-        failedPinAttempts = 0;
-        updateStatusBar();
-        
-        if (isFirstUnlock) {
-            const currentHash = window.location.hash.replace("#", "");
-            if (currentHash && currentHash !== "HOME" && views[currentHash]) {
-                setTimeout(() => {
-                    let btnId = "btnNav" + currentHash.charAt(0).toUpperCase() + currentHash.slice(1);
-                    let targetBtn = document.getElementById(btnId);
-                    if(typeof switchView === "function") switchView(views[currentHash], targetBtn || null, true);
-                }, 500); 
-            }
-            isFirstUnlock = false;
-        }
-    }
-
-    // 4. Reset & Password Fallbacks
-    elLock.btnForgot.addEventListener("click", () => {
-        if (lockMode === "SETUP_BIO") {
-            UnlockSecurityWall();
-            return;
-        }
-        elLock.reAuthPass.value = "";
-        elLock.reAuthStatus.innerText = "";
-        elLock.reAuthOverlay.classList.add("active");
-    });
-
-    document.getElementById("btnResetPinSettings")?.addEventListener("click", () => {
-        document.getElementById("settingsOverlay").classList.remove("active");
-        elLock.reAuthPass.value = "";
-        elLock.reAuthStatus.innerText = "";
-        elLock.reAuthOverlay.classList.add("active");
-    });
-
-    elLock.btnReAuth.addEventListener("click", async () => {
-        let pass = elLock.reAuthPass.value.trim();
-        if (!pass) return;
-
-        if (!auth.currentUser || !auth.currentUser.email) {
-            elLock.reAuthStatus.innerText = "Session lost. Please refresh the page.";
-            return;
-        }
-
-        elLock.btnReAuth.innerText = "Verifying...";
-        elLock.btnReAuth.disabled = true;
-        
-        try {
-            const credential = EmailAuthProvider.credential(auth.currentUser.email, pass);
-            await reauthenticateWithCredential(auth.currentUser, credential);
-            
-            elLock.reAuthOverlay.classList.remove("active");
-            elLock.reAuthPass.value = "";
-            
-            VaultDashboard(); // 🚨 VAULT DOM
-            SetLockMode("RESET_NEW_1");
-            
-        } catch(e) {
-            if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
-                elLock.reAuthStatus.innerText = "Incorrect Password.";
-            } else if (e.code === 'auth/too-many-requests') {
-                elLock.reAuthStatus.innerText = "Too many attempts. Try again later.";
-            } else {
-                elLock.reAuthStatus.innerText = "Error: " + (e.code || e.message); 
-            }
-        }
-        elLock.btnReAuth.innerText = "Verify";
-        elLock.btnReAuth.disabled = false;
-    });
-
-    document.getElementById("btnResetPassSettings")?.addEventListener("click", async () => {
-        if (!auth.currentUser || !auth.currentUser.email) {
-            showRcToast("Error: No active user session found.");
-            return;
-        }
-        if (confirm(`Send a password reset link to ${auth.currentUser.email}?`)) {
-            try {
-                await sendPasswordResetEmail(auth, auth.currentUser.email);
-                showRcToast("✅ Password reset link sent!");
-                document.getElementById("settingsOverlay").classList.remove("active");
-            } catch(e) {
-                showRcToast("❌ Failed: " + (e.code || "Unknown Error"));
-            }
-        }
-    });
-
-    // 5. App Background Visibility Lock
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-            const isLocked = elLock.screen.style.display === "flex";
-            if (!isLocked && !isBiometricPromptActive && cachedTeacherPinHash !== "") {
-                
-                // Close modals
-                document.querySelectorAll('.modal-overlay.active, .settings-drawer.active').forEach(modal => {
-                    modal.classList.remove('active');
-                });
-                
-                if (elLock.reAuthPass) elLock.reAuthPass.value = "";
-                if (elLock.reAuthStatus) elLock.reAuthStatus.innerText = "";
-                
-                VaultDashboard(); // 🚨 VAULT DOM
-                SetLockMode("LOGIN");
-
-                updateStatusBar();
-            }
-        }
-    });
-})();
-// ==========================================
 // 🚨 UI NAVIGATION ROUTER (WITH BACK BUTTON SUPPORT)
 // ==========================================
 const views = {
@@ -2146,19 +1508,12 @@ function cleanupAttendanceView() {
 function switchView(targetView, clickedBtn, isHistoryNav = false) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
-    
-    // 🚨 FIX 2: Ensure we remove 'active' from all views before showing the new one
-    Object.values(views).forEach(v => { 
-        if (v) {
-            v.classList.add("hidden-view"); 
-            v.classList.remove("active");
-        }
-    });
+    Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
     
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
-    if (targetView === views.assignments && typeof asnIsInit !== 'undefined' && asnIsInit) {
+    if (targetView === views.assignments && asnIsInit) {
         asnRenderList(asnCachedData);
     }
 
@@ -2166,25 +1521,14 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
         initTimetableEngine();
     }
 
-    const sidebar = document.getElementById("mainSidebar");
-    const mainContent = document.querySelector(".main-content");
-
     if (targetView === "HOME") {
         if(sidebar) sidebar.classList.remove("mobile-hidden"); 
         if(mainContent) mainContent.classList.remove("mobile-active");
-        if (views.welcome && window.innerWidth > 900) {
-            views.welcome.classList.remove("hidden-view");
-            views.welcome.classList.add("active"); // 🚨 Added Active State
-        }
+        if (views.welcome && window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
     } else {
         if(sidebar) sidebar.classList.add("mobile-hidden"); 
         if(mainContent) mainContent.classList.add("mobile-active");
-        if (targetView) { 
-            targetView.classList.remove("hidden-view"); 
-            targetView.classList.add("active"); // 🚨 Added Active State. Engines will now render!
-            targetView.style.opacity = 0; 
-            setTimeout(() => targetView.style.opacity = 1, 50); 
-        } 
+        if (targetView) { targetView.classList.remove("hidden-view"); targetView.style.opacity = 0; setTimeout(() => targetView.style.opacity = 1, 50); } 
         else showRcToast("This module is under construction.");
     }
 
@@ -2203,140 +1547,64 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
 // 🚨 THIS WAS CAUSING THE ERROR! It is now declared exactly ONCE here.
 function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
 
-// 🚨 ADDED FLAGS TO PREVENT DOUBLE-INITIALIZATION
-let attEngineLoaded = false;
-let subjEngineLoaded = false;
-
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
 attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
 attachSafeClick("btnNotifications", (e) => { switchView(views.notifications, e.currentTarget); document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); });
-
-// 🚨 LAZY INITIALIZATION: Engines only start when you click their button!
-attachSafeClick("btnNavAttendance", (e) => { 
-    switchView(views.attendance, e.currentTarget);
-    if (!attEngineLoaded) { initAttendanceEngine(); attEngineLoaded = true; }
-});
-attachSafeClick("btnNavTimetable", (e) => { 
-    switchView(views.timetable, e.currentTarget);
-    initTimetableEngine();
-});
-attachSafeClick("btnNavInternalMarks", (e) => { 
-    switchView(views.internalMarks, e.currentTarget);
-    initInternalMarksEngine();
-});
-attachSafeClick("btnNavSubjects", (e) => { 
-    switchView(views.subjects, e.currentTarget);
-    if (!subjEngineLoaded) { initSubjectDeclarationEngine(); subjEngineLoaded = true; }
-});
-attachSafeClick("btnNavCalendar", (e) => { 
-    switchView(views.calendar, e.currentTarget);
-    initCalendarEngine();
-});
-attachSafeClick("btnNavAssignments", (e) => { 
-    switchView(views.assignments, e.currentTarget);
-    initAssignmentsEngine();
-});
-attachSafeClick("btnNavStudentList", (e) => { 
-    switchView(views.studentList, e.currentTarget);
-    if (typeof startStudentListListener === "function" && !slLoaded) startStudentListListener();
-});
-attachSafeClick("btnNavSubjectAssign", (e) => { 
-    switchView(views.subjectAssign, e.currentTarget);
-    initSubjectAssignEngine();
-});
-attachSafeClick("btnNavBatch", (e) => { 
-    switchView(views.batch, e.currentTarget);
-    initBatchEngine();
-});
-attachSafeClick("btnNavEventAttendance", (e) => { 
-    switchView(views.eventAttendance, e.currentTarget);
-    initEventAttendanceEngine();
-});
+attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
+attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
+attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
+attachSafeClick("btnNavSubjects", (e) => switchView(views.subjects, e.currentTarget));
+attachSafeClick("btnNavCalendar", (e) => switchView(views.calendar, e.currentTarget));
+attachSafeClick("btnNavAssignments", (e) => switchView(views.assignments, e.currentTarget));
+attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.currentTarget));
+attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
+attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
+attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
 
 // ==========================================
-// 🚨 HARDWARE BACK BUTTON / ROUTING MANAGER
+// 🚨 SMART BACK BUTTON LISTENER
 // ==========================================
-let exitPressTimer = 0; // Tracks back button presses for exiting
 
-// Push an initial state to trap the back button the moment the app loads
-history.pushState(null, null, location.href);
+window.addEventListener("load", () => {
+    history.replaceState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
+});
 
-window.addEventListener('popstate', () => {
-
-    // 1. Security Check (Block back button if locked)
-    if (elLock.screen && elLock.screen.style.display === "flex") {
-        history.pushState(null, null, location.href); // Re-trap
+window.addEventListener("popstate", (e) => {
+    // 1. Close open Modals/Settings FIRST
+    let activeModals = document.querySelectorAll(".modal-overlay.active, .settings-drawer.active");
+    if (activeModals.length > 0) {
+        activeModals.forEach(m => m.classList.remove("active"));
+        
+        let vName = e.state ? e.state.viewId : "HOME";
+        let btnId = e.state ? e.state.btnId : "btnHome";
+        history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
         return;
     }
 
-    // 2. Modals & Overlays (Close the top-most active popup)
-    const closableOverlays = [
-        "updateProgressModal", "subConfirmModal", "jumpDateModal", "hodNotificationPanel", 
-        "settingsOverlay", "themesModal", "subjConfirmDeleteModal", "saConfirmModal", 
-        "evtSearchModal", "imMarksModal", "deptSplitOverlay", "exportDataModal", 
-        "composeMessageModal", "sessionsModal", "createAssignmentModal", "reAuthOverlay"
-    ];
-    
-    for (let id of closableOverlays) {
-        let el = document.getElementById(id);
-        if (el && el.classList.contains("active")) {
-            el.classList.remove("active");
-            
-            if(id === "reAuthOverlay") {
-                elLock.reAuthPass.value = "";
-                elLock.reAuthStatus.innerText = "";
+    // 2. Handle actual Panel Navigation
+    if (e.state && e.state.viewId) {
+        let vName = e.state.viewId;
+        let btnId = e.state.btnId;
+        let btn = btnId ? document.getElementById(btnId) : null;
+
+        if (vName === "HOME") {
+            switchView("HOME", btn || document.getElementById("btnHome"), true);
+        } else {
+            let targetView = document.getElementById(vName);
+            if (targetView) {
+                switchView(targetView, btn, true);
+            } else {
+                switchView("HOME", document.getElementById("btnHome"), true);
             }
-            
-            history.pushState(null, null, location.href); // Re-trap after closing modal
-            return;
         }
-    }
-
-    // 3. Deep Sub-Views (Attendance Screens)
-    let mainScr = document.getElementById("attMainScreen");
-    let histScr = document.getElementById("attHistoryScreen");
-    let recScr = document.getElementById("attRecordScreen");
-
-    // If viewing a specific record -> Go back to History list
-    if (recScr && recScr.style.display === "flex") {
-        recScr.style.display = "none";
-        if (histScr) histScr.style.display = "flex";
-        history.pushState(null, null, location.href); // Re-trap
-        return;
-    }
-    // If viewing History list -> Go back to Main Attendance Panel
-    if (histScr && histScr.style.display === "flex") {
-        histScr.style.display = "none";
-        if (mainScr) mainScr.style.display = "flex";
-        history.pushState(null, null, location.href); // Re-trap
-        return;
-    }
-
-    // 4. Are we on the Home Screen?
-    let isHome = false;
-    if (window.innerWidth > 900) {
-        isHome = views.welcome && !views.welcome.classList.contains("hidden-view");
     } else {
-        isHome = document.getElementById("mainSidebar") && !document.getElementById("mainSidebar").classList.contains("mobile-hidden") && !document.querySelector(".main-content").classList.contains("mobile-active");
-    }
-
-    if (!isHome) {
-        // We are inside a sidebar menu item. Go back to HOME.
-        switchView("HOME", document.getElementById("btnHome"));
-        history.pushState(null, null, location.href); // Re-trap on home screen
-        return;
-    }
-
-    // 5. 🚨 THE NEW DOUBLE-TAP TO EXIT LOGIC
-    let now = Date.now();
-    if (now - exitPressTimer < 2000) {
-        // Double tap confirmed. Let the OS close the PWA!
-        history.back(); 
-    } else {
-        // First tap: Arm the timer and show toast
-        exitPressTimer = now;
-        showRcToast("Press back again to exit");
-        history.pushState(null, null, location.href); 
+        // 3. Prevent accidental app exit
+        if (confirm("Do you want to sign out of Adhyora?")) {
+            handleSignOut();
+        } else {
+            history.pushState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
+            lastPushedView = "HOME";
+        }
     }
 });
 
@@ -2357,90 +1625,28 @@ attachSafeClick("btnWebsite", () => window.open("https://pixelaks.in/", "_blank"
 attachSafeClick("btnPrivacy", () => window.open("https://pixelaks.in/privacy", "_blank"));
 attachSafeClick("btnTerms", () => window.open("https://pixelaks.in/terms", "_blank"));
 // ==========================================
-// 🚨 SMART SIGN OUT (FULL CLEANUP)
+// 🚨 SMART SIGN OUT (CLEARS TOKENS)
 // ==========================================
 async function handleSignOut() {
-
     try {
-
-        // 🚨 REMOVE PUSH TOKEN FROM DATABASE
+        // If we have a token in RAM, delete it from the database!
         if (myCurrentPushToken && currentUserID && currentCollegeID) {
-
-            const teacherRef = doc(
-                db,
-                "colleges",
-                currentCollegeID,
-                "teachers",
-                currentUserID
-            );
-
+            const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
             await setDoc(teacherRef, {
                 webFcmTokens: arrayRemove(myCurrentPushToken)
             }, { merge: true });
-
-            console.log("Push Token removed!");
-
+            console.log("Push Token cleanly removed from database!");
         }
-
-        // 🚨 STOP FIRESTORE LISTENERS
-        if (profileListener) profileListener();
-
-        if (globalListenerUnsub) globalListenerUnsub();
-
-        if (inboxListenerUnsub) inboxListenerUnsub();
-
-        // 🚨 REMOVE CURRENT WEB SESSION
-        if (myWebDeviceID) {
-
-            try {
-
-                await deleteDoc(
-                    doc(
-                        db,
-                        "colleges",
-                        currentCollegeID,
-                        "teachers",
-                        currentUserID,
-                        "sessions",
-                        myWebDeviceID
-                    )
-                );
-
-            } catch (e) {
-
-                console.warn("Session Delete Error:", e);
-
-            }
-
-        }
-
-        // 🚨 FIREBASE AUTH SIGNOUT
-        await signOut(auth);
-
-        // 🚨 CLEAR BREADCRUMBS & CACHE
-        localStorage.clear();
-
-        sessionStorage.clear();
-
-        // 🚨 HARD REDIRECT
-        window.location.replace("index.html");
-
-    } catch(e) {
-
-        console.error("Signout Error:", e);
-
+    } catch(e) { 
+        console.error("Error removing token", e); 
     }
-
+    
+    // Now log them out!
+    signOut(auth).then(() => window.location.href = "index.html");
 }
 
 attachSafeClick("btnSignOut", () => {
-
-    if (confirm("Sign out of Adhyora?")) {
-
-        handleSignOut();
-
-    }
-
+    if (confirm("Sign out of Adhyora?")) handleSignOut();
 });
 
 // ==========================================
@@ -2457,8 +1663,6 @@ function applyTheme(isDark) {
         if(lBtn) lBtn.style.border = "2px solid var(--brand-red)"; if(dBtn) dBtn.style.border = "1px solid #cbd5e1";
     }
     localStorage.setItem("adhyora_teacher_theme", isDark ? "dark" : "light");
-
-    updateStatusBar();
 }
 attachSafeClick("btnThemes", () => { let s = document.getElementById("settingsOverlay"); let t = document.getElementById("themesModal"); if(s) s.classList.remove("active"); if(t) t.classList.add("active"); });
 attachSafeClick("btnDarkMode", () => applyTheme(true));
@@ -7000,7 +6204,7 @@ async function requestPushPermissions() {
             console.log('Notification permission granted.');
             
             // Explicitly use the root service worker route to match dev tools setup
-            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
+            const swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
             
             const currentToken = await getToken(messaging, { 
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
@@ -7144,13 +6348,7 @@ async function registerTeacherWebSession() {
         // Listen to our own subcollection document. If deleted, instantly force-kick the browser session!
         onSnapshot(sessionRef, (docSnap) => {
             if (!docSnap.exists()) {
-                signOut(auth).then(() => {
-
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    window.location.replace("index.html");
-                
-                });
+                signOut(auth).then(() => window.location.href = "index.html");
             }
         });
     } catch(e) {
