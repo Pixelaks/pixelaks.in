@@ -116,6 +116,7 @@ async function fetchPrincipalProfile() {
             
             registerWebSession();
             startSessionListener();
+            requestPushPermissions();
             // 🚨 Replaced Subscription with PIN check. Pin check will trigger Subscription upon success.
             CheckSecurityPin(); 
         } else {
@@ -289,16 +290,6 @@ el.btnSignOut.addEventListener("click", () => {
     if (confirm("Sign out of Adhyora?")) {
         handlePrincipalSignOut();
     }
-});
-
-el.btnSignOut.addEventListener("click", () => {
-
-    if (confirm("Sign out?")) {
-
-        principalSignOut();
-
-    }
-
 });
 
 const views = {
