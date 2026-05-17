@@ -137,8 +137,7 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    let loader = document.getElementById("initialAppLoader");
-    if(loader) loader.style.display = "none";
+    hideAppLoader();
 
     // 🚨 FIX: Force the profile loop to ensure teacherDeptRaw is ready before proceeding
     if (!hasStartedInbox && teacherDeptRaw !== "") {
@@ -147,10 +146,7 @@ async function finalizeProfileUI(rawName, email, deptName) {
         startInboxListener();
         await syncSemesterWithDatabase();
 
-        initAttendanceEngine(); 
-        initSubjectDeclarationEngine(); 
-        initCalendarEngine(); 
-        initAssignmentsEngine(); 
+        // 🚨 REMOVED AGGRESSIVE INITIALIZATIONS FROM HERE
         if (isHOD) setupExportEngine();
         
         // 🚨 CRITICAL ORDER CHANGE: Run permission verification AFTER all background engines load
@@ -2010,19 +2006,55 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
 // 🚨 THIS WAS CAUSING THE ERROR! It is now declared exactly ONCE here.
 function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
 
+// 🚨 ADDED FLAGS TO PREVENT DOUBLE-INITIALIZATION
+let attEngineLoaded = false;
+let subjEngineLoaded = false;
+
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
 attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
 attachSafeClick("btnNotifications", (e) => { switchView(views.notifications, e.currentTarget); document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); });
-attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
-attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
-attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
-attachSafeClick("btnNavSubjects", (e) => switchView(views.subjects, e.currentTarget));
-attachSafeClick("btnNavCalendar", (e) => switchView(views.calendar, e.currentTarget));
-attachSafeClick("btnNavAssignments", (e) => switchView(views.assignments, e.currentTarget));
-attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.currentTarget));
-attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
-attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
-attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
+
+// 🚨 LAZY INITIALIZATION: Engines only start when you click their button!
+attachSafeClick("btnNavAttendance", (e) => { 
+    switchView(views.attendance, e.currentTarget);
+    if (!attEngineLoaded) { initAttendanceEngine(); attEngineLoaded = true; }
+});
+attachSafeClick("btnNavTimetable", (e) => { 
+    switchView(views.timetable, e.currentTarget);
+    initTimetableEngine();
+});
+attachSafeClick("btnNavInternalMarks", (e) => { 
+    switchView(views.internalMarks, e.currentTarget);
+    initInternalMarksEngine();
+});
+attachSafeClick("btnNavSubjects", (e) => { 
+    switchView(views.subjects, e.currentTarget);
+    if (!subjEngineLoaded) { initSubjectDeclarationEngine(); subjEngineLoaded = true; }
+});
+attachSafeClick("btnNavCalendar", (e) => { 
+    switchView(views.calendar, e.currentTarget);
+    initCalendarEngine();
+});
+attachSafeClick("btnNavAssignments", (e) => { 
+    switchView(views.assignments, e.currentTarget);
+    initAssignmentsEngine();
+});
+attachSafeClick("btnNavStudentList", (e) => { 
+    switchView(views.studentList, e.currentTarget);
+    if (typeof startStudentListListener === "function" && !slLoaded) startStudentListListener();
+});
+attachSafeClick("btnNavSubjectAssign", (e) => { 
+    switchView(views.subjectAssign, e.currentTarget);
+    initSubjectAssignEngine();
+});
+attachSafeClick("btnNavBatch", (e) => { 
+    switchView(views.batch, e.currentTarget);
+    initBatchEngine();
+});
+attachSafeClick("btnNavEventAttendance", (e) => { 
+    switchView(views.eventAttendance, e.currentTarget);
+    initEventAttendanceEngine();
+});
 
 // ==========================================
 // 🚨 SMART BACK BUTTON LISTENER
