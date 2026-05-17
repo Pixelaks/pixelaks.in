@@ -83,6 +83,42 @@ if (!currentCollegeID) {
 }
 
 // ==========================================
+// 🚨 DYNAMIC PHONE STATUS BAR CONTROLLER
+// ==========================================
+function updateStatusBar() {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeMeta) return;
+
+    // Grab our full-screen dark overlays
+    const loader = document.getElementById("initialAppLoader");
+    const lockScreen = document.getElementById("appLockScreen");
+    const paywall = document.getElementById("subBlockPanel"); // Fallback check
+
+    // Check if any of them are currently visible
+    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
+    const isLockActive = lockScreen && lockScreen.style.display === "flex";
+    const isPaywallActive = paywall && paywall.style.display === "flex";
+
+    if (isLoaderActive || isLockActive || isPaywallActive) {
+        // Keep it Dark Navy for Loading / Lock
+        themeMeta.setAttribute("content", "#0b111e"); 
+    } else {
+        // We are on the Dashboard! Let the Theme Engine decide
+        const isDark = document.body.classList.contains("dark-mode");
+        themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+    }
+}
+
+function hideAppLoader() {
+    const loader = document.getElementById("initialAppLoader");
+    if (loader && !loader.classList.contains("hidden")) {
+        setTimeout(() => {
+            loader.classList.add("hidden");
+            updateStatusBar(); // 🚨 Trigger color change!
+        }, 800);
+    }
+}
+// ==========================================
 // 🚨 PROFILE ENGINE
 // ==========================================
 function ListenToProfile() {
@@ -137,8 +173,10 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    let loader = document.getElementById("initialAppLoader");
-    if(loader) loader.style.display = "none";
+    // let loader = document.getElementById("initialAppLoader");
+    // if(loader) loader.style.display = "none";
+
+    hideAppLoader();
 
     // 🚨 FIX: Force the profile loop to ensure teacherDeptRaw is ready before proceeding
     if (!hasStartedInbox && teacherDeptRaw !== "") {
@@ -1785,6 +1823,7 @@ async function hashText(text) {
     function UnlockSecurityWall() {
         RestoreDashboard(); // 🚨 BRING UI OUT OF VAULT
         failedPinAttempts = 0;
+        updateStatusBar();
         
         if (isFirstUnlock) {
             const currentHash = window.location.hash.replace("#", "");
@@ -2158,6 +2197,8 @@ function applyTheme(isDark) {
         if(lBtn) lBtn.style.border = "2px solid var(--brand-red)"; if(dBtn) dBtn.style.border = "1px solid #cbd5e1";
     }
     localStorage.setItem("adhyora_teacher_theme", isDark ? "dark" : "light");
+
+    updateStatusBar();
 }
 attachSafeClick("btnThemes", () => { let s = document.getElementById("settingsOverlay"); let t = document.getElementById("themesModal"); if(s) s.classList.remove("active"); if(t) t.classList.add("active"); });
 attachSafeClick("btnDarkMode", () => applyTheme(true));
