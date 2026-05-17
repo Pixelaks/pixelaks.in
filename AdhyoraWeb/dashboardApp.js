@@ -186,7 +186,13 @@ async function registerWebSession() {
         await setDoc(sessionRef, { deviceName: osName, loginTime: serverTimestamp() }, {merge: true});
         
         onSnapshot(sessionRef, (docSnap) => {
-            if (!docSnap.exists()) signOut(auth).then(() => window.location.href = "index.html");
+            if (!docSnap.exists()) {
+    signOut(auth).then(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace("index.html");
+    });
+}
         });
     } catch(e) {}
 }
