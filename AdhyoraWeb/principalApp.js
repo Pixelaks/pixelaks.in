@@ -75,10 +75,10 @@ currentCollegeID = urlParams.get('college');
 function updateStatusBar() {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     
-    // Grab our full-screen dark overlays (checking both paywall ID names just to be safe)
+    // Grab our full-screen dark overlays
     const loader = document.getElementById("initialAppLoader");
     const lockScreen = document.getElementById("appLockScreen");
-    const paywall = document.getElementById("subBlockPanel") || document.getElementById("subscriptionBlockPanel");
+    const paywall = document.getElementById("subscriptionBlockPanel") || document.getElementById("subBlockPanel");
 
     // Check if any of them are currently visible
     const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
@@ -89,7 +89,7 @@ function updateStatusBar() {
         // 1. TOP STATUS BAR: Force Dark Navy
         if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
         
-        // 2. BOTTOM NAV BAR: Force Dark Navy background
+        // 2. BOTTOM NAV BAR: Force Dark Navy background so Android paints the gesture bar!
         document.body.style.backgroundColor = "#0b111e";
     } else {
         const isDark = document.body.classList.contains("dark-mode");
@@ -97,8 +97,7 @@ function updateStatusBar() {
         // 1. TOP STATUS BAR: Match the Dashboard Theme
         if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
         
-        // 2. BOTTOM NAV BAR: Remove the inline override so your style.css 
-        //    light/dark mode variables naturally color the bottom of the phone!
+        // 2. BOTTOM NAV BAR: Let CSS take over
         document.body.style.backgroundColor = "";
     }
 }
