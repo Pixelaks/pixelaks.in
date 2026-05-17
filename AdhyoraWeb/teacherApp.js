@@ -83,29 +83,36 @@ if (!currentCollegeID) {
 }
 
 // ==========================================
-// 🚨 DYNAMIC PHONE STATUS BAR CONTROLLER
+// 🚨 DYNAMIC PHONE STATUS & NAV BAR CONTROLLER
 // ==========================================
 function updateStatusBar() {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (!themeMeta) return;
-
-    // Grab our full-screen dark overlays
+    
+    // Grab our full-screen dark overlays (checking both paywall ID names just to be safe)
     const loader = document.getElementById("initialAppLoader");
     const lockScreen = document.getElementById("appLockScreen");
-    const paywall = document.getElementById("subBlockPanel"); // Fallback check
+    const paywall = document.getElementById("subBlockPanel") || document.getElementById("subscriptionBlockPanel");
 
     // Check if any of them are currently visible
     const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
     const isLockActive = lockScreen && lockScreen.style.display === "flex";
-    const isPaywallActive = paywall && paywall.style.display === "flex";
+    const isPaywallActive = paywall && (paywall.style.display === "flex" || paywall.classList.contains("active"));
 
     if (isLoaderActive || isLockActive || isPaywallActive) {
-        // Keep it Dark Navy for Loading / Lock
-        themeMeta.setAttribute("content", "#0b111e"); 
+        // 1. TOP STATUS BAR: Force Dark Navy
+        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
+        
+        // 2. BOTTOM NAV BAR: Force Dark Navy background
+        document.body.style.backgroundColor = "#0b111e";
     } else {
-        // We are on the Dashboard! Let the Theme Engine decide
         const isDark = document.body.classList.contains("dark-mode");
-        themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 1. TOP STATUS BAR: Match the Dashboard Theme
+        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 2. BOTTOM NAV BAR: Remove the inline override so your style.css 
+        //    light/dark mode variables naturally color the bottom of the phone!
+        document.body.style.backgroundColor = "";
     }
 }
 
