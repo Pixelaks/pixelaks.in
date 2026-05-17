@@ -4,6 +4,7 @@
   "description": "Student and Teacher Portal",
   "start_url": "./index.html",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0b111e",
   "theme_color": "#0b111e",
   "orientation": "portrait-primary",
