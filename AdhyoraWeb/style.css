@@ -88,6 +88,9 @@ body {
     min-height: 100vh;
     color: var(--text-light);
     overflow: hidden; 
+
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Background Particles Container */
