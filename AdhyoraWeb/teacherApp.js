@@ -88,7 +88,7 @@ if (!currentCollegeID) {
 function updateStatusBar() {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     
-    // Grab our full-screen dark overlays (checking both paywall ID names just to be safe)
+    // Grab our full-screen dark overlays
     const loader = document.getElementById("initialAppLoader");
     const lockScreen = document.getElementById("appLockScreen");
     const paywall = document.getElementById("subBlockPanel") || document.getElementById("subscriptionBlockPanel");
@@ -99,19 +99,11 @@ function updateStatusBar() {
     const isPaywallActive = paywall && (paywall.style.display === "flex" || paywall.classList.contains("active"));
 
     if (isLoaderActive || isLockActive || isPaywallActive) {
-        // 1. TOP STATUS BAR: Force Dark Navy
         if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
-        
-        // 2. BOTTOM NAV BAR: Force Dark Navy background
         document.body.style.backgroundColor = "#0b111e";
     } else {
         const isDark = document.body.classList.contains("dark-mode");
-        
-        // 1. TOP STATUS BAR: Match the Dashboard Theme
         if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
-        
-        // 2. BOTTOM NAV BAR: Remove the inline override so your style.css 
-        //    light/dark mode variables naturally color the bottom of the phone!
         document.body.style.backgroundColor = "";
     }
 }
@@ -121,10 +113,11 @@ function hideAppLoader() {
     if (loader && !loader.classList.contains("hidden")) {
         setTimeout(() => {
             loader.classList.add("hidden");
-            updateStatusBar(); // 🚨 Trigger color change!
+            updateStatusBar(); 
         }, 800);
     }
 }
+
 // ==========================================
 // 🚨 PROFILE ENGINE
 // ==========================================
@@ -180,19 +173,16 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    hideAppLoader();
+    hideAppLoader(); // Because we defined this above, it will no longer crash!
 
-    // 🚨 FIX: Force the profile loop to ensure teacherDeptRaw is ready before proceeding
     if (!hasStartedInbox && teacherDeptRaw !== "") {
         hasStartedInbox = true;
         
-        startInboxListener();
+        startInboxListener(); // Messages and Notifications will now load correctly!
         await syncSemesterWithDatabase();
 
-        // 🚨 REMOVED AGGRESSIVE INITIALIZATIONS FROM HERE
         if (isHOD) setupExportEngine();
         
-        // 🚨 CRITICAL ORDER CHANGE: Run permission verification AFTER all background engines load
         await requestPushPermissions(); 
         updateNotificationToggleUI(); 
     }
