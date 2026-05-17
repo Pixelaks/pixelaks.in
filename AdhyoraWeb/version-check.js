@@ -16,7 +16,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   remoteConfig.settings.minimumFetchIntervalMillis = 0; 
 
   // THIS IS YOUR SINGLE SOURCE OF TRUTH
-  const LOCAL_VERSION = "1.0.0"; 
+  const LOCAL_VERSION = "1.0.1"; 
 
   // ==========================================
   // 1. DYNAMICALLY UPDATE THE UI TEXT
