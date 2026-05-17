@@ -234,6 +234,11 @@ signInBtn.addEventListener("click", async (e) => {
     signInBtn.disabled = true;
     signInBtn.innerText = "Processing...";
 
+    localStorage.removeItem("adhyora_role");
+    localStorage.removeItem("adhyora_college");
+    localStorage.removeItem("adhyora_roll");
+    localStorage.removeItem("adhyora_roomcode");
+
     try {
         // Teacher Room Code DB Validation (matches C# PerformRoomCodeValidation)
         if (role === "Teacher") {
@@ -261,17 +266,32 @@ signInBtn.addEventListener("click", async (e) => {
         }
 
         // 🚨 ROLE-BASED VERIFICATION & ROUTING
+        // 🚨 ROLE-BASED VERIFICATION & ROUTING
         if (role === "Student") {
-            showToast("Login Successful!");
-            const rollNo = email.split('@')[0]; 
+            showToast("Verifying Student Access...");
+            const rollNo = email.split('@')[0].toUpperCase();
 
-            // 🚨 ADD THESE BREADCRUMBS
-            localStorage.setItem("adhyora_role", "Student");
-            localStorage.setItem("adhyora_college", selectedCollegeID);
-            localStorage.setItem("adhyora_roll", rollNo.toUpperCase());
-          
-            window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo.toUpperCase()}`;
+            // 🚨 ADDED FIX: Actually check if the student exists in this college!
+            const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
+            const studentSnap = await getDoc(studentRef);
+
+            if (studentSnap.exists() && studentSnap.data().userID === user.uid) {
+                showToast("Login Successful!");
+
+                // ADD THESE BREADCRUMBS
+                localStorage.setItem("adhyora_role", "Student");
+                localStorage.setItem("adhyora_college", selectedCollegeID);
+                localStorage.setItem("adhyora_roll", rollNo);
+                
+                window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo}`;
+            } else {
+                showToast("Access Denied: Student record not found.");
+                await signOut(auth);
+                document.getElementById("loginPassword").value = "";
+                resetSignInBtn();
+            }
         } 
+        // 🚨 ADDED: TEACHER LOGIN VERIFICATION ... (rest of your code)
         // 🚨 ADDED: TEACHER LOGIN VERIFICATION
         else if (role === "Teacher") {
             showToast("Verifying Teacher Access...");
