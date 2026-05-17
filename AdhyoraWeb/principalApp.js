@@ -4201,19 +4201,25 @@ document.onkeydown = function(e) {
 // ==========================================
 // 🚨 HARDWARE BACK BUTTON / ROUTING MANAGER
 // ==========================================
+let exitPressTimer = 0; // 🚨 NEW: Tracks back button presses for exiting
+
 // Push an initial state to trap the back button the moment the app loads
 history.pushState(null, null, location.href);
 
 window.addEventListener('popstate', () => {
-    // 1. Immediately push another state to stay trapped inside the app
-    history.pushState(null, null, location.href);
 
-    // 2. Security Check (Block back button if locked or paywalled)
-    if (elLock.screen && elLock.screen.style.display === "flex") return;
+    // 1. Security Check (Block back button if locked or paywalled)
+    if (elLock.screen && elLock.screen.style.display === "flex") {
+        history.pushState(null, null, location.href); // Re-trap
+        return;
+    }
     const subBlock = document.getElementById("subBlockPanel");
-    if (subBlock && subBlock.style.display === "flex") return;
+    if (subBlock && subBlock.style.display === "flex") {
+        history.pushState(null, null, location.href); // Re-trap
+        return;
+    }
 
-    // 3. Modals & Overlays (Close the top-most active popup)
+    // 2. Modals & Overlays (Close the top-most active popup)
     const closableOverlays = [
         "pinOverlay", "confirmOverlay", "durationOverlay", "addDeptOverlay", "combineOverlay",
         "moveBatchOverlay", "deptSplitOverlay", "promoteWarningOverlay", "exportOverlay",
@@ -4234,21 +4240,25 @@ window.addEventListener('popstate', () => {
                 elLock.reAuthPass.value = "";
                 elLock.reAuthStatus.innerText = "";
             }
+            
+            history.pushState(null, null, location.href); // Re-trap after closing modal
             return; // Stop here! We only want to close one layer at a time.
         }
     }
 
-    // 4. Deep Sub-Views (e.g., looking at a specific teacher/student profile)
+    // 3. Deep Sub-Views (e.g., looking at a specific teacher/student profile)
     if (views.teacherDashboard && !views.teacherDashboard.classList.contains("hidden-view")) {
         switchView(views.teacherList);
+        history.pushState(null, null, location.href); // Re-trap
         return;
     }
     if (views.studentDashboard && !views.studentDashboard.classList.contains("hidden-view")) {
         switchView(views.studentList);
+        history.pushState(null, null, location.href); // Re-trap
         return;
     }
 
-    // 5. Are we on the Home Screen?
+    // 4. Are we on the Home Screen?
     let isHome = false;
     if (window.innerWidth > 900) {
         isHome = views.welcome && !views.welcome.classList.contains("hidden-view");
@@ -4259,20 +4269,20 @@ window.addEventListener('popstate', () => {
     if (!isHome) {
         // We are inside a sidebar menu item. Go back to HOME.
         switchView("HOME");
+        history.pushState(null, null, location.href); // Re-trap on home screen
         return;
     }
 
-    // 6. We are on the Home Screen with zero popups open. Prompt Sign Out!
-    if (confirm("Are you sure you want to sign out?")) {
-        if (myCurrentPushToken && currentCollegeID && currentUserID) {
-            // Clean up push tokens before signing out securely
-            updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
-                webFcmTokens: arrayRemove(myCurrentPushToken)
-            }).finally(() => {
-                signOut(auth).then(() => window.location.href = "index.html");
-            });
-        } else {
-            signOut(auth).then(() => window.location.href = "index.html");
-        }
+    // 5. 🚨 THE NEW DOUBLE-TAP TO EXIT LOGIC
+    let now = Date.now();
+    if (now - exitPressTimer < 2000) {
+        // They double-pressed within 2 seconds! Let the app close.
+        // We intentionally DO NOT pushState here so the OS takes over and exits.
+        history.back(); 
+    } else {
+        // First press: Update timer, show the toast, and re-arm the trap
+        exitPressTimer = now;
+        showRcToast("Press back again to exit");
+        history.pushState(null, null, location.href); 
     }
 });
