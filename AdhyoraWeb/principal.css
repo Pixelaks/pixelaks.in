@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Yatra+One&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
-
 /* =========================================
    🚀 DOM VIRTUALIZATION (SCROLL OPTIMIZATION)
    ========================================= */
@@ -124,7 +123,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
 
-html, body {
+body {
     background-color: var(--bg-base);
     color: var(--text-green);
     height: 100vh;
@@ -138,8 +137,6 @@ html, body {
     display: flex;
     overflow: hidden;
     position: relative;
-
-   padding-top: env(safe-area-inset-top);
 }
 
 .logo-text {
