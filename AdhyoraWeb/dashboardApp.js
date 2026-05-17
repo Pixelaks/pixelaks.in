@@ -1033,29 +1033,55 @@ setInterval(updateTimelineVisuals, 60000);
 document.getElementById("openSettingsBtn").addEventListener("click", () => { el.sidebar.classList.add("open"); el.overlay.classList.add("active"); });
 el.overlay.addEventListener("click", () => { el.sidebar.classList.remove("open"); el.overlay.classList.remove("active"); });
 // ==========================================
-// 🚨 SMART SIGN OUT (CLEARS TOKENS)
+// 🚨 UNIFIED MASTER SIGN-OUT ENGINE
 // ==========================================
 async function handleSignOut() {
     try {
-        // If we have a token in RAM, delete it from the database!
-        if (myCurrentPushToken && currentRollNo && collegeID) {
-            const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
-            await setDoc(studentRef, {
-                webFcmTokens: arrayRemove(myCurrentPushToken)
-            }, { merge: true });
-            console.log("Push Token cleanly removed from database!");
+        // 1. REMOVE PUSH TOKEN FROM BROWSER
+        if (myCurrentPushToken) {
+            try {
+                await deleteToken(messaging);
+            } catch(e) {
+                console.warn("Push Token Delete Error:", e);
+            }
         }
-    } catch(e) { 
-        console.error("Error removing token", e); 
+
+        // 2. REMOVE TOKEN FROM FIRESTORE PROFILE
+        if (myCurrentPushToken && currentRollNo && collegeID) {
+            try {
+                const studentRef = doc(db, "colleges", collegeID, "students", currentRollNo);
+                await setDoc(studentRef, {
+                    webFcmTokens: arrayRemove(myCurrentPushToken)
+                }, { merge: true });
+            } catch(e) {
+                console.warn("Firestore Token Remove Error:", e);
+            }
+        }
+
+        // 3. REMOVE ACTIVE BROWSER SESSION
+        if (myWebDeviceID && currentRollNo && collegeID) {
+            try {
+                await deleteDoc(doc(db, "colleges", collegeID, "students", currentRollNo, "sessions", myWebDeviceID));
+            } catch(e) {
+                console.warn("Session Delete Error:", e);
+            }
+        }
+
+        // 4. FIREBASE AUTH SIGNOUT
+        await signOut(auth);
+
+        // 5. NUKE ALL BREADCRUMBS & CACHE
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // 6. HARD REDIRECT
+        window.location.replace("index.html");
+
+    } catch (e) {
+        console.error("Signout Error:", e);
+        localStorage.clear();
+        window.location.replace("index.html");
     }
-    
-    // Now log them out!
-  // 🚨 SWEEP UP THE BREADCRUMBS!
-    localStorage.removeItem("adhyora_role");
-    localStorage.removeItem("adhyora_college");
-    localStorage.removeItem("adhyora_roll");
-  
-    signOut(auth).then(() => window.location.href = "index.html");
 }
 
 document.getElementById("btnSignOut").addEventListener("click", handleSignOut);
