@@ -83,6 +83,49 @@ if (!currentCollegeID) {
 }
 
 // ==========================================
+// 🚨 DYNAMIC PHONE STATUS & NAV BAR CONTROLLER
+// ==========================================
+function updateStatusBar() {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    
+    // Grab our full-screen dark overlays (checking both paywall ID names just to be safe)
+    const loader = document.getElementById("initialAppLoader");
+    const lockScreen = document.getElementById("appLockScreen");
+    const paywall = document.getElementById("subBlockPanel") || document.getElementById("subscriptionBlockPanel");
+
+    // Check if any of them are currently visible
+    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
+    const isLockActive = lockScreen && lockScreen.style.display === "flex";
+    const isPaywallActive = paywall && (paywall.style.display === "flex" || paywall.classList.contains("active"));
+
+    if (isLoaderActive || isLockActive || isPaywallActive) {
+        // 1. TOP STATUS BAR: Force Dark Navy
+        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
+        
+        // 2. BOTTOM NAV BAR: Force Dark Navy background
+        document.body.style.backgroundColor = "#0b111e";
+    } else {
+        const isDark = document.body.classList.contains("dark-mode");
+        
+        // 1. TOP STATUS BAR: Match the Dashboard Theme
+        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 2. BOTTOM NAV BAR: Remove the inline override so your style.css 
+        //    light/dark mode variables naturally color the bottom of the phone!
+        document.body.style.backgroundColor = "";
+    }
+}
+
+function hideAppLoader() {
+    const loader = document.getElementById("initialAppLoader");
+    if (loader && !loader.classList.contains("hidden")) {
+        setTimeout(() => {
+            loader.classList.add("hidden");
+            updateStatusBar(); // 🚨 Trigger color change!
+        }, 800);
+    }
+}
+// ==========================================
 // 🚨 PROFILE ENGINE
 // ==========================================
 function ListenToProfile() {
@@ -1781,6 +1824,7 @@ async function hashText(text) {
     function UnlockSecurityWall() {
         RestoreDashboard(); // 🚨 BRING UI OUT OF VAULT
         failedPinAttempts = 0;
+        updateStatusBar();
         
         if (isFirstUnlock) {
             const currentHash = window.location.hash.replace("#", "");
@@ -1880,6 +1924,8 @@ async function hashText(text) {
                 
                 VaultDashboard(); // 🚨 VAULT DOM
                 SetLockMode("LOGIN");
+
+                updateStatusBar();
             }
         }
     });
@@ -1963,8 +2009,8 @@ function cleanupAttendanceView() {
     if (recScr) recScr.style.display = "none";
 }
 
-// 🚨 OPTIMIZATION: Handles native history push states
-function switchView(targetView, clickedBtn, isHistoryNav = false) {
+// 🚨 OPTIMIZATION: Stripped out history tracking. Navigation is now a pure SPA state.
+function switchView(targetView, clickedBtn) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
     Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
@@ -1972,7 +2018,7 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
 
-    if (targetView === views.assignments && asnIsInit) {
+    if (targetView === views.assignments && typeof asnIsInit !== 'undefined' && asnIsInit) {
         asnRenderList(asnCachedData);
     }
 
@@ -1980,26 +2026,18 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
         initTimetableEngine();
     }
 
+    const sidebar = document.getElementById("mainSidebar");
+    const mainContent = document.querySelector(".main-content");
+
     if (targetView === "HOME") {
-        if(sidebar) sidebar.classList.remove("mobile-hidden"); 
+        if(sidebar) sidebar.classList.remove("mobile-hidden");
         if(mainContent) mainContent.classList.remove("mobile-active");
         if (views.welcome && window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
     } else {
-        if(sidebar) sidebar.classList.add("mobile-hidden"); 
+        if(sidebar) sidebar.classList.add("mobile-hidden");
         if(mainContent) mainContent.classList.add("mobile-active");
         if (targetView) { targetView.classList.remove("hidden-view"); targetView.style.opacity = 0; setTimeout(() => targetView.style.opacity = 1, 50); } 
         else showRcToast("This module is under construction.");
-    }
-
-    if (!isHistoryNav) {
-        let vName = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
-        if (vName !== lastPushedView) {
-            let btnId = clickedBtn ? clickedBtn.id : "";
-            history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
-            lastPushedView = vName;
-        }
-    } else {
-        lastPushedView = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
     }
 }
 
@@ -2057,49 +2095,89 @@ attachSafeClick("btnNavEventAttendance", (e) => {
 });
 
 // ==========================================
-// 🚨 SMART BACK BUTTON LISTENER
+// 🚨 HARDWARE BACK BUTTON / ROUTING MANAGER
 // ==========================================
+let exitPressTimer = 0; // Tracks back button presses for exiting
 
-window.addEventListener("load", () => {
-    history.replaceState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
-});
+// Push an initial state to trap the back button the moment the app loads
+history.pushState(null, null, location.href);
 
-window.addEventListener("popstate", (e) => {
-    // 1. Close open Modals/Settings FIRST
-    let activeModals = document.querySelectorAll(".modal-overlay.active, .settings-drawer.active");
-    if (activeModals.length > 0) {
-        activeModals.forEach(m => m.classList.remove("active"));
-        
-        let vName = e.state ? e.state.viewId : "HOME";
-        let btnId = e.state ? e.state.btnId : "btnHome";
-        history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
+window.addEventListener('popstate', () => {
+
+    // 1. Security Check (Block back button if locked)
+    if (elLock.screen && elLock.screen.style.display === "flex") {
+        history.pushState(null, null, location.href); // Re-trap
         return;
     }
 
-    // 2. Handle actual Panel Navigation
-    if (e.state && e.state.viewId) {
-        let vName = e.state.viewId;
-        let btnId = e.state.btnId;
-        let btn = btnId ? document.getElementById(btnId) : null;
-
-        if (vName === "HOME") {
-            switchView("HOME", btn || document.getElementById("btnHome"), true);
-        } else {
-            let targetView = document.getElementById(vName);
-            if (targetView) {
-                switchView(targetView, btn, true);
-            } else {
-                switchView("HOME", document.getElementById("btnHome"), true);
+    // 2. Modals & Overlays (Close the top-most active popup)
+    const closableOverlays = [
+        "updateProgressModal", "subConfirmModal", "jumpDateModal", "hodNotificationPanel", 
+        "settingsOverlay", "themesModal", "subjConfirmDeleteModal", "saConfirmModal", 
+        "evtSearchModal", "imMarksModal", "deptSplitOverlay", "exportDataModal", 
+        "composeMessageModal", "sessionsModal", "createAssignmentModal", "reAuthOverlay"
+    ];
+    
+    for (let id of closableOverlays) {
+        let el = document.getElementById(id);
+        if (el && el.classList.contains("active")) {
+            el.classList.remove("active");
+            
+            if(id === "reAuthOverlay") {
+                elLock.reAuthPass.value = "";
+                elLock.reAuthStatus.innerText = "";
             }
+            
+            history.pushState(null, null, location.href); // Re-trap after closing modal
+            return;
         }
+    }
+
+    // 3. Deep Sub-Views (Attendance Screens)
+    let mainScr = document.getElementById("attMainScreen");
+    let histScr = document.getElementById("attHistoryScreen");
+    let recScr = document.getElementById("attRecordScreen");
+
+    // If viewing a specific record -> Go back to History list
+    if (recScr && recScr.style.display === "flex") {
+        recScr.style.display = "none";
+        if (histScr) histScr.style.display = "flex";
+        history.pushState(null, null, location.href); // Re-trap
+        return;
+    }
+    // If viewing History list -> Go back to Main Attendance Panel
+    if (histScr && histScr.style.display === "flex") {
+        histScr.style.display = "none";
+        if (mainScr) mainScr.style.display = "flex";
+        history.pushState(null, null, location.href); // Re-trap
+        return;
+    }
+
+    // 4. Are we on the Home Screen?
+    let isHome = false;
+    if (window.innerWidth > 900) {
+        isHome = views.welcome && !views.welcome.classList.contains("hidden-view");
     } else {
-        // 3. Prevent accidental app exit
-        if (confirm("Do you want to sign out of Adhyora?")) {
-            handleSignOut();
-        } else {
-            history.pushState({ viewId: "HOME", btnId: "btnHome" }, "", "#HOME");
-            lastPushedView = "HOME";
-        }
+        isHome = document.getElementById("mainSidebar") && !document.getElementById("mainSidebar").classList.contains("mobile-hidden") && !document.querySelector(".main-content").classList.contains("mobile-active");
+    }
+
+    if (!isHome) {
+        // We are inside a sidebar menu item. Go back to HOME.
+        switchView("HOME", document.getElementById("btnHome"));
+        history.pushState(null, null, location.href); // Re-trap on home screen
+        return;
+    }
+
+    // 5. 🚨 THE NEW DOUBLE-TAP TO EXIT LOGIC
+    let now = Date.now();
+    if (now - exitPressTimer < 2000) {
+        // Double tap confirmed. Let the OS close the PWA!
+        history.back(); 
+    } else {
+        // First tap: Arm the timer and show toast
+        exitPressTimer = now;
+        showRcToast("Press back again to exit");
+        history.pushState(null, null, location.href); 
     }
 });
 
@@ -2158,6 +2236,8 @@ function applyTheme(isDark) {
         if(lBtn) lBtn.style.border = "2px solid var(--brand-red)"; if(dBtn) dBtn.style.border = "1px solid #cbd5e1";
     }
     localStorage.setItem("adhyora_teacher_theme", isDark ? "dark" : "light");
+
+    updateStatusBar();
 }
 attachSafeClick("btnThemes", () => { let s = document.getElementById("settingsOverlay"); let t = document.getElementById("themesModal"); if(s) s.classList.remove("active"); if(t) t.classList.add("active"); });
 attachSafeClick("btnDarkMode", () => applyTheme(true));
