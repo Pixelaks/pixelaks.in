@@ -6964,7 +6964,7 @@ async function requestPushPermissions() {
             console.log('Notification permission granted.');
             
             // Explicitly use the root service worker route to match dev tools setup
-            const swRegistration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            const swRegistration = await navigator.serviceWorker.register('/AdhyoraWeb/firebase-messaging-sw.js');
             
             const currentToken = await getToken(messaging, { 
                 vapidKey: "BNO8RVA-R1iOy19P2rbVYPBzlCSnptpq13ybtqqO0IgHhDOXhkauOXEWm2hGN6yIUz2_fHL-Iv7IG9cpRZv2YkU",
