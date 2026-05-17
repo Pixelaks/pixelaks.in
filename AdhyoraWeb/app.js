@@ -69,6 +69,10 @@ onAuthStateChanged(auth, async (user) => {
         }
     }
 
+    document.getElementById("loginPassword").value = "";
+    document.getElementById("regPassword").value = "";
+    document.getElementById("regConfirmPassword").value = "";
+
     // If we reach this line, it means they are NOT logged in, 
     // or their auto-login failed. Time to hide the splash screen and show the login page!
     hideSplash();
@@ -239,6 +243,7 @@ signInBtn.addEventListener("click", async (e) => {
 
             if (!lookupSnap.exists()) {
                 showToast("Invalid Room Code.");
+                document.getElementById("loginPassword").value = "";
                 resetSignInBtn();
                 return;
             }
@@ -250,6 +255,7 @@ signInBtn.addEventListener("click", async (e) => {
         if (!user.emailVerified) {
             showToast("Please verify your email first. Check your inbox!");
             await signOut(auth);
+            document.getElementById("loginPassword").value = "";
             resetSignInBtn();
             return;
         }
@@ -286,11 +292,13 @@ signInBtn.addEventListener("click", async (e) => {
                 } else {
                     showToast("Access Denied. Account Status: " + status);
                     await signOut(auth);
+                    document.getElementById("loginPassword").value = "";
                     resetSignInBtn();
                 }
             } else {
                 showToast("Teacher record not found in this college.");
                 await signOut(auth);
+                document.getElementById("loginPassword").value = "";
                 resetSignInBtn();
             }
         }
@@ -303,6 +311,7 @@ signInBtn.addEventListener("click", async (e) => {
                 if (principalSnap.data().subRole === "Staff") {
                     showToast("Staff must request a 1-time access code to log in via App.");
                     await signOut(auth);
+                    document.getElementById("loginPassword").value = "";
                     resetSignInBtn();
                     return;
                 }
@@ -317,12 +326,14 @@ signInBtn.addEventListener("click", async (e) => {
             } else {
                 showToast("Access Denied: Not a Principal here.");
                 await signOut(auth);
+                document.getElementById("loginPassword").value = "";
                 resetSignInBtn();
             }
         }
         
     } catch (error) {
         showToast(getErrorMessage(error.code));
+        document.getElementById("loginPassword").value = "";
         resetSignInBtn();
     }
 });
