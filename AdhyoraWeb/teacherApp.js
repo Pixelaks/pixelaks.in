@@ -173,12 +173,13 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    hideAppLoader(); // Because we defined this above, it will no longer crash!
+    hideAppLoader(); 
 
-    if (!hasStartedInbox && teacherDeptRaw !== "") {
+    // 🚨 FIX 1: Removed 'teacherDeptRaw' blocker so the Inbox always starts!
+    if (!hasStartedInbox) {
         hasStartedInbox = true;
         
-        startInboxListener(); // Messages and Notifications will now load correctly!
+        startInboxListener(); 
         await syncSemesterWithDatabase();
 
         if (isHOD) setupExportEngine();
@@ -1999,11 +2000,18 @@ function cleanupAttendanceView() {
     if (recScr) recScr.style.display = "none";
 }
 
-// 🚨 OPTIMIZATION: Stripped out history tracking. Navigation is now a pure SPA state.
-function switchView(targetView, clickedBtn) {
+// 🚨 OPTIMIZATION: Handles native history push states
+function switchView(targetView, clickedBtn, isHistoryNav = false) {
     navButtons.forEach(btn => btn.classList.remove("active-nav"));
     if (clickedBtn && (clickedBtn.classList.contains('nav-icon-btn') || clickedBtn.classList.contains('nav-btn') || clickedBtn.classList.contains('menu-btn'))) clickedBtn.classList.add("active-nav");
-    Object.values(views).forEach(v => { if (v) v.classList.add("hidden-view"); });
+    
+    // 🚨 FIX 2: Ensure we remove 'active' from all views before showing the new one
+    Object.values(views).forEach(v => { 
+        if (v) {
+            v.classList.add("hidden-view"); 
+            v.classList.remove("active");
+        }
+    });
     
     if (targetView !== views.attendance) cleanupAttendanceView();
     if (targetView !== views.subjects) subjPurgeUnsavedPending(); 
@@ -2020,14 +2028,33 @@ function switchView(targetView, clickedBtn) {
     const mainContent = document.querySelector(".main-content");
 
     if (targetView === "HOME") {
-        if(sidebar) sidebar.classList.remove("mobile-hidden");
+        if(sidebar) sidebar.classList.remove("mobile-hidden"); 
         if(mainContent) mainContent.classList.remove("mobile-active");
-        if (views.welcome && window.innerWidth > 900) views.welcome.classList.remove("hidden-view");
+        if (views.welcome && window.innerWidth > 900) {
+            views.welcome.classList.remove("hidden-view");
+            views.welcome.classList.add("active"); // 🚨 Added Active State
+        }
     } else {
-        if(sidebar) sidebar.classList.add("mobile-hidden");
+        if(sidebar) sidebar.classList.add("mobile-hidden"); 
         if(mainContent) mainContent.classList.add("mobile-active");
-        if (targetView) { targetView.classList.remove("hidden-view"); targetView.style.opacity = 0; setTimeout(() => targetView.style.opacity = 1, 50); } 
+        if (targetView) { 
+            targetView.classList.remove("hidden-view"); 
+            targetView.classList.add("active"); // 🚨 Added Active State. Engines will now render!
+            targetView.style.opacity = 0; 
+            setTimeout(() => targetView.style.opacity = 1, 50); 
+        } 
         else showRcToast("This module is under construction.");
+    }
+
+    if (!isHistoryNav) {
+        let vName = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
+        if (vName !== lastPushedView) {
+            let btnId = clickedBtn ? clickedBtn.id : "";
+            history.pushState({ viewId: vName, btnId: btnId }, "", "#" + vName);
+            lastPushedView = vName;
+        }
+    } else {
+        lastPushedView = targetView === "HOME" ? "HOME" : (targetView ? targetView.id : "HOME");
     }
 }
 
