@@ -326,7 +326,8 @@ function startInboxListener() {
     });
 
     let safeColID = getSafeTopic(currentCollegeID);
-    let safeDept = getSafeTopic(teacherDeptRaw);
+    let safeDept = teacherDeptRaw;
+    
     let myTopics = [
     `${safeColID}_ALL`,
     `${safeColID}_TEACHERS_ALL`
