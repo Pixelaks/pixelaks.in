@@ -69,50 +69,11 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
-// ==========================================
-// 🚨 DYNAMIC PHONE STATUS & NAV BAR CONTROLLER
-// ==========================================
-function updateStatusBar() {
-    const themeMeta = document.querySelector('meta[name="theme-color"]');
-    
-    // 🚨 PWA FIX: Target the actual HTML element, not just the body
-    const htmlTag = document.documentElement; 
-
-    // Grab our full-screen dark overlays
-    const loader = document.getElementById("initialAppLoader");
-    const lockScreen = document.getElementById("appLockScreen");
-    const paywall = document.getElementById("subscriptionBlockPanel") || document.getElementById("subBlockPanel");
-
-    // Check if any of them are currently visible
-    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
-    const isLockActive = lockScreen && lockScreen.style.display === "flex";
-    const isPaywallActive = paywall && (paywall.style.display === "flex" || paywall.classList.contains("active"));
-
-    if (isLoaderActive || isLockActive || isPaywallActive) {
-        // 1. TOP STATUS BAR: Force Dark Navy
-        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
-        
-        // 2. BOTTOM NAV BAR: Force HTML & Body to Dark Navy so Android WebAPK paints it!
-        htmlTag.style.backgroundColor = "#0b111e";
-        document.body.style.backgroundColor = "#0b111e";
-    } else {
-        const isDark = document.body.classList.contains("dark-mode");
-        
-        // 1. TOP STATUS BAR: Match the Dashboard Theme
-        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
-        
-        // 2. BOTTOM NAV BAR: Erase the JS override so your CSS takes over
-        htmlTag.style.backgroundColor = ""; 
-        document.body.style.backgroundColor = "";
-    }
-}
-
 function hideAppLoader() {
     const loader = document.getElementById("initialAppLoader");
     if (loader && !loader.classList.contains("hidden")) {
         setTimeout(() => {
             loader.classList.add("hidden");
-            updateStatusBar(); // 🚨 ADD THIS HERE!
         }, 800);
     }
 }
@@ -4133,8 +4094,6 @@ function UnlockSecurityWall() {
     document.getElementById("mainSidebar").style.display = "";
     
     failedPinAttempts = 0;
-
-    updateStatusBar();
     
     // 🚨 CHAIN REACTION: Now that PIN is verified, check Subscription!
     startSubscriptionListener(); 
@@ -4219,8 +4178,6 @@ document.addEventListener("visibilitychange", () => {
             document.getElementById("mainSidebar").style.display = "none";
             elLock.screen.style.display = "flex";
             SetLockMode("LOGIN");
-
-            updateStatusBar();
         }
     }
 });
@@ -4244,25 +4201,19 @@ document.onkeydown = function(e) {
 // ==========================================
 // 🚨 HARDWARE BACK BUTTON / ROUTING MANAGER
 // ==========================================
-let exitPressTimer = 0; // 🚨 NEW: Tracks back button presses for exiting
-
 // Push an initial state to trap the back button the moment the app loads
 history.pushState(null, null, location.href);
 
 window.addEventListener('popstate', () => {
+    // 1. Immediately push another state to stay trapped inside the app
+    history.pushState(null, null, location.href);
 
-    // 1. Security Check (Block back button if locked or paywalled)
-    if (elLock.screen && elLock.screen.style.display === "flex") {
-        history.pushState(null, null, location.href); // Re-trap
-        return;
-    }
+    // 2. Security Check (Block back button if locked or paywalled)
+    if (elLock.screen && elLock.screen.style.display === "flex") return;
     const subBlock = document.getElementById("subBlockPanel");
-    if (subBlock && subBlock.style.display === "flex") {
-        history.pushState(null, null, location.href); // Re-trap
-        return;
-    }
+    if (subBlock && subBlock.style.display === "flex") return;
 
-    // 2. Modals & Overlays (Close the top-most active popup)
+    // 3. Modals & Overlays (Close the top-most active popup)
     const closableOverlays = [
         "pinOverlay", "confirmOverlay", "durationOverlay", "addDeptOverlay", "combineOverlay",
         "moveBatchOverlay", "deptSplitOverlay", "promoteWarningOverlay", "exportOverlay",
@@ -4283,25 +4234,21 @@ window.addEventListener('popstate', () => {
                 elLock.reAuthPass.value = "";
                 elLock.reAuthStatus.innerText = "";
             }
-            
-            history.pushState(null, null, location.href); // Re-trap after closing modal
             return; // Stop here! We only want to close one layer at a time.
         }
     }
 
-    // 3. Deep Sub-Views (e.g., looking at a specific teacher/student profile)
+    // 4. Deep Sub-Views (e.g., looking at a specific teacher/student profile)
     if (views.teacherDashboard && !views.teacherDashboard.classList.contains("hidden-view")) {
         switchView(views.teacherList);
-        history.pushState(null, null, location.href); // Re-trap
         return;
     }
     if (views.studentDashboard && !views.studentDashboard.classList.contains("hidden-view")) {
         switchView(views.studentList);
-        history.pushState(null, null, location.href); // Re-trap
         return;
     }
 
-    // 4. Are we on the Home Screen?
+    // 5. Are we on the Home Screen?
     let isHome = false;
     if (window.innerWidth > 900) {
         isHome = views.welcome && !views.welcome.classList.contains("hidden-view");
@@ -4312,20 +4259,20 @@ window.addEventListener('popstate', () => {
     if (!isHome) {
         // We are inside a sidebar menu item. Go back to HOME.
         switchView("HOME");
-        history.pushState(null, null, location.href); // Re-trap on home screen
         return;
     }
 
-    // 5. 🚨 THE NEW DOUBLE-TAP TO EXIT LOGIC
-    let now = Date.now();
-    if (now - exitPressTimer < 2000) {
-        // They double-pressed within 2 seconds! Let the app close.
-        // We intentionally DO NOT pushState here so the OS takes over and exits.
-        history.back(); 
-    } else {
-        // First press: Update timer, show the toast, and re-arm the trap
-        exitPressTimer = now;
-        showRcToast("Press back again to exit");
-        history.pushState(null, null, location.href); 
+    // 6. We are on the Home Screen with zero popups open. Prompt Sign Out!
+    if (confirm("Are you sure you want to sign out?")) {
+        if (myCurrentPushToken && currentCollegeID && currentUserID) {
+            // Clean up push tokens before signing out securely
+            updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
+                webFcmTokens: arrayRemove(myCurrentPushToken)
+            }).finally(() => {
+                signOut(auth).then(() => window.location.href = "index.html");
+            });
+        } else {
+            signOut(auth).then(() => window.location.href = "index.html");
+        }
     }
 });
