@@ -234,68 +234,62 @@ el.btnContactUs.addEventListener("click", handleContactUs);
 el.btnWebsite.addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
 el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/privacy", "_blank"));
 el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
-async function principalSignOut() {
-
+// ==========================================
+// 🚨 UNIFIED MASTER SIGN-OUT ENGINE
+// ==========================================
+async function handlePrincipalSignOut() {
     try {
-
-        // 🚨 REMOVE PUSH TOKEN
+        // 1. REMOVE PUSH TOKEN FROM BROWSER
         if (myCurrentPushToken) {
-
             try {
-
                 await deleteToken(messaging);
-
             } catch(e) {
-
                 console.warn("Push Token Delete Error:", e);
-
             }
         }
 
-        // 🚨 REMOVE CURRENT SESSION DOCUMENT
-        if (myWebDeviceID) {
-
+        // 2. REMOVE TOKEN FROM FIRESTORE PROFILE
+        if (myCurrentPushToken && currentCollegeID && currentUserID) {
             try {
-
-                await deleteDoc(
-                    doc(
-                        db,
-                        "colleges",
-                        currentCollegeID,
-                        "principals",
-                        currentUserID,
-                        "sessions",
-                        myWebDeviceID
-                    )
-                );
-
+                await updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
+                    webFcmTokens: arrayRemove(myCurrentPushToken)
+                });
             } catch(e) {
-
-                console.warn("Session Delete Error:", e);
-
+                console.warn("Firestore Token Remove Error:", e);
             }
         }
 
-        // 🚨 SIGNOUT
+        // 3. REMOVE ACTIVE BROWSER SESSION
+        if (myWebDeviceID) {
+            try {
+                await deleteDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID, "sessions", myWebDeviceID));
+            } catch(e) {
+                console.warn("Session Delete Error:", e);
+            }
+        }
+
+        // 4. FIREBASE AUTH SIGNOUT
         await signOut(auth);
 
-        // 🚨 CLEAR CACHE
+        // 5. NUKE ALL BREADCRUMBS & CACHE
         localStorage.clear();
         sessionStorage.clear();
 
-        // 🚨 CLEAR PASSWORD FIELD
-        const passField = document.getElementById("loginPassword");
-        if (passField) passField.value = "";
-
-        // 🚨 HARD REDIRECT
+        // 6. HARD REDIRECT
         window.location.replace("index.html");
 
     } catch (e) {
-
         console.error("Principal Signout Error:", e);
-
+        localStorage.clear();
+        window.location.replace("index.html");
     }
 }
+
+el.btnSignOut.addEventListener("click", () => {
+    if (confirm("Sign out of Adhyora?")) {
+        handlePrincipalSignOut();
+    }
+});
 
 el.btnSignOut.addEventListener("click", () => {
 
@@ -3522,22 +3516,6 @@ document.getElementById("btnToggleNotifications").addEventListener("click", asyn
     }
 });
 
-// 5. Smart Sign Out (Clears Token before logging out)
-document.getElementById("btnSignOut").addEventListener("click", async () => {
-    if (confirm("Sign out?")) {
-        if (myCurrentPushToken && currentCollegeID && currentUserID) {
-            await updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
-                webFcmTokens: arrayRemove(myCurrentPushToken)
-            });
-        }
-
-        // 🚨 SWEEP UP THE BREADCRUMBS!
-    localStorage.removeItem("adhyora_role");
-    localStorage.removeItem("adhyora_college");
-        signOut(auth).then(() => window.location.href = "index.html");
-    }
-});
-
 // ==========================================
 // 🚨 NOTIFICATION CLICK ROUTER 🚨
 // ==========================================
@@ -4339,15 +4317,6 @@ window.addEventListener('popstate', () => {
 
     // 6. We are on the Home Screen with zero popups open. Prompt Sign Out!
     if (confirm("Are you sure you want to sign out?")) {
-        if (myCurrentPushToken && currentCollegeID && currentUserID) {
-            // Clean up push tokens before signing out securely
-            updateDoc(doc(db, "colleges", currentCollegeID, "principals", currentUserID), {
-                webFcmTokens: arrayRemove(myCurrentPushToken)
-            }).finally(() => {
-                signOut(auth).then(() => window.location.href = "index.html");
-            });
-        } else {
-            signOut(auth).then(() => window.location.href = "index.html");
-        }
+        handlePrincipalSignOut();
     }
 });
