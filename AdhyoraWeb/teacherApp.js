@@ -217,6 +217,9 @@ function startInboxListener() {
         let dot = document.querySelector("#btnMessages .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderMessages();
+    }, (error) => {
+        console.error("Sent Messages Error:", error);
+        document.getElementById("messagesList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     const chatsRef = collection(db, "colleges", currentCollegeID, "chats");
@@ -235,8 +238,13 @@ function startInboxListener() {
                     });
                 });
                 renderMessages();
+            }, (error) => {
+                console.error("Chat Messages Subcollection Error:", error);
             });
         });
+    }, (error) => {
+        console.error("Chats Index Error:", error);
+        document.getElementById("messagesList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     let safeColID = getSafeTopic(currentCollegeID);
@@ -257,6 +265,9 @@ function startInboxListener() {
         let dot = document.querySelector("#btnNotifications .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
+    }, (error) => {
+        console.error("Inbox Index Error:", error);
+        document.getElementById("notificationsList").innerHTML = `<div class="no-data-text" style="color:red; text-align:center; padding:20px;">Database Index Error.<br>Please check the Chrome Console (F12).</div>`;
     });
 
     globalListenerUnsub = onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
@@ -273,6 +284,8 @@ function startInboxListener() {
         let dot = document.querySelector("#btnNotifications .notification-dot");
         if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
+    }, (error) => {
+        console.error("Global Updates Error:", error);
     });
 }
 
