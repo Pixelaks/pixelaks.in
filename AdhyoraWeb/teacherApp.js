@@ -7079,7 +7079,13 @@ async function registerTeacherWebSession() {
         // Listen to our own subcollection document. If deleted, instantly force-kick the browser session!
         onSnapshot(sessionRef, (docSnap) => {
             if (!docSnap.exists()) {
-                signOut(auth).then(() => window.location.href = "index.html");
+                signOut(auth).then(() => {
+
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
+                
+                });
             }
         });
     } catch(e) {
