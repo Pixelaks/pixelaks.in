@@ -266,90 +266,135 @@ signInBtn.addEventListener("click", async (e) => {
         }
 
         // 🚨 ROLE-BASED VERIFICATION & ROUTING
-        // 🚨 ROLE-BASED VERIFICATION & ROUTING
-        if (role === "Student") {
-            showToast("Verifying Student Access...");
-            const rollNo = email.split('@')[0].toUpperCase();
 
-            // 🚨 ADDED FIX: Actually check if the student exists in this college!
-            const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
-            const studentSnap = await getDoc(studentRef);
+if (role === "Student") {
 
-            if (studentSnap.exists() && studentSnap.data().userID === user.uid) {
-                showToast("Login Successful!");
+    showToast("Verifying Student Access...");
 
-                // ADD THESE BREADCRUMBS
-                localStorage.setItem("adhyora_role", "Student");
-                localStorage.setItem("adhyora_college", selectedCollegeID);
-                localStorage.setItem("adhyora_roll", rollNo);
-                
-                window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo}`;
-            } else {
-                showToast("Access Denied: Student record not found.");
-                await signOut(auth);
-                document.getElementById("loginPassword").value = "";
-                resetSignInBtn();
-            }
-        } 
-        // 🚨 ADDED: TEACHER LOGIN VERIFICATION ... (rest of your code)
-        // 🚨 ADDED: TEACHER LOGIN VERIFICATION
-        else if (role === "Teacher") {
-            showToast("Verifying Teacher Access...");
-            const teacherRef = doc(db, "colleges", selectedCollegeID, "teachers", user.uid);
-            const teacherSnap = await getDoc(teacherRef);
+    const rollNo = email.split('@')[0].toUpperCase();
 
-            if (teacherSnap.exists()) {
-                const status = teacherSnap.data().status || "Pending";
-                if (status === "Approved" || status === "Pending") {
-                    showToast("Teacher Login Successful!");
+    const studentRef = doc(db, "colleges", selectedCollegeID, "students", rollNo);
+    const studentSnap = await getDoc(studentRef);
 
-                  // 🚨 ADD THESE BREADCRUMBS
-                    localStorage.setItem("adhyora_role", "Teacher");
-                    localStorage.setItem("adhyora_college", selectedCollegeID);
-                   localStorage.setItem("adhyora_roomcode", roomCode.toUpperCase());
-                  
-                    window.location.href = `teacherDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
-                } else {
-                    showToast("Access Denied. Account Status: " + status);
-                    await signOut(auth);
-                    document.getElementById("loginPassword").value = "";
-                    resetSignInBtn();
-                }
-            } else {
-                showToast("Teacher record not found in this college.");
-                await signOut(auth);
-                document.getElementById("loginPassword").value = "";
-                resetSignInBtn();
-            }
-        }
-        else if (role === "Principal") {
-            showToast("Verifying Principal Access...");
-            const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
-            const principalSnap = await getDoc(principalRef);
+    if (!studentSnap.exists()) {
+        showToast("Student record not found.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
 
-            if (principalSnap.exists()) {
-                if (principalSnap.data().subRole === "Staff") {
-                    showToast("Staff must request a 1-time access code to log in via App.");
-                    await signOut(auth);
-                    document.getElementById("loginPassword").value = "";
-                    resetSignInBtn();
-                    return;
-                }
-                
-                showToast("Principal Login Successful!");
+    const studentData = studentSnap.data();
 
-              // 🚨 ADD THESE BREADCRUMBS
-                localStorage.setItem("adhyora_role", "Principal");
-                localStorage.setItem("adhyora_college", selectedCollegeID);
-              
-                window.location.href = `principalDashboard.html?college=${selectedCollegeID}`;
-            } else {
-                showToast("Access Denied: Not a Principal here.");
-                await signOut(auth);
-                document.getElementById("loginPassword").value = "";
-                resetSignInBtn();
-            }
-        }
+    if (studentData.email?.toLowerCase() !== email.toLowerCase()) {
+        showToast("Security Check Failed.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    if (studentData.userID !== user.uid) {
+        showToast("Unauthorized account.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    showToast("Login Successful!");
+
+    localStorage.setItem("adhyora_role", "Student");
+    localStorage.setItem("adhyora_college", selectedCollegeID);
+    localStorage.setItem("adhyora_roll", rollNo);
+
+    window.location.href = `studentDashboard.html?college=${selectedCollegeID}&uid=${user.uid}&roll=${rollNo}`;
+}
+
+else if (role === "Teacher") {
+
+    showToast("Verifying Teacher Access...");
+
+    const teacherRef = doc(db, "colleges", selectedCollegeID, "teachers", user.uid);
+    const teacherSnap = await getDoc(teacherRef);
+
+    if (!teacherSnap.exists()) {
+        showToast("Teacher record not found in this college.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    const teacherData = teacherSnap.data();
+
+    if (teacherData.email?.toLowerCase() !== email.toLowerCase()) {
+        showToast("Security Check Failed.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    const status = teacherData.status || "Pending";
+
+    if (status !== "Approved" && status !== "Pending") {
+        showToast("Access Denied. Account Status: " + status);
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    showToast("Teacher Login Successful!");
+
+    localStorage.setItem("adhyora_role", "Teacher");
+    localStorage.setItem("adhyora_college", selectedCollegeID);
+    localStorage.setItem("adhyora_roomcode", roomCode.toUpperCase());
+
+    window.location.href = `teacherDashboard.html?college=${selectedCollegeID}&uid=${user.uid}`;
+}
+
+else if (role === "Principal") {
+
+    showToast("Verifying Principal Access...");
+
+    const principalRef = doc(db, "colleges", selectedCollegeID, "principals", user.uid);
+    const principalSnap = await getDoc(principalRef);
+
+    if (!principalSnap.exists()) {
+        showToast("Access Denied: This account is not registered as Principal.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    const principalData = principalSnap.data();
+
+    if (principalData.email?.toLowerCase() !== email.toLowerCase()) {
+        showToast("Security Check Failed.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    if (principalData.subRole === "Staff") {
+        showToast("Staff must request a 1-time access code to log in via App.");
+        await signOut(auth);
+        document.getElementById("loginPassword").value = "";
+        resetSignInBtn();
+        return;
+    }
+
+    showToast("Principal Login Successful!");
+
+    localStorage.setItem("adhyora_role", "Principal");
+    localStorage.setItem("adhyora_college", selectedCollegeID);
+
+    window.location.href = `principalDashboard.html?college=${selectedCollegeID}`;
+}
         
     } catch (error) {
         showToast(getErrorMessage(error.code));
