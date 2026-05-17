@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚨 ADDED: initializeFirestore, persistentLocalCache, persistentMultipleTabManager
-import { getFirestore, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, deleteDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
@@ -2292,28 +2292,90 @@ attachSafeClick("btnWebsite", () => window.open("https://pixelaks.in/", "_blank"
 attachSafeClick("btnPrivacy", () => window.open("https://pixelaks.in/privacy", "_blank"));
 attachSafeClick("btnTerms", () => window.open("https://pixelaks.in/terms", "_blank"));
 // ==========================================
-// 🚨 SMART SIGN OUT (CLEARS TOKENS)
+// 🚨 SMART SIGN OUT (FULL CLEANUP)
 // ==========================================
 async function handleSignOut() {
+
     try {
-        // If we have a token in RAM, delete it from the database!
+
+        // 🚨 REMOVE PUSH TOKEN FROM DATABASE
         if (myCurrentPushToken && currentUserID && currentCollegeID) {
-            const teacherRef = doc(db, "colleges", currentCollegeID, "teachers", currentUserID);
+
+            const teacherRef = doc(
+                db,
+                "colleges",
+                currentCollegeID,
+                "teachers",
+                currentUserID
+            );
+
             await setDoc(teacherRef, {
                 webFcmTokens: arrayRemove(myCurrentPushToken)
             }, { merge: true });
-            console.log("Push Token cleanly removed from database!");
+
+            console.log("Push Token removed!");
+
         }
-    } catch(e) { 
-        console.error("Error removing token", e); 
+
+        // 🚨 STOP FIRESTORE LISTENERS
+        if (profileListener) profileListener();
+
+        if (globalListenerUnsub) globalListenerUnsub();
+
+        if (inboxListenerUnsub) inboxListenerUnsub();
+
+        // 🚨 REMOVE CURRENT WEB SESSION
+        if (myWebDeviceID) {
+
+            try {
+
+                await deleteDoc(
+                    doc(
+                        db,
+                        "colleges",
+                        currentCollegeID,
+                        "teachers",
+                        currentUserID,
+                        "sessions",
+                        myWebDeviceID
+                    )
+                );
+
+            } catch (e) {
+
+                console.warn("Session Delete Error:", e);
+
+            }
+
+        }
+
+        // 🚨 FIREBASE AUTH SIGNOUT
+        await signOut(auth);
+
+        // 🚨 CLEAR BREADCRUMBS & CACHE
+        localStorage.clear();
+
+        sessionStorage.clear();
+
+        // 🚨 HARD REDIRECT
+        window.location.replace("index.html");
+
+    } catch(e) {
+
+        console.error("Signout Error:", e);
+
     }
-    
-    // Now log them out!
-    signOut(auth).then(() => window.location.href = "index.html");
+
 }
 
 attachSafeClick("btnSignOut", () => {
-    if (confirm("Sign out of Adhyora?")) handleSignOut();
+
+    if (confirm("Sign out of Adhyora?")) {
+
+        handleSignOut();
+
+    }
+
 });
 
 // ==========================================
