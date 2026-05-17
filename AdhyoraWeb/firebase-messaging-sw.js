@@ -73,3 +73,5 @@ const messaging = firebase.messaging();
 self.addEventListener('fetch', function(event) {
     // Leave this empty for now! 
     // In the future, you can add offline caching logic here.
+
+  });
