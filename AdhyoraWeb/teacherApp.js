@@ -1923,6 +1923,8 @@ async function hashText(text) {
                 
                 VaultDashboard(); // 🚨 VAULT DOM
                 SetLockMode("LOGIN");
+
+                updateStatusBar();
             }
         }
     });
