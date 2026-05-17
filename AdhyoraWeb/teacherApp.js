@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 // 🚨 ADDED: initializeFirestore, persistentLocalCache, persistentMultipleTabManager
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit, writeBatch, increment, serverTimestamp, deleteField, updateDoc, addDoc, setDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // 🚀 OPTIMIZATION: Debounce Function to stop UI lag when searching
@@ -48,9 +48,7 @@ const auth = getAuth(app);
 
 // 🚨 COST OPTIMIZATION: Native RAM Caching Enabled!
 const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-    })
+    localCache: persistentLocalCache()
 });
 
 const messaging = getMessaging(app);
@@ -173,24 +171,54 @@ async function finalizeProfileUI(rawName, email, deptName) {
     let deptEl = document.getElementById("teacherInfoDept");
     if(deptEl) deptEl.innerText = deptName;
 
-    hideAppLoader(); 
+    hideAppLoader();
 
-    // 🚨 FIX 1: Removed 'teacherDeptRaw' blocker so the Inbox always starts!
-    if (!hasStartedInbox && teacherDeptRaw) {
-    hasStartedInbox = true;
-
-    startInboxListener();
-        await syncSemesterWithDatabase();
-
-        if (isHOD) setupExportEngine();
-        
-        await requestPushPermissions(); 
-        updateNotificationToggleUI(); 
-    }
-    if (!teacherDeptRaw) {
+// 🚨 Wait until department loads properly
+if (!teacherDeptRaw) {
     console.warn("Department not loaded yet");
     return;
 }
+
+// 🚨 Prevent double initialization
+if (hasStartedInbox) return;
+
+hasStartedInbox = true;
+
+console.log("===== TEACHER INIT START =====");
+console.log("Teacher:", currentTeacherName);
+console.log("Department:", teacherDeptRaw);
+console.log("College:", currentCollegeID);
+console.log("User:", currentUserID);
+
+// 🚨 START CORE SYSTEMS IMMEDIATELY
+startInboxListener();
+
+// 🚨 Run these in background (NON-BLOCKING)
+syncSemesterWithDatabase()
+    .catch(err => console.error("Semester Sync Error:", err));
+
+if (isHOD) {
+    try {
+        setupExportEngine();
+    } catch (e) {
+        console.error("Export Engine Error:", e);
+    }
+}
+
+// 🚨 NEVER BLOCK APP LOADING WITH PUSH PERMISSIONS
+requestPushPermissions()
+    .then(() => {
+        try {
+            updateNotificationToggleUI();
+        } catch (e) {
+            console.error("Notification Toggle UI Error:", e);
+        }
+    })
+    .catch(err => {
+        console.warn("Push Permission Skipped:", err);
+    });
+
+console.log("===== TEACHER INIT COMPLETE =====");
 }
 
 // ==========================================
