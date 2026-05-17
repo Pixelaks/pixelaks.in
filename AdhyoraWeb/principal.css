@@ -124,21 +124,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
 
-/* 1. Paint the raw window to match Light/Dark mode */
-html {
-    background-color: var(--bg-base);
-    transition: background-color 0.3s;
-}
-
-/* 2. Handle the dashboard layout safely */
-body {
+html, body {
     background-color: var(--bg-base);
     color: var(--text-green);
-    
-    /* 🚨 100dvh forces it completely edge-to-edge */
     height: 100vh;
-    height: 100dvh;
-    
     overflow: hidden;
     display: flex;
     flex-direction: column;
