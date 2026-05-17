@@ -3459,6 +3459,10 @@ document.getElementById("btnSignOut").addEventListener("click", async () => {
                 webFcmTokens: arrayRemove(myCurrentPushToken)
             });
         }
+
+        // 🚨 SWEEP UP THE BREADCRUMBS!
+    localStorage.removeItem("adhyora_role");
+    localStorage.removeItem("adhyora_college");
         signOut(auth).then(() => window.location.href = "index.html");
     }
 });
