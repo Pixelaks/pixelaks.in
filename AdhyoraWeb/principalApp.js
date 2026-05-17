@@ -234,7 +234,78 @@ el.btnContactUs.addEventListener("click", handleContactUs);
 el.btnWebsite.addEventListener("click", () => window.open("https://pixelaks.in/", "_blank"));
 el.btnPrivacy.addEventListener("click", () => window.open("https://pixelaks.in/privacy", "_blank"));
 el.btnTerms.addEventListener("click", () => window.open("https://pixelaks.in/terms", "_blank"));
-el.btnSignOut.addEventListener("click", () => { if (confirm("Sign out?")) signOut(auth).then(() => window.location.href = "index.html"); });
+async function principalSignOut() {
+
+    try {
+
+        // 🚨 REMOVE PUSH TOKEN
+        if (myCurrentPushToken) {
+
+            try {
+
+                await deleteToken(messaging);
+
+            } catch(e) {
+
+                console.warn("Push Token Delete Error:", e);
+
+            }
+        }
+
+        // 🚨 REMOVE CURRENT SESSION DOCUMENT
+        if (myWebDeviceID) {
+
+            try {
+
+                await deleteDoc(
+                    doc(
+                        db,
+                        "colleges",
+                        currentCollegeID,
+                        "principals",
+                        currentUserID,
+                        "sessions",
+                        myWebDeviceID
+                    )
+                );
+
+            } catch(e) {
+
+                console.warn("Session Delete Error:", e);
+
+            }
+        }
+
+        // 🚨 SIGNOUT
+        await signOut(auth);
+
+        // 🚨 CLEAR CACHE
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // 🚨 CLEAR PASSWORD FIELD
+        const passField = document.getElementById("loginPassword");
+        if (passField) passField.value = "";
+
+        // 🚨 HARD REDIRECT
+        window.location.replace("index.html");
+
+    } catch (e) {
+
+        console.error("Principal Signout Error:", e);
+
+    }
+}
+
+el.btnSignOut.addEventListener("click", () => {
+
+    if (confirm("Sign out?")) {
+
+        principalSignOut();
+
+    }
+
+});
 
 const views = {
     welcome: document.getElementById("welcomeView"), roomcode: document.getElementById("roomcodeView"),
