@@ -46,11 +46,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🚨 COST OPTIMIZATION: Native RAM Caching Enabled!
-const db = initializeFirestore(app, {
-    localCache: persistentLocalCache()
-});
+// 🚨 USE STABLE FIRESTORE ENGINE
+const db = getFirestore(app);
 
+// 🚨 ENABLE SAFE OFFLINE CACHE
+try {
+    enableIndexedDbPersistence(db).catch((err) => {
+        console.warn("Firebase Persistence Warning:", err.code);
+    });
+} catch (e) {
+    console.warn("Persistence Init Error:", e);
+}
+
+// 🚨 FIREBASE MESSAGING
 const messaging = getMessaging(app);
 
 let myCurrentPushToken = ""; // Tracks active session
@@ -62,22 +70,34 @@ if (!currentCollegeID) {
     window.location.href = "index.html"; 
 } else {
     onAuthStateChanged(auth, (user) => {
-        if (user) { 
-            currentUserID = user.uid; 
-            
-            // 🚨 1. Setup Biometric Variables first
-            InitBiometricUI(); 
-            
-            // 🚨 2. Start the Lock Screen Sequence
+
+    if (user) {
+
+        currentUserID = user.uid;
+
+        console.log("===== TEACHER AUTH SUCCESS =====");
+        console.log("UID:", currentUserID);
+
+        // 🚨 LOAD PROFILE FIRST
+        ListenToProfile();
+
+        // 🚨 INIT BIOMETRICS AFTER PROFILE STARTS
+        InitBiometricUI();
+
+        // 🚨 SHOW LOCK SCREEN LAST
+        setTimeout(() => {
+
             CheckSecurityPin();
-            
-            // 🚨 3. Load Profile in the background (hidden behind lock screen)
-            ListenToProfile(); 
-            
-        } else { 
-            window.location.href = "index.html"; 
-        }
-    });
+
+        }, 500);
+
+    } else {
+
+        console.warn("User not authenticated");
+        window.location.href = "index.html";
+
+    }
+});
 }
 
 // ==========================================
@@ -173,53 +193,63 @@ async function finalizeProfileUI(rawName, email, deptName) {
 
     hideAppLoader();
 
-// 🚨 Wait until department loads properly
+// 🚨 WAIT UNTIL DEPARTMENT LOADS
 if (!teacherDeptRaw) {
+
     console.warn("Department not loaded yet");
     return;
 }
 
-// 🚨 Prevent double initialization
+// 🚨 PREVENT DOUBLE INIT
 if (hasStartedInbox) return;
 
 hasStartedInbox = true;
 
-console.log("===== TEACHER INIT START =====");
+console.log("===== TEACHER DASHBOARD INIT =====");
 console.log("Teacher:", currentTeacherName);
 console.log("Department:", teacherDeptRaw);
 console.log("College:", currentCollegeID);
-console.log("User:", currentUserID);
 
 // 🚨 START CORE SYSTEMS IMMEDIATELY
 startInboxListener();
 
-// 🚨 Run these in background (NON-BLOCKING)
+// 🚨 BACKGROUND TASKS (NON-BLOCKING)
 syncSemesterWithDatabase()
     .catch(err => console.error("Semester Sync Error:", err));
 
 if (isHOD) {
+
     try {
+
         setupExportEngine();
+
     } catch (e) {
+
         console.error("Export Engine Error:", e);
     }
 }
 
-// 🚨 NEVER BLOCK APP LOADING WITH PUSH PERMISSIONS
+// 🚨 NEVER BLOCK UI WITH NOTIFICATION PERMISSIONS
 requestPushPermissions()
     .then(() => {
+
         try {
+
             updateNotificationToggleUI();
+
         } catch (e) {
-            console.error("Notification Toggle UI Error:", e);
+
+            console.error("Notification UI Error:", e);
         }
+
     })
     .catch(err => {
+
         console.warn("Push Permission Skipped:", err);
+
     });
 
 console.log("===== TEACHER INIT COMPLETE =====");
-}
 
 // ==========================================
 // 🚨 NOTIFICATIONS & UNIVERSAL MESSAGES
