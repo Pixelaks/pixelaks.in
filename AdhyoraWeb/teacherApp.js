@@ -326,16 +326,23 @@ function startInboxListener() {
     });
 
     let safeColID = getSafeTopic(currentCollegeID);
-    let safeDept = teacherDeptRaw;
-    
-    let myTopics = [
-    `${safeColID}_ALL`,
-    `${safeColID}_TEACHERS_ALL`
-    ];
-    
-    if(safeDept && safeDept.trim() !== ""){
-        myTopics.push(`${safeColID}_TEACHERS_${safeDept}`);
-    }
+
+let safeDept = getSafeTopic(
+    teacherDeptRaw.replace("DEPT_", "")
+);
+
+let myTopics = [
+`${safeColID}_ALL`,
+`${safeColID}_TEACHERS_ALL`
+];
+
+if (safeDept && safeDept.trim() !== "") {
+    myTopics.push(
+        `${safeColID}_TEACHERS_${safeDept}`
+    );
+}
+
+console.log("Topics:", myTopics);
 
     inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         snap.docChanges().forEach(change => {
