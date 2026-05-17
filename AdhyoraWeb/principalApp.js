@@ -75,6 +75,9 @@ currentCollegeID = urlParams.get('college');
 function updateStatusBar() {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     
+    // 🚨 PWA FIX: Target the actual HTML element, not just the body
+    const htmlTag = document.documentElement; 
+
     // Grab our full-screen dark overlays
     const loader = document.getElementById("initialAppLoader");
     const lockScreen = document.getElementById("appLockScreen");
@@ -89,7 +92,8 @@ function updateStatusBar() {
         // 1. TOP STATUS BAR: Force Dark Navy
         if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
         
-        // 2. BOTTOM NAV BAR: Force Dark Navy background so Android paints the gesture bar!
+        // 2. BOTTOM NAV BAR: Force HTML & Body to Dark Navy so Android WebAPK paints it!
+        htmlTag.style.backgroundColor = "#0b111e";
         document.body.style.backgroundColor = "#0b111e";
     } else {
         const isDark = document.body.classList.contains("dark-mode");
@@ -97,7 +101,8 @@ function updateStatusBar() {
         // 1. TOP STATUS BAR: Match the Dashboard Theme
         if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
         
-        // 2. BOTTOM NAV BAR: Let CSS take over
+        // 2. BOTTOM NAV BAR: Erase the JS override so your CSS takes over
+        htmlTag.style.backgroundColor = ""; 
         document.body.style.backgroundColor = "";
     }
 }
