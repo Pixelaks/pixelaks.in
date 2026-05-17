@@ -69,9 +69,17 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // This dummy fetch listener tells Android/Chrome that this site 
-// is a valid PWA and triggers the "Install App" prompt.
-self.addEventListener('fetch', function(event) {
-    // Leave this empty for now! 
-    // In the future, you can add offline caching logic here.
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
 
-  });
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        fetch(event.request, { cache: "no-store" })
+            .catch(() => caches.match(event.request))
+    );
+});
