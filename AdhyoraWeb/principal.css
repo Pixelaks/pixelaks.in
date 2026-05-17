@@ -127,7 +127,6 @@
 /* 1. Paint the raw window to match Light/Dark mode */
 html {
     background-color: var(--bg-base);
-    color-scheme: light dark; /* 🚨 ADDED: Tells Android you handle your own system themes (fixes the horizontal line) */
     transition: background-color 0.3s;
 }
 
@@ -143,13 +142,6 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-}
-
-/* 🚨 ADD THIS ENTIRE NEW BLOCK RIGHT BELOW 'body' */
-/* This brute-forces the Android System UI to instantly repaint the bottom nav bar */
-body.dark-mode, 
-html:has(body.dark-mode) {
-    background-color: #0f172a !important;
 }
 
 .dashboard-wrapper {
