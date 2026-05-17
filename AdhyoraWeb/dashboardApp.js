@@ -67,7 +67,6 @@ let isStrictCollege = true;
 // ==========================================
 function updateStatusBar() {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (!themeMeta) return;
 
     const loader = document.getElementById("initialAppLoader");
     const paywall = document.getElementById("subscriptionBlockPanel");
@@ -77,12 +76,20 @@ function updateStatusBar() {
     const isPaywallActive = paywall && paywall.classList.contains("active");
 
     if (isLoaderActive || isPaywallActive) {
-        // Keep it Dark Navy for Loading & Paywall
-        themeMeta.setAttribute("content", "#0b111e"); 
+        // 1. TOP STATUS BAR: Keep it Dark Navy for Loading & Paywall
+        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
+        
+        // 2. BOTTOM NAV BAR: Force Dark Navy background
+        document.body.style.backgroundColor = "#0b111e";
     } else {
         // We are on the Dashboard! Let the Theme Engine decide (White or Dark Mode)
         const isDark = document.body.classList.contains("dark-mode");
-        themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 1. TOP STATUS BAR
+        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 2. BOTTOM NAV BAR: Clear inline style so CSS takes over!
+        document.body.style.backgroundColor = "";
     }
 }
 
