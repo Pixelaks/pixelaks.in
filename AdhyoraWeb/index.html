@@ -93,7 +93,7 @@
             
             <div class="password-container">
                 <!-- 🚨 BANK GRADE SHIELD: autocomplete="new-password" + readonly trick -->
-                <input type="password" id="loginPassword" class="input-field" placeholder="Password..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="password" id="loginPassword" class="input-field" placeholder="Password..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 <span class="toggle-password" onclick="toggleVisibility('loginPassword', this)">
                     <i class="fas fa-eye"></i>
                 </span>
@@ -122,7 +122,7 @@
             
             <div class="password-container">
                 <!-- 🚨 BANK GRADE SHIELD -->
-                <input type="password" id="regPassword" class="input-field" placeholder="Password..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="password" id="regPassword" class="input-field" placeholder="Password..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 <span class="toggle-password" onclick="toggleVisibility('regPassword', this)">
                     <i class="fas fa-eye"></i>
                 </span>
@@ -130,7 +130,7 @@
 
             <div class="password-container">
                 <!-- 🚨 BANK GRADE SHIELD -->
-                <input type="password" id="regConfirmPassword" class="input-field" placeholder="Confirm Password..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="password" id="regConfirmPassword" class="input-field" placeholder="Confirm Password..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 <span class="toggle-password" onclick="toggleVisibility('regConfirmPassword', this)">
                     <i class="fas fa-eye"></i>
                 </span>
