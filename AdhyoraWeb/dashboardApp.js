@@ -62,12 +62,44 @@ let savedStrictTotal = 0;
 let savedRemainingDays = 0;
 let isStrictCollege = true;
 
+// ==========================================
+// 🚨 DYNAMIC PHONE STATUS BAR CONTROLLER
+// ==========================================
+function updateStatusBar() {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+    const loader = document.getElementById("initialAppLoader");
+    const paywall = document.getElementById("subscriptionBlockPanel");
+
+    // Check if splash screen or paywall are visible
+    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
+    const isPaywallActive = paywall && paywall.classList.contains("active");
+
+    if (isLoaderActive || isPaywallActive) {
+        // 1. TOP STATUS BAR: Keep it Dark Navy for Loading & Paywall
+        if (themeMeta) themeMeta.setAttribute("content", "#0b111e"); 
+        
+        // 2. BOTTOM NAV BAR: Force Dark Navy background
+        document.body.style.backgroundColor = "#0b111e";
+    } else {
+        // We are on the Dashboard! Let the Theme Engine decide (White or Dark Mode)
+        const isDark = document.body.classList.contains("dark-mode");
+        
+        // 1. TOP STATUS BAR
+        if (themeMeta) themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+        
+        // 2. BOTTOM NAV BAR: Clear inline style so CSS takes over!
+        document.body.style.backgroundColor = "";
+    }
+}
+
 function hideAppLoader() {
     const loader = document.getElementById("initialAppLoader");
     if (loader && !loader.classList.contains("hidden")) {
         // Add a tiny 800ms delay so the loading screen feels smooth
         setTimeout(() => {
             loader.classList.add("hidden");
+            updateStatusBar(); // 🚨 Trigger color change when loader fades!
         }, 800);
     }
 }
@@ -172,6 +204,7 @@ async function syncCollegeAndListen() {
             if (!data.subscription) {
                 blockPanel.classList.add("active");
                 dashboardUI.style.display = "none";
+              updateStatusBar();
             } else {
                 let expiryTimestamp = data.subscription.expiryDate || 0;
                 let hardBlockDate = new Date(expiryTimestamp * 1000);
@@ -180,9 +213,11 @@ async function syncCollegeAndListen() {
                 if (new Date() > hardBlockDate) {
                     blockPanel.classList.add("active");
                     dashboardUI.style.display = "none"; 
+                  updateStatusBar();
                 } else {
                     blockPanel.classList.remove("active");
                     dashboardUI.style.display = "flex"; 
+                  updateStatusBar();
                 }
             }
         }
@@ -1343,6 +1378,8 @@ function applyTheme(colorKey, isDark) {
 
     localStorage.setItem("adhyora_theme_color", colorKey);
     localStorage.setItem("adhyora_theme_mode", isDark ? "dark" : "light");
+
+  updateStatusBar();
 }
 
 document.querySelectorAll('.color-swatch').forEach(swatch => {
