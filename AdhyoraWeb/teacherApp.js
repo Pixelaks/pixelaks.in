@@ -494,21 +494,57 @@ let attActiveRosterYear = "";
 let attCurrentLoadTicket = 0;
 
 async function initAttendanceEngine() {
+
+    // 🚨 WAIT UNTIL EVERYTHING IS READY
+    while (
+        !currentCollegeID ||
+        !currentUserID ||
+        !teacherDeptRaw
+    ) {
+
+        console.log("Waiting for teacher profile...");
+
+        await new Promise(resolve =>
+            setTimeout(resolve, 300)
+        );
+    }
+
+    console.log("Attendance Engine Ready");
+
     await syncSemesterWithDatabase();
 
     setupJumpDateModals();
-    document.getElementById("attDateBtn").addEventListener("click", () => document.getElementById("jumpDateModal").classList.add("active"));
-    
-    document.getElementById("attSemDropdown").addEventListener("change", filterSubjectsBySemester);
-    document.getElementById("attPeriodDropdown").addEventListener("change", loadSessionData);
-    document.getElementById("attSubjDropdown").addEventListener("change", loadSessionData);
-    
-    document.getElementById("attSaveBtn").addEventListener("click", saveAttendance);
 
-    document.getElementById("subConfirmNoBtn").addEventListener("click", () => document.getElementById("subConfirmModal").classList.remove("active"));
-    document.getElementById("subConfirmYesBtn").addEventListener("click", confirmSubstituteLoad);
+    document.getElementById("attDateBtn")
+    .addEventListener("click", () =>
+        document.getElementById("jumpDateModal")
+        .classList.add("active")
+    );
+
+    document.getElementById("attSemDropdown")
+    .addEventListener("change", filterSubjectsBySemester);
+
+    document.getElementById("attPeriodDropdown")
+    .addEventListener("change", loadSessionData);
+
+    document.getElementById("attSubjDropdown")
+    .addEventListener("change", loadSessionData);
+
+    document.getElementById("attSaveBtn")
+    .addEventListener("click", saveAttendance);
+
+    document.getElementById("subConfirmNoBtn")
+    .addEventListener("click", () =>
+        document.getElementById("subConfirmModal")
+        .classList.remove("active")
+    );
+
+    document.getElementById("subConfirmYesBtn")
+    .addEventListener("click", confirmSubstituteLoad);
 
     resetDateToToday();
+
+    // 🚨 LOAD SUBJECTS ONLY AFTER EVERYTHING READY
     fetchTeacherSubjects();
 }
 
@@ -565,7 +601,7 @@ function fetchTeacherSubjects() {
     if (attSubjectListenerUnsub) attSubjectListenerUnsub();
     document.getElementById("attSubjDropdown").innerHTML = `<option>Loading...</option>`;
     
-    attSubjectListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID)), async (snap) => {
+    attSubjectListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "faculty_subjects"), where("teacherID", "==", currentUserID),where("isActive", "==", true)), async (snap) => {
         attTeacherSubjects = [{ name: "Tutorial", category: "TUTORIAL", semester: "1,2,3,4,5,6,7,8" }];
         
         let autoHealPromises = [];
@@ -618,7 +654,7 @@ function filterSubjectsBySemester() {
     let filteredNames = [];
     
     attTeacherSubjects.forEach(sub => {
-        if(sub.semester.split(',').map(s=>s.trim()).includes(currentSem)) {
+        let semList = String(sub.semester).replace(/Semester/gi, "").split(',').map(s => s.trim());if (semList.includes(currentSem)) {
             if(!filteredNames.includes(sub.name)) {
                 filteredNames.push(sub.name);
                 attSubjectCategories.set(sub.name, sub.category);
