@@ -117,12 +117,6 @@ function hideAppLoader() {
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    // Small delay ensures Firebase auth states and dark-mode loaders 
-    // have already appended their classes to the body element.
-    setTimeout(updateStatusBar, 100); 
-});
-
 // ==========================================
 // 🚨 INITIAL AUTHENTICATION CHECK
 // ==========================================
