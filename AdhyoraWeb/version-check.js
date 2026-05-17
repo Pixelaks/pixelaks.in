@@ -1,8 +1,6 @@
-  // Import Firebase modules from the CDN
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getRemoteConfig, fetchAndActivate, getString } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-remote-config.js";
 
-  // 1. Initialize Firebase with your exact Adhyora configuration
   const firebaseConfig = {
     apiKey: "AIzaSyD_ixI42lNdSqWxHj2EZNpXDLBZ2U8coLA",
     authDomain: "adhyora-5d4c1.firebaseapp.com",
@@ -15,31 +13,35 @@
   const app = initializeApp(firebaseConfig);
   const remoteConfig = getRemoteConfig(app);
 
-  // Set minimum fetch interval. 
-  // 0 is great for testing so it fetches every time.
-  // For production, change to 3600000 (1 hour) or 43200000 (12 hours) to avoid hitting Firebase quota limits.
   remoteConfig.settings.minimumFetchIntervalMillis = 0; 
 
-  // 2. Define the LOCAL version (Update this string before every deployment!)
+  // THIS IS YOUR SINGLE SOURCE OF TRUTH
   const LOCAL_VERSION = "1.0.0"; 
 
+  // ==========================================
+  // 1. DYNAMICALLY UPDATE THE UI TEXT
+  // ==========================================
+  document.addEventListener("DOMContentLoaded", () => {
+    const versionDisplayElement = document.getElementById("versionText");
+    if (versionDisplayElement) {
+        versionDisplayElement.innerText = `Version ${LOCAL_VERSION} (Web)`;
+    }
+  });
+
+  // ==========================================
+  // 2. CHECK FIREBASE FOR UPDATES
+  // ==========================================
   async function enforceVersionCheck() {
     try {
-      // 3. Fetch the latest config from Firebase
       await fetchAndActivate(remoteConfig);
-      
-      // 4. Get the remote version value using your specific parameter name
       const remoteVersion = getString(remoteConfig, "web_version");
 
-      // 5. Compare the versions
       if (remoteVersion && remoteVersion !== LOCAL_VERSION) {
         console.log(`Update required. Local: ${LOCAL_VERSION}, Remote: ${remoteVersion}`);
         
-        // Prevent infinite reload loops
         if (!sessionStorage.getItem("isUpdating")) {
           sessionStorage.setItem("isUpdating", "true");
           
-          // Step A: Unregister Service Workers (Crucial for installed PWAs)
           if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (let registration of registrations) {
@@ -48,17 +50,14 @@
             }
           }
 
-          // Step B: Clear the Browser/PWA Cache Storage
           if ('caches' in window) {
             const cacheKeys = await caches.keys();
             await Promise.all(cacheKeys.map(key => caches.delete(key)));
             console.log('PWA cache cleared.');
           }
 
-          // Step C: Force a hard reload from the server, bypassing local cache
           window.location.reload(true); 
         } else {
-          // Reset the flag if the reload has already executed
           sessionStorage.removeItem("isUpdating");
         }
       } else {
@@ -69,5 +68,4 @@
     }
   }
 
-  // Execute the check when the page loads
   enforceVersionCheck();
