@@ -69,11 +69,39 @@ const el = {
 const urlParams = new URLSearchParams(window.location.search);
 currentCollegeID = urlParams.get('college');
 
+// ==========================================
+// 🚨 DYNAMIC PHONE STATUS BAR CONTROLLER
+// ==========================================
+function updateStatusBar() {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeMeta) return;
+
+    // Grab our three full-screen dark overlays
+    const loader = document.getElementById("initialAppLoader");
+    const lockScreen = document.getElementById("appLockScreen");
+    const paywall = document.getElementById("subBlockPanel"); // (Students might not have this, which is fine)
+
+    // Check if any of them are currently visible
+    const isLoaderActive = loader && !loader.classList.contains("hidden") && loader.style.display !== "none";
+    const isLockActive = lockScreen && lockScreen.style.display === "flex";
+    const isPaywallActive = paywall && paywall.style.display === "flex";
+
+    if (isLoaderActive || isLockActive || isPaywallActive) {
+        // Keep it Dark Navy for Loading / Lock / Paywall
+        themeMeta.setAttribute("content", "#0b111e"); 
+    } else {
+        // We are on the Dashboard! Let the Theme Engine decide (White or Dark Mode)
+        const isDark = document.body.classList.contains("dark-mode");
+        themeMeta.setAttribute("content", isDark ? "#0f172a" : "#ffffff"); 
+    }
+}
+
 function hideAppLoader() {
     const loader = document.getElementById("initialAppLoader");
     if (loader && !loader.classList.contains("hidden")) {
         setTimeout(() => {
             loader.classList.add("hidden");
+            updateStatusBar(); // 🚨 ADD THIS HERE!
         }, 800);
     }
 }
@@ -4094,6 +4122,8 @@ function UnlockSecurityWall() {
     document.getElementById("mainSidebar").style.display = "";
     
     failedPinAttempts = 0;
+
+    updateStatusBar();
     
     // 🚨 CHAIN REACTION: Now that PIN is verified, check Subscription!
     startSubscriptionListener(); 
@@ -4178,6 +4208,8 @@ document.addEventListener("visibilitychange", () => {
             document.getElementById("mainSidebar").style.display = "none";
             elLock.screen.style.display = "flex";
             SetLockMode("LOGIN");
+
+            updateStatusBar();
         }
     }
 });
