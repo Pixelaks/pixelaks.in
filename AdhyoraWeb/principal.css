@@ -137,6 +137,8 @@ body {
     display: flex;
     overflow: hidden;
     position: relative;
+
+   padding-top: env(safe-area-inset-top);
 }
 
 .logo-text {
