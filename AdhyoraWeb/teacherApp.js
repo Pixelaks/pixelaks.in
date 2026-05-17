@@ -262,6 +262,20 @@ function getSafeTopic(str) {
 }
 
 function startInboxListener() {
+    setTimeout(() => {
+    const notifList = document.getElementById("notificationsList");
+
+    if(
+        notifList &&
+        notifList.innerHTML.includes("Loading notifications")
+    ){
+        notifList.innerHTML = `
+        <div class="no-data-text" style="text-align:center; color:#94a3b8; margin-top:20px;">
+            No notifications available.
+        </div>`;
+    }
+    }, 5000);
+    
     const sentMessagesRef = collection(db, "colleges", currentCollegeID, "sent_messages");
     onSnapshot(query(sentMessagesRef, orderBy("timestamp", "desc"), limit(30)), (snap) => {
         snap.docChanges().forEach((change) => {
@@ -313,7 +327,14 @@ function startInboxListener() {
 
     let safeColID = getSafeTopic(currentCollegeID);
     let safeDept = getSafeTopic(teacherDeptRaw);
-    let myTopics = [ `${safeColID}_ALL`, `${safeColID}_TEACHERS_ALL`, `${safeColID}_TEACHERS_${safeDept}` ];
+    let myTopics = [
+    `${safeColID}_ALL`,
+    `${safeColID}_TEACHERS_ALL`
+    ];
+    
+    if(safeDept && safeDept.trim() !== ""){
+        myTopics.push(`${safeColID}_TEACHERS_${safeDept}`);
+    }
 
     inboxListenerUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "inbox_messages"), where("targetTopic", "in", myTopics), orderBy("timestamp", "desc"), limit(30)), (snap) => {
         snap.docChanges().forEach(change => {
