@@ -251,6 +251,8 @@ requestPushPermissions()
 
 console.log("===== TEACHER INIT COMPLETE =====");
 
+}
+
 // ==========================================
 // 🚨 NOTIFICATIONS & UNIVERSAL MESSAGES
 // ==========================================
