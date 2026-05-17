@@ -80,12 +80,23 @@
     z-index: 1;
 }
 
+/* 1. Paint the absolute bottom of the phone window */
+html {
+    background-color: var(--dark-bg);
+    height: 100%;
+}
+
+/* 2. Control the actual layout safely inside the body */
 body {
     background-color: var(--dark-bg);
     display: flex;
     justify-content: center;
     align-items: center;
+    
+    /* 🚨 100dvh handles the Android gesture bar perfectly! */
     min-height: 100vh;
+    min-height: 100dvh; 
+    
     color: var(--text-light);
     overflow: hidden; 
 
