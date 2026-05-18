@@ -561,6 +561,29 @@ body {
 
    /* 🚨 Recover screen padding on Student Dashboard for narrow phones */
     #studentDashboardView { padding: 15px 10px !important; }
+
+   /* =========================================
+       🚨 SUBJECT ASSIGN DROPDOWNS PHONE FIX
+       ========================================= */
+    #subjectAssignView > div:nth-child(2) {
+        flex-wrap: nowrap !important; /* 🚨 Forces them into exactly one row */
+        padding: 10px 10px !important; /* Recovers screen padding */
+        gap: 5px !important; /* Shrinks the gap between them */
+    }
+    
+    #saSemDrop, #saCatDrop {
+        flex: 1 !important;
+        min-width: 0 !important; /* 🚨 Allows them to squish */
+        padding: 8px 4px !important;
+        font-size: 11px !important;
+    }
+    
+    #saSubDrop {
+        flex: 1.5 !important; /* Gives the Subject dropdown slightly more room */
+        min-width: 0 !important;
+        padding: 8px 20px 8px 4px !important; /* 20px on the right protects the browser arrow */
+        font-size: 11px !important;
+    }
 }
 /* =========================================
    🚨 ASSIGN CLASSES EDITOR STYLES
