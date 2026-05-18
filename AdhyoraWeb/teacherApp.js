@@ -1277,7 +1277,7 @@ async function saveAttendance() {
             if(attCurrentPeriodEvents.has(id)) {
                 // 🚨 FIRESTORE MERGE FIX: Deleting from a JS object doesn't delete it from the database during a merge. 
                 // We MUST use deleteField() to match C#'s FieldValue.Delete!
-                attendanceMap[id] = deleteField(); 
+                delete attendanceMap[id];
             } else {
                 let isPresent = el.dataset.state === "true";
                 attendanceMap[id] = isPresent;
@@ -4956,13 +4956,20 @@ function asnRenderLayout() {
             
             let catOptions = "";
             if (isMjdOrTut) {
-                let mjd = row.category.replace("MID", "MJD").replace("SEC", "MJD");
-                let mid = row.category.replace("MJD", "MID").replace("SEC", "MID");
-                let sec = row.category.replace("MJD", "SEC").replace("MID", "SEC");
-                catOptions += `<option value="${mjd}" ${row.category === mjd ? 'selected' : ''}>${mjd}</option>`;
-                catOptions += `<option value="${mid}" ${row.category === mid ? 'selected' : ''}>${mid}</option>`;
-                catOptions += `<option value="${sec}" ${row.category === sec ? 'selected' : ''}>${sec}</option>`;
-                catOptions += `<option value="Tutorial" ${row.category === "Tutorial" ? 'selected' : ''}>Tutorial</option>`;
+                let mjd = "Tutorial", mid = "Tutorial", sec = "Tutorial";
+                
+                // Only swap prefixes if it's NOT already Tutorial
+                if (!row.category.toUpperCase().includes("TUTORIAL")) {
+                    mjd = row.category.replace("MID", "MJD").replace("SEC", "MJD");
+                    mid = row.category.replace("MJD", "MID").replace("SEC", "MID");
+                    sec = row.category.replace("MJD", "SEC").replace("MID", "SEC");
+                }
+            
+                // Use a Set to prevent duplicates
+                let uniqueCats = new Set([mjd, mid, sec, "Tutorial"]);
+                uniqueCats.forEach(c => {
+                    catOptions += `<option value="${c}" ${row.category === c ? 'selected' : ''}>${c}</option>`;
+                });
             } else {
                 catOptions = `<option value="${row.category}">${row.category}</option>`;
             }
@@ -5299,7 +5306,8 @@ function asnExecuteSplitAction() {
                     getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", asnCurrentSem), where("subjectName", "==", row.subject))).then(snap => {
                         const wb = writeBatch(db); 
                         snap.forEach(d => wb.delete(d.ref)); 
-                        wb.commit().then(() => asnExecuteDivideEvenly(row.subject, newBatches));
+                        // 🚨 FIX: Added row.category here
+                        wb.commit().then(() => asnExecuteDivideEvenly(row.subject, newBatches, row.category));
                     });
                 }
             }
@@ -5311,18 +5319,68 @@ function asnExecuteSplitAction() {
             let newIdx = asnActiveRows.filter(r => r.period === row.period && r.isSplit).length + 1; 
             asnActiveRows.push({ id: `r_${row.period}_${newIdx}_${Date.now()}`, period: row.period, splitIndex: newIdx, isSplit: true, category: row.category, subject: row.subject, teacher: "", teacherID: "", room: "" }); 
             asnRenderLayout(); 
-            asnExecuteDivideEvenly(row.subject, newIdx + 1);
+            // 🚨 FIX: Added row.category here
+            asnExecuteDivideEvenly(row.subject, newIdx + 1, row.category);
         }
     }
 }
 
-async function asnExecuteDivideEvenly(subject, totalBatches) {
-    let allStudents = asnCachedYearStudents.map(s => s.id);
-    let baseSize = Math.floor(allStudents.length / totalBatches); let remainder = allStudents.length % totalBatches;
-    const wb = writeBatch(db); let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, ''); let offset = 0;
-    for(let i=0; i<totalBatches; i++){
-        let size = baseSize + (i < remainder ? 1 : 0); let bStudents = allStudents.slice(offset, offset + size); offset += size; let bName = `Batch ${i+1}`; let docID = `BATCH_Sem${asnCurrentSem}_${cleanSub}_${bName.replace(/\s+/g,'')}`;
-        wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", docID), { batchName: bName, subjectName: subject, semester: asnCurrentSem, studentIDs: bStudents }, {merge: true});
+async function asnExecuteDivideEvenly(subject, totalBatches, rowCategory) {
+    let validStudentIDs = [];
+    let cleanCat = (rowCategory || "").toUpperCase().replace(/\s+/g,"");
+    let semKey = `Semester_${asnCurrentSem}`;
+    let semSpace = `Semester ${asnCurrentSem}`;
+
+    // 🚨 FIX: Filter the cached students exactly like the C# version does!
+    asnCachedYearStudents.forEach(s => {
+        let isEnrolled = false;
+
+        if (cleanCat.includes("MJD") || cleanCat.includes("CORE") || cleanCat.includes("TUTORIAL")) {
+            // Strict Department Check for MJD
+            let sDept = "DEPT_" + String(s.Department || s.department || "").replace(/ /g, "");
+            if (sDept === teacherDeptRaw || (s.Department || s.department) === teacherDeptRaw) {
+                isEnrolled = true;
+            }
+        } else {
+            // Normal Check for Electives/Open subjects
+            let enrolledMap = s.enrolledSubjects ? (s.enrolledSubjects[semKey] || s.enrolledSubjects[semSpace] || s.enrolledSubjects[asnCurrentSem]) : null;
+            if (enrolledMap) {
+                Object.values(enrolledMap).forEach(v => {
+                    if (v.toString().trim() === subject.trim()) isEnrolled = true;
+                });
+            }
+        }
+
+        if (isEnrolled) {
+            validStudentIDs.push(s.id);
+        }
+    });
+
+    if (validStudentIDs.length === 0) {
+        showRcToast("No enrolled students found to split.");
+        return;
+    }
+
+    let baseSize = Math.floor(validStudentIDs.length / totalBatches); 
+    let remainder = validStudentIDs.length % totalBatches;
+    const wb = writeBatch(db); 
+    let cleanSub = subject.replace(/\s+/g, '').replace(/\//g, ''); 
+    let offset = 0;
+
+    for(let i = 0; i < totalBatches; i++) {
+        let size = baseSize + (i < remainder ? 1 : 0); 
+        let bStudents = validStudentIDs.slice(offset, offset + size); 
+        offset += size; 
+        
+        let bName = `Batch ${i+1}`; 
+        let docID = `BATCH_Sem${asnCurrentSem}_${cleanSub}_${bName.replace(/\s+/g,'')}`;
+        
+        wb.set(doc(db, "colleges", currentCollegeID, "subject_batches", docID), { 
+            batchName: bName, 
+            subjectName: subject, 
+            semester: asnCurrentSem, 
+            studentIDs: bStudents 
+        }, {merge: true});
     }
     await wb.commit();
     showRcToast(`Split Class evenly!`);
