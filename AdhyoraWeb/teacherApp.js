@@ -183,12 +183,17 @@ function startInboxListener() {
                 allMessagesMap.set(doc.id, {
                     id: doc.id, title: d.title || "Notice", body: d.body || "",
                     time: d.timestamp ? d.timestamp.toDate() : new Date(),
-                    sender: d.senderName || "Adhyora Team", role: d.senderRole || "system", type: d.type || "broadcast", source: targetText, isMe: senderID === currentUserID
+                    sender: d.senderName || "Adhyora Team", role: d.senderRole || "system", 
+                    type: d.type || "broadcast", source: targetText, isMe: senderID === currentUserID,
+                    // 🚨 FIX: Added the missing link data!
+                    status: d.status || "sent",
+                    linkedChatID: d.linkedChatID || "",
+                    linkedMessageID: d.linkedMessageID || ""
                 });
             }
         });
         renderMessages();
-        updateInboxDot(); // 🚨 FIX: Smart Check
+        updateInboxDot(); 
     });
 
     const chatsRef = collection(db, "colleges", currentCollegeID, "chats");
@@ -203,11 +208,16 @@ function startInboxListener() {
                     allMessagesMap.set(msgDoc.id, {
                         id: msgDoc.id, title: md.title || "Private Message", body: md.body || "",
                         time: md.timestamp ? md.timestamp.toDate() : new Date(),
-                        sender: md.senderName || "User", role: md.senderRole || "Student", type: "incoming", isMe: false
+                        sender: md.senderName || "User", role: md.senderRole || "Student", 
+                        type: "incoming", isMe: false,
+                        // 🚨 FIX: Added the missing link data!
+                        status: md.status || "sent",
+                        linkedChatID: roomDoc.id,
+                        linkedMessageID: msgDoc.id
                     });
                 });
                 renderMessages();
-                updateInboxDot(); // 🚨 FIX: Smart Check
+                updateInboxDot(); 
             });
         });
     });
@@ -228,7 +238,7 @@ function startInboxListener() {
             });
         });
         renderNotifications();
-        updateNotifDot(); // 🚨 FIX: Smart Check
+        updateNotifDot(); 
     });
 
     globalListenerUnsub = onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
@@ -243,7 +253,7 @@ function startInboxListener() {
             });
         });
         renderNotifications();
-        updateNotifDot(); // 🚨 FIX: Smart Check
+        updateNotifDot(); 
     });
 }
 
@@ -259,48 +269,40 @@ function IsMessageForMe(targetText, senderID) {
 function renderMessages() {
     const listEl = document.getElementById("messagesList");
     if (!listEl) return;
-    
     let sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => b.time - a.time);
-    
-    if (sortedMessages.length === 0) { 
-        listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">Inbox is empty</div>`; 
-        return; 
-    }
+    if (sortedMessages.length === 0) { listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">Inbox is empty</div>`; return; }
     
     listEl.innerHTML = sortedMessages.map(m => {
-        let borderColor = "var(--brand-red)"; 
-        let roleLabel = m.role; 
-        let icon = m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn';
-        
-        if (m.role.toLowerCase().includes("system") || m.sender === "Adhyora Team") { 
-            borderColor = "#8b5cf6"; icon = "fa-satellite-dish"; roleLabel = "Developer"; 
-        } 
-        else if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) { 
-            borderColor = "#10b981"; 
-        } 
-        else if (m.role.toLowerCase().includes("student")) { 
-            borderColor = "#3b82f6"; 
-        }
+        let borderColor = "var(--brand-red)"; let roleLabel = m.role; let icon = m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn';
+        if (m.role.toLowerCase().includes("system") || m.sender === "Adhyora Team") { borderColor = "#8b5cf6"; icon = "fa-satellite-dish"; roleLabel = "Developer"; } 
+        else if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) { borderColor = "#10b981"; } 
+        else if (m.role.toLowerCase().includes("student")) { borderColor = "#3b82f6"; }
         
         let headerTxt = m.isMe ? `Sent to: ${m.source}` : `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">(${roleLabel})</span>`;
         if (m.type === "incoming") headerTxt = `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">• Private Chat</span>`;
 
-        // 🚨 NEW LOGIC: Pin for Broadcasts, Double Tick for Sent Personal Messages
         let cornerIconHTML = "";
+        let clickAction = "";
+        let cursorStyle = "default";
+
         if (m.type === "broadcast") {
-            // Notice Board Pin
             cornerIconHTML = `<i class="fas fa-thumbtack" style="color: #cbd5e1; font-size: 16px; transform: rotate(45deg);"></i>`;
         } else if (m.isMe) {
-            // WhatsApp style double-tick for sent personal messages
-            let tickColor = (m.status === "read") ? "#3b82f6" : "#94a3b8"; // Blue if read, Gray if sent
+            let tickColor = (m.status === "read") ? "#3b82f6" : "#94a3b8"; 
             cornerIconHTML = `<i class="fas fa-check-double" id="tick_${m.id}" style="color: ${tickColor}; font-size: 14px; transition: color 0.3s;"></i>`;
+        } else {
+            // Incoming Message: If unread, show a red dot and make it clickable!
+            if (m.status !== "read") {
+                cornerIconHTML = `<div id="unread_dot_${m.id}" style="width:10px; height:10px; background:var(--brand-red); border-radius:50%; box-shadow:0 0 5px rgba(220,38,38,0.5);"></div>`;
+                clickAction = `onclick="window.markMessageAsRead('${m.linkedChatID}', '${m.linkedMessageID}', '${m.id}')"`;
+                cursorStyle = "pointer";
+            }
         }
 
-        // Added position: relative and padding-right to the card to safely position the icon in the top right!
         return `
-        <div style="position:relative; background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; padding-right:45px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor};">
+        <div id="msg_card_${m.id}" ${clickAction} style="position:relative; cursor:${cursorStyle}; background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; padding-right:45px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor}; transition: 0.2s;">
             
-            <div style="position:absolute; top:15px; right:15px;">
+            <div style="position:absolute; top:15px; right:15px; display:flex; align-items:center; justify-content:center;">
                 ${cornerIconHTML}
             </div>
 
@@ -313,36 +315,54 @@ function renderMessages() {
         </div>`;
     }).join('');
 
-    // 🚨 THE REAL-TIME READ RECEIPT ENGINE (Matches your C# ListenToRealMessage)
+    // 🚨 ZERO-COST LISTENER: Only watches personal messages that are unread
     sortedMessages.forEach(m => {
-        // If it's a personal message sent by ME, and it hasn't been read yet...
         if (m.isMe && m.status !== "read" && m.linkedChatID && m.linkedMessageID) {
-            // Make sure we aren't already listening to this specific message
             if (!activeReadListeners.has(m.id)) {
                 let msgRef = doc(db, "colleges", currentCollegeID, "chats", m.linkedChatID, "messages", m.linkedMessageID);
-                
                 let unsub = onSnapshot(msgRef, (docSnap) => {
                     if (docSnap.exists() && docSnap.data().status === "read") {
-                        // 1. Update the local RAM cache so it stays blue
-                        if (allMessagesMap.has(m.id)) {
-                            allMessagesMap.get(m.id).status = "read";
-                        }
-                        
-                        // 2. Instantly turn the tick Blue on the screen!
+                        if (allMessagesMap.has(m.id)) allMessagesMap.get(m.id).status = "read";
                         let tickEl = document.getElementById(`tick_${m.id}`);
                         if (tickEl) tickEl.style.color = "#3b82f6"; 
-                        
-                        // 3. Cleanup: Stop listening to save Firebase reads
                         unsub();
                         activeReadListeners.delete(m.id);
                     }
                 });
-                
                 activeReadListeners.set(m.id, unsub);
             }
         }
     });
 }
+
+window.markMessageAsRead = async function(chatID, msgID, mapID) {
+    if (!chatID || !msgID) return;
+    
+    // 1. Instantly hide the Red Dot so the UI feels fast
+    let dot = document.getElementById(`unread_dot_${mapID}`);
+    if (dot) dot.style.display = "none";
+    
+    // 2. Remove pointer cursor
+    let card = document.getElementById(`msg_card_${mapID}`);
+    if (card) {
+        card.style.cursor = "default";
+        card.onclick = null; 
+    }
+
+    // 3. Update local RAM
+    if (allMessagesMap.has(mapID)) {
+        allMessagesMap.get(mapID).status = "read";
+    }
+
+    // 4. Update Database (This triggers the Blue Tick for the sender!)
+    try {
+        await updateDoc(doc(db, "colleges", currentCollegeID, "chats", chatID, "messages", msgID), {
+            status: "read"
+        });
+    } catch (e) {
+        console.error("Failed to mark as read", e);
+    }
+};
 
 // 🚨 NEW: Smart Red Dot Checkers
 function updateInboxDot() {
