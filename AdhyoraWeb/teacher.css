@@ -438,16 +438,18 @@ body {
    🚨 TIMETABLE VIEWER STYLES
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
-.tt-day-btn { 
+.tt-day-btn {
     background: #fff5f5 !important;
-    color: var(--text-muted); 
-    border: 1px dashed var(--border-color); 
-    padding: 8px 15px; 
-    border-radius: 12px; 
-    font-weight: 600; 
-    font-size: 13px; 
-    cursor: pointer; 
-    transition: all 0.2s; 
+    background-image: none !important;
+    opacity: 1 !important;
+
+    border: 1px solid #fecaca !important;
+
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.04),
+        0 0 0 1px rgba(255,255,255,0.8) inset;
+
+    isolation: isolate;
 }
 
 .tt-day-btn.active { 
