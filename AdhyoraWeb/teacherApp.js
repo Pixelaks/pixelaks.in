@@ -1788,11 +1788,12 @@ function histUpdateQuickDays() {
     const labels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     for(let i=0; i<5; i++) {
         let isSelected = i === dayIndex;
-        // 🚨 STYLING FIX: Enforces the clean White/Red aesthetics for the unselected buttons
         let bg = isSelected ? "var(--brand-red)" : "white"; 
-        let col = isSelected ? "white" : "var(--brand-red)";
-        let border = isSelected ? "none" : "1px solid rgba(220, 38, 38, 0.3)";
-        html += `<button id="quickDayBtn_${i}" style="flex:1; padding:12px 0; border-radius:8px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">${labels[i]}</button>`;
+        let col = isSelected ? "white" : "var(--text-muted)";
+        let border = isSelected ? "none" : "1px solid var(--border-color)";
+        
+        // 🚨 FIX: Removed flex:1, added standard padding so they stay pill-shaped and centered!
+        html += `<button id="quickDayBtn_${i}" style="padding:8px 18px; border-radius:12px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">${labels[i]}</button>`;
     }
     container.innerHTML = html;
 
