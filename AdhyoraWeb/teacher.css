@@ -449,8 +449,36 @@ body {
 
 .tt-card { flex: 1; display: flex; flex-direction: column; gap: 10px; border-radius: 12px; padding: 15px; min-height: 80px; transition: all 0.3s ease; background: var(--bg-base); }
 .tt-pill-grid { display: grid; grid-template-columns: 1fr 2.5fr; gap: 10px; }
-.tt-pill { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 20px; padding: 8px 15px; text-align: center; font-size: 13px; font-weight: 700; color: var(--text-dark); display: flex; justify-content: center; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.tt-pill { 
+    background: var(--bg-base); 
+    border: 1px solid var(--border-color); 
+    border-radius: 20px; 
+    padding: 8px 10px; /* Slightly reduced horizontal padding */
+    text-align: center; 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: var(--text-dark); 
+    display: block; /* 🚨 Block handles ellipsis much better than Flex */
+    line-height: 1.3;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+    min-width: 0; /* 🚨 CRITICAL FIX: Forces grid children to shrink instead of overflowing screen */
+}
+
 .tt-pill.primary { color: var(--brand-red); }
+
+/* =========================================
+   📱 TIMETABLE MOBILE & FOLD PHONE FIXES
+   ========================================= */
+@media (max-width: 380px) {
+    .tt-row { gap: 10px; margin-bottom: 15px; }
+    .tt-timeline-col { width: 35px; min-width: 35px; }
+    .tt-card { padding: 12px 10px; gap: 8px; }
+    .tt-pill-grid { gap: 5px; }
+    .tt-pill { font-size: 11px; padding: 6px 5px; }
+}
 
 /* =========================================
    🚨 ASSIGN CLASSES EDITOR STYLES
