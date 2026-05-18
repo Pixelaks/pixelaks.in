@@ -492,25 +492,22 @@ body {
 /* =========================================
    📱 TIMETABLE MOBILE & PHONE FIXES
    ========================================= */
-@media (max-width: 480px) { /* 🚨 Changed to 480px to protect ALL mobile phones! */
+@media (max-width: 480px) { 
     
     /* 🚨 Reclaim Screen Space & Shift Left */
-    #timetableView > .scrollable-list { padding: 15px 10px !important; } /* Recovers 30px of lost side screen space! */
-    .tt-main-wrapper { padding-left: 0; padding-top: 5px; } /* Removes empty left filler */
+    #timetableView > .scrollable-list { padding: 15px 10px !important; } 
+    .tt-main-wrapper { padding-left: 0; padding-top: 5px; } 
     
-    /* 🚨 Maximize Card Width */
-    .tt-row { gap: 8px; margin-bottom: 20px; } /* Pulls the card much closer to the timeline */
-    .tt-timeline-col { width: 30px; min-width: 30px; } /* Shrinks the timeline column safely */
-    
-    /* 🚨 Card & Text Sizing */
+    /* 🚨 Perfect Card Width & Goldilocks Sizing */
+    .tt-row { gap: 8px; margin-bottom: 15px; } 
+    .tt-timeline-col { width: 30px; min-width: 30px; } 
     .tt-card { padding: 12px 10px; gap: 8px; } 
-    .tt-pill-grid { grid-template-columns: 1fr 3fr; gap: 6px; } /* Gives the Subject Name MUCH more room than the Category */
-    .tt-pill { font-size: 11px; padding: 6px 6px; } 
+    .tt-pill-grid { grid-template-columns: 1fr 3fr; gap: 6px; } 
+    .tt-pill { font-size: 11px; padding: 6px 6px; } /* Clean size, allows wrapping without stretching */
     
-    /* Day Buttons Phone Fix */
-    /* 🚨 Relaxed Day Buttons (Made them even bigger!) */
-    .tt-days-container { gap: 6px; } 
-    .tt-day-btn { padding: 10px 16px; font-size: 14px; } /* Increased padding and font size! */
+    /* 🚨 Day Buttons Fold Fix (Forces 5 buttons to share space perfectly) */
+    .tt-days-container { flex-wrap: nowrap !important; gap: 4px; width: 100%; } 
+    .tt-day-btn { padding: 8px 2px; font-size: 11px; flex: 1; min-width: 0; text-align: center; } 
 
    /* =========================================
        🚨 ASSIGN CLASSES (HOD) PHONE FIXES
@@ -520,17 +517,14 @@ body {
     #assignView > div:nth-child(2) { padding: 15px 10px !important; } 
     #asnListContainer { padding: 15px 10px !important; } 
 
-    /* Day button mobile spacing (Structural rules are handled globally now) */
-    .asn-days-container { gap: 4px; }
-    .asn-day-btn { 
-        padding: 6px 2px; 
-        font-size: 11px; 
-    }
+    /* Day button mobile spacing */
+    .asn-days-container { gap: 4px; width: 100%; }
+    .asn-day-btn { padding: 8px 2px; font-size: 11px; }
 
     /* Remove horizontal scroll limits & tighten the dropdown grid */
     .asn-periods-grid { grid-template-columns: 1fr; gap: 15px; } 
-    .asn-grid { gap: 5px; } /* Shrinks space between dropdowns */
-    .asn-input { padding: 8px 6px; font-size: 11px; } /* Shrinks input padding */
+    .asn-grid { gap: 5px; } 
+    .asn-input { padding: 8px 6px; font-size: 11px; } 
     
     /* Shrink internal card padding slightly */
     .asn-period-wrapper { padding: 12px 10px; }
