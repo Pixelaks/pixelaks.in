@@ -517,15 +517,9 @@ body {
     #assignView > div:nth-child(2) { padding: 15px 10px !important; } 
     #asnListContainer { padding: 15px 10px !important; } 
 
-   /* 🚨 Day Buttons Phone Engine (Matches Timetable Layout perfectly) */
-    .asn-days-container { flex-wrap: nowrap !important; gap: 4px; width: 100%; }
-    .asn-day-btn { 
-        padding: 8px 2px; 
-        font-size: 11px; 
-        flex: 1; /* Forces 5 buttons to share space perfectly on narrow screens */
-        min-width: 0; 
-        text-align: center;
-    }
+    /* Day button mobile spacing */
+    .asn-days-container { gap: 4px; width: 100%; }
+    .asn-day-btn { padding: 8px 2px; font-size: 11px; }
 
     /* Remove horizontal scroll limits & tighten the dropdown grid */
     .asn-periods-grid { grid-template-columns: 1fr; gap: 15px; } 
@@ -542,21 +536,25 @@ body {
 .asn-select-pill { background: rgba(220, 38, 38, 0.08); color: var(--brand-red); border: 1px solid var(--brand-red); padding: 8px 20px; border-radius: 20px; font-weight: 700; font-size: 14px; outline: none; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 2px 10px rgba(220, 38, 38, 0.1); }
 .asn-days-container { 
     display: flex; 
-    gap: 8px; /* Matches Timetable layout exactly */
+    gap: 6px; 
+    flex-wrap: nowrap !important; /* 🚨 Forbids wrapping on ANY screen size */
     justify-content: center; 
+    width: 100%;
 }
 
 .asn-day-btn { 
     background: #ffffff !important; 
     color: var(--text-muted); 
     border: 1px solid var(--border-color); 
-    padding: 8px 15px; /* Comfortable width on PC */
+    padding: 8px 2px; 
     border-radius: 12px; 
     font-weight: 600; 
     font-size: 13px; 
     cursor: pointer; 
     transition: all 0.2s; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+    flex: 1; /* 🚨 Forces them to share space evenly everywhere */
+    min-width: 0; /* 🚨 Allows them to squish without breaking */
     text-align: center;
 }
 
