@@ -4781,8 +4781,8 @@ function ttRenderDay(periodData) {
         let semText = hasClass ? periodData[i].semester : "-";
         let roomText = hasClass ? periodData[i].room : "-";
         
-        // Exact Match to Reference UI: Dashed for empty, solid red + tinted bg for active
-        let borderStyle = hasClass ? "1px solid var(--brand-red)" : "1px dashed var(--border-color)";
+        // 🚨 Darkens the dashed border and thickens the solid active border
+        let borderStyle = hasClass ? "2px solid var(--brand-red)" : "1px dashed rgba(239, 68, 68, 0.4)";
         let bgStyle = hasClass ? "var(--bg-grid-color)" : "transparent"; 
 
         html += `
@@ -4825,11 +4825,11 @@ function ttUpdateVisuals() {
             let hasClass = nodeEl.getAttribute("data-has-class") === "true";
             
             if (currentHour >= endTime) { 
-                // Passed: Gray out
-                nodeEl.style.background = "var(--border-color)"; 
-                nodeEl.style.borderColor = "var(--border-color)";
+                // Passed: Stay Solid Red to match the filler line seamlessly!
+                nodeEl.style.background = "var(--brand-red)"; 
+                nodeEl.style.borderColor = "var(--brand-red)";
                 nodeEl.style.color = "white"; 
-                nodeEl.style.boxShadow = "none";
+                nodeEl.style.boxShadow = "none"; // Removes the active glow so it looks 'finished'
             }
             else if (currentHour >= startTime && currentHour < endTime) { 
                 // Active: Glow Red
