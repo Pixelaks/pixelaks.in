@@ -710,6 +710,7 @@ async function checkTimetableAllocation(ticket, dateStr) {
         }
 
         // 🚨 C# DECISION ENGINE PORT 🚨
+        if(isTargetSubjectScheduled) {// 🚨 C# DECISION ENGINE PORT 🚨
         if(isTargetSubjectScheduled) {
             let totalBatches = myAllocations.length + substituteAllocations.length;
 
@@ -724,14 +725,18 @@ async function checkTimetableAllocation(ticket, dateStr) {
                         <div id="attDirectArea"></div>
                     `;
 
-                    if (myAllocations.length === 0) {
-                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
-                    } else {
-                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Select a batch to mark attendance:</div>`;
+                    // 1. Spawn Substitute Cards for OTHER teachers' batches
+                    if (substituteAllocations.length > 0) {
+                        spawnSubstituteCards(substituteAllocations, selectedSem, selectedSubject);
                     }
 
-                    // 🚨 C# PORT: Spawn ALL allocations as clickable cards!
-                    spawnAllAllocationCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
+                    // 2. Spawn YOUR batch directly onto the main screen
+                    if (myAllocations.length > 0) {
+                        loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+                    } else {
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                    }
+
                 } else {
                     showAttCenterMessage("This period is assigned to another teacher.");
                 }
@@ -773,52 +778,44 @@ async function checkTimetableAllocation(ticket, dateStr) {
     } catch(e) { console.error("Timetable Engine Error", e); showAttCenterMessage("Connection Error."); }
 }
 
-function spawnAllAllocationCards(myAllocs, subAllocs, sem, subj) {
+function spawnSubstituteCards(subDocs, sem, subj) {
     const targetArea = document.getElementById("attSubCardsArea");
     if (!targetArea) return;
 
     let fullHTML = "";
 
-    const generateHTML = (docs, isMyOwn) => {
-        docs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(docSnap => {
-            let d = docSnap.data();
-            let bIndex = parseInt(d.splitIndex || "0");
-            let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-            if (isMyOwn) bName += " (My Class)";
-            let id = docSnap.id;
-            
-            fullHTML += `
-            <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
-                <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
-                    <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
-                        ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
-                    </div>
-                    <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
-                </button>
-                <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
-                    <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
-                    <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                    <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
+    subDocs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(docSnap => {
+        let d = docSnap.data();
+        let bIndex = parseInt(d.splitIndex || "0");
+        let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
+        let id = docSnap.id;
+        
+        fullHTML += `
+        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
+            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
+                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
+                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
                 </div>
-            </div>`;
-        });
-    };
-
-    if (myAllocs.length > 0) generateHTML(myAllocs, true);
-    if (subAllocs.length > 0) generateHTML(subAllocs, false);
+                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
+            </button>
+            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
+                <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
+            </div>
+        </div>`;
+    });
 
     targetArea.innerHTML = fullHTML;
 
     // Attach listeners
-    if (myAllocs.length > 0) myAllocs.forEach(d => attachSubCardListener(d, sem, subj, true));
-    if (subAllocs.length > 0) subAllocs.forEach(d => attachSubCardListener(d, sem, subj, false));
+    subDocs.forEach(d => attachSubCardListener(d, sem, subj));
 }
 
-function attachSubCardListener(docSnap, sem, subj, isMyOwn = false) {
+function attachSubCardListener(docSnap, sem, subj) {
     let d = docSnap.data();
     let bIndex = parseInt(d.splitIndex || "0");
     let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-    if (isMyOwn) bName += " (My Class)";
     let id = docSnap.id;
 
     fetchAndDisplayBatchCount(id, sem, subj, d.isCommon, bIndex);
@@ -952,11 +949,7 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
 
 function showSubstituteConfirmModal(displayName) {
     let t = document.getElementById("subConfirmText");
-    if (displayName.includes("(My Class)")) {
-        t.innerHTML = `Open register for<br><b>${displayName.replace(" (My Class)", "")}</b>?`;
-    } else {
-        t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
-    }
+    t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
     document.getElementById("subConfirmModal").classList.add("active");
 }
 
@@ -975,15 +968,12 @@ function confirmSubstituteLoad() {
     const selectedSem = document.getElementById("attSemDropdown").value;
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
-    // 🚨 Clean the DB string so Firebase doesn't break
-    let cleanBatchNameForDB = attPendingSubBatchName.replace(" (My Class)", "").trim();
-
-    if(cleanBatchNameForDB === "Entire Class") {
+    if(attPendingSubBatchName === "Entire Class") {
         attCurrentSessionBatchIndex = -1;
         loadAttendanceRegister(null, attCurrentLoadTicket, attSubjectCategories.get(selectedSubject), dateStr);
     } else {
         const cleanSub = selectedSubject.replace(/ /g, "").replace(/\//g, "");
-        const batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_${cleanBatchNameForDB.replace(/ /g, "")}`;
+        const batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_${attPendingSubBatchName.replace(/ /g, "")}`;
         
         getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID)).then(snap => {
             if(snap.exists() && snap.data().studentIDs) {
