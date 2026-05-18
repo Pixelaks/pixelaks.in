@@ -3214,9 +3214,18 @@ document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if
 function SD_RenderMarksUI(examName) {
     let marks = sdCachedMarks[examName]; if(!marks) return;
     document.getElementById("sdMarksList").innerHTML = marks.map(m => {
-        let maxText = m.max ? m.max : "N/A"; let ratio = m.max ? m.obt / m.max : 0; let per = m.max ? (ratio * 100).toFixed(0) + "%" : "";
-        let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:var(--brand-red); width:${ratio*100}%;"></div></div>` : "";
-        return `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
+        let maxText = m.max ? m.max : "N/A"; 
+        let ratio = m.max ? m.obt / m.max : 0; 
+        let percentVal = ratio * 100;
+        let per = m.max ? percentVal.toFixed(0) + "%" : "";
+        
+        // 🚨 THE FIX: Dynamic Color Logic based on performance!
+        let col = percentVal >= 75 ? "#10b981" : (percentVal >= 60 ? "#f59e0b" : "var(--brand-red)");
+
+        let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${percentVal}%;"></div></div>` : "";
+        
+        // 🚨 DARK MODE FIX: Replaced background:white with background:var(--bg-base)
+        return `<div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
 }
 
