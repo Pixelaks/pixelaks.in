@@ -529,6 +529,35 @@ body {
     /* Shrink internal card padding slightly */
     .asn-period-wrapper { padding: 12px 10px; }
     .asn-card { padding: 15px 10px 10px; }
+
+   /* =========================================
+       🚨 ACADEMIC CALENDAR MOBILE & FOLD FIXES
+       ========================================= */
+    #calendarView {
+        padding: 10px !important;
+    }
+
+    #calViewCard {
+        height: auto !important; /* 🚨 Stop the card from stretching full-screen vertically */
+        max-height: 90vh !important;
+        padding: 16px !important;
+        border-radius: 20px !important;
+    }
+
+    #calGridContainer {
+        flex: none !important; /* Disables infinite flex stretching */
+        width: 100% !important;
+        height: auto !important;
+        /* 🚨 PURE MATH: 7 columns / 6 rows makes every single cell a perfect, unsquished square! */
+        aspect-ratio: 7 / 6 !important; 
+        margin-bottom: 15px !important;
+        gap: 4px !important; /* Tightens the space between squares on mobile */
+    }
+
+    #calUpcomingEventBanner {
+        padding: 12px !important;
+        font-size: 13px !important;
+    }
 }
 /* =========================================
    🚨 ASSIGN CLASSES EDITOR STYLES
