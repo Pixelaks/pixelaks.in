@@ -664,21 +664,21 @@ body {
 .asn-split-btn.del:hover { background: var(--brand-red); color: white; }
 
 /* =========================================
-   🌙 DARK MODE OVERRIDES (ULTIMATE V4)
+   🌙 DARK MODE OVERRIDES (ULTIMATE V5)
    ========================================= */
 body.dark-mode {
     --bg-base: #0f172a;       /* Deep slate background */
     --bg-surface: #1e293b;    /* Lighter slate for floating cards */
-    --brand-red: #b91c1c;     /* 🚨 Deepened to a rich, eye-friendly crimson! */
+    --brand-red: #dc2626;     /* Brightened slightly to pop against the dark UI */
     --text-red: #ef4444;      
     --text-light-red: #fca5a5;
-    --text-dark: #94a3b8;     /* 🚨 Soft Slate-400 (Zero eye strain) */
+    --text-dark: #94a3b8;     /* Soft Slate-400 (Zero eye strain) */
     --text-muted: #64748b;    /* Slate-500 for secondary text */
-    --bg-grid-color: rgba(185, 28, 28, 0.05); /* Adjusted grid to match deeper red */
+    --bg-grid-color: rgba(220, 38, 38, 0.12); /* 🚨 Increased opacity so the grid is visible! */
     --card-bg: #1e293b;       
     --border-color: #334155;  /* Slate-700 lines */
     color: var(--text-dark);
-    color-scheme: dark;       /* 🚨 MAGICAL FIX: Forces native checkboxes and date-pickers dark! */
+    color-scheme: dark;       /* Forces native checkboxes and date-pickers dark! */
 }
 
 /* 🚨 1. SCROLLBAR FIXES */
@@ -686,18 +686,24 @@ body.dark-mode *::-webkit-scrollbar-track { background: var(--bg-base) !importan
 body.dark-mode *::-webkit-scrollbar-thumb { background: #475569 !important; border-radius: 4px; }
 body.dark-mode *::-webkit-scrollbar-thumb:hover { background: var(--brand-red) !important; }
 
-/* 🚨 2. TOP NAV & BOTTOM NAV BAR FIX */
+/* 🚨 2. TOP NAV & BOTTOM NAV BAR FIX (Fixed the white pill) */
 body.dark-mode .icon-nav {
-    background-image: none !important; 
-    background-color: var(--bg-surface) !important;
-    border-color: var(--border-color) !important;
+    background: var(--bg-surface) !important; /* 🚨 Shorthand overrides the light-mode gradient image */
+    border: 1px solid var(--border-color) !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
 }
-body.dark-mode .icon-nav-container .nav-icon-btn { color: var(--text-muted); }
+body.dark-mode .icon-nav-container .nav-icon-btn { color: var(--text-muted) !important; }
 body.dark-mode .icon-nav-container .nav-icon-btn:hover,
-body.dark-mode .icon-nav-container .nav-icon-btn.active-nav { color: var(--brand-red); }
+body.dark-mode .icon-nav-container .nav-icon-btn.active-nav { color: var(--brand-red) !important; }
 
-/* 🚨 3. ULTIMATE CATCH-ALL FOR INLINE JS CARDS */
+/* 🚨 3. WELCOME TEXT COLOR FIX */
+body.dark-mode .welcome-text { 
+    color: var(--brand-red) !important; 
+    background: transparent !important; 
+    text-shadow: 0 0 15px rgba(220, 38, 38, 0.3) !important; 
+}
+
+/* 🚨 4. ULTIMATE CATCH-ALL FOR INLINE JS CARDS */
 body.dark-mode [style*="background: white"],
 body.dark-mode [style*="background:white"],
 body.dark-mode [style*="background: #ffffff"],
@@ -708,64 +714,85 @@ body.dark-mode [style*="background-color: #ffffff"],
 body.dark-mode [style*="background-color:#ffffff"],
 body.dark-mode [style*="background: var(--bg-base)"],
 body.dark-mode [style*="background:var(--bg-base)"] {
-    background-color: var(--bg-surface) !important;
-    border: 1px solid var(--border-color) !important; /* 🚨 FORCES missing borders to appear on Student List/Messages! */
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-color) !important;
     color: var(--text-dark) !important;
 }
 
-/* Catch light pink backgrounds (Fixes the Attendance Batch headers!) */
+/* Catch light pink backgrounds */
 body.dark-mode [style*="background: #fff5f5"],
 body.dark-mode [style*="background:#fff5f5"],
 body.dark-mode [style*="background: #fef2f2"],
 body.dark-mode [style*="background:#fef2f2"],
 body.dark-mode [style*="background: #fee2e2"],
-body.dark-mode [style*="background:#fee2e2"] {
-    background-color: rgba(185, 28, 28, 0.1) !important; /* Matches deeper red */
-    border-color: rgba(185, 28, 28, 0.2) !important;
+body.dark-mode [style*="background:#fee2e2"],
+body.dark-mode [style*="background: rgba(220, 38, 38, 0.08)"] {
+    background: rgba(220, 38, 38, 0.1) !important;
+    border-color: rgba(220, 38, 38, 0.2) !important;
 }
 
-/* Protect Green active buttons from the catch-all */
+/* Protect Green active buttons */
 body.dark-mode [style*="background: #10b981"],
 body.dark-mode [style*="background:#10b981"] {
-    background-color: #065f46 !important; 
+    background: #065f46 !important; 
     color: #a7f3d0 !important; 
     border-color: #065f46 !important;
 }
 
-/* 🚨 4. CALENDAR SPECIFIC FIXES */
+/* 🚨 5. CALENDAR FIXES (Fixed invisible buttons) */
 body.dark-mode #calViewCard { background: var(--bg-surface) !important; }
 body.dark-mode #calUpcomingEventBanner { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; }
 body.dark-mode #calPrevMonthBtn, body.dark-mode #calNextMonthBtn { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; }
-body.dark-mode #calGridContainer > div { 
-    background-color: var(--bg-base) !important; 
+
+/* Target the buttons inside the calendar specifically */
+body.dark-mode #calGridContainer > button { 
+    background: var(--bg-base) !important; 
     border: 1px solid var(--border-color) !important; 
+    color: var(--text-dark) !important;
 }
-body.dark-mode #calGridContainer > div[style*="background: #10b981"],
-body.dark-mode #calGridContainer > div[style*="background:#10b981"],
-body.dark-mode #calGridContainer > div[style*="color: white"],
-body.dark-mode #calGridContainer > div[style*="color:white"] { 
-    background-color: #059669 !important; 
+
+/* Calendar: Active Green Day */
+body.dark-mode #calGridContainer > button[style*="white"],
+body.dark-mode #calGridContainer > button[style*="#22c55e"],
+body.dark-mode #calGridContainer > button[style*="rgb(34, 197, 94)"] { 
+    background: #059669 !important; 
     color: #ffffff !important; 
     border: none !important;
 }
 
-/* 🚨 5. TIMETABLE BEAUTIFICATION */
+/* Calendar: Red Holidays/Weekends */
+body.dark-mode #calGridContainer > button[style*="#ef4444"],
+body.dark-mode #calGridContainer > button[style*="rgb(239, 68, 68)"] {
+    background: rgba(220, 38, 38, 0.15) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Calendar: Blue Semester Start/End */
+body.dark-mode #calGridContainer > button[style*="#3b82f6"],
+body.dark-mode #calGridContainer > button[style*="rgb(59, 130, 246)"] {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #93c5fd !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* 🚨 6. TIMETABLE BEAUTIFICATION */
 body.dark-mode .tt-card { background: var(--bg-surface) !important; border-color: var(--border-color) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; }
 body.dark-mode .tt-pill { background: var(--bg-base) !important; color: var(--text-dark); border-color: var(--border-color); }
 body.dark-mode .tt-node { background: var(--bg-surface) !important; color: var(--text-dark); border-color: var(--border-color); }
 body.dark-mode .tt-day-btn { background: var(--bg-surface) !important; border-color: var(--border-color) !important; color: var(--text-muted); }
 body.dark-mode .tt-day-btn.active { background: var(--brand-red) !important; color: #ffffff !important; border-color: var(--brand-red) !important; }
 
-/* 🚨 6. ASSIGN CLASSES PANEL */
-body.dark-mode .asn-period-wrapper { background: rgba(185, 28, 28, 0.03) !important; border-color: var(--border-color) !important; }
+/* 🚨 7. ASSIGN CLASSES PANEL */
+body.dark-mode .asn-period-wrapper { background: rgba(220, 38, 38, 0.03) !important; border-color: var(--border-color) !important; }
 body.dark-mode .asn-card { background: var(--bg-surface) !important; border-color: var(--border-color) !important; }
-body.dark-mode .asn-card.split { background: rgba(185, 28, 28, 0.08) !important; border-color: rgba(185, 28, 28, 0.3) !important; }
+body.dark-mode .asn-card.split { background: rgba(220, 38, 38, 0.08) !important; border-color: rgba(220, 38, 38, 0.3) !important; }
 body.dark-mode .asn-day-btn { background: var(--bg-surface) !important; border-color: var(--border-color) !important; color: var(--text-muted); }
 body.dark-mode .asn-day-btn.active { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #ffffff !important; }
 body.dark-mode .asn-input, body.dark-mode .asn-split-btn { background: var(--bg-base) !important; color: var(--text-dark) !important; border-color: var(--border-color) !important; }
-body.dark-mode .asn-select-pill { background: rgba(185, 28, 28, 0.1) !important; color: var(--text-red) !important; border-color: rgba(185, 28, 28, 0.3) !important; }
+body.dark-mode .asn-select-pill { background: rgba(220, 38, 38, 0.1) !important; color: var(--text-red) !important; border-color: rgba(220, 38, 38, 0.3) !important; }
 
-/* 🚨 7. STUDENT DASHBOARD STATS & WAVES */
+/* 🚨 8. STUDENT DASHBOARD STATS & WAVES */
 body.dark-mode .circle-wave-wrap { background: var(--bg-base) !important; border-color: var(--border-color) !important; }
 body.dark-mode .circle-wave-text { color: var(--text-dark) !important; text-shadow: 0 0 10px rgba(0,0,0,0.8) !important; }
 body.dark-mode .wavy-row { background: var(--bg-base) !important; border-color: var(--border-color) !important; }
@@ -773,11 +800,11 @@ body.dark-mode .wavy-text { color: var(--text-dark) !important; text-shadow: 0 0
 body.dark-mode .hod-badge { background-color: rgba(29, 78, 216, 0.2) !important; color: #93c5fd !important; border-color: #1e3a8a !important; }
 body.dark-mode .status-pending { background-color: rgba(180, 83, 9, 0.2) !important; color: #fcd34d !important; border-color: #92400e !important; }
 body.dark-mode .status-approved { background-color: rgba(22, 101, 52, 0.2) !important; color: #86efac !important; border-color: #14532d !important; }
-body.dark-mode .status-declined { background: rgba(185, 28, 28, 0.2) !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
+body.dark-mode .status-declined { background: rgba(220, 38, 38, 0.2) !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
 body.dark-mode .stat-label { color: var(--text-muted) !important; }
 body.dark-mode .stat-value { color: var(--text-dark) !important; }
 
-/* 🚨 8. INPUTS, SELECTS, TOGGLES & CHECKBOXES */
+/* 🚨 9. INPUTS, SELECTS, TOGGLES & CHECKBOXES */
 body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background-color: var(--bg-base) !important; color: var(--text-dark) !important; border-color: var(--border-color) !important; }
 body.dark-mode input::placeholder, body.dark-mode textarea::placeholder { color: var(--text-muted) !important; }
 body.dark-mode .filter-select { background: var(--bg-base) !important; color: var(--text-dark) !important; border-color: var(--border-color) !important; }
@@ -790,15 +817,14 @@ body.dark-mode .attd-toggle.active { background: rgba(16, 185, 129, 0.2) !import
 body.dark-mode .attd-toggle.active::after { background: #34d399 !important; }
 body.dark-mode .attd-toggle.active::before { color: #a7f3d0 !important; }
 
-/* 🚨 9. POPUPS & SIDEBAR */
+/* 🚨 10. POPUPS & SIDEBAR */
 body.dark-mode .compose-modal, body.dark-mode .settings-drawer, body.dark-mode .welcome-card { background-color: var(--bg-surface) !important; border-color: var(--border-color) !important; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; }
 body.dark-mode .sidebar { background-color: var(--bg-base); }
 body.dark-mode .menu-btn { background-color: var(--bg-surface); border-color: var(--border-color); }
-body.dark-mode .menu-btn:hover { background-color: rgba(185, 28, 28, 0.1); border-color: rgba(185, 28, 28, 0.3); }
+body.dark-mode .menu-btn:hover { background-color: rgba(220, 38, 38, 0.1); border-color: rgba(220, 38, 38, 0.3); }
 body.dark-mode .btn-text, body.dark-mode .btn-icon { color: var(--text-dark); }
 body.dark-mode .settings-btn { background: var(--bg-base); color: var(--text-dark); border-color: var(--border-color); }
 body.dark-mode .settings-btn:hover { background: var(--bg-surface); border-color: var(--brand-red); color: var(--brand-red); }
-body.dark-mode .welcome-text { background: transparent !important; text-shadow: 0 0 15px rgba(185, 28, 28, 0.3) !important; }
 
 /* =========================================
    📱 MOBILE POLISH & 2-COLUMN GRID FIX
