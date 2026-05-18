@@ -1085,7 +1085,7 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
     }
 
     if (!attIsSubstitutePanelOpen) {
-        document.getElementById("attTotalStudentsText").innerText = `${matchingStudents.length} Students`;
+        document.getElementById("attTotalStudentsText").innerHTML = `<i class="fas fa-users" style="margin-right:5px; color:var(--text-muted);"></i> ${matchingStudents.length} Students`;
     }
     
     matchingStudents.sort((a,b) => {
@@ -1192,7 +1192,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         uiText += `<br><span style="font-size:11px; color:#94a3b8;">${sDept}</span>`;
 
         let toggleClass = `attd-toggle ${isPresent ? 'active' : ''} ${rowLocked ? 'locked' : ''}`;
-        let padding = attIsSubstitutePanelOpen ? "10px" : "15px";
+        let padding = attIsSubstitutePanelOpen ? "8px 10px" : "10px 15px";
         let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base, #ffffff)";
         let cursorStyle = rowLocked ? "not-allowed" : "pointer";
         let opacityStyle = rowLocked ? "0.6" : "1.0"; // 🚨 VISUAL LOCK (Gray out row)
