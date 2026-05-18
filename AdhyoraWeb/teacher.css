@@ -134,6 +134,32 @@ body {
     cursor: pointer;
 }
 
+/* 🚨 FIX: Attendance Header Auto-Wrapping */
+#attMainScreen > div:first-child {
+    flex-wrap: wrap !important;
+    gap: 15px;
+}
+#attMainScreen > div:first-child > div {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
+}
+@media (min-width: 450px) {
+    #attMainScreen > div:first-child > div {
+        width: auto;
+    }
+}
+
+/* 🚨 FIX: Attendance Filter Dropdowns */
+#attSemDropdown, #attPeriodDropdown {
+    min-width: 110px;
+    flex: 1 1 45% !important;
+}
+#attSubjDropdown {
+    flex: 1 1 100% !important;
+    width: 100%;
+}
+
 /* =========================================
    🚨 SIDEBAR (PC HORIZONTAL BUTTONS)
    ========================================= */
