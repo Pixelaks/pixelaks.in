@@ -705,21 +705,39 @@ async function checkTimetableAllocation(ticket, dateStr) {
             showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
         }
 
-        // Create Layout Zones
-        const listContainer = document.getElementById("attListContainer");
-        listContainer.innerHTML = `
-            <div id="attSubCardsArea"></div>
-            <div id="attDirectArea"></div>
-        `;
-
+        // 🚨 THE C# DECISION ENGINE PORT 🚨
         if(isTargetSubjectScheduled) {
-            if (substituteAllocations.length > 0) {
-                spawnSubstituteCards(substituteAllocations, selectedSem, selectedSubject);
-            }
-            if (myAllocations.length > 0) {
-                loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+            let totalBatches = myAllocations.length + substituteAllocations.length;
+
+            if (totalBatches > 0) {
+                // Check if I actually teach this subject anywhere
+                let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
+
+                if (myAllocations.length > 0 || iTeachSubject) {
+                    
+                    // Create Layout Zones
+                    const listContainer = document.getElementById("attListContainer");
+                    listContainer.innerHTML = `
+                        <div id="attSubCardsArea"></div>
+                        <div id="attDirectArea"></div>
+                    `;
+
+                    // Spawn Substitutes if any exist
+                    if (substituteAllocations.length > 0) {
+                        spawnSubstituteCards(substituteAllocations, selectedSem, selectedSubject);
+                    }
+
+                    // Spawn My Class or show the Substitute Helper Text
+                    if (myAllocations.length > 0) {
+                        loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+                    } else {
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                    }
+                } else {
+                    showAttCenterMessage("This period is assigned to another teacher.");
+                }
             } else {
-                document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                showAttCenterMessage("This period is assigned to another teacher.");
             }
         } else {
             let isFreeRoam = targetSubCategory.includes("MJD") || targetSubCategory.includes("MID") || targetSubCategory.includes("SEC") || targetSubCategory.includes("TUTORIAL") || targetSubCategory.includes("CORE");
