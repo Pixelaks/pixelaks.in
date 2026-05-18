@@ -134,10 +134,15 @@ body {
     cursor: pointer;
 }
 
-/* 🚨 FIX: Attendance Header Auto-Wrapping (KEEP THIS PART) */
+/* =========================================
+   🚨 ATTENDANCE MOBILE RESPONSIVENESS FIXES
+   ========================================= */
+
+/* 1. Header Auto-Wrapping & Compact Spacing */
 #attMainScreen > div:first-child {
     flex-wrap: wrap !important;
     gap: 15px;
+    padding: 12px 15px 10px !important; /* Shrinks the massive padding */
 }
 #attMainScreen > div:first-child > div {
     flex-wrap: wrap;
@@ -150,26 +155,42 @@ body {
     }
 }
 
-/* 🚨 FIX: Force Attendance Dropdowns onto ONE Row (REPLACE WITH THIS) */
+/* 2. Compact Top Buttons */
+#btnOpenHistory, #attDateBtn {
+    padding: 6px 10px !important;
+    height: 38px !important; /* Locks height to save space */
+    justify-content: center;
+}
+#btnOpenHistory { font-size: 12px !important; }
+#attDateText { font-size: 10.5px !important; }
+
+/* 3. Force Dropdowns onto ONE Row */
 #attMainScreen > div:nth-child(2) {
     flex-wrap: nowrap !important; 
     padding: 10px 15px !important; 
     gap: 6px !important; 
 }
-
 #attSemDropdown, #attPeriodDropdown {
     flex: 1 !important;
     min-width: 0 !important; 
     padding: 8px 4px !important;
     font-size: 11px !important; 
 }
-
 #attSubjDropdown {
     flex: 1.5 !important; 
     min-width: 0 !important;
-    padding: 8px 4px !important;
+    padding: 8px 25px 8px 4px !important; /* 25px padding on the right protects the arrow */
     font-size: 11px !important;
 }
+
+/* 4. Prevent Text Overlapping the Arrow */
+.filter-select, #attSemDropdown, #attPeriodDropdown, #attSubjDropdown {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+
 
 /* =========================================
    🚨 SIDEBAR (PC HORIZONTAL BUTTONS)
