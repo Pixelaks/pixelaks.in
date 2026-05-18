@@ -438,7 +438,7 @@ body {
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
 .tt-day-btn { 
-    background: var(--card-bg); /* 🚨 Matches the pastel red header background */
+    background: var(--card-bg); /* 🚨 Matches the pastel red header background exactly! */
     color: var(--text-muted); 
     border: 1px dashed var(--border-color); 
     padding: 8px 15px; 
