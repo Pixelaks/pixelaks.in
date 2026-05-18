@@ -1820,8 +1820,9 @@ async function histFetchDailyHistory() {
     try {
         let snap = await getDocs(query(
             collection(db, "colleges", currentCollegeID, "attendance"),
-            where(documentId(), ">=", docPrefix),
-            where(documentId(), "<=", docPrefix + "\uf8ff")
+            // 🚨 FIX: Changed documentId() to "__name__" for web compatibility!
+            where("__name__", ">=", docPrefix),
+            where("__name__", "<=", docPrefix + "\uf8ff")
         ));
 
         if (snap.empty) {
