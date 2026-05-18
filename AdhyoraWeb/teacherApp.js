@@ -4899,7 +4899,7 @@ async function asnLoadData() {
     }
 
     // 2. Fetch Existing Allocations for HOD's Dept
-    let safeHodDept = `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
+    let safeHodDept = teacherDeptRaw.startsWith("DEPT_") ? teacherDeptRaw : `DEPT_${teacherDeptRaw.replace(/\s+/g,"")}`;
     const allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", asnCurrentSem), where("day", "==", asnSelectedDay), where("departmentID", "==", safeHodDept)));
     
     let allocsByPeriod = {};
