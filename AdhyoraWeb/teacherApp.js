@@ -793,17 +793,18 @@ function spawnSubstituteCards(subDocs, sem, subj) {
         let id = docSnap.id;
         
         fullHTML += `
-        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
-            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
-                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
-                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
+        <div class="sub-card" style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; transition:0.3s; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--bg-grid-color); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <div id="subCardTitle_${id}" style="font-weight:bold; color:var(--brand-red); font-size:14px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    ${bName} 
+                    <span style="font-size:11px; font-weight:normal; background:var(--bg-base); padding:2px 8px; border-radius:10px; color:var(--brand-red); border:1px solid var(--border-color);">(Assigned: ${d.teacherName || "Unknown"})</span>
                 </div>
-                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
+                <i class="fas fa-chevron-right" id="subCardIcon_${id}" style="color:var(--text-muted); transition: 0.2s; transform:rotate(0deg);"></i>
             </button>
-            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+            <div id="subCardBody_${id}" style="display:none; padding:15px; background: var(--bg-surface); border-top:1px solid var(--border-color);">
                 <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
                 <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 10px rgba(220,38,38,0.2);">Save Attendance</button>
             </div>
         </div>`;
     });
@@ -862,17 +863,18 @@ function spawnManualBatchCards(subDocs, sem, subj) {
         let id = d.id;
 
         fullHTML += `
-        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
-            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
-                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
-                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.data().teacherName})</span>
+        <div class="sub-card" style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; margin-bottom:15px; overflow:hidden; transition:0.3s; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <button id="subCardBtn_${id}" style="width:100%; padding:15px; background:var(--bg-grid-color); border:none; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <div id="subCardTitle_${id}" style="font-weight:bold; color:var(--brand-red); font-size:14px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    ${bName} 
+                    <span style="font-size:11px; font-weight:normal; background:var(--bg-base); padding:2px 8px; border-radius:10px; color:var(--brand-red); border:1px solid var(--border-color);">(Assigned: ${d.data().teacherName})</span>
                 </div>
-                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
+                <i class="fas fa-chevron-right" id="subCardIcon_${id}" style="color:var(--text-muted); transition: 0.2s; transform:rotate(0deg);"></i>
             </button>
-            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+            <div id="subCardBody_${id}" style="display:none; padding:15px; background: var(--bg-surface); border-top:1px solid var(--border-color);">
                 <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
                 <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
+                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 10px rgba(220,38,38,0.2);">Save Attendance</button>
             </div>
         </div>`;
     });
@@ -935,7 +937,7 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
                 if(isEnrolled) count++;
             });
             let titleEl = document.getElementById(`subCardTitle_${id}`);
-            if(titleEl) titleEl.innerHTML += ` <span style='font-size:13px; color:#991b1b; font-weight:normal;'>(${count} Students)</span>`;
+            if(titleEl) titleEl.innerHTML += ` <span style="font-size:11px; font-weight:normal; background:var(--bg-base); padding:2px 8px; border-radius:10px; color:var(--brand-red); border:1px solid var(--border-color);">(${count} Students)</span>`;
         } else {
             let cleanSub = subj.replace(/ /g, "").replace(/\//g, "");
             let batchDocID = `BATCH_Sem${sem}_${cleanSub}_Batch${bIndex + 1}`;
@@ -943,7 +945,7 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
             if(docSnap.exists() && docSnap.data().studentIDs) {
                 let count = docSnap.data().studentIDs.length;
                 let titleEl = document.getElementById(`subCardTitle_${id}`);
-                if(titleEl) titleEl.innerHTML += ` <span style='font-size:13px; color:#991b1b; font-weight:normal;'>(${count} Students)</span>`;
+                if(titleEl) titleEl.innerHTML += ` <span style="font-size:11px; font-weight:normal; background:var(--bg-base); padding:2px 8px; border-radius:10px; color:var(--brand-red); border:1px solid var(--border-color);">(${count} Students)</span>`;
             }
         }
     } catch(e) { console.error("Count Error", e); }
@@ -959,8 +961,8 @@ function confirmSubstituteLoad() {
     document.getElementById("subConfirmModal").classList.remove("active");
     
     document.getElementById(`subCardBody_${attPendingSubCardId}`).style.display = "block";
-    document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(180deg)";
-    document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:#64748b;'>Loading Register...</span>";
+    document.getElementById(`subCardIcon_${attPendingSubCardId}`).style.transform = "rotate(90deg)"; // Fixed Rotation!
+    document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:var(--text-muted);'>Loading Register...</span>"; // Fixed Color!
     document.getElementById(`subCardStudents_${attPendingSubCardId}`).innerHTML = `<div style="text-align:center; padding:20px;"><div style="width:30px; height:30px; border:2px solid rgba(220,38,38,0.2); border-top-color:var(--brand-red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div></div>`;
     
     attIsSubstitutePanelOpen = true; 
@@ -982,7 +984,7 @@ function confirmSubstituteLoad() {
                 attCurrentSessionBatchIndex = attPendingSubBatchIndex;
                 loadAttendanceRegister(snap.data().studentIDs, attCurrentLoadTicket, attSubjectCategories.get(selectedSubject), dateStr);
             } else {
-                document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:red;'>Batch Error. Ask Principal to resplit.</span>";
+                document.getElementById(`subCardStatus_${attPendingSubCardId}`).innerHTML = "<span style='color:var(--brand-red);'>Batch Error. Ask Principal to resplit.</span>";
                 document.getElementById(`subCardStudents_${attPendingSubCardId}`).innerHTML = "";
             }
         });
@@ -1159,7 +1161,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
         let saveBtn = document.getElementById(`subCardSaveBtn_${attPendingSubCardId}`);
         
         if (isThisBatchLocked) {
-            statusEl.innerHTML = `<span style='color:red;'>${lockText}</span>`;
+            statusEl.innerHTML = `<span style='color:var(--brand-red);'>${lockText}</span>`; // Fixed Red!
             saveBtn.style.opacity = "0.5";
             saveBtn.style.pointerEvents = "none";
         } else {
@@ -1217,7 +1219,7 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
 
         let toggleClass = `attd-toggle ${isPresent ? 'active' : ''} ${rowLocked ? 'locked' : ''}`;
         let padding = attIsSubstitutePanelOpen ? "8px 10px" : "10px 15px";
-        let bgCol = attIsSubstitutePanelOpen ? "white" : "var(--bg-base, #ffffff)";
+        let bgCol = "var(--bg-base)"; // 🚨 FIXED: Now explicitly uses CSS Vars instead of 'white'!
         let cursorStyle = rowLocked ? "not-allowed" : "pointer";
         let opacityStyle = rowLocked ? "0.6" : "1.0"; // 🚨 VISUAL LOCK (Gray out row)
         
