@@ -677,65 +677,62 @@ async function checkTimetableAllocation(ticket, dateStr) {
         }
 
         let allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", selectedSem), where("day", "==", dayName), where("period", "==", String(pIndex))));
-            if(allocSnap.empty) {
-                allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex))));
+        if(allocSnap.empty) {
+            allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex))));
+        }
+
+        if(ticket !== attCurrentLoadTicket) return;
+
+        let isTargetSubjectScheduled = false;
+        let myAllocations = [];
+        let substituteAllocations = [];
+
+        allocSnap.forEach(docSnap => {
+            let data = docSnap.data();
+            let sCat = (data.subjectCategory || data.category || data.type || "UNKNOWN").toUpperCase();
+            if(data.subjectName === selectedSubject) {
+                isTargetSubjectScheduled = true;
+                let isStrictDeptSubject = sCat.includes("MJD") || sCat.includes("CORE") || sCat.includes("TUTORIAL");
+                
+                // 🚨 BUG 1 FIXED: Bulletproof String Cleaner for Department Matching!
+                let docDept = (data.departmentID || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+                let myDept = (teacherDeptRaw || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+
+                if(isStrictDeptSubject && docDept !== myDept && docDept !== "general" && docDept !== "all") return;
+
+                if((data.teacherID || "").trim() === currentUserID) myAllocations.push(docSnap);
+                else substituteAllocations.push(docSnap);
             }
-    
-            if(ticket !== attCurrentLoadTicket) return;
-    
-            let isTargetSubjectScheduled = false;
-            let myAllocations = [];
-            let substituteAllocations = [];
-    
-            allocSnap.forEach(docSnap => {
-                let data = docSnap.data();
-                let sCat = (data.subjectCategory || data.category || data.type || "UNKNOWN").toUpperCase();
-                if(data.subjectName === selectedSubject) {
-                    isTargetSubjectScheduled = true;
-                    let isStrictDeptSubject = sCat.includes("MJD") || sCat.includes("CORE") || sCat.includes("TUTORIAL");
+        });
+
+        if(isStructurallyStrict && !isMySelectedSubjectStrict) {
+            showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
+        }
+
+        // 🚨 C# DECISION ENGINE PORT 🚨
+        if(isTargetSubjectScheduled) {
+            let totalBatches = myAllocations.length + substituteAllocations.length;
+
+            if (totalBatches > 0) {
+                let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
+
+                if (myAllocations.length > 0 || iTeachSubject) {
                     
-                    // 🚨 BUG 1 FIXED: Direct comparison to teacherDeptRaw!
-                    if(isStrictDeptSubject && data.departmentID !== teacherDeptRaw) return;
-    
-                    if((data.teacherID || "").trim() === currentUserID) myAllocations.push(docSnap);
-                    else substituteAllocations.push(docSnap);
-                }
-            });
-    
-            if(isStructurallyStrict && !isMySelectedSubjectStrict) {
-                showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
-            }
-    
-            // 🚨 BUG 2 FIXED: C# Decision Engine Port
-            if(isTargetSubjectScheduled) {
-                let totalBatches = myAllocations.length + substituteAllocations.length;
-    
-                if (totalBatches > 0) {
-                    let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
-    
-                    if (myAllocations.length > 0 || iTeachSubject) {
-                        
-                        const listContainer = document.getElementById("attListContainer");
-                        listContainer.innerHTML = `
-                            <div id="attSubCardsArea"></div>
-                            <div id="attDirectArea"></div>
-                        `;
-    
-                        if (myAllocations.length === 0) {
-                            document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
-                        } else {
-                            document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Select a batch to mark attendance:</div>`;
-                        }
-    
-                        // 🚨 C# PORT: Spawn ALL allocations as clickable cards!
-                        spawnAllAllocationCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
+                    const listContainer = document.getElementById("attListContainer");
+                    listContainer.innerHTML = `
+                        <div id="attSubCardsArea"></div>
+                        <div id="attDirectArea"></div>
+                    `;
+
+                    if (myAllocations.length === 0) {
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
                     } else {
-                        showAttCenterMessage("This period is assigned to another teacher.");
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Select a batch to mark attendance:</div>`;
                     }
+
+                    // 🚨 C# PORT: Spawn ALL allocations as clickable cards!
+                    spawnAllAllocationCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
                 } else {
-                    showAttCenterMessage("This period is assigned to another teacher.");
-                }
-            } else {
                     showAttCenterMessage("This period is assigned to another teacher.");
                 }
             } else {
@@ -744,7 +741,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
         } else {
             let isFreeRoam = targetSubCategory.includes("MJD") || targetSubCategory.includes("MID") || targetSubCategory.includes("SEC") || targetSubCategory.includes("TUTORIAL") || targetSubCategory.includes("CORE");
             if(isFreeRoam) {
-                // 🚨 BULLETPROOF QUERY
                 let bSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", selectedSem), where("subjectName", "==", selectedSubject)));
                 if(bSnap.empty) {
                     bSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", `Semester ${selectedSem}`), where("subjectName", "==", selectedSubject)));
@@ -762,9 +758,9 @@ async function checkTimetableAllocation(ticket, dateStr) {
                     if (myBatch) {
                         loadMyClassDirectly(myBatch, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
                     } else if (subBatches.length > 0) {
-                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
                     } else {
-                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">No teachers assigned to these batches yet.</div>`;
+                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">No teachers assigned to these batches yet.</div>`;
                     }
                 } else {
                     attCurrentSessionBatchIndex = -1;
