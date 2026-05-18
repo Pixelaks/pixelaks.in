@@ -438,7 +438,7 @@ body {
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
 .tt-day-btn { 
-    background: #fef2f2; /* 🚨 Solid pastel red to completely hide the grid behind it */
+    background: var(--bg-base) !important; /* 🚨 Forced solid white to completely block grid lines */
     color: var(--text-muted); 
     border: 1px dashed var(--border-color); 
     padding: 8px 15px; 
@@ -448,7 +448,14 @@ body {
     cursor: pointer; 
     transition: all 0.2s; 
 }
-.tt-day-btn.active { background: var(--brand-red); color: white; border-style: solid; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); transform: translateY(-2px); }
+
+.tt-day-btn.active { 
+    background: var(--brand-red) !important; 
+    color: white; 
+    border-style: solid; 
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); 
+    transform: translateY(-2px); 
+}
 
 .tt-main-wrapper { display: flex; flex-direction: column; padding-left: 10px; padding-top: 10px; }
 .tt-row { display: flex; flex-direction: row; gap: 20px; align-items: stretch; margin-bottom: 20px; position: relative; }
