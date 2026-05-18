@@ -379,31 +379,31 @@
                         <button id="btnSaAction" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;" disabled>Assign</button>
                     </div>
                 </div>
-                <div id="batchView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                <div id="batchView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: transparent;">
                     <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <h3 style="color:var(--brand-red); font-family: 'Poppins', sans-serif; font-weight: 800; letter-spacing: 0.5px; margin:0; font-size:24px;">Batch Viewer</h3>
                     </div>
-
+                
                     <div id="bchHodWarning" style="background: #fef2f2; color: #ef4444; padding: 15px; text-align: center; font-weight: bold; border-bottom: 1px solid #fca5a5; display: none; flex-shrink: 0;">
                         <i class="fas fa-lock" style="margin-right: 5px;"></i> Only Head of Department (HOD) can view this section.
                     </div>
-
-                    <div id="bchControls" style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                
+                    <div id="bchControls" style="padding: 15px 25px; background: transparent; display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
                         <select id="bchSemDrop" class="filter-select" style="flex: 1;"></select>
                         <select id="bchSubDrop" class="filter-select" style="flex: 2;"></select>
                     </div>
                     
-                    <div style="padding: 12px 25px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                    <div style="padding: 12px 25px; background: transparent; border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <span style="font-weight: 800; color: var(--text-dark); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;" id="bchCategoryText">Category: --</span>
                     </div>
-
+                
                     <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
                         <div id="bchEmptyMsg" class="no-data-text">Select a Subject to view batches.</div>
                         <div id="bchGroupsContainer" style="display:flex; flex-direction:column; gap:15px; margin-bottom: 25px;">
                             </div>
                     </div>
                 </div>
-                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: var(--bg-base);">
+                <div id="eventAttendanceView" class="dashboard-view hidden-view" style="display: flex; flex-direction: column; height: 100%; background: transparent;">
                     <div style="padding: 20px 25px 15px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <h3 style="color:var(--brand-red); font-family: 'Poppins', sans-serif; font-weight: 800; letter-spacing: 0.5px; margin:0; font-size:24px;">Event Attendance</h3>
                         <div style="display:flex; gap:10px; align-items:center;">
@@ -412,26 +412,26 @@
                             </button>
                         </div>
                     </div>
-
-                    <div style="padding: 15px 25px; background: rgba(0,0,0,0.02); display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                
+                    <div style="padding: 15px 25px; background: transparent; display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
                         <select id="evtPeriodDrop" class="filter-select" style="flex: 1; max-width: 150px;">
                             <option value="1">Period 1</option><option value="2">Period 2</option><option value="3">Period 3</option>
                             <option value="4">Period 4</option><option value="5">Period 5</option><option value="6">Period 6</option>
                         </select>
                         <input type="text" id="evtNameInput" placeholder="Enter Event Name (e.g., NCC Camp, NSS Duty)" style="flex: 2; padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border-color); outline: none; font-family: 'Poppins'; font-weight: 600; color: var(--text-dark); background: white;">
                     </div>
-
-                    <div style="padding: 12px 25px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                
+                    <div style="padding: 12px 25px; background: transparent; border-bottom: 1px solid var(--border-color); display:flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                         <button id="btnEvtOpenSearch" style="background: var(--brand-red); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 5px rgba(220,38,38,0.2);"><i class="fas fa-search" style="margin-right: 5px;"></i> Find Students</button>
                         <span id="evtLockStatusText" style="color: var(--brand-red); font-size: 13px; font-weight: bold;"></span>
                     </div>
-
+                
                     <div class="scrollable-list" style="flex: 1; overflow-y: auto; padding: 20px 25px;">
                         <div id="evtEmptyCartMsg" class="no-data-text">No event attendance marked for this period.</div>
                         <div id="evtCartContainer" style="display:flex; flex-direction:column; gap:10px;">
                             </div>
                     </div>
-
+                
                     <div style="padding: 15px 25px; background: var(--card-bg); border-top: 1px solid var(--border-color); flex-shrink: 0;">
                         <button id="btnEvtSave" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(220, 38, 38, 0.2); transition:0.2s;">Send to Principal</button>
                     </div>
