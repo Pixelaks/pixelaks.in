@@ -361,9 +361,29 @@ let attCurrentLoadTicket = 0;
 
 async function initAttendanceEngine() {
     await syncSemesterWithDatabase();
-
-    setupJumpDateModals();
-    document.getElementById("attDateBtn").addEventListener("click", () => document.getElementById("jumpDateModal").classList.add("active"));
+    
+    // 🚨 FIX: Replaced dropdown logic with native date picker and dynamic onclick
+    document.getElementById("attDateBtn").addEventListener("click", () => {
+        let yyyy = attCurrentDate.getFullYear();
+        let mm = String(attCurrentDate.getMonth() + 1).padStart(2, '0');
+        let dd = String(attCurrentDate.getDate()).padStart(2, '0');
+        document.getElementById("jumpDatePicker").value = `${yyyy}-${mm}-${dd}`;
+        
+        document.getElementById("jumpDateModal").classList.add("active");
+        
+        // Dynamically assign what the Go button does for THIS screen
+        document.getElementById("jumpSubmitBtn").onclick = () => {
+            let dateVal = document.getElementById("jumpDatePicker").value;
+            if (!dateVal) return;
+            
+            let parts = dateVal.split('-');
+            attCurrentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
+            updateDateUI();
+            document.getElementById("jumpDateModal").classList.remove("active");
+            loadSessionData();
+        };
+    });
     
     document.getElementById("attSemDropdown").addEventListener("change", filterSubjectsBySemester);
     document.getElementById("attPeriodDropdown").addEventListener("change", loadSessionData);
@@ -393,38 +413,6 @@ function updateDateUI() {
     const mm = String(attCurrentDate.getMonth() + 1).padStart(2, '0');
     const dd = String(attCurrentDate.getDate()).padStart(2, '0');
     document.getElementById("attDateText").innerHTML = `${days[attCurrentDate.getDay()]}<br>${yyyy}-${mm}-${dd}`;
-}
-
-function setupJumpDateModals() {
-    const dDrop = document.getElementById("jumpDayDropdown");
-    const mDrop = document.getElementById("jumpMonthDropdown");
-    const yDrop = document.getElementById("jumpYearDropdown");
-    
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    mDrop.innerHTML = months.map((m,i) => `<option value="${i}">${m}</option>`).join('');
-    
-    const curYear = new Date().getFullYear();
-    yDrop.innerHTML = [-2,-1,0,1,2].map(i => `<option value="${curYear+i}">${curYear+i}</option>`).join('');
-    
-    const updateDays = () => {
-        let currentDayVal = parseInt(dDrop.value) || 1;
-        let daysInMonth = new Date(parseInt(yDrop.value), parseInt(mDrop.value) + 1, 0).getDate();
-        dDrop.innerHTML = Array.from({length: daysInMonth}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('');
-        dDrop.value = Math.min(currentDayVal, daysInMonth);
-    };
-    
-    mDrop.addEventListener("change", updateDays);
-    yDrop.addEventListener("change", updateDays);
-    
-    document.getElementById("jumpCloseBtn").addEventListener("click", () => document.getElementById("jumpDateModal").classList.remove("active"));
-    document.getElementById("jumpSubmitBtn").addEventListener("click", () => {
-        attCurrentDate = new Date(parseInt(yDrop.value), parseInt(mDrop.value), parseInt(dDrop.value));
-        updateDateUI();
-        document.getElementById("jumpDateModal").classList.remove("active");
-        loadSessionData();
-    });
-
-    yDrop.value = curYear; mDrop.value = new Date().getMonth(); updateDays(); dDrop.value = new Date().getDate();
 }
 
 function fetchTeacherSubjects() {
@@ -1560,6 +1548,8 @@ attachSafeClick("btnNavStudentList", (e) => switchView(views.studentList, e.curr
 attachSafeClick("btnNavSubjectAssign", (e) => switchView(views.subjectAssign, e.currentTarget));
 attachSafeClick("btnNavBatch", (e) => switchView(views.batch, e.currentTarget));
 attachSafeClick("btnNavEventAttendance", (e) => switchView(views.eventAttendance, e.currentTarget));
+// Add this near the bottom of your file
+attachSafeClick("jumpCloseBtn", () => document.getElementById("jumpDateModal").classList.remove("active"));
 
 // ==========================================
 // 🚨 SMART BACK BUTTON LISTENER
@@ -1694,20 +1684,25 @@ document.getElementById("backFromRecordBtn")?.addEventListener("click", () => {
 
 document.getElementById("histSemDropdown")?.addEventListener("change", onHistSemesterChanged);
 document.getElementById("histDateJumpBtn")?.addEventListener("click", () => {
+    let yyyy = histCurrentDate.getFullYear();
+    let mm = String(histCurrentDate.getMonth() + 1).padStart(2, '0');
+    let dd = String(histCurrentDate.getDate()).padStart(2, '0');
+    document.getElementById("jumpDatePicker").value = `${yyyy}-${mm}-${dd}`;
+
     document.getElementById("jumpDateModal").classList.add("active");
-    let submitBtn = document.getElementById("jumpSubmitBtn");
-    let newSubmit = submitBtn.cloneNode(true);
-    submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
-    newSubmit.addEventListener("click", () => {
-        let d = parseInt(document.getElementById("jumpDayDropdown").value);
-        let m = parseInt(document.getElementById("jumpMonthDropdown").value);
-        let y = parseInt(document.getElementById("jumpYearDropdown").value);
-        histCurrentDate = new Date(y, m, d);
+    
+    // Dynamically assign what the Go button does for THIS screen
+    document.getElementById("jumpSubmitBtn").onclick = () => {
+        let dateVal = document.getElementById("jumpDatePicker").value;
+        if (!dateVal) return;
+
+        let parts = dateVal.split('-');
+        histCurrentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        
         document.getElementById("jumpDateModal").classList.remove("active");
         histUpdateDateUI();
         histFetchDailyHistory();
-        setupJumpDateModals(); 
-    });
+    };
 });
 
 function openHistoryPanel() {
@@ -3743,13 +3738,21 @@ function initEventAttendanceEngine() {
     evtLoaded = true;
 
     document.getElementById("evtDateBtn").addEventListener("click", () => {
-        // Recycle the same Jump Date modal from the Attendance engine!
+        let yyyy = evtCurrentDate.getFullYear();
+        let mm = String(evtCurrentDate.getMonth() + 1).padStart(2, '0');
+        let dd = String(evtCurrentDate.getDate()).padStart(2, '0');
+        document.getElementById("jumpDatePicker").value = `${yyyy}-${mm}-${dd}`;
+
         document.getElementById("jumpDateModal").classList.add("active");
+        
+        // Dynamically assign what the Go button does for THIS screen
         document.getElementById("jumpSubmitBtn").onclick = () => {
-            let d = parseInt(document.getElementById("jumpDayDropdown").value) + 1;
-            let m = parseInt(document.getElementById("jumpMonthDropdown").value);
-            let y = parseInt(document.getElementById("jumpYearDropdown").value);
-            evtCurrentDate = new Date(y, m, d);
+            let dateVal = document.getElementById("jumpDatePicker").value;
+            if (!dateVal) return;
+            
+            let parts = dateVal.split('-');
+            evtCurrentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
             evtUpdateDateUI();
             evtLoadDataForPeriod();
             document.getElementById("jumpDateModal").classList.remove("active");
