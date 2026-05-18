@@ -438,7 +438,7 @@ body {
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
 .tt-day-btn { 
-    background: var(--bg-base) !important; /* 🚨 Forced solid white to completely block grid lines */
+    background: #fff5f5 !important;
     color: var(--text-muted); 
     border: 1px dashed var(--border-color); 
     padding: 8px 15px; 
