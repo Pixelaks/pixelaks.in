@@ -694,13 +694,16 @@ async function checkTimetableAllocation(ticket, dateStr) {
                 isTargetSubjectScheduled = true;
                 let isStrictDeptSubject = sCat.includes("MJD") || sCat.includes("CORE") || sCat.includes("TUTORIAL");
                 
-                // 🚨 BUG 1 FIXED: Bulletproof String Cleaner for Department Matching!
-                let docDept = (data.departmentID || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
-                let myDept = (teacherDeptRaw || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+                // 🚨 BULLETPROOF STRING CLEANER: Prevents mismatch bugs
+                let docDept = String(data.departmentID || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
+                let myDept = String(teacherDeptRaw || "").replace("DEPT_", "").replace(/\s+/g, "").toLowerCase();
 
-                if(isStrictDeptSubject && docDept !== myDept && docDept !== "general" && docDept !== "all") return;
+                if(isStrictDeptSubject && docDept && docDept !== myDept && docDept !== "general" && docDept !== "all") return;
 
-                if((data.teacherID || "").trim() === currentUserID) myAllocations.push(docSnap);
+                let dbTeacherID = String(data.teacherID || "").trim();
+                let myID = String(currentUserID).trim();
+
+                if(dbTeacherID === myID) myAllocations.push(docSnap);
                 else substituteAllocations.push(docSnap);
             }
         });
@@ -710,7 +713,6 @@ async function checkTimetableAllocation(ticket, dateStr) {
         }
 
         // 🚨 C# DECISION ENGINE PORT 🚨
-        if(isTargetSubjectScheduled) {// 🚨 C# DECISION ENGINE PORT 🚨
         if(isTargetSubjectScheduled) {
             let totalBatches = myAllocations.length + substituteAllocations.length;
 
@@ -754,8 +756,8 @@ async function checkTimetableAllocation(ticket, dateStr) {
                 if(ticket !== attCurrentLoadTicket) return;
                 
                 if(!bSnap.empty) {
-                    let myBatch = bSnap.docs.find(d => d.data().teacherID === currentUserID);
-                    let subBatches = bSnap.docs.filter(d => d.data().teacherID !== currentUserID && d.data().teacherID);
+                    let myBatch = bSnap.docs.find(d => String(d.data().teacherID || "").trim() === String(currentUserID).trim());
+                    let subBatches = bSnap.docs.filter(d => String(d.data().teacherID || "").trim() !== String(currentUserID).trim() && d.data().teacherID);
                     
                     if (subBatches.length > 0) {
                         spawnManualBatchCards(subBatches, selectedSem, selectedSubject);
