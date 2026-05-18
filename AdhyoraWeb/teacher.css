@@ -157,12 +157,18 @@ body {
 
 /* 2. Compact Top Buttons */
 #btnOpenHistory, #attDateBtn {
-    padding: 6px 10px !important;
-    height: 38px !important; /* Locks height to save space */
+    padding: 4px 10px !important; /* Reduced vertical padding slightly */
+    min-height: 38px !important; 
+    height: auto !important; /* Lets the button stretch down if the text needs room */
+    display: flex !important;
+    align-items: center;
     justify-content: center;
 }
 #btnOpenHistory { font-size: 12px !important; }
-#attDateText { font-size: 10.5px !important; }
+#attDateText { 
+    font-size: 10px !important; 
+    line-height: 1.1 !important; /* Squishes the day and the date closer together */
+}
 
 /* 3. Force Dropdowns onto ONE Row */
 #attMainScreen > div:nth-child(2) {
