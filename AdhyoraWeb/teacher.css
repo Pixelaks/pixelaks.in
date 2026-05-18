@@ -501,6 +501,31 @@ body {
     /* 🚨 Day Buttons Fold Phone Fix */
     .tt-days-container { gap: 4px; } /* Shrinks the space between buttons */
     .tt-day-btn { padding: 6px 10px; font-size: 11px; } /* Shrinks the buttons slightly */
+
+   /* =========================================
+       🚨 ASSIGN CLASSES (HOD) FOLD FIXES
+       ========================================= */
+    /* Recover screen padding on ultra-narrow devices */
+    #assignView > div:first-child { padding: 15px 10px 10px !important; } 
+    #assignView > div:nth-child(2) { padding: 15px 10px !important; } 
+    #asnListContainer { padding: 15px 10px !important; } 
+
+    /* Force Day Buttons into one evenly-spaced row */
+    .asn-days-container { flex-wrap: nowrap; gap: 4px; }
+    .asn-day-btn { 
+        padding: 6px 2px; 
+        font-size: 11px; 
+        flex: 1; 
+        min-width: 0; 
+        text-align: center; 
+    }
+
+    /* Remove the 320px minimum width forcing the horizontal scroll */
+    .asn-periods-grid { grid-template-columns: 1fr; gap: 15px; } 
+    
+    /* Shrink internal card padding slightly */
+    .asn-period-wrapper { padding: 12px 10px; }
+    .asn-card { padding: 15px 10px 10px; }
 }
 
 /* =========================================
