@@ -3040,16 +3040,18 @@ async function SD_BuildUI(specificDate = "All Time") {
     let finalSubjectsHTML = [];
     let addedSubjectNames = new Set(); // 🚨 FIX 1: Tracks EXACT names to prevent substring swallowing!
 
+    // 🚨 FIX 2: Bulletproof Key Search & Merger
+    // Merges fragmented database keys (Semester_1 and Semester 1) together!
     let enrollMap = {};
     if (sdStudentData.enrolledSubjects) {
-        // 🚨 FIX 2: Bulletproof Key Search - Checks all possible Firebase naming conventions
-        let possibleKeys = [semKey, semDisplay, cleanSemNum, `Sem ${cleanSemNum}`, `Semester${cleanSemNum}`];
-        for (let pk of possibleKeys) {
-            if (sdStudentData.enrolledSubjects[pk]) {
-                enrollMap = sdStudentData.enrolledSubjects[pk];
-                break;
+        Object.keys(sdStudentData.enrolledSubjects).forEach(k => {
+            let kLow = k.toLowerCase().replace(/\s+/g, "").replace("_", ""); // normalizes to "semester1"
+            let targetLow = `semester${cleanSemNum}`;
+            
+            if (kLow === targetLow || kLow === `sem${cleanSemNum}` || kLow === cleanSemNum) {
+                Object.assign(enrollMap, sdStudentData.enrolledSubjects[k]);
             }
-        }
+        });
     }
 
     Object.entries(enrollMap).forEach(([k,v]) => {
@@ -3083,18 +3085,31 @@ async function SD_BuildUI(specificDate = "All Time") {
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
     let subjectAtt = {}; 
 
-    let statsObj = null;
+    // 🚨 FIX 3: Also merge Attendance Stats keys just in case they are fragmented!
+    let statsObj = {};
     if (sdStudentData.attendance_stats) {
-        // Bulletproof stats key finder
-        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => 
-            k.toLowerCase() === semKey.toLowerCase() || 
-            k === cleanSemNum || 
-            k.replace(/_/g, " ").toLowerCase() === semDisplay.toLowerCase()
-        );
-        if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
+        Object.keys(sdStudentData.attendance_stats).forEach(k => {
+            let kLow = k.toLowerCase().replace(/\s+/g, "").replace("_", "");
+            let targetLow = `semester${cleanSemNum}`;
+            
+            if (kLow === targetLow || kLow === `sem${cleanSemNum}` || kLow === cleanSemNum) {
+                let map = sdStudentData.attendance_stats[k];
+                for (let subName in map) {
+                    if (!statsObj[subName]) statsObj[subName] = { present: 0, total: 0 };
+                    
+                    if (subName === "Strict_Global") {
+                        statsObj[subName].present = Math.max(statsObj[subName].present, parseFloat(map[subName].present || 0));
+                        statsObj[subName].total = Math.max(statsObj[subName].total, parseFloat(map[subName].total || 0));
+                    } else {
+                        statsObj[subName].present += parseFloat(map[subName].present || 0);
+                        statsObj[subName].total += parseFloat(map[subName].total || 0);
+                    }
+                }
+            }
+        });
     }
 
-    if(statsObj) {
+    if(Object.keys(statsObj).length > 0) {
         Object.entries(statsObj).forEach(([subName, s]) => {
             if(subName === "Strict_Global") { strictPresent = s.present || 0; strictTotal = s.total || 0; }
             else {
