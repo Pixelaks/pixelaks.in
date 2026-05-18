@@ -1792,8 +1792,8 @@ function histUpdateQuickDays() {
         let col = isSelected ? "white" : "var(--text-muted)";
         let border = isSelected ? "none" : "1px solid var(--border-color)";
         
-        // 🚨 FIX: Removed flex:1, added standard padding so they stay pill-shaped and centered!
-        html += `<button id="quickDayBtn_${i}" style="padding:8px 18px; border-radius:12px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">${labels[i]}</button>`;
+        // 🚨 FIX: Using flex: 1 and max-width so they shrink on mobile but stay pill-shaped on PC!
+        html += `<button id="quickDayBtn_${i}" style="flex: 1; max-width: 70px; min-width: 0; padding: 8px 0; border-radius:12px; background:${bg}; color:${col}; border:${border}; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); text-align: center; font-size: 13px;">${labels[i]}</button>`;
     }
     container.innerHTML = html;
 
