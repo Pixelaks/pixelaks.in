@@ -2862,7 +2862,7 @@ function renderStudentList(searchTerm = "") {
             </div>
             <div style="display:flex; gap:15px; align-items:center;">
                 <span style="font-size:12px; font-weight:800; color:${statusColor};">${statusLabel}</span>
-                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson}, '${s.id}')" ...>
+                <button title="Message" onclick="event.stopPropagation(); window.OpenCompose(true, '${s.Name || ""}', ${tokensJson}, '${s.id}')" style="background: transparent; border: none; font-size: 22px; color: var(--text-muted); cursor: pointer; transition: 0.2s; padding: 5px;" onmouseover="this.style.color='var(--brand-red)'" onmouseout="this.style.color='var(--text-muted)'">
                     <i class="fas fa-comment-dots"></i>
                 </button>
             </div>
