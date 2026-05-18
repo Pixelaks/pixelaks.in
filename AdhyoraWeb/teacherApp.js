@@ -30,6 +30,7 @@ let allMessagesMap = new Map();
 let allNotifsMap = new Map();
 let globalListenerUnsub = null;
 let inboxListenerUnsub = null;
+let activeReadListeners = new Map();
 
 // ==========================================
 // 🚨 FIREBASE CONFIGURATION & CACHE SHIELD
@@ -258,17 +259,51 @@ function IsMessageForMe(targetText, senderID) {
 function renderMessages() {
     const listEl = document.getElementById("messagesList");
     if (!listEl) return;
+    
     let sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => b.time - a.time);
-    if (sortedMessages.length === 0) { listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">Inbox is empty</div>`; return; }
+    
+    if (sortedMessages.length === 0) { 
+        listEl.innerHTML = `<div class="no-data-text" style="text-align: center; color: #94a3b8; margin-top: 20px;">Inbox is empty</div>`; 
+        return; 
+    }
+    
     listEl.innerHTML = sortedMessages.map(m => {
-        let borderColor = "var(--brand-red)"; let roleLabel = m.role; let icon = m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn';
-        if (m.role.toLowerCase().includes("system") || m.sender === "Adhyora Team") { borderColor = "#8b5cf6"; icon = "fa-satellite-dish"; roleLabel = "Developer"; } 
-        else if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) { borderColor = "#10b981"; } 
-        else if (m.role.toLowerCase().includes("student")) { borderColor = "#3b82f6"; }
+        let borderColor = "var(--brand-red)"; 
+        let roleLabel = m.role; 
+        let icon = m.type === 'incoming' ? 'fa-comment' : 'fa-bullhorn';
+        
+        if (m.role.toLowerCase().includes("system") || m.sender === "Adhyora Team") { 
+            borderColor = "#8b5cf6"; icon = "fa-satellite-dish"; roleLabel = "Developer"; 
+        } 
+        else if (m.role.toLowerCase().includes("principal") || m.role.toLowerCase().includes("admin")) { 
+            borderColor = "#10b981"; 
+        } 
+        else if (m.role.toLowerCase().includes("student")) { 
+            borderColor = "#3b82f6"; 
+        }
+        
         let headerTxt = m.isMe ? `Sent to: ${m.source}` : `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">(${roleLabel})</span>`;
         if (m.type === "incoming") headerTxt = `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">• Private Chat</span>`;
+
+        // 🚨 NEW LOGIC: Pin for Broadcasts, Double Tick for Sent Personal Messages
+        let cornerIconHTML = "";
+        if (m.type === "broadcast") {
+            // Notice Board Pin
+            cornerIconHTML = `<i class="fas fa-thumbtack" style="color: #cbd5e1; font-size: 16px; transform: rotate(45deg);"></i>`;
+        } else if (m.isMe) {
+            // WhatsApp style double-tick for sent personal messages
+            let tickColor = (m.status === "read") ? "#3b82f6" : "#94a3b8"; // Blue if read, Gray if sent
+            cornerIconHTML = `<i class="fas fa-check-double" id="tick_${m.id}" style="color: ${tickColor}; font-size: 14px; transition: color 0.3s;"></i>`;
+        }
+
+        // Added position: relative and padding-right to the card to safely position the icon in the top right!
         return `
-        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor};">
+        <div style="position:relative; background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; padding-right:45px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor};">
+            
+            <div style="position:absolute; top:15px; right:15px;">
+                ${cornerIconHTML}
+            </div>
+
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${m.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${m.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
@@ -277,6 +312,36 @@ function renderMessages() {
             </div>
         </div>`;
     }).join('');
+
+    // 🚨 THE REAL-TIME READ RECEIPT ENGINE (Matches your C# ListenToRealMessage)
+    sortedMessages.forEach(m => {
+        // If it's a personal message sent by ME, and it hasn't been read yet...
+        if (m.isMe && m.status !== "read" && m.linkedChatID && m.linkedMessageID) {
+            // Make sure we aren't already listening to this specific message
+            if (!activeReadListeners.has(m.id)) {
+                let msgRef = doc(db, "colleges", currentCollegeID, "chats", m.linkedChatID, "messages", m.linkedMessageID);
+                
+                let unsub = onSnapshot(msgRef, (docSnap) => {
+                    if (docSnap.exists() && docSnap.data().status === "read") {
+                        // 1. Update the local RAM cache so it stays blue
+                        if (allMessagesMap.has(m.id)) {
+                            allMessagesMap.get(m.id).status = "read";
+                        }
+                        
+                        // 2. Instantly turn the tick Blue on the screen!
+                        let tickEl = document.getElementById(`tick_${m.id}`);
+                        if (tickEl) tickEl.style.color = "#3b82f6"; 
+                        
+                        // 3. Cleanup: Stop listening to save Firebase reads
+                        unsub();
+                        activeReadListeners.delete(m.id);
+                    }
+                });
+                
+                activeReadListeners.set(m.id, unsub);
+            }
+        }
+    });
 }
 
 // 🚨 NEW: Smart Red Dot Checkers
