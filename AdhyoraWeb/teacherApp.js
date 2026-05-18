@@ -1318,6 +1318,20 @@ async function saveAttendance() {
             }
         }
 
+        // 🚨 C# PORT: Department-Wide Lock Check (Common Classes Only)
+        if (attCurrentSessionBatchIndex === -1 && !attIsSubstitutePanelOpen) {
+            if (gData.dept_locks) {
+                let dLock = gData.dept_locks[`p${pIndex}_${teacherDeptRaw}`];
+                if (dLock && dLock.teacherID !== currentUserID) {
+                    let lockedName = dLock.teacherName || "another teacher";
+                    alert(`Conflict: Period ${pIndex} was just claimed by ${lockedName}!`); 
+                    document.getElementById("updateProgressModal").classList.remove("active"); 
+                    updateMainButtonState(); 
+                    return;
+                }
+            }
+        }
+
         let pData = sData[periodKey] || {};
         let batchTeachers = pData.batch_teachers || {};
         let isFirstTimeMarking = !batchTeachers[myKey];
