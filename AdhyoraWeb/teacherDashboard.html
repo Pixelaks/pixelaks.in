@@ -486,10 +486,8 @@
     <div class="modal-overlay" id="jumpDateModal">
         <div class="compose-modal" style="background: white; width: 90%; max-width: 350px; margin: auto; border-radius: 20px; padding: 25px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
             <h3 style="color: var(--brand-red); margin-bottom: 15px;">Jump to Date</h3>
-            <div style="display:flex; gap:10px; margin-bottom: 20px;">
-                <select id="jumpDayDropdown" class="filter-select" style="min-width:0; padding:8px;"></select>
-                <select id="jumpMonthDropdown" class="filter-select" style="min-width:0; padding:8px;"></select>
-                <select id="jumpYearDropdown" class="filter-select" style="min-width:0; padding:8px;"></select>
+            <div style="margin-bottom: 20px;">
+                <input type="date" id="jumpDatePicker" class="filter-select" style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: 'Poppins'; color: var(--text-dark); background: var(--bg-surface); font-weight: bold; cursor: text;">
             </div>
             <div style="display:flex; gap:10px;">
                 <button id="jumpCloseBtn" style="flex:1; padding:10px; border-radius:10px; border:1px solid #cbd5e1; background:white; color:#64748b; font-weight:bold; cursor:pointer;">Cancel</button>
