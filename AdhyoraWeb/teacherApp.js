@@ -3036,29 +3036,48 @@ async function SD_BuildUI(specificDate = "All Time") {
     await fetchGlobalSubjects(); 
     let cleanSemNum = semKey.replace(/[^0-9]/g, '');
     let cleanStuDept = (sdStudentData.Department || sdStudentData.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", "");
-    let finalSubjects = [];
+    
+    let finalSubjectsHTML = [];
+    let addedSubjectNames = new Set(); // 🚨 FIX 1: Tracks EXACT names to prevent substring swallowing!
 
     let enrollMap = {};
-    if (sdStudentData.enrolledSubjects) enrollMap = sdStudentData.enrolledSubjects[semKey] || sdStudentData.enrolledSubjects[semDisplay] || {};
+    if (sdStudentData.enrolledSubjects) {
+        // 🚨 FIX 2: Bulletproof Key Search - Checks all possible Firebase naming conventions
+        let possibleKeys = [semKey, semDisplay, cleanSemNum, `Sem ${cleanSemNum}`, `Semester${cleanSemNum}`];
+        for (let pk of possibleKeys) {
+            if (sdStudentData.enrolledSubjects[pk]) {
+                enrollMap = sdStudentData.enrolledSubjects[pk];
+                break;
+            }
+        }
+    }
 
     Object.entries(enrollMap).forEach(([k,v]) => {
-        finalSubjects.push(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${k}]</b> <span style="font-size:13px; color:var(--text-dark);">${v}</span></div>`);
+        let subName = v.toString().trim();
+        addedSubjectNames.add(subName.toLowerCase()); // Register the exact name
+        finalSubjectsHTML.push(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${k}]</b> <span style="font-size:13px; color:var(--text-dark);">${subName}</span></div>`);
     });
 
     sdCachedGlobalSubjects.forEach(sub => {
         let semMatch = sub.semesterArray.split(',').map(s=>s.trim()).includes(cleanSemNum);
         if (semMatch) {
-            let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
+            let isDeptMatch = (sub.cleanSubDept === cleanStuDept) || 
+                              (cleanStuDept.includes(sub.cleanSubDept) && sub.cleanSubDept.length > 3) || 
+                              (sub.cleanSubDept.includes(cleanStuDept) && cleanStuDept.length > 3);
+            
             if ((sub.cleanType.includes("MJD") || sub.cleanType.includes("CORE") || sub.cleanType.includes("TUTORIAL")) && isDeptMatch) {
-                let isAlreadyEnrolled = finalSubjects.some(existing => existing.includes(sub.displayName));
-                if (!isAlreadyEnrolled) {
-                    finalSubjects.unshift(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:var(--text-dark);">${sub.displayName}</span></div>`);
+                
+                // 🚨 EXACT MATCH CHECK: Replaces the buggy ".includes()" logic!
+                if (!addedSubjectNames.has(sub.displayName.trim().toLowerCase())) {
+                    addedSubjectNames.add(sub.displayName.trim().toLowerCase());
+                    finalSubjectsHTML.unshift(`<div style="padding:10px 0; border-bottom:1px dashed var(--border-color); display:flex; align-items:center; gap:8px;"><b style="color:var(--brand-red); font-size:12px;">[${sub.rawType}]</b> <span style="font-size:13px; color:var(--text-dark);">${sub.displayName}</span></div>`);
                 }
             }
         }
     });
 
-    document.getElementById("sdEnrolledList").innerHTML = finalSubjects.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjects.join('');
+    document.getElementById("sdEnrolledList").innerHTML = finalSubjectsHTML.length === 0 ? "<i>No subjects assigned for this semester.</i>" : finalSubjectsHTML.join('');
+    
     SD_FetchMarks(semDisplay);
 
     let strictPresent = 0, strictTotal = 0, simpleAtt = 0, simpleTotal = 0;
@@ -3066,7 +3085,12 @@ async function SD_BuildUI(specificDate = "All Time") {
 
     let statsObj = null;
     if (sdStudentData.attendance_stats) {
-        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => k.toLowerCase() === semKey.toLowerCase());
+        // Bulletproof stats key finder
+        let foundKey = Object.keys(sdStudentData.attendance_stats).find(k => 
+            k.toLowerCase() === semKey.toLowerCase() || 
+            k === cleanSemNum || 
+            k.replace(/_/g, " ").toLowerCase() === semDisplay.toLowerCase()
+        );
         if (foundKey) statsObj = sdStudentData.attendance_stats[foundKey];
     }
 
