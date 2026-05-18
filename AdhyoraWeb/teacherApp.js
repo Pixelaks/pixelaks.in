@@ -4916,7 +4916,23 @@ async function asnLoadData() {
             let docs = allocsByPeriod[p].sort((a,b) => (parseInt(a.splitIndex)||0) - (parseInt(b.splitIndex)||0));
             docs.forEach((d, idx) => {
                 let actualCat = d.category ? d.category : cat; // Support tutorial overrides
-                asnActiveRows.push({ id: `r_${p}_${idx}`, period: p, splitIndex: parseInt(d.splitIndex)||0, isSplit: (parseInt(d.splitIndex)||0) > 0 || !d.isCommon, category: actualCat, subject: d.subjectName || "", teacher: d.teacherName || "", teacherID: d.teacherID || "", room: d.room || "" });
+                let currentSplitIndex = parseInt(d.splitIndex) || 0;
+                
+                // 🚨 FIX: isSplit must ONLY be true for sub-batches (Batch 2, 3, etc.).
+                // The Main row (Batch 1 / splitIndex 0) MUST remain false so the dropdowns stay unlocked!
+                let isSubBatch = currentSplitIndex > 0;
+                
+                asnActiveRows.push({ 
+                    id: `r_${p}_${idx}`, 
+                    period: p, 
+                    splitIndex: currentSplitIndex, 
+                    isSplit: isSubBatch, 
+                    category: actualCat, 
+                    subject: d.subjectName || "", 
+                    teacher: d.teacherName || "", 
+                    teacherID: d.teacherID || "", 
+                    room: d.room || "" 
+                });
             });
         } else {
             asnActiveRows.push({ id: `r_${p}_0`, period: p, splitIndex: 0, isSplit: false, category: cat, subject: "", teacher: "", teacherID: "", room: "" });
