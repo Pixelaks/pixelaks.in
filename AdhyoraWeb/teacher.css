@@ -471,18 +471,20 @@ body {
     background: var(--bg-base); 
     border: 1px solid var(--border-color); 
     border-radius: 20px; 
-    padding: 8px 10px; /* Slightly reduced horizontal padding */
+    padding: 8px 10px; 
     text-align: center; 
     font-size: 13px; 
     font-weight: 700; 
     color: var(--text-dark); 
-    display: block; /* 🚨 Block handles ellipsis much better than Flex */
+    display: flex; /* 🚨 Flex ensures multi-line text stays vertically centered */
+    align-items: center;
+    justify-content: center;
     line-height: 1.3;
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
+    /* 🚨 REMOVED nowrap and ellipsis! Text will now wrap naturally so teachers can read everything */
+    white-space: normal; 
+    word-wrap: break-word; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
-    min-width: 0; /* 🚨 CRITICAL FIX: Forces grid children to shrink instead of overflowing screen */
+    min-width: 0; 
 }
 
 .tt-pill.primary { color: var(--brand-red); }
@@ -492,16 +494,22 @@ body {
    ========================================= */
 @media (max-width: 480px) { /* 🚨 Changed to 480px to protect ALL mobile phones! */
     
-    /* 🚨 Relaxed Timeline Fixes (Made boxes and text bigger!) */
-    .tt-row { gap: 15px; margin-bottom: 20px; }
-    .tt-timeline-col { width: 35px; min-width: 35px; }
-    .tt-card { padding: 15px 12px; gap: 10px; } /* Restored card padding */
-    .tt-pill-grid { gap: 8px; }
-    .tt-pill { font-size: 12px; padding: 8px 8px; } /* Bigger text and pill height */
+    /* 🚨 Reclaim Screen Space & Shift Left */
+    #timetableView > .scrollable-list { padding: 15px 10px !important; } /* Recovers 30px of lost side screen space! */
+    .tt-main-wrapper { padding-left: 0; padding-top: 5px; } /* Removes empty left filler */
     
-    /* 🚨 Relaxed Day Buttons (Made them bigger!) */
-    .tt-days-container { gap: 6px; } 
-    .tt-day-btn { padding: 8px 14px; font-size: 13px; } /* Restored to near-desktop size */
+    /* 🚨 Maximize Card Width */
+    .tt-row { gap: 8px; margin-bottom: 20px; } /* Pulls the card much closer to the timeline */
+    .tt-timeline-col { width: 30px; min-width: 30px; } /* Shrinks the timeline column safely */
+    
+    /* 🚨 Card & Text Sizing */
+    .tt-card { padding: 12px 10px; gap: 8px; } 
+    .tt-pill-grid { grid-template-columns: 1fr 3fr; gap: 6px; } /* Gives the Subject Name MUCH more room than the Category */
+    .tt-pill { font-size: 11px; padding: 6px 6px; } 
+    
+    /* Day Buttons Phone Fix */
+    .tt-days-container { gap: 4px; } 
+    .tt-day-btn { padding: 6px 10px; font-size: 12px; }
 
    /* =========================================
        🚨 ASSIGN CLASSES (HOD) PHONE FIXES
