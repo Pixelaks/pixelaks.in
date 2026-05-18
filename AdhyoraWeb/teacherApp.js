@@ -268,7 +268,7 @@ function renderMessages() {
         let headerTxt = m.isMe ? `Sent to: ${m.source}` : `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">(${roleLabel})</span>`;
         if (m.type === "incoming") headerTxt = `From: ${m.sender} <span style="font-weight:normal; opacity:0.7;">• Private Chat</span>`;
         return `
-        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid ${borderColor};">
+        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor};">
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${m.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${m.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
@@ -325,7 +325,7 @@ function renderNotifications() {
         else if (n.role.includes("principal") || n.role.includes("admin")) { borderColor = "#10b981"; } 
         else if (n.role.includes("student")) { borderColor = "#3b82f6"; }
         return `
-        <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid ${borderColor};">
+        <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-bottom:10px; box-shadow:0 4px 10px rgba(0,0,0,0.03); border-left: 4px solid ${borderColor};">
             <div style="font-weight:bold; color:var(--text-dark); font-size:15px; margin-bottom:5px;">${n.title}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">${n.body}</div>
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); font-weight:600;">
@@ -3667,10 +3667,10 @@ async function bchFetchBatches(subjectName) {
             let iconId = `bch_group_icon_${idx}`;
             
             html += `
-            <div style="background:white; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
-                <div style="background:var(--bg-grid-color); padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="bchToggleGroup('${bodyId}', '${iconId}', ${sidsJson})">
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+                <div style="background:transparent; padding:15px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="bchToggleGroup('${bodyId}', '${iconId}', ${sidsJson})">
                     <div>
-                        <div style="font-weight:bold; color:var(--brand-red); font-size:14px; margin-bottom: 4px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:white; padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-red); border: 1px solid var(--border-color);">${sList.length} Students</span></div>
+                        <div style="font-weight:bold; color:var(--brand-red); font-size:14px; margin-bottom: 4px;">${b.batchName} <span style="font-size:12px; font-weight:normal; background:var(--bg-base); padding:2px 8px; border-radius:10px; margin-left:10px; color:var(--brand-red); border: 1px solid var(--border-color);">${sList.length} Students</span></div>
                         <div style="color:var(--text-muted); font-size:12px; font-weight: 600;"><i class="fas fa-chalkboard-teacher"></i> ${tName} &nbsp;|&nbsp; <i class="fas fa-door-open"></i> ${room}</div>
                     </div>
                     <i id="${iconId}" class="fas fa-chevron-right" style="color:var(--text-muted); transition:0.2s; transform:rotate(0deg);"></i>
