@@ -437,7 +437,17 @@ body {
    🚨 TIMETABLE VIEWER STYLES
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
-.tt-day-btn { background: rgba(220, 38, 38, 0.05); color: var(--text-muted); border: 1px dashed var(--border-color); padding: 8px 15px; border-radius: 12px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.tt-day-btn { 
+    background: var(--card-bg); /* 🚨 Matches the pastel red header background */
+    color: var(--text-muted); 
+    border: 1px dashed var(--border-color); 
+    padding: 8px 15px; 
+    border-radius: 12px; 
+    font-weight: 600; 
+    font-size: 13px; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+}
 .tt-day-btn.active { background: var(--brand-red); color: white; border-style: solid; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); transform: translateY(-2px); }
 
 .tt-main-wrapper { display: flex; flex-direction: column; padding-left: 10px; padding-top: 10px; }
