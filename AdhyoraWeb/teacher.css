@@ -283,12 +283,72 @@ body {
 /* =========================================
    🚨 COMPONENT STYLES (Attendance & Filters)
    ========================================= */
-.attd-toggle { position: relative; width: 46px; height: 24px; background: #fecaca; border-radius: 12px; cursor: pointer; transition: 0.3s; }
-.attd-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-.attd-toggle.active { background: #10b981; }
-.attd-toggle.active::after { left: 24px; }
-.attd-toggle.locked { opacity: 0.5; cursor: not-allowed; }
 
+/* The Modern Attendance Toggle Track */
+.attd-toggle {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background: #fee2e2;
+    border-radius: 10px; /* Modern rounded-square look */
+    cursor: pointer;
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    box-shadow: inset 0 2px 4px rgba(220, 38, 38, 0.1);
+}
+
+/* The 'A' (Absent) / 'P' (Present) Text */
+.attd-toggle::before {
+    content: 'A';
+    position: absolute;
+    right: 12px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #ef4444; /* Light Red */
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+}
+
+/* The Sliding Thumb */
+.attd-toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 7px;
+    /* Satisfying "bouncy" slide animation */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+/* --- ACTIVE (PRESENT) STATE --- */
+.attd-toggle.active {
+    background: #10b981; /* Success Green */
+    box-shadow: inset 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.attd-toggle.active::before {
+    content: 'P';
+    left: 12px;
+    right: auto;
+    color: #ecfdf5; /* Light green text */
+}
+
+.attd-toggle.active::after {
+    transform: translateX(30px); /* Slide perfectly to the right */
+}
+
+.attd-toggle.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+
+/* Filter Dropdowns (Leave this as it was) */
 .filter-select { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-dark); font-weight: 600; flex: 1; min-width: 100px;}
 
 /* =========================================
