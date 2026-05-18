@@ -3560,7 +3560,9 @@ async function saExecuteAction() {
 
     let cat = document.getElementById("saCatDrop").value;
     let sub = document.getElementById("saSubDrop").value;
-    let semKey = `Semester_${saCurrentSem}`;
+    
+    // 🚨 THE FIX: Replaced the underscore with a space to perfectly match C# and prevent database fragmentation!
+    let semKey = `Semester ${saCurrentSem}`; 
 
     let studentsToProcess = saIsRemoveMode ? Array.from(saSelectedAssigned) : Array.from(saSelectedUnassigned);
     let wb = writeBatch(db);
