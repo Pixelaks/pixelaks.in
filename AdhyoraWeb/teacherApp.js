@@ -755,13 +755,24 @@ async function checkTimetableAllocation(ticket, dateStr) {
 
                 if(ticket !== attCurrentLoadTicket) return;
                 
+                // 🚨 THE FIX: Inject the Base Layout BEFORE evaluating batches!
+                // This ensures the Substitute Cards have a place to spawn!
+                const listContainer = document.getElementById("attListContainer");
+                listContainer.innerHTML = `
+                    <div id="attSubCardsArea"></div>
+                    <div id="attDirectArea"></div>
+                `;
+
                 if(!bSnap.empty) {
                     let myBatch = bSnap.docs.find(d => String(d.data().teacherID || "").trim() === String(currentUserID).trim());
                     let subBatches = bSnap.docs.filter(d => String(d.data().teacherID || "").trim() !== String(currentUserID).trim() && d.data().teacherID);
                     
+                    // 1. Spawn Substitute Cards
                     if (subBatches.length > 0) {
                         spawnManualBatchCards(subBatches, selectedSem, selectedSubject);
                     }
+                    
+                    // 2. Spawn Your Class Directly
                     if (myBatch) {
                         loadMyClassDirectly(myBatch, ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
                     } else if (subBatches.length > 0) {
