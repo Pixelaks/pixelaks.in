@@ -558,6 +558,9 @@ body {
         padding: 12px !important;
         font-size: 13px !important;
     }
+
+   /* 🚨 Recover screen padding on Student Dashboard for narrow phones */
+    #studentDashboardView { padding: 15px 10px !important; }
 }
 /* =========================================
    🚨 ASSIGN CLASSES EDITOR STYLES
