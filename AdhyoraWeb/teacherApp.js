@@ -4781,8 +4781,8 @@ function ttRenderDay(periodData) {
         let semText = hasClass ? periodData[i].semester : "-";
         let roomText = hasClass ? periodData[i].room : "-";
         
-        // 🚨 Darkens the dashed border and thickens the solid active border
-        let borderStyle = hasClass ? "2px solid var(--brand-red)" : "1px dashed rgba(239, 68, 68, 0.4)";
+        // 🚨 Reverts assigned boxes to 1px solid red, and only increases dashed visibility
+        let borderStyle = hasClass ? "1px solid var(--brand-red)" : "2px dashed rgba(239, 68, 68, 0.5)";
         let bgStyle = hasClass ? "var(--bg-grid-color)" : "transparent"; 
 
         html += `
@@ -4825,26 +4825,27 @@ function ttUpdateVisuals() {
             let hasClass = nodeEl.getAttribute("data-has-class") === "true";
             
             if (currentHour >= endTime) { 
-                // Passed: Stay Solid Red to match the filler line seamlessly!
+                // ✅ PASSED: Stay Solid Red (The pipe is full)
                 nodeEl.style.background = "var(--brand-red)"; 
                 nodeEl.style.borderColor = "var(--brand-red)";
                 nodeEl.style.color = "white"; 
-                nodeEl.style.boxShadow = "none"; // Removes the active glow so it looks 'finished'
+                nodeEl.style.boxShadow = "none"; 
             }
             else if (currentHour >= startTime && currentHour < endTime) { 
-                // Active: Glow Red
-                nodeEl.style.background = "var(--brand-red)"; 
+                // ⏳ ACTIVE: Hollow with a Red Glow (Currently filling)
+                nodeEl.style.background = "white"; 
                 nodeEl.style.borderColor = "var(--brand-red)";
-                nodeEl.style.color = "white"; 
-                nodeEl.style.boxShadow = "0 0 10px rgba(220,38,38,0.4)";
+                nodeEl.style.color = "var(--brand-red)"; 
+                nodeEl.style.boxShadow = "0 0 10px rgba(220,38,38,0.6)";
             }
             else { 
-                // Upcoming
+                // 🔮 UPCOMING: Pale / Hollow (Waiting to be filled)
                 if (hasClass) {
-                    nodeEl.style.background = "var(--brand-red)"; 
-                    nodeEl.style.borderColor = "var(--brand-red)";
-                    nodeEl.style.color = "white"; 
+                    nodeEl.style.background = "var(--bg-base)"; // Matches page background
+                    nodeEl.style.borderColor = "rgba(220,38,38,0.5)"; // Light transparent red border
+                    nodeEl.style.color = "var(--brand-red)"; 
                 } else {
+                    // Free period
                     nodeEl.style.background = "var(--bg-base)"; 
                     nodeEl.style.borderColor = "var(--border-color)";
                     nodeEl.style.color = "var(--text-muted)"; 
