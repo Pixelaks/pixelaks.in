@@ -488,9 +488,10 @@ body {
 .tt-pill.primary { color: var(--brand-red); }
 
 /* =========================================
-   📱 TIMETABLE MOBILE & FOLD PHONE FIXES
+   📱 TIMETABLE MOBILE & PHONE FIXES
    ========================================= */
-@media (max-width: 380px) {
+@media (max-width: 480px) { /* 🚨 Changed to 480px to protect ALL mobile phones! */
+    
     /* Timeline Fixes */
     .tt-row { gap: 10px; margin-bottom: 15px; }
     .tt-timeline-col { width: 35px; min-width: 35px; }
@@ -498,25 +499,23 @@ body {
     .tt-pill-grid { gap: 5px; }
     .tt-pill { font-size: 11px; padding: 6px 5px; }
     
-    /* 🚨 Day Buttons Fold Phone Fix */
-    .tt-days-container { gap: 4px; } /* Shrinks the space between buttons */
-    .tt-day-btn { padding: 6px 10px; font-size: 11px; } /* Shrinks the buttons slightly */
+    /* Day Buttons Phone Fix */
+    .tt-days-container { gap: 4px; } 
+    .tt-day-btn { padding: 6px 10px; font-size: 11px; } 
 
    /* =========================================
-       🚨 ASSIGN CLASSES (HOD) FOLD FIXES
+       🚨 ASSIGN CLASSES (HOD) PHONE FIXES
        ========================================= */
-    /* Recover screen padding on ultra-narrow devices */
+    /* Recover screen padding on phones */
     #assignView > div:first-child { padding: 15px 10px 10px !important; } 
     #assignView > div:nth-child(2) { padding: 15px 10px !important; } 
     #asnListContainer { padding: 15px 10px !important; } 
 
-    /* Force Day Buttons into one evenly-spaced row ONLY on Fold phones */
-    .asn-days-container { flex-wrap: nowrap; gap: 4px; width: 100%; }
+    /* Day button mobile spacing (Structural rules are handled globally now) */
+    .asn-days-container { gap: 4px; }
     .asn-day-btn { 
         padding: 6px 2px; 
         font-size: 11px; 
-        flex: 1; /* 🚨 Squishes evenly ONLY on mobile! */
-        min-width: 0; 
     }
 
     /* Remove horizontal scroll limits & tighten the dropdown grid */
@@ -528,31 +527,32 @@ body {
     .asn-period-wrapper { padding: 12px 10px; }
     .asn-card { padding: 15px 10px 10px; }
 }
-
 /* =========================================
    🚨 ASSIGN CLASSES EDITOR STYLES
    ========================================= */
 .asn-select-pill { background: rgba(220, 38, 38, 0.08); color: var(--brand-red); border: 1px solid var(--brand-red); padding: 8px 20px; border-radius: 20px; font-weight: 700; font-size: 14px; outline: none; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 2px 10px rgba(220, 38, 38, 0.1); }
 .asn-days-container { 
     display: flex; 
-    gap: 8px; /* Matched timetable gap */
+    gap: 6px; 
+    flex-wrap: nowrap !important; /* 🚨 Forbids wrapping on ANY screen size */
     justify-content: center; 
-    flex-wrap: wrap; 
+    width: 100%;
 }
 
 .asn-day-btn { 
     background: #ffffff !important; 
     color: var(--text-muted); 
     border: 1px solid var(--border-color); 
-    padding: 8px 15px; /* Restored original PC padding */
+    padding: 8px 2px; 
     border-radius: 12px; 
     font-weight: 600; 
     font-size: 13px; 
     cursor: pointer; 
     transition: all 0.2s; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+    flex: 1; /* 🚨 Forces them to share space evenly everywhere */
+    min-width: 0; /* 🚨 Allows them to squish without breaking */
     text-align: center;
-    /* 🚨 Removed flex: 1 and min-width: 0 from here so it doesn't stretch on PC! */
 }
 
 .asn-day-btn.active { 
