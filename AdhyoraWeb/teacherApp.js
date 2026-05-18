@@ -186,9 +186,8 @@ function startInboxListener() {
                 });
             }
         });
-        let dot = document.querySelector("#btnMessages .notification-dot");
-        if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderMessages();
+        updateInboxDot(); // 🚨 FIX: Smart Check
     });
 
     const chatsRef = collection(db, "colleges", currentCollegeID, "chats");
@@ -207,6 +206,7 @@ function startInboxListener() {
                     });
                 });
                 renderMessages();
+                updateInboxDot(); // 🚨 FIX: Smart Check
             });
         });
     });
@@ -226,9 +226,8 @@ function startInboxListener() {
                 sender: d.senderName || "Adhyora Team", role: (d.senderRole || "system").toLowerCase(), isGlobal: false
             });
         });
-        let dot = document.querySelector("#btnNotifications .notification-dot");
-        if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
+        updateNotifDot(); // 🚨 FIX: Smart Check
     });
 
     globalListenerUnsub = onSnapshot(query(collection(db, "adhyora_global_updates"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
@@ -242,9 +241,8 @@ function startInboxListener() {
                 sender: "Adhyora Team", role: "system", isGlobal: true
             });
         });
-        let dot = document.querySelector("#btnNotifications .notification-dot");
-        if (dot && snap.docs.length > 0) dot.style.display = "block";
         renderNotifications();
+        updateNotifDot(); // 🚨 FIX: Smart Check
     });
 }
 
@@ -279,6 +277,41 @@ function renderMessages() {
             </div>
         </div>`;
     }).join('');
+}
+
+// 🚨 NEW: Smart Red Dot Checkers
+function updateInboxDot() {
+    let isViewing = document.getElementById("messagesView") && !document.getElementById("messagesView").classList.contains("hidden-view");
+    if (isViewing) {
+        localStorage.setItem(`lastViewedInbox_${currentUserID}`, Date.now());
+        document.querySelectorAll("#btnMessages .notification-dot").forEach(d => d.style.display = "none");
+        return;
+    }
+
+    let lastViewed = parseInt(localStorage.getItem(`lastViewedInbox_${currentUserID}`) || "0");
+    let hasNew = false;
+    allMessagesMap.forEach((m) => {
+        if (!m.isMe && m.time.getTime() > lastViewed) hasNew = true;
+    });
+
+    document.querySelectorAll("#btnMessages .notification-dot").forEach(d => d.style.display = hasNew ? "block" : "none");
+}
+
+function updateNotifDot() {
+    let isViewing = document.getElementById("notificationsView") && !document.getElementById("notificationsView").classList.contains("hidden-view");
+    if (isViewing) {
+        localStorage.setItem(`lastViewedNotifs_${currentUserID}`, Date.now());
+        document.querySelectorAll("#btnNotifications .notification-dot").forEach(d => d.style.display = "none");
+        return;
+    }
+
+    let lastViewed = parseInt(localStorage.getItem(`lastViewedNotifs_${currentUserID}`) || "0");
+    let hasNew = false;
+    allNotifsMap.forEach((n) => {
+        if (n.time.getTime() > lastViewed) hasNew = true;
+    });
+
+    document.querySelectorAll("#btnNotifications .notification-dot").forEach(d => d.style.display = hasNew ? "block" : "none");
 }
 
 function renderNotifications() {
@@ -1536,8 +1569,17 @@ function switchView(targetView, clickedBtn, isHistoryNav = false) {
 function attachSafeClick(elementId, action) { let el = document.getElementById(elementId); if (el) el.addEventListener("click", action); }
 
 attachSafeClick("btnHome", (e) => switchView("HOME", e.currentTarget));
-attachSafeClick("btnMessages", (e) => { switchView(views.messages, e.currentTarget); document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); });
-attachSafeClick("btnNotifications", (e) => { switchView(views.notifications, e.currentTarget); document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); });
+attachSafeClick("btnMessages", (e) => { 
+    switchView(views.messages, e.currentTarget); 
+    localStorage.setItem(`lastViewedInbox_${currentUserID}`, Date.now()); // 🚨 Save timestamp
+    document.querySelectorAll("#btnMessages .notification-dot").forEach(dot => dot.style.display = "none"); 
+});
+
+attachSafeClick("btnNotifications", (e) => { 
+    switchView(views.notifications, e.currentTarget); 
+    localStorage.setItem(`lastViewedNotifs_${currentUserID}`, Date.now()); // 🚨 Save timestamp
+    document.querySelectorAll("#btnNotifications .notification-dot").forEach(dot => dot.style.display = "none"); 
+});
 attachSafeClick("btnNavAttendance", (e) => switchView(views.attendance, e.currentTarget));
 attachSafeClick("btnNavTimetable", (e) => switchView(views.timetable, e.currentTarget));
 attachSafeClick("btnNavInternalMarks", (e) => switchView(views.internalMarks, e.currentTarget));
