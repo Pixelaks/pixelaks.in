@@ -676,64 +676,66 @@ async function checkTimetableAllocation(ticket, dateStr) {
             }
         }
 
-        // 🚨 BULLETPROOF QUERY: Safely checks for both "2" and "Semester 2"
         let allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", selectedSem), where("day", "==", dayName), where("period", "==", String(pIndex))));
-        if(allocSnap.empty) {
-            allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex))));
-        }
-
-        if(ticket !== attCurrentLoadTicket) return;
-
-        let isTargetSubjectScheduled = false;
-        let myAllocations = [];
-        let substituteAllocations = [];
-
-        allocSnap.forEach(docSnap => {
-            let data = docSnap.data();
-            let sCat = (data.subjectCategory || data.category || data.type || "UNKNOWN").toUpperCase();
-            if(data.subjectName === selectedSubject) {
-                isTargetSubjectScheduled = true;
-                let isStrictDeptSubject = sCat.includes("MJD") || sCat.includes("CORE") || sCat.includes("TUTORIAL");
-                if(isStrictDeptSubject && data.departmentID !== `DEPT_${teacherDeptRaw.replace(/ /g, '')}`) return;
-
-                if((data.teacherID || "").trim() === currentUserID) myAllocations.push(docSnap);
-                else substituteAllocations.push(docSnap);
+            if(allocSnap.empty) {
+                allocSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "timetable_allocations"), where("semester", "==", `Semester ${selectedSem}`), where("day", "==", dayName), where("period", "==", String(pIndex))));
             }
-        });
-
-        if(isStructurallyStrict && !isMySelectedSubjectStrict) {
-            showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
-        }
-
-        // 🚨 THE C# DECISION ENGINE PORT 🚨
-        if(isTargetSubjectScheduled) {
-            let totalBatches = myAllocations.length + substituteAllocations.length;
-
-            if (totalBatches > 0) {
-                // Check if I actually teach this subject anywhere
-                let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
-
-                if (myAllocations.length > 0 || iTeachSubject) {
+    
+            if(ticket !== attCurrentLoadTicket) return;
+    
+            let isTargetSubjectScheduled = false;
+            let myAllocations = [];
+            let substituteAllocations = [];
+    
+            allocSnap.forEach(docSnap => {
+                let data = docSnap.data();
+                let sCat = (data.subjectCategory || data.category || data.type || "UNKNOWN").toUpperCase();
+                if(data.subjectName === selectedSubject) {
+                    isTargetSubjectScheduled = true;
+                    let isStrictDeptSubject = sCat.includes("MJD") || sCat.includes("CORE") || sCat.includes("TUTORIAL");
                     
-                    // Create Layout Zones
-                    const listContainer = document.getElementById("attListContainer");
-                    listContainer.innerHTML = `
-                        <div id="attSubCardsArea"></div>
-                        <div id="attDirectArea"></div>
-                    `;
-
-                    // Spawn Substitutes if any exist
-                    if (substituteAllocations.length > 0) {
-                        spawnSubstituteCards(substituteAllocations, selectedSem, selectedSubject);
-                    }
-
-                    // Spawn My Class or show the Substitute Helper Text
-                    if (myAllocations.length > 0) {
-                        loadMyClassDirectly(myAllocations[0], ticket, targetSubCategory, dateStr, selectedSem, selectedSubject);
+                    // 🚨 BUG 1 FIXED: Direct comparison to teacherDeptRaw!
+                    if(isStrictDeptSubject && data.departmentID !== teacherDeptRaw) return;
+    
+                    if((data.teacherID || "").trim() === currentUserID) myAllocations.push(docSnap);
+                    else substituteAllocations.push(docSnap);
+                }
+            });
+    
+            if(isStructurallyStrict && !isMySelectedSubjectStrict) {
+                showAttCenterMessage(`Master Timetable Lock:<br>This period is strictly reserved for <b>${structuralCategoryName}</b>.<br><br>You cannot mark '${selectedSubject}' here.`); return;
+            }
+    
+            // 🚨 BUG 2 FIXED: C# Decision Engine Port
+            if(isTargetSubjectScheduled) {
+                let totalBatches = myAllocations.length + substituteAllocations.length;
+    
+                if (totalBatches > 0) {
+                    let iTeachSubject = attTeacherSubjects.some(s => s.name === selectedSubject);
+    
+                    if (myAllocations.length > 0 || iTeachSubject) {
+                        
+                        const listContainer = document.getElementById("attListContainer");
+                        listContainer.innerHTML = `
+                            <div id="attSubCardsArea"></div>
+                            <div id="attDirectArea"></div>
+                        `;
+    
+                        if (myAllocations.length === 0) {
+                            document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                        } else {
+                            document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Select a batch to mark attendance:</div>`;
+                        }
+    
+                        // 🚨 C# PORT: Spawn ALL allocations as clickable cards!
+                        spawnAllAllocationCards(myAllocations, substituteAllocations, selectedSem, selectedSubject);
                     } else {
-                        document.getElementById("attDirectArea").innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-weight:bold;">Not assigned to you.<br>(Substitute options above)</div>`;
+                        showAttCenterMessage("This period is assigned to another teacher.");
                     }
                 } else {
+                    showAttCenterMessage("This period is assigned to another teacher.");
+                }
+            } else {
                     showAttCenterMessage("This period is assigned to another teacher.");
                 }
             } else {
@@ -775,37 +777,74 @@ async function checkTimetableAllocation(ticket, dateStr) {
     } catch(e) { console.error("Timetable Engine Error", e); showAttCenterMessage("Connection Error."); }
 }
 
-function spawnSubstituteCards(subDocs, sem, subj) {
+function spawnAllAllocationCards(myAllocs, subAllocs, sem, subj) {
     const targetArea = document.getElementById("attSubCardsArea");
     if (!targetArea) return;
 
-    const createCardHTML = (docSnap) => {
-        let d = docSnap.data();
-        let bIndex = parseInt(d.splitIndex || "0");
-        let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-        let id = docSnap.id;
-        
-        return `
-        <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
-            <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
-                <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
-                    ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
+    let fullHTML = "";
+
+    const generateHTML = (docs, isMyOwn) => {
+        docs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(docSnap => {
+            let d = docSnap.data();
+            let bIndex = parseInt(d.splitIndex || "0");
+            let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
+            if (isMyOwn) bName += " (My Class)";
+            let id = docSnap.id;
+            
+            fullHTML += `
+            <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:30px; margin-bottom:15px; overflow:hidden; transition:0.3s;">
+                <button id="subCardBtn_${id}" style="width:100%; padding:20px; background:transparent; border:none; text-align:center; cursor:pointer; display:flex; justify-content:center; align-items:center; position:relative;">
+                    <div id="subCardTitle_${id}" style="font-weight:bold; color:#991b1b; font-size:16px;">
+                        ${bName} <span style="font-size:12px; color:#991b1b; font-weight:normal;">(Assigned: ${d.teacherName || "Unknown"})</span>
+                    </div>
+                    <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
+                </button>
+                <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
+                    <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
+                    <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
+                    <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
                 </div>
-                <i class="fas fa-chevron-down" id="subCardIcon_${id}" style="position:absolute; right:20px; color:#991b1b; transition: 0.3s;"></i>
-            </button>
-            <div id="subCardBody_${id}" style="display:none; padding:15px; border-top:1px solid #fca5a5; background: #fff5f5;">
-                <div id="subCardStatus_${id}" style="font-size:12px; font-weight:bold; margin-bottom:10px; text-align:center;"></div>
-                <div id="subCardStudents_${id}" style="max-height: 400px; overflow-y: auto; margin-bottom:15px; padding-right:5px;"></div>
-                <button id="subCardSaveBtn_${id}" style="width:100%; background:var(--brand-red); color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">Save Attendance</button>
-            </div>
-        </div>`;
+            </div>`;
+        });
     };
 
-    let fullHTML = "";
-    subDocs.sort((a,b)=>parseInt(a.data().splitIndex||0)-parseInt(b.data().splitIndex||0)).forEach(d => fullHTML += createCardHTML(d));
-    
+    if (myAllocs.length > 0) generateHTML(myAllocs, true);
+    if (subAllocs.length > 0) generateHTML(subAllocs, false);
+
     targetArea.innerHTML = fullHTML;
-    subDocs.forEach(d => attachSubCardListener(d, sem, subj));
+
+    // Attach listeners
+    if (myAllocs.length > 0) myAllocs.forEach(d => attachSubCardListener(d, sem, subj, true));
+    if (subAllocs.length > 0) subAllocs.forEach(d => attachSubCardListener(d, sem, subj, false));
+}
+
+function attachSubCardListener(docSnap, sem, subj, isMyOwn = false) {
+    let d = docSnap.data();
+    let bIndex = parseInt(d.splitIndex || "0");
+    let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
+    if (isMyOwn) bName += " (My Class)";
+    let id = docSnap.id;
+
+    fetchAndDisplayBatchCount(id, sem, subj, d.isCommon, bIndex);
+
+    document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
+        let body = document.getElementById(`subCardBody_${id}`);
+        if (body.style.display === "block") {
+            body.style.display = "none";
+            document.getElementById(`subCardIcon_${id}`).style.transform = "rotate(0deg)";
+            attIsSubstitutePanelOpen = false;
+            updateMainButtonState();
+        } else {
+            attPendingSubBatchName = bName;
+            attPendingSubBatchIndex = bIndex;
+            attPendingSubTeacherID = d.teacherID || "";
+            attPendingSubTeacherName = d.teacherName || "Unknown";
+            attPendingSubCardId = id; 
+            showSubstituteConfirmModal(bName);
+        }
+    });
+
+    document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
 }
 
 function spawnManualBatchCards(subDocs, sem, subj) {
@@ -873,34 +912,6 @@ function spawnManualBatchCards(subDocs, sem, subj) {
     });
 }
 
-function attachSubCardListener(docSnap, sem, subj) {
-    let d = docSnap.data();
-    let bIndex = parseInt(d.splitIndex || "0");
-    let bName = d.isCommon ? "Entire Class" : `Batch ${bIndex + 1}`;
-    let id = docSnap.id;
-
-    fetchAndDisplayBatchCount(id, sem, subj, d.isCommon, bIndex);
-
-    document.getElementById(`subCardBtn_${id}`).addEventListener("click", () => {
-        let body = document.getElementById(`subCardBody_${id}`);
-        if (body.style.display === "block") {
-            body.style.display = "none";
-            document.getElementById(`subCardIcon_${id}`).style.transform = "rotate(0deg)";
-            attIsSubstitutePanelOpen = false;
-            updateMainButtonState();
-        } else {
-            attPendingSubBatchName = bName;
-            attPendingSubBatchIndex = bIndex;
-            attPendingSubTeacherID = d.teacherID || "";
-            attPendingSubTeacherName = d.teacherName || "Unknown";
-            attPendingSubCardId = id; 
-            showSubstituteConfirmModal(bName);
-        }
-    });
-
-    document.getElementById(`subCardSaveBtn_${id}`).addEventListener("click", saveAttendance);
-}
-
 async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
     try {
         if (isCommon) {
@@ -945,7 +956,11 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
 
 function showSubstituteConfirmModal(displayName) {
     let t = document.getElementById("subConfirmText");
-    t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
+    if (displayName.includes("(My Class)")) {
+        t.innerHTML = `Open register for<br><b>${displayName.replace(" (My Class)", "")}</b>?`;
+    } else {
+        t.innerHTML = `<b>Substitute Mode</b><br>Mark attendance for ${displayName}?`;
+    }
     document.getElementById("subConfirmModal").classList.add("active");
 }
 
@@ -964,12 +979,15 @@ function confirmSubstituteLoad() {
     const selectedSem = document.getElementById("attSemDropdown").value;
     const selectedSubject = document.getElementById("attSubjDropdown").value;
 
-    if(attPendingSubBatchName === "Entire Class") {
+    // 🚨 Clean the DB string so Firebase doesn't break
+    let cleanBatchNameForDB = attPendingSubBatchName.replace(" (My Class)", "").trim();
+
+    if(cleanBatchNameForDB === "Entire Class") {
         attCurrentSessionBatchIndex = -1;
         loadAttendanceRegister(null, attCurrentLoadTicket, attSubjectCategories.get(selectedSubject), dateStr);
     } else {
         const cleanSub = selectedSubject.replace(/ /g, "").replace(/\//g, "");
-        const batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_${attPendingSubBatchName.replace(/ /g, "")}`;
+        const batchDocID = `BATCH_Sem${selectedSem}_${cleanSub}_${cleanBatchNameForDB.replace(/ /g, "")}`;
         
         getDoc(doc(db, "colleges", currentCollegeID, "subject_batches", batchDocID)).then(snap => {
             if(snap.exists() && snap.data().studentIDs) {
@@ -1311,12 +1329,12 @@ async function saveAttendance() {
         let myBatchPresent = 0; let myBatchTotal = 0;
 
         // 🚨 Using the correct array and prefix to grab toggles
+        // 🚨 Using the correct array and prefix to grab toggles
         activeRows.forEach(id => {
             let el = document.getElementById(`tog_${prefix}${id}`);
             if(attCurrentPeriodEvents.has(id)) {
-                // 🚨 FIRESTORE MERGE FIX: Deleting from a JS object doesn't delete it from the database during a merge. 
-                // We MUST use deleteField() to match C#'s FieldValue.Delete!
-                delete attendanceMap[id];
+                // 🚨 EXACT C# PORT: Forces Firebase to wipe the field from the cloud database
+                attendanceMap[id] = deleteField();
             } else {
                 let isPresent = el.dataset.state === "true";
                 attendanceMap[id] = isPresent;
