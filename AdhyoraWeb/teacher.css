@@ -438,7 +438,7 @@ body {
    ========================================= */
 .tt-days-container { display: flex; gap: 8px; justify-content: center; }
 .tt-day-btn { 
-    background: var(--card-bg); /* 🚨 Matches the pastel red header background exactly! */
+    background: #fef2f2; /* 🚨 Solid pastel red to completely hide the grid behind it */
     color: var(--text-muted); 
     border: 1px dashed var(--border-color); 
     padding: 8px 15px; 
@@ -483,11 +483,16 @@ body {
    📱 TIMETABLE MOBILE & FOLD PHONE FIXES
    ========================================= */
 @media (max-width: 380px) {
+    /* Timeline Fixes */
     .tt-row { gap: 10px; margin-bottom: 15px; }
     .tt-timeline-col { width: 35px; min-width: 35px; }
     .tt-card { padding: 12px 10px; gap: 8px; }
     .tt-pill-grid { gap: 5px; }
     .tt-pill { font-size: 11px; padding: 6px 5px; }
+    
+    /* 🚨 Day Buttons Fold Phone Fix */
+    .tt-days-container { gap: 4px; } /* Shrinks the space between buttons */
+    .tt-day-btn { padding: 6px 10px; font-size: 11px; } /* Shrinks the buttons slightly */
 }
 
 /* =========================================
@@ -533,6 +538,7 @@ body.dark-mode {
     color: #f8fafc;
 }
 
+body.dark-mode .tt-day-btn { background: #1e293b; }
 body.dark-mode .circle-wave-text { text-shadow: 0px 0px 8px rgba(0,0,0,0.9); }
 body.dark-mode .wavy-text { text-shadow: 0px 0px 5px rgba(0,0,0,0.8); }
 body.dark-mode .circle-wave-wrap { border-color: #334155; }
