@@ -2779,11 +2779,11 @@ function asnRenderList(dataList) {
         }
 
         html += `
-            <div style="background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: 0.2s;">
-                <div style="font-size: 18px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">${topic}</div>
-                <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 15px; letter-spacing: 0.5px;">${subject} | ${semester}</div>
-                <div style="font-size: 14px; color: var(--text-dark); line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap;">${desc}</div>
-                <div style="text-align: right; font-size: 13px; font-weight: bold; color: ${dateColor};">Due: ${dateStr}${dateSuffix}</div>
+            <div style="background: var(--bg-base); border: 1px solid var(--border-color); border-left: 5px solid var(--brand-red); border-radius: 12px; padding: 15px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: 0.2s;">
+                <div style="font-size: 16px; font-weight: 800; color: var(--text-dark); margin-bottom: 2px;">${topic}</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; letter-spacing: 0.3px;">${subject} | ${semester}</div>
+                <div style="font-size: 13px; color: var(--text-dark); line-height: 1.5; margin-bottom: 15px; white-space: pre-wrap;">${desc}</div>
+                <div style="text-align: right; font-size: 12px; font-weight: bold; color: ${dateColor};">Due: ${dateStr}${dateSuffix}</div>
             </div>
         `;
     });
