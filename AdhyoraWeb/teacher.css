@@ -492,16 +492,16 @@ body {
    ========================================= */
 @media (max-width: 480px) { /* 🚨 Changed to 480px to protect ALL mobile phones! */
     
-    /* Timeline Fixes */
-    .tt-row { gap: 10px; margin-bottom: 15px; }
+    /* 🚨 Relaxed Timeline Fixes (Made boxes and text bigger!) */
+    .tt-row { gap: 15px; margin-bottom: 20px; }
     .tt-timeline-col { width: 35px; min-width: 35px; }
-    .tt-card { padding: 12px 10px; gap: 8px; }
-    .tt-pill-grid { gap: 5px; }
-    .tt-pill { font-size: 11px; padding: 6px 5px; }
+    .tt-card { padding: 15px 12px; gap: 10px; } /* Restored card padding */
+    .tt-pill-grid { gap: 8px; }
+    .tt-pill { font-size: 12px; padding: 8px 8px; } /* Bigger text and pill height */
     
-    /* Day Buttons Phone Fix */
-    .tt-days-container { gap: 4px; } 
-    .tt-day-btn { padding: 6px 10px; font-size: 11px; } 
+    /* 🚨 Relaxed Day Buttons (Made them bigger!) */
+    .tt-days-container { gap: 6px; } 
+    .tt-day-btn { padding: 8px 14px; font-size: 13px; } /* Restored to near-desktop size */
 
    /* =========================================
        🚨 ASSIGN CLASSES (HOD) PHONE FIXES
