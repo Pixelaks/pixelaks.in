@@ -1985,6 +1985,7 @@ elLock.btnSubmit.addEventListener("click", async () => {
     }
     else if (lockMode === "SETUP_BIO") {
         elLock.btnSubmit.innerText = "Scanning...";
+        isBiometricPromptActive = true; // 🚨 ADDED: Turn on the shield
         try {
             const challenge = window.crypto.getRandomValues(new Uint8Array(32)); const userIDBuffer = new TextEncoder().encode(currentUserID);
             const credential = await navigator.credentials.create({
@@ -1997,8 +1998,16 @@ elLock.btnSubmit.addEventListener("click", async () => {
             localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64); localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPinHash); 
             localStorage.setItem(`adhyora_bio_${currentUserID}`, "true"); isBioEnabledLocally = true;
             if(elLock.toggleBio) elLock.toggleBio.classList.add("active");
-            elLock.btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Linked!'; setTimeout(() => { UnlockSecurityWall(); }, 800);
-        } catch (err) { elLock.status.innerText = "Scan failed or cancelled."; elLock.status.style.color = "#ef4444"; elLock.btnSubmit.innerText = "Try Again"; }
+            elLock.btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Linked!'; 
+            
+            setTimeout(() => { 
+                UnlockSecurityWall(); 
+                isBiometricPromptActive = false; // 🚨 ADDED: Safely drop the shield AFTER unlocking
+            }, 800);
+        } catch (err) { 
+            isBiometricPromptActive = false; // 🚨 ADDED: Drop shield on error
+            elLock.status.innerText = "Scan failed or cancelled."; elLock.status.style.color = "#ef4444"; elLock.btnSubmit.innerText = "Try Again"; 
+        }
     }
 });
 
@@ -2016,6 +2025,7 @@ if(elLock.btnToggleWrap) {
             isBioEnabledLocally = false; localStorage.setItem(`adhyora_bio_${currentUserID}`, "false"); localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
             elLock.toggleBio.classList.remove("active"); showRcToast("Biometrics disabled.");
         } else {
+            isBiometricPromptActive = true; // 🚨 ADDED: Turn on the shield
             try {
                 const challenge = window.crypto.getRandomValues(new Uint8Array(32)); const userIDBuffer = new TextEncoder().encode(currentUserID);
                 const credential = await navigator.credentials.create({
@@ -2027,7 +2037,12 @@ if(elLock.btnToggleWrap) {
                 const credIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
                 localStorage.setItem(`adhyora_bio_id_${currentUserID}`, credIdBase64); localStorage.setItem(`adhyora_bio_linked_pin_${currentUserID}`, cachedAdminPinHash); 
                 isBioEnabledLocally = true; localStorage.setItem(`adhyora_bio_${currentUserID}`, "true"); elLock.toggleBio.classList.add("active"); showRcToast("✅ Biometrics Linked!");
-            } catch (err) { showRcToast("❌ Failed to link Biometrics."); }
+            } catch (err) { 
+                showRcToast("❌ Failed to link Biometrics."); 
+            } finally {
+                // 🚨 ADDED: Guarantee the shield drops 
+                setTimeout(() => { isBiometricPromptActive = false; }, 500); 
+            }
         }
     });
 }
@@ -2043,9 +2058,15 @@ if(elLock.btnBio) {
             await navigator.credentials.get({
                 publicKey: { challenge: challenge, rpId: window.location.hostname, allowCredentials: [{ type: "public-key", id: bytes.buffer }], userVerification: "required", timeout: 60000 }
             });
-            isBiometricPromptActive = false; elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!'; setTimeout(() => { UnlockSecurityWall(); }, 500);
+            
+            elLock.btnBio.innerHTML = '<i class="fas fa-check-circle"></i> Verified!'; 
+            setTimeout(() => { 
+                UnlockSecurityWall(); 
+                isBiometricPromptActive = false; // 🚨 MOVED: Drop shield down here instead!
+            }, 500);
         } catch (err) {
-            isBiometricPromptActive = false; elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again'; elLock.status.innerText = "Scan failed."; elLock.status.style.color = "#ef4444";
+            isBiometricPromptActive = false; 
+            elLock.btnBio.innerHTML = '<i class="fas fa-fingerprint" style="margin-right:8px;"></i> Try Again'; elLock.status.innerText = "Scan failed."; elLock.status.style.color = "#ef4444";
         }
     });
 }
