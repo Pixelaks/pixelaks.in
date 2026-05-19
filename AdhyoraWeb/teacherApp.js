@@ -1303,9 +1303,10 @@ function renderStudentRows(students, existingData, batchTeachersMap, ticket) {
     
     targetArray.length = 0;
 
-    students.forEach(docSnap => {
-        let d = docSnap.data();
-        let id = docSnap.id;
+   // 🚨 FIX: Data is now pulled directly from the RAM cache as standard JSON!
+    students.forEach(studentData => {
+        let d = studentData; 
+        let id = d.id;
         let name = d.Name || d.studentName || "Unknown";
         let roll = d.RollNumber || d.rollNumber || "";
         let sDept = d.Department || d.department || "";
