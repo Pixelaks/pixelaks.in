@@ -2997,8 +2997,9 @@ function renderStudentList(searchTerm = "", appendOnly = false) {
         else if (s.fcmToken) tokensArr = [s.fcmToken];
         let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
         
+        // 🚨 PERFORMANCE FIX: Added GPU Acceleration (translateZ) and will-change
         return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--bg-base); border-left: 6px solid ${statusColor}; border-radius: 14px; margin-bottom: 12px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: transform 0.2s;" onclick="window.SL_OpenDashboard('${s.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--bg-base); border-left: 6px solid ${statusColor}; border-radius: 14px; margin-bottom: 12px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transform: translateZ(0); will-change: transform; transition: transform 0.2s;" onclick="window.SL_OpenDashboard('${s.id}')" onmouseover="this.style.transform='translateY(-2px) translateZ(0)'" onmouseout="this.style.transform='translateY(0) translateZ(0)'">
             <div style="flex:1;">
                 <div style="margin-bottom:4px;">
                     <span style="font-weight:800; font-size:15px; color:var(--text-dark);">${s.Name || "Unknown"}</span> 
@@ -3027,8 +3028,12 @@ document.getElementById("slSearchInput").addEventListener("input", debounce((e) 
     renderStudentList(e.target.value.trim(), false); 
 }, 250));
 
-// 🚀 SCROLL DETECTOR: Triggers when they reach the bottom of the list
+// 🚀 SCROLL DETECTOR: Optimized with a Hardware Lock
+let isFetchingNextBatch = false; // 🚨 THE LOCK
+
 document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
+    if (isFetchingNextBatch) return; // 🚨 Ignore scroll events while already building!
+
     let el = e.target;
     // If user scrolls within 150px of the bottom
     if (el.scrollHeight - el.scrollTop <= el.clientHeight + 150) {
@@ -3037,8 +3042,11 @@ document.getElementById("studentListContainer").addEventListener("scroll", (e) =
         
         // If we haven't rendered all the students yet, append the next batch
         if (currentRenderedCount < totalCurrentMatches) {
-            // True means safely append the next 50 cards
+            isFetchingNextBatch = true; // 🚨 Lock it!
             renderStudentList(searchTerm, true); 
+            
+            // 🚨 Unlock after 150ms so the browser's DOM has time to push the scrollHeight down
+            setTimeout(() => { isFetchingNextBatch = false; }, 150);
         }
     }
 });
@@ -3230,9 +3238,11 @@ async function SD_BuildUI(specificDate = "All Time") {
         
         document.getElementById("sdSubjectList").innerHTML = Object.entries(subjectAtt).map(([name, data]) => {
             let p = data.p, t = data.t, per = t>0 ? (p/t)*100 : 0; let col = per >= 75 ? "#10b981" : (per >= 60 ? "#f59e0b" : "var(--brand-red)");
-            return `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px;">
+            
+            // 🚨 PERFORMANCE FIX: Forced GPU rendering on the rounded progress bars
+            return `<div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px; transform: translateZ(0);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${name}</span> <span style="font-size:12px; font-weight:bold; color:${col};">${per.toFixed(0)}% (${p}/${t})</span></div>
-                <div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${per}%;"></div></div>
+                <div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden; transform: translateZ(0);"><div style="height:100%; background:${col}; width:${per}%;"></div></div>
             </div>`;
         }).join('');
     } else {
@@ -3313,14 +3323,12 @@ function SD_RenderMarksUI(examName) {
         let ratio = m.max ? m.obt / m.max : 0; 
         let percentVal = ratio * 100;
         let per = m.max ? percentVal.toFixed(0) + "%" : "";
-        
-        // 🚨 THE FIX: Dynamic Color Logic based on performance!
         let col = percentVal >= 75 ? "#10b981" : (percentVal >= 60 ? "#f59e0b" : "var(--brand-red)");
 
-        let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden;"><div style="height:100%; background:${col}; width:${percentVal}%;"></div></div>` : "";
+        // 🚨 PERFORMANCE FIX: GPU Acceleration
+        let barHtml = m.max ? `<div style="background:var(--bg-surface); height:6px; border-radius:3px; overflow:hidden; transform: translateZ(0);"><div style="height:100%; background:${col}; width:${percentVal}%;"></div></div>` : "";
         
-        // 🚨 DARK MODE FIX: Replaced background:white with background:var(--bg-base)
-        return `<div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:10px; padding:12px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
+        return `<div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px; transform: translateZ(0);"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${m.sub}</span><span style="font-size:13px; font-weight:bold; color:var(--text-dark);">${m.obt}/${maxText} <span style="font-size:10px; color:var(--text-muted);">${per}</span></span></div>${barHtml}</div>`;
     }).join('');
 }
 
