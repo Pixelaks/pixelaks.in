@@ -7444,9 +7444,6 @@ function UnlockSecurityWall() {
     if (loader) loader.style.display = "none";
     
     failedPinAttempts = 0;
-    
-    // 4. Start subscriptions
-    startSubscriptionListener(); 
 }
 
 // --- FORGOT PIN / RE-AUTH LOGIC ---
