@@ -2932,7 +2932,7 @@ function asnRenderList(dataList) {
 // ==========================================
 let slLoaded = false; 
 let cachedStudents = [];
-let studentRenderLimit = 50; // Start with 50
+let currentRenderedCount = 0; // 🚨 REPLACES studentRenderLimit
 
 function startStudentListListener() {
     if (slLoaded) return;
@@ -2941,11 +2941,13 @@ function startStudentListListener() {
         cachedStudents = []; 
         snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
         document.getElementById("slTotalStudents").innerText = `Total: ${cachedStudents.length}`; 
-        renderStudentList(document.getElementById("slSearchInput").value);
+        
+        // False forces a fresh wipe on initial load
+        renderStudentList(document.getElementById("slSearchInput").value, false); 
     });
 }
 
-function renderStudentList(searchTerm = "") {
+function renderStudentList(searchTerm = "", appendOnly = false) {
     const listEl = document.getElementById("studentListContainer"); 
     const noData = document.getElementById("slNoDataText");
     let filtered = cachedStudents;
@@ -2964,17 +2966,26 @@ function renderStudentList(searchTerm = "") {
         noData.innerText = searchTerm ? `No student matching "${searchTerm}"` : "No students found."; 
         listEl.innerHTML = ""; 
         listEl.appendChild(noData); 
+        currentRenderedCount = 0;
         return; 
     }
+    
     noData.style.display = "none";
     
-    // 🚀 RAM SCROLL: Slice the array based on the current limit
-    let renderBatch = filtered.slice(0, studentRenderLimit);
-    
-    // 🚨 EXACT PRINCIPAL SCRIPT TRICK: Remember scroll position before rebuilding DOM
-    let oldScroll = listEl.scrollTop;
+    // 🚨 PERFORMANCE FIX 1: Clear the list ONLY if we are starting a fresh search
+    if (!appendOnly) {
+        listEl.innerHTML = "";
+        listEl.appendChild(noData); // Keep the hidden element safe
+        currentRenderedCount = 0;
+    }
 
-    listEl.innerHTML = renderBatch.map(s => {
+    // 🚨 PERFORMANCE FIX 2: Only slice out the NEXT 50 items, not the whole list
+    let nextBatchSize = 50;
+    let itemsToRender = filtered.slice(currentRenderedCount, currentRenderedCount + nextBatchSize);
+    
+    if (itemsToRender.length === 0) return; // Nothing left to append
+
+    let htmlChunk = itemsToRender.map(s => {
         let cleanDept = (s.Department || "Unknown").replace("DEPT_", ""); 
         let status = s.status || "Approved";
         
@@ -2986,7 +2997,6 @@ function renderStudentList(searchTerm = "") {
         else if (s.fcmToken) tokensArr = [s.fcmToken];
         let tokensJson = JSON.stringify(tokensArr).replace(/"/g, '&quot;');
         
-        // 🚨 THE FIX: Restored explicit background, margins, padding, and shadows to create floating cards!
         return `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--bg-base); border-left: 6px solid ${statusColor}; border-radius: 14px; margin-bottom: 12px; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: transform 0.2s;" onclick="window.SL_OpenDashboard('${s.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
             <div style="flex:1;">
@@ -3005,30 +3015,30 @@ function renderStudentList(searchTerm = "") {
         </div>`;
     }).join('');
     
-    listEl.appendChild(noData); 
+    // 🚨 PERFORMANCE FIX 3: Inject HTML below the existing cards without destroying the DOM!
+    listEl.insertAdjacentHTML('beforeend', htmlChunk);
     
-    // Restore scroll instantly so it doesn't snap to top
-    listEl.scrollTop = oldScroll;
+    currentRenderedCount += itemsToRender.length;
 }
 
 // Search Input Logic
 document.getElementById("slSearchInput").addEventListener("input", debounce((e) => {
-    studentRenderLimit = 50; // Reset scroll limit when they search
-    renderStudentList(e.target.value.trim());
+    // False means we wipe the list and start a fresh search
+    renderStudentList(e.target.value.trim(), false); 
 }, 250));
 
 // 🚀 SCROLL DETECTOR: Triggers when they reach the bottom of the list
 document.getElementById("studentListContainer").addEventListener("scroll", (e) => {
     let el = e.target;
-    // If user scrolls within 100px of the bottom
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 100) {
+    // If user scrolls within 150px of the bottom
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 150) {
         let searchTerm = document.getElementById("slSearchInput").value.trim();
-        let totalCurrentMatches = cachedStudents.length; // Simplified length check
+        let totalCurrentMatches = cachedStudents.length; 
         
-        // If we haven't rendered all the students yet, increase limit by 50 and render
-        if (studentRenderLimit < totalCurrentMatches) {
-            studentRenderLimit += 50;
-            renderStudentList(searchTerm);
+        // If we haven't rendered all the students yet, append the next batch
+        if (currentRenderedCount < totalCurrentMatches) {
+            // True means safely append the next 50 cards
+            renderStudentList(searchTerm, true); 
         }
     }
 });
