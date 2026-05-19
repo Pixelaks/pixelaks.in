@@ -3793,31 +3793,51 @@ let securityListener = null;
 let isFirstSecurityLoad = true;
 
 function CheckSecurityPin() {
-    // Force the Lock Screen on immediately
     document.querySelector(".main-content").style.display = "none";
     document.getElementById("mainSidebar").style.display = "none";
+    document.getElementById("initialAppLoader").style.display = "none"; 
     elLock.screen.style.display = "flex"; 
 
     if (securityListener) securityListener(); 
 
-    // 🚨 UPDATED: Listens to the TEACHER document instead of metadata/security
-    securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), async (snap) => {
-        if (snap.exists() && snap.data().securityPin) {
-            const livePin = snap.data().securityPin;
-            const hashedLivePin = await hashText(livePin);
+    securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "metadata", "security"), async (snap) => {
+        if (snap.exists() && snap.data().adminPin) {
+            const livePin = snap.data().adminPin;
+            const hashedLivePin = await hashText(livePin); // 🚨 Hash it immediately!
             
-            // Handle remote PIN changes
+            // REMOTE HACK PREVENTION (Comparing Hashes)
             if (!isFirstSecurityLoad && cachedAdminPinHash && cachedAdminPinHash !== hashedLivePin) {
-                // ... (your existing reset bio logic)
+                isBioEnabledLocally = false;
+                localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+                localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
+                localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
+                
+                document.querySelector(".main-content").style.display = "none";
+                document.getElementById("mainSidebar").style.display = "none";
+                elLock.screen.style.display = "flex";
+                
+                showRcToast("Security PIN was changed remotely. Biometrics reset.");
                 SetLockMode("LOGIN");
             }
 
+            // 🚨 Store ONLY the hash in active memory!
             cachedAdminPinHash = hashedLivePin;
 
             if (isFirstSecurityLoad) {
+                const linkedPin = localStorage.getItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                if (isBioEnabledLocally && linkedPin && linkedPin !== hashedLivePin) {
+                    isBioEnabledLocally = false;
+                    localStorage.setItem(`adhyora_bio_${currentUserID}`, "false");
+                    localStorage.removeItem(`adhyora_bio_id_${currentUserID}`);
+                    localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
+                    if (elLock.toggleBio) elLock.toggleBio.classList.remove("active");
+                }
+                
                 SetLockMode("LOGIN");
                 isFirstSecurityLoad = false;
             }
+
         } else {
             if (isFirstSecurityLoad) {
                 SetLockMode("SETUP_1");
@@ -3827,6 +3847,7 @@ function CheckSecurityPin() {
     }, (error) => {
         console.error("Security Sync Error");
         elLock.status.innerText = "Network error syncing security.";
+        elLock.status.style.color = "#ef4444";
     });
 }
 // ==========================================
@@ -4110,20 +4131,15 @@ elLock.btnSubmit.addEventListener("click", async () => {
 });
 
 function UnlockSecurityWall() {
-    // 1. Hide the lock screen
     elLock.screen.style.display = "none";
     
-    // 2. Reveal the main UI
+    // Restore the DOM layout physically
     document.querySelector(".main-content").style.display = "";
     document.getElementById("mainSidebar").style.display = "";
     
-    // 3. 🚨 FINALLY: Hide the initial loader
-    const loader = document.getElementById("initialAppLoader");
-    if (loader) loader.style.display = "none";
-    
     failedPinAttempts = 0;
     
-    // 4. Start subscriptions
+    // 🚨 CHAIN REACTION: Now that PIN is verified, check Subscription!
     startSubscriptionListener(); 
 }
 
