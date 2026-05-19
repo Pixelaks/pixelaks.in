@@ -1852,8 +1852,9 @@ function CheckSecurityPin() {
     if (securityListener) securityListener(); 
     // 🚨 Stores the PIN strictly in the Teacher's own private metadata block
     securityListener = onSnapshot(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), async (snap) => {
-        if (snap.exists() && snap.data().appPin) {
-            const livePin = snap.data().appPin;
+        // Changed "appPin" to "securityPin"
+        if (snap.exists() && snap.data().securityPin) {
+            const livePin = snap.data().securityPin;
             const hashedLivePin = await hashText(livePin); 
             
             if (!isFirstSecurityLoad && cachedAdminPinHash && cachedAdminPinHash !== hashedLivePin) {
@@ -1969,7 +1970,7 @@ elLock.btnSubmit.addEventListener("click", async () => {
         if (val === setupTempPin) {
             elLock.btnSubmit.innerText = "Saving..."; elLock.btnSubmit.disabled = true;
             try {
-                await setDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), { appPin: val, updatedAt: serverTimestamp() }, { merge: true });
+                await setDoc(doc(db, "colleges", currentCollegeID, "teachers", currentUserID), { securityPin: val }, { merge: true });
                 cachedAdminPinHash = await hashText(val);
                 isBioEnabledLocally = false;
                 localStorage.setItem(`adhyora_bio_${currentUserID}`, "false"); localStorage.removeItem(`adhyora_bio_id_${currentUserID}`); localStorage.removeItem(`adhyora_bio_linked_pin_${currentUserID}`);
