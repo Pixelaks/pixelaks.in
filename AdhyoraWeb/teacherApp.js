@@ -24,6 +24,8 @@ let profileListener = null;
 let teacherDeptRaw = ""; 
 let currentDeptName = "Unknown Dept"; 
 let hasStartedInbox = false;
+let sdAttListenerUnsub = null;
+let sdMarksListenerUnsub = null;
 
 // Notification Variables
 let allMessagesMap = new Map();
@@ -53,6 +55,38 @@ const db = initializeFirestore(app, {
         tabManager: persistentMultipleTabManager()
     })
 });
+
+// 🚨 THE MASTER RAM CACHE (Zero Cost Reads)
+const AdhyoraMasterCache = {
+    subjects: null,
+    async getSubjects(collegeID, dbInstance) {
+        if (this.subjects) return this.subjects; // Free RAM return
+        
+        let localData = sessionStorage.getItem(`adhyora_subs_${collegeID}`);
+        if (localData) {
+            this.subjects = JSON.parse(localData);
+            return this.subjects; // Free Local Storage return
+        }
+
+        // Only pay for Firebase reads if absolutely necessary!
+        const snap = await getDocs(collection(dbInstance, "colleges", collegeID, "subjects"));
+        this.subjects = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        sessionStorage.setItem(`adhyora_subs_${collegeID}`, JSON.stringify(this.subjects));
+        return this.subjects;
+    }
+};
+
+// 🚨 THE MASTER STUDENT RAM CACHE (Zero Cost Reads)
+async function getGlobalStudents() {
+    if (cachedStudents && cachedStudents.length > 0) return cachedStudents;
+    
+    let t = document.getElementById("rcToast");
+    if(t) { t.innerText = "Syncing College Database..."; t.style.bottom = "30px"; setTimeout(() => t.style.bottom = "-100px", 2000); }
+    
+    const snap = await getDocs(collection(db, "colleges", currentCollegeID, "students"));
+    cachedStudents = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return cachedStudents;
+}
 
 const messaging = getMessaging(app);
 
@@ -1015,12 +1049,12 @@ async function fetchAndDisplayBatchCount(id, sem, subj, isCommon, bIndex) {
             let count = 0;
             let cUp = (attSubjectCategories.get(subj) || "").toUpperCase();
             
-            let studentsRef = collection(db, "colleges", currentCollegeID, "students");
-            let q = query(studentsRef, where("Year", "==", yearStr));
-            let snap = await getDocs(q);
+            // 🚨 COST OPTIMIZED: Uses RAM, prevents infinite query loops!
+            let allStu = await getGlobalStudents();
             
-            snap.forEach(docSnap => {
-                let data = docSnap.data();
+            allStu.forEach(data => {
+                if (data.Year !== yearStr && data.year !== yearStr) return;
+                
                 let isEnrolled = false;
                 if(cUp.includes("MJD") || cUp.includes("CORE") || cUp.includes("TUTORIAL")) {
                     let sDept = "DEPT_" + String(data.Department || data.department || "").replace(/ /g, "");
@@ -1150,30 +1184,24 @@ async function loadAttendanceRegister(filterStudentIDs, ticket, trueCategory, da
     } catch(e) { console.error("Register Load Error", e); }
 }
 
-function fetchStudentsAndPopulate(semNum, category, subjName, existingData, batchTeachersMap, filterIDs, ticket) {
+async function fetchStudentsAndPopulate(semNum, category, subjName, existingData, batchTeachersMap, filterIDs, ticket) {
     let semInt = parseInt(semNum);
     let yearStr = "1";
     if(semInt <= 2) yearStr = "1"; else if(semInt <= 4) yearStr = "2"; else if(semInt <= 6) yearStr = "3"; else yearStr = "4";
 
-    if(attActiveRosterYear !== yearStr) {
-        if(attStudentRosterUnsub) attStudentRosterUnsub();
-        attActiveRosterYear = yearStr;
-        attStudentRosterUnsub = onSnapshot(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)), (snap) => {
-            attCachedStudentsByYear.set(yearStr, snap.docs);
-            if(ticket === attCurrentLoadTicket) filterAndSpawn(snap.docs, category, subjName, semNum, existingData, batchTeachersMap, filterIDs, ticket);
-        });
-    } else if(attCachedStudentsByYear.has(yearStr)) {
-        filterAndSpawn(attCachedStudentsByYear.get(yearStr), category, subjName, semNum, existingData, batchTeachersMap, filterIDs, ticket);
-    }
+    // 🚨 COST OPTIMIZED: Pulls instantly from RAM!
+    let allStu = await getGlobalStudents();
+    let yearStudents = allStu.filter(s => s.Year === yearStr || s.year === yearStr);
+    
+    filterAndSpawn(yearStudents, category, subjName, semNum, existingData, batchTeachersMap, filterIDs, ticket);
 }
 
 function filterAndSpawn(allStudents, category, subjName, semNum, existingData, batchTeachersMap, filterIDs, ticket) {
     if(ticket !== attCurrentLoadTicket) return;
 
     let matchingStudents = [];
-    allStudents.forEach(docSnap => {
-        let id = docSnap.id;
-        let data = docSnap.data();
+    allStudents.forEach(data => {
+        let id = data.id;
         let roll = data.RollNumber || data.rollNumber || "";
 
         let inPastRegister = existingData && (existingData[id] !== undefined || existingData[roll] !== undefined);
@@ -1193,8 +1221,8 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
         let isBatchedClass = filterIDs !== null;
         if(isBatchedClass && !filterIDs.includes(id) && !filterIDs.includes(data.userID)) inBatch = false;
 
-        if(isBatchedClass) { if(inBatch) matchingStudents.push(docSnap); }
-        else { if(inPastRegister || isCurrentlyEnrolled) matchingStudents.push(docSnap); }
+        if(isBatchedClass) { if(inBatch) matchingStudents.push(data); }
+        else { if(inPastRegister || isCurrentlyEnrolled) matchingStudents.push(data); }
     });
 
     let targetContainer = attIsSubstitutePanelOpen ? document.getElementById(`subCardStudents_${attPendingSubCardId}`) : document.getElementById("attDirectArea");
@@ -1211,12 +1239,11 @@ function filterAndSpawn(allStudents, category, subjName, semNum, existingData, b
     }
     
     matchingStudents.sort((a,b) => {
-        let r1 = a.data().RollNumber || a.data().rollNumber || "0";
-        let r2 = b.data().RollNumber || b.data().rollNumber || "0";
+        let r1 = a.RollNumber || a.rollNumber || "0";
+        let r2 = b.RollNumber || b.rollNumber || "0";
         return r1.localeCompare(r2, undefined, {numeric:true});
     });
 
-    // 🚨 THE FIX: We cache the data, but let renderStudentRows fetch the live container!
     attCurrentStudentsCache = matchingStudents;
     attCurrentExistingData = existingData;
     attCurrentBatchMap = batchTeachersMap;
@@ -2937,6 +2964,11 @@ let currentRenderedCount = 0; // 🚨 REPLACES studentRenderLimit
 function startStudentListListener() {
     if (slLoaded) return;
     slLoaded = true;
+
+    // 🚨 CLEANUP: Kill dashboard listeners if we are looking at the master list
+    if (typeof sdAttListenerUnsub === "function") { sdAttListenerUnsub(); sdAttListenerUnsub = null; }
+    if (typeof sdMarksListenerUnsub === "function") { sdMarksListenerUnsub(); sdMarksListenerUnsub = null; }
+    
     onSnapshot(collection(db, "colleges", currentCollegeID, "students"), (snap) => {
         cachedStudents = []; 
         snap.forEach(doc => { cachedStudents.push({ id: doc.id, ...doc.data() }); });
@@ -3065,26 +3097,18 @@ let sdCachedGlobalSubjects = [];
 
 async function fetchGlobalSubjects() {
     if (sdCachedGlobalSubjects.length > 0) return;
-    let localCache = sessionStorage.getItem(`adhyora_subjects_${currentCollegeID}`);
-    if (localCache) {
-        sdCachedGlobalSubjects = JSON.parse(localCache);
-        return;
-    }
-    try {
-        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
-        snap.forEach(doc => {
-            let d = doc.data();
-            sdCachedGlobalSubjects.push({
-                id: doc.id,
-                cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''),
-                cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""),
-                semesterArray: (d.Semester || d.semester || "").toString(),
-                displayName: d.Name || d.name || "Unnamed",
-                rawType: d.Type || d.type || ""
-            });
-        });
-        sessionStorage.setItem(`adhyora_subjects_${currentCollegeID}`, JSON.stringify(sdCachedGlobalSubjects));
-    } catch(e) {}
+    
+    // 🚨 ZERO COST TRAP: Automatically uses the Master RAM cache!
+    const cachedSubs = await AdhyoraMasterCache.getSubjects(currentCollegeID, db);
+    
+    sdCachedGlobalSubjects = cachedSubs.map(d => ({
+        id: d.id,
+        cleanType: (d.Type || d.type || "").toUpperCase().replace(/\s+/g, ''),
+        cleanSubDept: (d.Department || d.department || "").toLowerCase().replace(/\s+/g, '').replace("dept_", ""),
+        semesterArray: (d.Semester || d.semester || "").toString(),
+        displayName: d.Name || d.name || "Unnamed",
+        rawType: d.Type || d.type || ""
+    }));
 }
 
 window.SL_OpenDashboard = async (sID) => {
@@ -3259,6 +3283,10 @@ function SD_UpdateWaveUI(percentage) {
     circleFill.style.setProperty('--wave-color', col);
     circleFill.style.top = `${105 - visualPercent}%`; 
     
+    // 🚨 PERFORMANCE FIX: Force GPU Acceleration on the Liquid Wave!
+    circleFill.style.transform = "translateZ(0)";
+    circleFill.style.willChange = "transform, top"; 
+    
     document.getElementById("sdCircleText").innerHTML = `<span style="font-size: 11px; display: block; line-height: 1; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Projected</span><span id="sdCirclePercentVal" style="font-size: 26px;">${txt}</span>`;
 
     let rowFill = document.getElementById("sdWavyFill");
@@ -3270,48 +3298,120 @@ function SD_UpdateWaveUI(percentage) {
 document.getElementById("sdBtnAllTime").addEventListener("click", () => { document.getElementById("sdDateFilter").value = ""; SD_BuildUI("All Time"); });
 document.getElementById("sdDateFilter").addEventListener("change", (e) => { if(e.target.value) SD_BuildUI(e.target.value); });
 
-async function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
-    const listEl = document.getElementById("sdSubjectList"); listEl.innerHTML = "";
+function SD_FetchDailyAttendance(targetDate, dbSemesterFormat) {
+    const listEl = document.getElementById("sdSubjectList"); 
+    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>`;
+    
+    // Kill any previous listener so we don't leak memory!
+    if (sdAttListenerUnsub) { sdAttListenerUnsub(); sdAttListenerUnsub = null; }
+
     try {
-        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "attendance"), where("date", "==", targetDate), where("semester", "==", dbSemesterFormat)));
-        if (snap.empty) {
-            document.getElementById("sdNoDataText").style.display = "block"; document.getElementById("sdNoDataText").innerText = "No data available on this date.";
-            document.getElementById("sdStatPAtt").innerText = "0"; document.getElementById("sdStatPAbs").innerText = "0"; document.getElementById("sdStatPTot").innerText = "0"; return;
-        }
-        document.getElementById("sdNoDataText").style.display = "none";
-        let dayPres = 0, dayAbs = 0; let html = "";
-        snap.forEach(doc => {
-            let d = doc.data();
-            Object.keys(d).forEach(k => {
-                if (k.startsWith("period_")) {
-                    let pData = d[k];
-                    if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) {
-                        let isPres = pData.attendance[sdCurrentStudentID]; if(isPres) dayPres++; else dayAbs++;
-                        let subName = pData.subject || "Unknown Subject"; let col = isPres ? "#10b981" : "var(--brand-red)";
-                        html += `<div style="background:white; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${subName}</span> <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px;">${isPres ? 'Present' : 'Absent'}</span></div>`;
+        const q = query(
+            collection(db, "colleges", currentCollegeID, "attendance"), 
+            where("date", "==", targetDate), 
+            where("semester", "==", dbSemesterFormat)
+        );
+
+        // 🚨 REAL-TIME LISTENER: Instantly updates the UI if another teacher changes a mark!
+        sdAttListenerUnsub = onSnapshot(q, (snap) => {
+            if (snap.empty) {
+                document.getElementById("sdNoDataText").style.display = "block"; 
+                document.getElementById("sdNoDataText").innerText = "No data available on this date.";
+                document.getElementById("sdStatPAtt").innerText = "0"; 
+                document.getElementById("sdStatPAbs").innerText = "0"; 
+                document.getElementById("sdStatPTot").innerText = "0"; 
+                listEl.innerHTML = "";
+                return;
+            }
+            
+            document.getElementById("sdNoDataText").style.display = "none";
+            let dayPres = 0, dayAbs = 0; let html = "";
+            
+            snap.forEach(doc => {
+                let d = doc.data();
+                Object.keys(d).forEach(k => {
+                    if (k.startsWith("period_")) {
+                        let pData = d[k];
+                        if (pData.attendance && pData.attendance[sdCurrentStudentID] !== undefined) {
+                            let isPres = pData.attendance[sdCurrentStudentID]; 
+                            if(isPres) dayPres++; else dayAbs++;
+                            
+                            let subName = pData.subject || "Unknown Subject"; 
+                            let col = isPres ? "#10b981" : "var(--brand-red)";
+                            
+                            html += `
+                            <div style="background:var(--bg-base); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; transform: translateZ(0); transition: 0.2s;">
+                                <span style="font-weight:bold; font-size:13px; color:var(--text-dark);">${subName}</span> 
+                                <span style="font-size:12px; font-weight:bold; color:white; background:${col}; padding:3px 8px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${isPres ? 'Present' : 'Absent'}</span>
+                            </div>`;
+                        }
                     }
-                }
+                });
             });
+            
+            document.getElementById("sdStatPAtt").innerText = dayPres; 
+            document.getElementById("sdStatPAbs").innerText = dayAbs; 
+            document.getElementById("sdStatPTot").innerText = dayPres + dayAbs; 
+            listEl.innerHTML = html;
         });
-        document.getElementById("sdStatPAtt").innerText = dayPres; document.getElementById("sdStatPAbs").innerText = dayAbs; document.getElementById("sdStatPTot").innerText = dayPres + dayAbs; listEl.innerHTML = html;
-    } catch(e) { }
+
+    } catch(e) { console.error("Error setting up live attendance tracker", e); }
 }
 
 let sdCachedMarks = {};
-async function SD_FetchMarks(semDisplay) {
-    let drop = document.getElementById("sdExamDropdown"); drop.innerHTML = "<option>Loading...</option>"; document.getElementById("sdMarksList").innerHTML = ""; document.getElementById("sdNoMarksText").style.display = "none"; sdCachedMarks = {};
+function SD_FetchMarks(semDisplay) {
+    let drop = document.getElementById("sdExamDropdown"); 
+    drop.innerHTML = "<option>Loading...</option>"; 
+    document.getElementById("sdMarksList").innerHTML = ""; 
+    document.getElementById("sdNoMarksText").style.display = "none"; 
+    sdCachedMarks = {};
+
+    // Kill any previous listener
+    if (sdMarksListenerUnsub) { sdMarksListenerUnsub(); sdMarksListenerUnsub = null; }
+
     try {
-        const snap = await getDoc(doc(db, "colleges", currentCollegeID, "students", sdCurrentStudentID, "nep_marks", semDisplay));
-        if (snap.exists()) {
-            let data = snap.data();
-            Object.entries(data).forEach(([subName, examsMap]) => {
-                Object.entries(examsMap).forEach(([examName, stats]) => { if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); });
-            });
-            let exams = Object.keys(sdCachedMarks).sort();
-            if(exams.length === 0) { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; } 
-            else { drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); SD_RenderMarksUI(exams[0]); }
-        } else { drop.innerHTML = "<option>No Exams Data</option>"; document.getElementById("sdNoMarksText").style.display = "block"; }
-    } catch(e) { drop.innerHTML = "<option>Error</option>"; }
+        const docRef = doc(db, "colleges", currentCollegeID, "students", sdCurrentStudentID, "nep_marks", semDisplay);
+        
+        // 🚨 REAL-TIME LISTENER: Instantly updates if a teacher edits a mark in the modal!
+        sdMarksListenerUnsub = onSnapshot(docRef, (snap) => {
+            sdCachedMarks = {}; // Wipe old cache
+            
+            if (snap.exists()) {
+                let data = snap.data();
+                Object.entries(data).forEach(([subName, examsMap]) => {
+                    Object.entries(examsMap).forEach(([examName, stats]) => { 
+                        if(!sdCachedMarks[examName]) sdCachedMarks[examName] = []; 
+                        sdCachedMarks[examName].push({ sub: subName, obt: stats.total || 0, max: stats.max }); 
+                    });
+                });
+                
+                let exams = Object.keys(sdCachedMarks).sort();
+                if(exams.length === 0) { 
+                    drop.innerHTML = "<option>No Exams Data</option>"; 
+                    document.getElementById("sdNoMarksText").style.display = "block"; 
+                    document.getElementById("sdMarksList").innerHTML = "";
+                } else { 
+                    // Maintain current dropdown selection if possible, otherwise grab first
+                    let currentSelection = drop.value;
+                    drop.innerHTML = exams.map(e => `<option value="${e}">${e}</option>`).join(''); 
+                    
+                    if (exams.includes(currentSelection)) {
+                        drop.value = currentSelection;
+                        SD_RenderMarksUI(currentSelection);
+                    } else {
+                        SD_RenderMarksUI(exams[0]); 
+                    }
+                }
+            } else { 
+                drop.innerHTML = "<option>No Exams Data</option>"; 
+                document.getElementById("sdNoMarksText").style.display = "block"; 
+                document.getElementById("sdMarksList").innerHTML = "";
+            }
+        });
+    } catch(e) { 
+        drop.innerHTML = "<option>Error</option>"; 
+        console.error("Error tracking live marks", e);
+    }
 }
 
 document.getElementById("sdExamDropdown").addEventListener("change", (e) => { if(e.target.value && e.target.value !== "No Exams Data") SD_RenderMarksUI(e.target.value); });
@@ -3370,17 +3470,19 @@ function initSubjectAssignEngine() {
 
     // 2. Fetch Master Subjects
     if (saCachedSubjects.length === 0) {
-        getDocs(collection(db, "colleges", currentCollegeID, "subjects")).then(snap => {
-            snap.forEach(doc => {
-                let d = doc.data();
+        // 🚨 COST OPTIMIZED!
+        AdhyoraMasterCache.getSubjects(currentCollegeID, db).then(subs => {
+            subs.forEach(d => {
                 saCachedSubjects.push({ 
-                    id: doc.id, name: d.Name || d.name || "", 
+                    id: d.id, name: d.Name || d.name || "", 
                     type: d.Type || d.type || "", semesters: (d.Semester || d.semester || "1").toString() 
                 });
             });
             saRefreshCategories();
         }).catch(e => console.error(e));
-    } else { saRefreshCategories(); }
+    } else { 
+        saRefreshCategories(); 
+    }
 }
 
 function saRefreshCategories() {
@@ -3441,19 +3543,18 @@ async function saLoadStudents() {
     let targetYear = Math.ceil(parseInt(saCurrentSem) / 2).toString();
     
     try {
-        const snap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", targetYear)));
+        // 🚨 COST OPTIMIZED: Zero Firebase reads!
+        let allStu = await getGlobalStudents();
         saCachedStudents = [];
         
-        snap.forEach(doc => {
-            let d = doc.data();
-            
-            // 🚨 THE FIX: Strictly filter by the Teacher's Department!
-            let rawDept = d.Department || d.department || "";
-            let formattedDept = "DEPT_" + String(rawDept).replace(/ /g, "");
-            
-            // If the student's department matches the teacher's department, add them!
-            if (formattedDept === teacherDeptRaw || rawDept === teacherDeptRaw) {
-                saCachedStudents.push({ id: doc.id, ...d });
+        allStu.forEach(d => {
+            if (d.Year === targetYear || d.year === targetYear) {
+                let rawDept = d.Department || d.department || "";
+                let formattedDept = "DEPT_" + String(rawDept).replace(/ /g, "");
+                
+                if (formattedDept === teacherDeptRaw || rawDept === teacherDeptRaw) {
+                    saCachedStudents.push(d);
+                }
             }
         });
 
@@ -3920,25 +4021,22 @@ window.bchToggleGroup = async (bodyId, iconId, sids) => {
                 else missingSids.push(sid);
             });
             
-            // 🚨 Use WhereIn with 30-item chunks just like Unity!
             if (missingSids.length > 0) {
-                for (let i = 0; i < missingSids.length; i += 30) {
-                    let chunk = missingSids.slice(i, i + 30);
-                    try {
-                        const sSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("__name__", "in", chunk)));
-                        sSnap.forEach(d => {
-                            let data = d.data();
-                            let stuObj = {
-                                id: d.id,
-                                name: data.Name || data.studentName || "Unknown",
-                                roll: data.RollNumber || data.rollNumber || "No Roll",
-                                dept: (data.Department || data.department || "Unknown Dept").replace("DEPT_", "")
-                            };
-                            bchStudentCache[d.id] = stuObj;
-                            fetchedStudents.push(stuObj);
-                        });
-                    } catch(e) { console.error(e); }
-                }
+                // 🚨 COST OPTIMIZED: Fetches instantly from RAM!
+                let allStu = await getGlobalStudents();
+                missingSids.forEach(sid => {
+                    let d = allStu.find(s => s.id === sid);
+                    if (d) {
+                        let stuObj = {
+                            id: d.id,
+                            name: d.Name || d.studentName || "Unknown",
+                            roll: d.RollNumber || d.rollNumber || "No Roll",
+                            dept: (d.Department || d.department || "Unknown Dept").replace("DEPT_", "")
+                        };
+                        bchStudentCache[d.id] = stuObj;
+                        fetchedStudents.push(stuObj);
+                    }
+                });
             }
             
             fetchedStudents.sort((a,b) => a.name.localeCompare(b.name));
@@ -4037,18 +4135,10 @@ async function evtLoadAllStudentsIntoRAM() {
         return;
     }
 
-    showRcToast("Syncing College Database...");
-    try {
-        const snap = await getDocs(collection(db, "colleges", currentCollegeID, "students"));
-        evtAllCollegeStudentsCache = [];
-        snap.forEach(doc => evtAllCollegeStudentsCache.push({ id: doc.id, ...doc.data() }));
-        
-        evtIsCacheLoaded = true;
-        evtLoadDataForPeriod();
-    } catch(e) {
-        console.error("Failed to load students cache", e);
-        showRcToast("Error syncing students.");
-    }
+    // 🚨 COST OPTIMIZED: Free RAM pull!
+    evtAllCollegeStudentsCache = await getGlobalStudents();
+    evtIsCacheLoaded = true;
+    evtLoadDataForPeriod();
 }
 
 function evtLoadDataForPeriod() {
@@ -4488,19 +4578,16 @@ async function imLoadStudents() {
     imShowEmpty("Checking Batches...");
 
     try {
-        // 1. Check if batched
         const batchSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "subject_batches"), where("semester", "==", semNum), where("subjectName", "==", selectedSubject)));
         let batches = [];
         if (!batchSnap.empty) {
             batchSnap.forEach(d => batches.push({ id: d.id, ...d.data() }));
         }
 
-        // 2. Fetch Students (with caching)
+        // 🚨 COST OPTIMIZED: Zero Firebase reads!
         if (!imCachedStudentsByYear[year]) {
-            imShowEmpty("Syncing Class Data...");
-            const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", year.toString())));
-            imCachedStudentsByYear[year] = [];
-            stuSnap.forEach(d => imCachedStudentsByYear[year].push({ id: d.id, ...d.data() }));
+            let allStu = await getGlobalStudents();
+            imCachedStudentsByYear[year] = allStu.filter(s => s.Year === year.toString() || s.year === year.toString());
         }
 
         imProcessAndSpawnStudents(imCachedStudentsByYear[year], selectedSemText, selectedSubject, batches);
@@ -5193,9 +5280,10 @@ async function asnLoadData() {
 
     // 3. Cache Students for Splitting Logic
     let yearStr = Math.ceil(parseInt(asnCurrentSem) / 2).toString();
-    const stuSnap = await getDocs(query(collection(db, "colleges", currentCollegeID, "students"), where("Year", "==", yearStr)));
-    asnCachedYearStudents = [];
-    stuSnap.forEach(d => asnCachedYearStudents.push({ id: d.id, ...d.data() }));
+    
+    // 🚨 COST OPTIMIZED: Free RAM pull!
+    let allStu = await getGlobalStudents();
+    asnCachedYearStudents = allStu.filter(s => s.Year === yearStr || s.year === yearStr);
 
     asnRenderLayout();
 }
@@ -6882,9 +6970,8 @@ async function executeCreateAssignment() {
         // 🚨 FIX: Use currentDeptName instead of the HOD-exclusive expDeptName
         let targetDeptName = currentDeptName; 
 
-        const subSnap = await getDocs(collection(db, "colleges", currentCollegeID, "subjects"));
-        for (let docObj of subSnap.docs) {
-            let data = docObj.data();
+        const cachedSubs = await AdhyoraMasterCache.getSubjects(currentCollegeID, db);
+        for (let data of cachedSubs) {
             let dName = data.name || data.Name || "";
 
             if (dName.replace(/\s+/g, "").toLowerCase() === selectedSubject.replace(/\s+/g, "").toLowerCase()) {
