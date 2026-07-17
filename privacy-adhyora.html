@@ -141,11 +141,11 @@
     <div class="legal-container">
         <h1>Privacy Policy for Adhyora</h1>
         <p><strong>Effective Date:</strong> January 1, 2026<br>
-        <strong>Last Updated:</strong> June 1, 2026</p>
+        <strong>Last Updated:</strong> July 17, 2026</p>
 
         <h2>1. Introduction</h2>
         <p>This Privacy Policy explains how <strong>Pixelaks Technologies</strong> collects, uses, stores, and protects information within the <strong>Adhyora</strong> Academic Management System. Adhyora is a cloud-based platform for Higher Education Institutions that enables attendance management, internal assessment tracking, student fee collection, in-app communication, timetable management, and related academic administration workflows.</p>
-        <p>By accessing or using Adhyora, the Institution and its authorized users (Principals, Admins, Teachers, and Students) agree to the data practices described in this Policy. This Policy is designed to comply with the <strong>Digital Personal Data Protection Act, 2023 (DPDPA)</strong> of India and applicable data protection laws.</p>
+        <p>By accessing or using Adhyora, the Institution and its authorized users (Principals, Admins, Teachers, and Students) agree to the data practices described in this Policy. This Policy is designed to comply with the <strong>Digital Personal Data Protection Act, 2023 (DPDPA)</strong> of India and applicable data protection laws, and operates alongside the Master Software Subscription Agreement (MSSA) and Data Processing Agreement (DPA) executed with each Institution. In the event of any conflict between this Policy and the DPA on a data-protection matter, the DPA shall prevail.</p>
 
         <h2>2. Relationship Disclosure</h2>
         <p>For the purposes of this Privacy Policy:</p>
@@ -163,6 +163,7 @@
             <li>Login activity, administrative action logs, and session records.</li>
             <li>Device identifiers including FCM tokens for mobile push notifications and web push tokens for browser notifications.</li>
             <li>Active session identifiers used to manage and secure simultaneous logins across multiple devices.</li>
+            <li>A numerical Security PIN, set by the user, for application-level access control. Biometric authentication (fingerprint or Face ID), where used, is processed entirely on the user's own device by the device operating system — no biometric data is ever transmitted to or stored by Adhyora.</li>
         </ul>
 
         <p><strong>3.2 Teacher / Faculty Data</strong></p>
@@ -172,6 +173,7 @@
             <li>Substitute teaching assignments and scheduling records.</li>
             <li>Device identifiers (FCM tokens, web push tokens) and active session records across devices.</li>
             <li>In-app messages sent or received within the platform, including message content, sender identity, and timestamps.</li>
+            <li>A numerical Security PIN for application-level access control, and on-device-only biometric authentication where used (see Section 3.1).</li>
         </ul>
 
         <p><strong>3.3 Student Data</strong></p>
@@ -179,7 +181,7 @@
             <li>Name, institutional roll number, student ID, department, year, and batch.</li>
             <li>Attendance records including subject-wise attendance percentages, event attendance, and daily period-level logs.</li>
             <li>Internal assessment marks, Continuous Evaluation (CE) scores, test marks, assignment marks, and academic performance reports.</li>
-            <li>Medical leave applications, including leave start dates, end dates, and details submitted by the student or institutional staff. This data is treated as sensitive personal information.</li>
+            <li>Medical leave records, limited to the leave category and the specific dates marked by authorized faculty or institutional staff. Adhyora does not collect or store medical reasons, diagnoses, or supporting medical documentation. This data is nonetheless treated as sensitive personal information.</li>
             <li>Fee payment records including payment history, transaction IDs (Razorpay Order ID and Payment ID), payment amounts, due dates, fee type, and subscription-linked receipts.</li>
             <li>Device identifiers (FCM tokens, web push tokens) used for academic and institutional notification delivery.</li>
             <li>Active session identifiers used to manage login sessions across devices.</li>
@@ -206,8 +208,8 @@
         <ul>
             <li><strong>Attendance Management:</strong> Processing and storing attendance entries made by teachers, computing subject-wise and institution-wide attendance percentages, and maintaining daily period logs per student.</li>
             <li><strong>Internal Assessment:</strong> Recording Continuous Evaluation (CE) marks and generating student academic performance summaries and reports.</li>
-            <li><strong>Medical Leave Processing:</strong> Storing and displaying medical leave applications to allow administrative review and attendance record adjustments where applicable.</li>
-            <li><strong>Fee Collection:</strong> Processing student fee payments through the integrated Razorpay payment gateway, storing transaction records, generating payment receipts, and maintaining payment history for institutional reference.</li>
+            <li><strong>Medical Leave Processing:</strong> Storing and displaying medical leave dates and categories to allow administrative review and attendance record adjustments where applicable.</li>
+            <li><strong>Fee Collection:</strong> Facilitating student fee payments through the Institution's own Razorpay payment gateway integration, storing transaction records, generating payment receipts, and maintaining payment history for institutional reference.</li>
             <li><strong>In-App Communication:</strong> Enabling Principals and Admins to send broadcast announcements and private messages to teachers and students, and retaining message records for delivery confirmation and historical reference.</li>
             <li><strong>Push Notifications:</strong> Using FCM tokens and web push tokens to deliver academic updates, attendance alerts, fee reminders, and institutional announcements to users' registered devices.</li>
             <li><strong>Timetable and Scheduling:</strong> Managing timetable allocations, subject-teacher assignments, batch configurations, and substitute teacher scheduling.</li>
@@ -221,12 +223,12 @@
         <p>Pixelaks Technologies does <strong>not</strong> sell, rent, or share institutional or personal data with any third-party advertisers, analytics providers, or external organizations for commercial purposes. Data is shared only in the following strictly limited circumstances:</p>
         <ul>
             <li><strong>Google Firebase (Cloud Infrastructure):</strong> Adhyora uses Google Firebase for secure cloud database storage (Firestore), user authentication, and push notification delivery (Firebase Cloud Messaging / FCM). Firebase processes data under Google's strict confidentiality and security standards and is compliant with international data protection frameworks. For further details, please see the <a href="https://firebase.google.com/support/privacy" target="_blank">Firebase Privacy and Security documentation</a>.</li>
-            <li><strong>Razorpay (Payment Processing):</strong> For Institutions that have enabled the online student fee collection feature, payments are processed through <strong>Razorpay Payment Solutions Private Limited</strong>, a PCI-DSS compliant payment gateway. Transaction data including Razorpay Order IDs, Payment IDs, and verification signatures are transmitted to and stored by Razorpay in accordance with their own privacy policy. Pixelaks Technologies does not store raw card numbers, UPI credentials, or bank account details. Institutions and students using the fee collection feature are subject to Razorpay's Terms of Service and Privacy Policy. For details, please see the <a href="https://razorpay.com/privacy/" target="_blank">Razorpay Privacy Policy</a>.</li>
+            <li><strong>Razorpay (Payment Processing):</strong> For Institutions on plans that support online student fee collection, the Institution independently registers its own Razorpay merchant account and supplies its own API keys for integration with Adhyora. Fee payments are routed directly into the Institution's Razorpay merchant account — <strong>Pixelaks Technologies does not at any point receive, hold, or control this fee revenue.</strong> Adhyora stores transaction references such as Razorpay Order IDs, Payment IDs, and verification signatures for record-keeping within the platform. Pixelaks Technologies does not store raw card numbers, UPI credentials, or bank account details. Because the Razorpay account belongs to the Institution, the Institution's and its students' use of Razorpay is governed by Razorpay's own Terms of Service and Privacy Policy, and Pixelaks Technologies is not liable for disputes, failures, or chargebacks arising from Razorpay's services. For details, please see the <a href="https://razorpay.com/privacy/" target="_blank">Razorpay Privacy Policy</a>.</li>
             <li><strong>Legal Compliance:</strong> Data may be disclosed if required by applicable Indian law, valid court orders, lawful government directives, or regulatory requirements.</li>
         </ul>
 
         <h2>6. Medical and Sensitive Data</h2>
-        <p>Adhyora stores medical leave records submitted by students or entered by institutional staff. This information is treated as sensitive personal data and is subject to the following protections:</p>
+        <p>Adhyora stores medical leave records — limited to leave category and dates — submitted by students or entered by institutional staff. No medical reason, diagnosis, or supporting documentation is collected or stored through the platform. This information is nonetheless treated as sensitive personal data and is subject to the following protections:</p>
         <ul>
             <li>Medical leave records are accessible only to authorized Admins and Principals within the platform, and to the concerned student.</li>
             <li>This data is never shared with any third party except as legally required.</li>
@@ -240,16 +242,16 @@
             <li><strong>Data Isolation:</strong> Each Institution's data is logically partitioned at the database level using strict Firebase Security Rules, preventing any cross-institutional access.</li>
             <li><strong>Role-Based Access:</strong> Permission rules ensure Principals, Teachers, and Students can only access data relevant to their assigned role and department.</li>
             <li><strong>Session Management:</strong> Active login sessions are tracked per device. Users and Admins can invalidate sessions, and the system supports secure remote session termination.</li>
-            <li><strong>Payment Security:</strong> Fee payment processing is handled end-to-end by Razorpay. Pixelaks Technologies does not handle or store raw payment credentials at any point.</li>
+            <li><strong>Payment Security:</strong> Fee payments are routed directly to the Institution's own Razorpay merchant account and processed end-to-end by Razorpay. Pixelaks Technologies does not handle or store raw payment credentials at any point.</li>
             <li><strong>Monitoring:</strong> Continuous monitoring is maintained to detect unauthorized activity and ensure system integrity.</li>
-            <li><strong>Breach Notification:</strong> In the event of a confirmed security incident that affects institutional data, Pixelaks Technologies will notify the affected Institution without undue delay so that appropriate administrative and legal measures can be taken promptly.</li>
+            <li><strong>Breach Notification:</strong> In the event of a confirmed security incident affecting institutional data, Pixelaks Technologies will notify the affected Institution without undue delay and, in any event, within seventy-two (72) hours of confirming the breach internally, so that appropriate administrative and legal measures can be taken promptly.</li>
         </ul>
 
         <h2>8. Data Retention and Deletion</h2>
         <p>Data is retained for as long as the Institution maintains an active subscription with Pixelaks Technologies.</p>
         <ul>
-            <li>Upon a written request from the authorized Principal or Admin, Pixelaks Technologies will permanently delete all institutional data from our systems within <strong>30 days</strong> of receiving the verified request.</li>
-            <li>If the subscription remains inactive for more than <strong>30 days</strong> without renewal, the Institution's data may be permanently deleted. Reasonable attempts will be made to notify the Institution before deletion occurs.</li>
+            <li>Upon a written request from the authorized Principal or Admin, Pixelaks Technologies will work with the Institution to export and, where confirmed appropriate, delete institutional data, subject to the timelines set out in the Institution's Data Processing Agreement.</li>
+            <li><strong>If a subscription payment is missed:</strong> an 8-day grace period keeps the Service fully active, followed by a possible paywall suspension (with 3 days' advance notice) during which Institution data is retained intact for up to 30 days. If the account remains unpaid beyond that point, Pixelaks Technologies may proceed to terminate the subscription after a further 14-day notice period. Only after termination does the 60-day data export ("Transition Period") begin — the Institution may request a full export of its data at any point during that window. Data is permanently deleted from active systems only after the Transition Period ends, and reasonable attempts will be made to notify the Institution beforehand. Backup copies are deleted on a rolling basis within 90 days of deletion from active storage.</li>
             <li>Payment transaction records may be retained for a minimum period as required under applicable Indian financial and tax regulations, even after an account deletion request is processed.</li>
         </ul>
 
@@ -266,7 +268,7 @@
         <h2>10. Limitation of Liability and Service Disclaimer</h2>
         <p><strong>Service Continuity:</strong> The Adhyora software is provided on an "AS IS" and "AS AVAILABLE" basis. While strong industry-standard security, backup, and redundancy measures are maintained via Google Firebase, Pixelaks Technologies does not warrant that the software will be 100% uninterrupted, timely, secure, or entirely free of temporary technical issues.</p>
         <p><strong>Exclusion of Consequential Damages:</strong> To the maximum extent permitted by applicable law, Pixelaks Technologies shall not be liable for any indirect, incidental, special, consequential, or exemplary damages — including but not limited to loss of institutional data, academic downtime, failed or disputed fee transactions processed through third-party gateways, or loss of goodwill — arising from the use of or inability to use the platform.</p>
-        <p><strong>Maximum Liability Cap:</strong> In any event, the total collective liability of Pixelaks Technologies for any legal claims, losses, or causes of action shall be strictly limited to the total amount actually paid by the Institution to Pixelaks Technologies for the software subscription during the twelve (12) months immediately preceding the event giving rise to liability.</p>
+        <p><strong>Maximum Liability Cap:</strong> To the maximum extent permitted by applicable law, the total collective liability of Pixelaks Technologies for any legal claims, losses, or causes of action shall be strictly limited to the total amount actually paid by the Institution to Pixelaks Technologies for the software subscription during the twelve (12) months immediately preceding the event giving rise to liability. This cap does not apply to liability that cannot be lawfully excluded or limited, including liability for death or personal injury caused by gross negligence.</p>
 
         <h2>11. Children's Privacy and Consent</h2>
         <p>Adhyora is designed strictly for Higher Education Institutions and is not targeted at children under the age of 18 as a primary user base. However, the platform may incidentally store academic records of students who are minors, as permitted under Indian higher education age norms.</p>
