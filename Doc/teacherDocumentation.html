@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Teacher Guide</title>
+    <style>
+        :root { --bg-main: #f8fafc; --bg-sidebar: #0f172a; --text-main: #1e293b; --text-sidebar: #cbd5e1; --accent: #ef4444; --accent-principal: #10b981; --border-light: #e2e8f0; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; display: flex; background-color: var(--bg-main); color: var(--text-main); line-height: 1.6; }
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: var(--text-sidebar); height: 100vh; position: fixed; padding: 20px 0; overflow-y: auto; border-right: 1px solid #1e293b; }
+        .sidebar h2 { padding: 0 20px; color: #fff; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; }
+        .nav-folder { margin-bottom: 2px; }
+        .nav-header { padding: 8px 20px; cursor: pointer; font-weight: 500; font-size: 0.95rem; color: #cbd5e1; display: flex; justify-content: flex-start; align-items: center; transition: background 0.2s, color 0.2s; user-select: none; }
+        .nav-header:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-header.level-1[style] { border-left-color: transparent !important; }
+        .nav-header.level-1 { font-size: 1rem; font-weight: 600; color: #fff; background-color: transparent; border-left: none; padding-top: 10px; padding-bottom: 10px; }
+        .nav-header.level-2 { padding-left: 30px; font-size: 0.9rem; border-left: none; }
+        .sidebar > .nav-folder:nth-of-type(1) { --role-color: #000000; --role-bg: rgba(255,255,255,0.1); }
+        .sidebar > .nav-folder:nth-of-type(2) { --role-color: #ef4444; --role-bg: rgba(239,68,68,0.15); }
+        .arrow { order: -1; display: inline-flex; justify-content: center; align-items: center; width: 14px; height: 14px; background-color: var(--role-color); margin-right: 12px; border-radius: 2px; color: transparent; position: relative; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.2); }
+        .arrow::before { content: "+"; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-family: monospace; font-weight: bold; font-size: 14px; line-height: 1; }
+        .nav-folder.active > .nav-header > .arrow { opacity: 0.7; }
+        .nav-folder.active > .nav-header > .arrow::before { content: "-"; }
+        .nav-content { display: none; position: relative; }
+        .nav-content::before { content: ""; position: absolute; top: 0; bottom: 0; left: 26px; width: 1px; background-color: #1e293b; z-index: 1; }
+        .nav-folder.active > .nav-content { display: block; }
+        .nav-link { position: relative; z-index: 2; display: flex; align-items: center; padding: 6px 20px 6px 45px; color: #94a3b8; text-decoration: none; font-size: 0.85rem; transition: 0.2s; border-left: none; }
+        .nav-folder .nav-folder .nav-link { padding-left: 55px; }
+        .nav-link::before { content: ""; display: inline-block; width: 6px; height: 6px; background-color: #475569; border-radius: 50%; margin-right: 8px; flex-shrink: 0; transition: background-color 0.2s, transform 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff; background-color: var(--role-bg); }
+        .nav-link:hover::before, .nav-link.active::before { background-color: var(--role-color); transform: scale(1.2); border: 1px solid rgba(255,255,255,0.3); }
+        .content { margin-left: 280px; padding: 50px 60px; max-width: 900px; width: 100%; }
+        h1 { font-size: 2.2rem; margin-top: 0; padding-bottom: 15px; border-bottom: 2px solid var(--border-light); scroll-margin-top: 40px; }
+        h2 { font-size: 1.5rem; color: var(--accent); margin-top: 40px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; scroll-margin-top: 40px; }
+        h3 { font-size: 1.1rem; color: #334155; margin-top: 25px; }
+        p { font-size: 1rem; color: #475569; }
+        .teacher-section h1 { color: #ef4444; border-bottom-color: #ef4444; }
+        .teacher-section h2 { color: #ef4444; border-bottom-color: #fca5a5; }
+        .doc-image { width: 100%; max-width: 600px; height: auto; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 20px 0; display: block; }
+        .image-row { display: flex; gap: 20px; margin: 20px 0; align-items: flex-start; }
+        .image-row .doc-image { flex: 1; margin: 0; object-fit: contain; }
+        .icon-image { width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin-top: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: block; }
+        ul.steps { padding-left: 20px; }
+        ul.steps li { margin-bottom: 10px; }
+        .highlight { background-color: #fef2f2; color: #b91c1c; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0; font-size: 0.95rem; }
+        .note { background-color: #fffbeb; color: #b45309; padding: 10px 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 10px 0; font-size: 0.9rem; }
+        .warning { background-color: #fef2f2; color: #b91c1c; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0; font-size: 0.95rem; }
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .nav-card-link { text-decoration: none; color: inherit; display: block; }
+        .nav-card { background: white; border: 1px solid var(--border-light); border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+        .teacher-section .nav-card-link:hover .nav-card { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(239,68,68,0.15); border-color: #ef4444; }
+        .nav-card h4 { margin-top: 0; color: var(--text-main); font-size: 1.05rem; }
+        .jump-link { display: inline-block; margin-top: 15px; font-size: 0.85rem; font-weight: bold; color: #ef4444; }
+        @media (max-width: 768px) { .image-row { flex-direction: column; } .nav-grid { grid-template-columns: 1fr; } .content { margin-left: 0; padding: 20px; } .sidebar { display: none; } }
+        @media print {
+            body { background-color: #ffffff !important; color: #0f172a !important; display: block; }
+            @page { margin: 0.5in; }
+            .sidebar { display: block !important; position: relative; width: 100%; height: auto; overflow: visible; border-right: none; padding-bottom: 40px; page-break-after: always; background-color: transparent !important; }
+            .sidebar h2 { color: #0f172a !important; font-size: 2.8rem !important; text-align: center; border-bottom: 2px solid #1e293b !important; padding-bottom: 10px; margin-bottom: 40px; }
+            .sidebar h2::after { content: "Powered by Pixelaks Technologies"; display: block; font-size: 1.2rem; font-weight: 500; color: #64748b !important; margin-top: 10px; }
+            .nav-header, .nav-header.level-1, .nav-link { color: #0f172a !important; background-color: transparent !important; }
+            .nav-header.level-1 { background-color: #f1f5f9 !important; border-left: 4px solid #0f172a !important; margin-top: 15px; }
+            .nav-folder .nav-link { color: #334155 !important; }
+            .nav-link::before { background-color: #94a3b8 !important; }
+            .nav-content { display: block !important; }
+            .arrow { display: none !important; }
+            .content { margin-left: 0; padding: 0 0 50px 0; max-width: 100%; }
+            .doc-image, .nav-card, .image-row, .highlight, .note, .warning { page-break-inside: avoid; }
+            h1, h2 { page-break-after: avoid; }
+            h1 { page-break-before: always; padding-top: 20px; }
+            .auth-section h1 { page-break-before: avoid; }
+            body::after { content: "Adhyora Teacher Guide | Powered by Pixelaks Technologies"; position: fixed; bottom: 0; right: 0; font-size: 9pt; color: #64748b; font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>ADHYORA TEACHER GUIDE</h2>
+        <div class="nav-folder active">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">Getting Started <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <a href="#authentication-portal" class="nav-link">Sign-In & Registration</a>
+            </div>
+        </div>
+        <div class="nav-folder">
+            <div class="nav-header level-1" onclick="toggleFolder(this)" style="border-left-color: #ef4444;">Teacher Portal <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">System & Navigation <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-first-login" class="nav-link">First-Time Setup & Security</a><a href="#teacher-navigation" class="nav-link">Navigation Bar</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Dashboard <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-main-dashboard" class="nav-link">My Dashboard</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Classroom Tools <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-my-subjects" class="nav-link">My Subjects Declaration</a><a href="#teacher-attendance-marking" class="nav-link">Daily Attendance Marking</a><a href="#teacher-internal-marks" class="nav-link">Internal Marks</a><a href="#teacher-attendance-records" class="nav-link">History & Records</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Department Administration <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-timetable" class="nav-link">Timetable & Allocations (HOD)</a><a href="#teacher-subject-assign" class="nav-link">Student Subject Allocation (HOD)</a><a href="#teacher-section-manage" class="nav-link">Manage Sections (HOD)</a><a href="#teacher-promotion-holds" class="nav-link">Promotion Holds (HOD)</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">General Academics <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-calendar" class="nav-link">Academic Calendar</a><a href="#teacher-assignments" class="nav-link">Assignments</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Student Management <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-student-list" class="nav-link">Student Directory & Profiles</a><a href="#teacher-medical-leave" class="nav-link">Medical Leave Management (HOD)</a><a href="#teacher-batch-viewer" class="nav-link">Subject Batch Viewer</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Special Duties & Events <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-event-attendance" class="nav-link">Event Attendance Requests</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Communications & Tools <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-notifications" class="nav-link">System Notifications</a><a href="#teacher-quick-add" class="nav-link">Quick Add Assignment</a><a href="#teacher-messages" class="nav-link">Inbox & Broadcasts</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">System Settings <span class="arrow">▼</span></div><div class="nav-content"><a href="#teacher-settings" class="nav-link">App Configuration & Security</a><a href="#teacher-data-export" class="nav-link">HOD Data Export</a></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div style="background: linear-gradient(135deg, #7f1d1d 0%, #ef4444 100%); border-radius: 16px; padding: 40px; margin-bottom: 50px; color: white;">
+            <div style="font-size:0.85rem; color:#fca5a5; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Pixelaks Technologies — Adhyora AMS</div>
+            <h1 style="color:white; border:none; margin:0 0 10px; font-size:2.4rem; padding:0;">Teacher Guide</h1>
+            <p style="color:#fee2e2; margin:0; font-size:1rem;">Everything you need to know about using your Adhyora teacher portal.</p>
+        </div>
+
+        <div class="auth-section">
+            <h1 id="authentication-portal" style="color: #1e293b; border-bottom-color: #1e293b;">Getting Started</h1>
+            <p>Before accessing your portal, you must register using a Room Code provided by your Head of Department, and be approved by the Principal.</p>
+            <h2 id="auth-gateway" style="color: #1e293b; border-bottom-color: #cbd5e1;">1. The Main Gateway</h2>
+            <img src="select-college.png" alt="Select College and Role Screen" class="doc-image">
+            <ul class="steps">
+                <li><b>Select Your College:</b> Choose your institution from the dropdown.</li>
+                <li><b>Select Role:</b> Choose <b>Teacher</b>.</li>
+                <li>Click <b>Continue</b>.</li>
+            </ul>
+            <h2 id="auth-teacher" style="color: #1e293b; border-bottom-color: #cbd5e1;">2. Teacher Registration & Sign-In (Room Code Required)</h2>
+            <div class="image-row">
+                <img src="teacher-registration.png" alt="Teacher Registration" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <img src="teacher-signin.png" alt="Teacher Sign In" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+            <ul class="steps">
+                <li><b>Room Code:</b> Both Registration and Sign-In require a 6-digit <b>Room Code</b>. This is generated by the Principal and given to you by your HOD.</li>
+                <li>The Room Code maps you automatically to the correct department in the database.</li>
+                <li>After registering, your account is <b>Pending</b> until the Principal approves it. You cannot access the dashboard until approved.</li>
+            </ul>
+            <div class="highlight" style="border-left-color: #1e293b; background-color: #f1f5f9; color: #0f172a;">
+                <b>Email Verification:</b> After creating your account, verify it by clicking the link sent to your email before trying to sign in. If you don't see it in your inbox within a few minutes, check your Spam/Junk folder.
+            </div>
+            <div class="note"><b>Forgot Password?</b> Click "Forgot Password?" to receive a reset link at your registered email.</div>
+        </div>
+
+        <hr style="border: 2px solid var(--border-light); margin: 80px 0;">
+
+        <div class="teacher-section">
+            <h1 id="teacher-portal" style="color: #ef4444; border-bottom-color: #ef4444;">Teacher Portal Guide</h1>
+            <p>Welcome to the Adhyora Teacher Dashboard. This portal equips faculty with powerful tools to manage daily attendance, monitor student records, and handle substitute duties efficiently.</p>
+
+            <!-- NEW FIRST-TIME SETUP SECTION -->
+            <h2 id="teacher-first-login" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 40px;">First-Time Login & Security Setup</h2>
+            <p>When you log into the Teacher Portal for the first time, you must complete a brief security and configuration workflow.</p>
+
+            <h3>1. Account Approval</h3>
+            <div class="image-row">
+                <img src="account-status-pending.png" alt="Account Status Pending" class="doc-image" style="max-width: 450px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Upon entering your roomcode and signing in, your account is placed in a <b>Pending</b> state.</li>
+                        <li>You cannot access the dashboard until the Principal officially approves your account. Once approved, this screen will automatically disappear.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>2. Security PIN & Biometrics</h3>
+            <p>To protect sensitive academic data, you are required to set up a secure lock screen.</p>
+            <div style="flex:1; display: flex; flex-direction: column; gap: 20px;">
+                <img src="create-security-pin-teacher.png" alt="Create Security PIN" class="doc-image" style="margin: 0; max-width: 320px;">
+                <img src="confirm-security-pin-teacher.png" alt="Confirm Security PIN" class="doc-image" style="margin: 0; max-width: 320px;">
+                <img src="enable-biometrics-teacher.png" alt="Enable Biometrics" class="doc-image" style="margin: 0; max-width: 320px;">
+            </div>
+            <ul class="steps">
+                <li><b>Create PIN:</b> Enter a secure 4-digit PIN, then re-enter it to confirm. You will use this PIN as an extra layer of security to unlock the app on future visits.</li>
+                <li><b>Enable Biometrics:</b> After setting the PIN, you can optionally link your device's fingerprint or Face ID for faster logins. You can click "Skip for now" and enable it later from your <a href="#teacher-settings" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Settings</a>.</li>
+            </ul>
+
+            <h3>3. The Initial Workflow</h3>
+            <p>Once your security is set up, follow these steps to configure your teaching profile:</p>
+            <ul class="steps">
+                <li><b>Step 1 (All Teachers):</b> The app will prompt you to declare the subjects you are teaching. Go to the <a href="#teacher-my-subjects" style="color: #ef4444; font-weight: bold; text-decoration: underline;">My Subjects Declaration</a> panel to add them.</li>
+                <li><b>Step 2 (HODs Only):</b> If you are the Head of Department, navigate to the <a href="#teacher-subject-assign" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Student Subject Allocation</a> panel to assign students to their respective elective and core subjects.</li>
+                <li><b>Step 3 (HODs Only):</b> Finally, map your department's teachers to the Principal's master structure using the <a href="#teacher-timetable" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Timetable & Allocations</a> panel.</li>
+            </ul>
+
+            <h2 id="teacher-navigation" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 40px;">Navigation Bar</h2>
+            <p>The Global Navigation Bar provides instant access to core system tools from anywhere in the app. On a PC or laptop, this bar is locked to the <b>top right corner</b> of the screen. On mobile devices (Android/iOS), it is anchored to the <b>bottom</b> of the screen for easy thumb access.</p>
+
+            <style>
+                /* Force red hover states for the Teacher section cards */
+                .teacher-section .nav-card-link:hover .nav-card {
+                    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15) !important;
+                    border-color: #ef4444 !important;
+                }
+            </style>
+            
+            <div class="nav-grid">
+                <a href="#teacher-portal" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>1. Main Overview</h4>
+                            <p>Returns you to the primary welcome screen of the portal.</p>
+                        </div>
+                        <img src="main-button-teacher.png" alt="Overview Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+                
+                <a href="#teacher-main-dashboard" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>2. Dashboard</h4>
+                            <p>Opens your personal analytics, workload statistics, and timeline logs.</p>
+                        </div>
+                        <img src="dashboard-teacher-button.png" alt="Dashboard Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#teacher-settings" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>3. Settings</h4>
+                            <p>Opens the configuration menu for themes, security, and data exports.</p>
+                        </div>
+                        <img src="settings-btn-teacher.png" alt="Settings Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#teacher-notifications" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>4. Notifications</h4>
+                            <p>Displays global system alerts and updates from the administration.</p>
+                        </div>
+                        <img src="notifications-btn-teacher.png" alt="Notifications Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#teacher-quick-add" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>5. Quick Add</h4>
+                            <p>Instantly create and post a new assignment from any screen.</p>
+                        </div>
+                        <img src="quick-add-btn.png" alt="Quick Add Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#teacher-messages" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>6. Messages</h4>
+                            <p>Opens your Inbox to read direct communications and send targeted broadcasts.</p>
+                        </div>
+                        <img src="message-btn-teacher.png" alt="Messages Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: #ef4444;">Go to section →</span>
+                    </div>
+                </a>
+            </div>
+
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h2 id="teacher-main-dashboard" style="color: #ef4444; border-bottom-color: #fca5a5;">My Dashboard</h2>
+            <p>Clicking the <b>Dashboard Icon</b> (first icon) in your navigation bar opens your primary analytics screen. This provides a comprehensive overview of your workload and teaching history.</p>
+
+            <img src="teacher-dashboard-teacher.png" alt="Teacher Dashboard Analytics" class="doc-image">
+
+            <h3>1. Profile & Workload Statistics</h3>
+            <ul class="steps">
+                <li><b>Profile Details:</b> The top left displays your Name, verified Email Address, and Department.</li>
+                <li><b>Total Hours:</b> The red box on the top right tracks the absolute total number of hours (periods) you have taught based on your submitted records.</li>
+                <li><b>Subject Breakdown:</b> The left panel itemizes your total hours taught per subject. Subjects that you haven't taught yet will appear faded out with zero hours.</li>
+            </ul>
+
+            <h3>2. Data Filters & Timetable</h3>
+            <ul class="steps">
+                <li><b>Date Picker:</b> Use the calendar input to select a specific date. The dashboard will dynamically recalculate to show exactly which subjects and how many hours you taught <i>on that specific day</i>.</li>
+                <li><b>All Time:</b> Click this button to reset the filter and view your cumulative teaching history.</li>
+                <li><b>Assigned Timetable:</b> The right panel visually maps out your weekly schedule. It shows the days of the week, the period numbers, and displays the <b>Semester Number</b> assigned to you for each slot.</li>
+            </ul>
+
+            <img src="teacher-attendance-timeline-logs.png" alt="Teacher Attendance Timeline Logs" class="doc-image">
+
+            <h3>3. Attendance Timeline Logs</h3>
+            <p>Scroll down the dashboard to view your complete, chronological audit trail.</p>
+            <ul class="steps">
+                <li>Every single time you successfully save an attendance register, a new log card is generated here automatically.</li>
+                <li>Each log displays the <b>Subject Name</b> (and specific Event tag if you approved an event), the exact <b>Time</b> and <b>Date</b> you submitted it, the <b>Period Number</b>, and the total ratio of <b>Present vs. Total Students</b> for that class.</li>
+            </ul>
+
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h2 id="teacher-attendance-marking" style="color: #ef4444; border-bottom-color: #fca5a5;">Daily Attendance Marking</h2>
+            <p>The core function of the Teacher Portal is the Live Attendance Engine. Here, faculty can mark attendance for their scheduled classes or act as a substitute for colleagues.</p>
+
+            <img src="attendance-selection-panel.png" alt="Attendance Selection Panel" class="doc-image">
+
+            <h3>1. Selecting the Class</h3>
+            <ul class="steps">
+                <li><b>Date Selection:</b> By default, the panel loads today's date. Click the date at the top to open the <b>Date Picker</b> if you need to jump to a previous day to view or edit past records.</li>
+                <li><b>Period & Subject:</b> Select the Semester, Period, and Subject. The dropdown intelligently filters to <i>only</i> show subjects assigned to you for that specific semester.</li>
+            </ul>
+            
+            <img src="date-picker-attendance.png" alt="Date Picker Modal" class="doc-image" style="max-width: 350px;">
+
+            <h3>2. Marking the Register</h3>
+            <p>Once a subject is loaded, the student roster will appear. If the class is divided into batches, you will see your specific batch loaded automatically.</p>
+            
+            <img src="attendance-roster.png" alt="Attendance Roster" class="doc-image">
+
+            <ul class="steps">
+                <li><b>Default State:</b> All students are marked <b>Present (Green)</b> by default to save time.</li>
+                <li><b>Toggle Absentees:</b> Simply tap or click a student's card to toggle them to <b>Absent (Red)</b>.</li>
+                <li><b>Save:</b> Click the <b>Save Attendance</b> button at the bottom of the screen. A secure cloud queue modal will appear, confirming when the data is synced.</li>
+            </ul>
+
+            <img src="saving-attendance-progess.png" alt="Saving Attendance Progress" class="doc-image" style="max-width: 350px;">
+
+            <div class="note"><b>Medical Leave Students:</b> Any student currently on an approved <a href="#teacher-medical-leave" style="color: #b45309; font-weight: bold;">Medical Leave</a> record appears with a blue <b>MEDICAL</b> tag next to their name. Their row is automatically locked as Present (greyed out and non-clickable) so their attendance percentage isn't penalized, and a warning toast listing all such students appears the moment the roster loads.</div>
+            
+            
+
+            <h3>3. Substitute Teacher Mode</h3>
+            <p>Substituting means a colleague who normally teaches a class is absent (or otherwise unavailable), so another teacher steps in and marks attendance for that period on their behalf. How this shows up on your screen depends on whether the subject is split into batches or not.</p>
+
+            <h4 style="font-size: 1rem; color: #334155; margin-top: 20px; margin-bottom: 8px;">A. Unsplit Subject (Single Class, No Batches)</h4>
+            <ul class="steps">
+                <li>If the subject for that period is <i>not</i> divided into batches and the assigned teacher is absent, simply open the app, select that same Date, Period, and Subject as usual.</li>
+                <li>Even if the subject isn't split into batches, it's still assigned to a specific teacher. So if another teacher who also teaches that subject opens that same Date, Period, and Subject, the whole class appears as a single 'Entire Class' substitute card labeled with the assigned teacher's name and student count — click it, confirm Substitute Mode, and the full roster loads for you to mark and save.</li>
+            </ul>
+
+            <img src="substitute-attendance-UI.png" alt="Saving Attendance Progress" class="doc-image" style="max-width: 350px;">
+
+            <h4 style="font-size: 1rem; color: #334155; margin-top: 20px; margin-bottom: 8px;">B. Split Subject (Multiple Batches)</h4>
+            <div class="image-row">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>If the subject is split into two (or more) batches, your own assigned batch loads directly as your normal roster — nothing changes for you there.</li>
+                        <img src="split-batch-mode-UI.png" alt="Substitute Mode Confirmation" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                        <li>Every <i>other</i> batch of that same subject appears as a separate <b>Substitute Card</b> underneath your roster, clearly labelled with its batch name and the teacher it's assigned to.</li>
+                        <li>Click any Substitute Card to open it. A warning popup appears asking you to confirm you're entering <b>Substitute Mode</b> for that batch.</li>
+                        <img src="substitute-mode-confirmation.png" alt="Substitute Mode Confirmation" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                        <li>Click <b>Yes</b> to load that batch's students and mark their attendance too — useful if that batch's own teacher is on leave, or if you (as Batch 1's teacher) want to combine and personally teach/mark Batch 2 as well.</li>
+                    </ul>
+                </div>
+                
+            </div>
+
+            <div class="note">Substitute Cards for a split subject aren't limited to the two batch-owning teachers. <b>Any</b> teacher in the department who teaches that same subject can also see both batch cards and step in as a substitute for either one — as long as they have first added that subject to their own <a href="#teacher-my-subjects" style="color: #b45309; font-weight: bold;">My Subjects Declaration</a> list.</div>
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c;">
+                <b>Strict Security & Booking Rules:</b><br>
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    <li><b>Ownership Lock:</b> Once a teacher marks a period, they "own" that record. <i>Only the teacher who originally marked the attendance can edit it later.</i> The system permanently records who marked it.</li>
+                    <li><b>Double Booking Prevention:</b> The system blocks multiple teachers from marking the same period for the same students.</li>
+                    <li><b>Shared Subjects (Strict):</b> General subjects (like AECC, VAC) strictly follow the Principal's timetable. You cannot mark them if you are not assigned.</li>
+                    <li><b>Department Subjects (Flexible):</b> Core/Major subjects are flexible. Teacher B can substitute Teacher A's 1st period without the Principal needing to officially reassign the timetable.</li>
+                </ul>
+            </div>
+
+            <h3 style="font-size: 1rem; color: #334155; margin-top: 20px; margin-bottom: 8px;">4. Marking Attendance in a Multi-Section Department</h3>
+            <p>If your department has been split into Sections (e.g. Section A, Section B) for a given year, a red <b>Section</b> dropdown appears just below the Semester/Period/Subject selectors the moment you pick a subject that has more than one section active.</p>
+            <ul class="steps">
+                <li><b>Shared (All Sections):</b> The top option in the dropdown. Select this for subjects (like MLD, AECC, VAC) that are timetabled once for the whole year rather than per-section.</li>
+                <li><b>Section A / Section B / etc.:</b> Selecting a specific section loads <i>that section's</i> roster only. The dropdown defaults to whichever section you're already assigned to teach for that period; switch it manually if you need to re-check a past date or step in for a section that isn't yours yet.</li>
+                <li>For subjects that aren't split by section (MJD, MID, SEC, Core, Tutorial), the dropdown still lets you jump directly into any section's class proactively, without waiting for a Substitute Card to appear.</li>
+                <li>A teacher can be legitimately assigned to teach the <i>same</i> subject to <i>multiple</i> sections in the same period (e.g. you personally teach both Section A and Section B back-to-back). Marking one section's register never blocks or overwrites the other section's — each is tracked and saved completely independently.</li>
+            </ul>
+            <div class="note">Sections only ever appear for departments/years where your HOD has actually created them. If your department doesn't use sections, this dropdown never shows up and nothing about your existing workflow changes.</div>
+
+            <h2 id="teacher-attendance-records" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Attendance History & Records</h2>
+            <p>Teachers can review their past submissions and see exactly what was recorded for any given day using the Records panel.</p>
+
+            
+
+            <ul class="steps">
+                <li>Click the <b>History/Records (Clock) Icon</b> at the top right of the attendance screen.</li>
+                <img src="attendance-history-open-button.png" alt="Attendance History Panel" class="doc-image">
+                <li>Select the date and semester. The system will display all periods marked by you (or your department) on that day.</li>
+                <img src="attendance-history-panel.png" alt="Attendance History Panel" class="doc-image">
+            </ul>
+
+            
+
+            <ul class="steps">
+                <li><b>Detailed View:</b> Click on any period card to open the Time Capsule Viewer.</li>
+                <li>This view displays the exact list of students, clearly showing who was marked Present (P) or Absent (A), along with the overall statistics for that specific class.</li>
+                <img src="detailed-attendance-record.png" alt="Detailed Attendance Record" class="doc-image" style="max-width: 450px;">
+            </ul>
+            <div class="note">In a multi-section department, period cards that belong to a specific section display a small <b>SEC</b> badge (e.g. "SEC A") so you can tell at a glance which section's register a given card represents.</div>
+
+            <!-- NEW TIMETABLE & HOD ASSIGNMENT SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-timetable" style="color: #ef4444; border-bottom-color: #fca5a5;">Timetable & Allocations (HOD)</h1>
+            <p>The <b>Timetable</b> panel provides a complete visual breakdown of your daily class schedule. For standard teachers, this is a read-only viewer. However, if the Principal has granted you <b>HOD (Head of Department)</b> privileges, you will also have access to the Assignment Engine.</p>
+
+            <img src="teacher-timetable-view.png" alt="Teacher Timetable View" class="doc-image">
+
+            <h3>1. My Timetable (Teacher View)</h3>
+            <ul class="steps">
+                <li><b>Daily Layout:</b> Switch between days using the Mon-Fri buttons at the top. The grid displays all periods for the day.</li>
+                <li><b>Class Details:</b> Assigned periods show the Subject Category, Subject Name, Semester, and Room. Free periods remain blank.</li>
+                <li><b>Section Badges:</b> In a multi-section department, a period card shows a red <b>Section</b> badge above the class details. If you teach the same subject to more than one section in that same period (e.g. Section A and Section B back-to-back), all the relevant section badges appear together on that one card.</li>
+                <li><b>Live Visual Tracker:</b> The timeline on the left side (red vertical line) fills up dynamically to indicate the current physical time of the day relative to your scheduled classes.</li>
+                <li><b>HOD Access:</b> If you are an HOD, you will see a red <b>Assign Classes</b> button in the top right corner.</li>
+            </ul>
+
+            <h2 style="color: #ef4444; border-bottom-color: #fca5a5;">Department Timetable Assignment</h2>
+            <p>Clicking the <b>Assign Classes</b> button opens the master configuration panel for your department. The period boxes displayed here are generated based on the Principal's foundational structure.</p>
+
+            <img src="timetable-assignment-hod.png" alt="Timetable Assignment Panel" class="doc-image">
+
+            <h3>1. Assigning Subjects & Faculty</h3>
+            <ul class="steps">
+                <li><b>Category Locking:</b> Categories for "Shared Subjects" (e.g., AECC, VAC, SEC) are locked by the Principal and cannot be changed. However, for "Department Core" subjects (e.g., MJD, Tutorial), the HOD has the flexibility to override the category type using the dropdown.</li>
+                <li><b>Select Subject:</b> Choose the specific subject being taught in this period. <i>Note: You only need to assign timetable slots for subjects officially offered by your own department.</i></li>
+                <li><b>Select Teacher:</b> Pick the faculty member who will teach this class. <br>
+                    <span style="display:inline-block; margin-top:5px; padding:5px 10px; background:#fef2f2; color:#b91c1c; border-radius:6px; font-size:12px;"><b>Crucial Rule:</b> A teacher's name will <i>only</i> appear in this dropdown if they have logged into their app and actively added this subject to their personal "Subject List".</span></li>
+                <li><b>Assign Room:</b> Enter the physical room name or number (optional).</li>
+            </ul>
+
+            <h3>2. Editing by Section (Multi-Section Departments)</h3>
+            <p>If your department has Sections created for a given year (see <a href="#teacher-section-manage" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Manage Sections</a>), a red <b>Section</b> dropdown appears next to the Semester selector at the top of the Assign Classes panel.</p>
+            <ul class="steps">
+                <li><b>Shared (All Sections):</b> The default view. Use this for subjects common to the whole year, like MLD. This is exactly how the timetable behaved before sections existed.</li>
+                <li><b>Section A / Section B / etc.:</b> Switch to a specific section to build a timetable just for that section's students. Splitting a class here only divides <i>that section's</i> enrolled students into batches — the other sections are untouched.</li>
+                <li><b>Ownership Locking:</b> Whichever side — Shared or a specific section — gets a real teacher assigned to a period <i>first</i> "owns" that period. If Shared already has a teacher for a period, that period locks for every section (with a message telling you to switch to "Shared (All Sections)" instead). Likewise, if a specific section already has a teacher for a period, the Shared row for that same period locks. Two <i>different</i> sections both independently using the same period is always fine and never locks anything — only a Shared-vs-section clash does.</li>
+                <li><b>Forced-Shared Categories:</b> Categories like MLD, AECC, and VAC must always be set under "Shared (All Sections)" — the dropdown is disabled for these while a specific section is selected. MID is the one exception: it can be set either as Shared or per-section, since some colleges run it either way.</li>
+            </ul>
+            <div class="note">If your department/year has no sections created, the Section dropdown never appears and the panel behaves exactly as before.</div>
+
+            <h3>3. Splitting Classes into Batches</h3>
+            <p>If a class needs to be taught by multiple teachers or separated for lab work, click the <b>Split</b> button at the bottom of a period card.</p>
+
+            <div class="image-row">
+                <div style="flex:1;">
+                    <img src="even-split-modal.png" alt="Even Split Modal" class="doc-image" style="margin-top: 0; max-width: 100%;">
+                    <p style="font-size: 13px; color: #475569;"><b>A. Department Core Split:</b> For core subjects, the system will automatically divide the enrolled students evenly into new batches.</p>
+                </div>
+                <div style="flex:1;">
+                    <img src="department-split-modal.png" alt="Department Split Modal" class="doc-image" style="margin-top: 0; max-width: 100%;">
+                    <p style="font-size: 13px; color: #475569;"><b>B. Shared Subject Split:</b> For shared subjects containing students from multiple departments, a modal will appear. Select the total number of batches required, and meticulously map each participating department to its correct batch.</p>
+                </div>
+            </div>
+
+            <img src="batched-periods-teacher.png" alt="Batched Period View" class="doc-image" style="max-width: 350px;">
+
+            <ul class="steps">
+                <li><b>Configuring Split Batches:</b> Once a split is confirmed, the period card will divide into multiple, independent batch boxes (e.g., Batch 1, Batch 2). You can now assign a different Teacher and Room to each specific batch.</li>
+                <li><b>Batch Persistence:</b> Once a subject is split into batches, that division is remembered globally for that semester (and, in a multi-section department, specifically for whichever section you were editing). If you schedule the same subject on a different day (e.g., Tuesday), it will automatically appear as split boxes. Simply re-assign the exact same teachers to their respective batches on the new day.</li>
+            </ul>
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c; margin-top: 20px;">
+                <b>Finalizing the Timetable:</b><br>
+                When you have finished configuring the day's schedule, you <b>must</b> click the red <b>Save Timetable</b> button in the top right corner. The system will securely encrypt and push the updated schedule to all students and faculty instantly.
+            </div>
+
+            <!-- NEW INTERNAL MARKS SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-internal-marks" style="color: #ef4444; border-bottom-color: #fca5a5;">Internal Marks Entry</h1>
+            <p>The <b>Internal Marks</b> panel is designed to streamline the grading process for your assigned subjects. The system intelligently auto-calculates attendance scores and organizes your class lists perfectly, even for complex batch configurations.</p>
+
+            <img src="internal-marks-panel.png" alt="Internal Marks Panel" class="doc-image">
+
+            <h3>1. Navigating Subjects & Batches</h3>
+            <ul class="steps">
+                <li><b>Select Academic Year:</b> Use the first dropdown to select the target year (e.g., 1st Year). The Semester dropdown will automatically update to the current active semester for that year.</li>
+                <li><b>Select Subject:</b> The final dropdown will populate <i>only</i> with the subjects you teach for that specific semester. Select a subject to load the student roster.</li>
+                <li><b>Batched Subjects:</b> If the selected subject is divided into practical batches, the system will group the students accordingly into distinct Batch Cards. Click a batch card to expand it and reveal the assigned students.</li>
+            </ul>
+
+            <img src="internal-marks-batch-view.png" alt="Internal Marks Batch View" class="doc-image" style="max-width: 600px;">
+
+            <h3>2. Recording Grades</h3>
+            <p>Click on any student's name card to open their individual grading sheet.</p>
+
+            <div class="image-row">
+                <img src="student-exam-records.png" alt="Student Exam Records" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <img src="editing-internal-marks.png" alt="Editing Internal Marks" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+
+            <ul class="steps">
+                <li><b>Select Exam:</b> By default, the system provides standard slots like <b>1st Internal</b> and <b>2nd Internal</b>. Click the accordion to expand the input fields.</li>
+                <li><b>Enter Scores:</b> Input the maximum marks (Max Marks), the test marks obtained, and the assignment marks.</li>
+                <li><b>Automated Attendance Marks:</b> You cannot manually edit the Attendance mark field. The Adhyora engine automatically locks and calculates this score out of 5 based on the student's real-time attendance percentage for this specific subject.</li>
+                <li><b>Add Custom Exams:</b> If you need to record additional assessments, click the red <b>+ Add Exam</b> button to dynamically generate a new grading slot.</li>
+                <li><b>Save:</b> Click the red <b>Save Marks</b> button to instantly sync the grades to the cloud. Once saved, students can immediately view their updated progress bars in their own dashboard.</li>
+            </ul>
+
+            <!-- NEW MY SUBJECTS SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-my-subjects" style="color: #ef4444; border-bottom-color: #fca5a5;">My Subjects Declaration</h1>
+            <p>The <b>Subjects</b> panel is where you officially declare the courses you are teaching. This step is critical—the subjects you add here will automatically link to your Attendance, Internal Marks, and Timetable panels.</p>
+
+            <img src="my-subjects-panel.png" alt="My Subjects Panel" class="doc-image">
+
+            <h3>1. Adding Subjects</h3>
+            <ul class="steps">
+                <li><b>Select Semester:</b> Choose the target semester from the first dropdown.</li>
+                <li><b>Select Subject:</b> Click the second dropdown to view all available subjects offered by the college for that semester. Select the subjects you are going to teach.</li>
+                <li><b>Unsaved Status:</b> The selected subjects will appear on the main screen as pending additions.</li>
+                <li><b>Save:</b> You <b>must</b> click the red <b>Save Selections</b> button at the bottom of the screen to lock them into your profile.</li>
+                <li><b>Repeat:</b> Switch the semester dropdown and repeat this process for all other semesters you are teaching.</li>
+            </ul>
+
+            <img src="subjects-dropdown-list.png" alt="Subjects Dropdown List" class="doc-image" style="max-width: 500px;">
+
+            <h3>2. Deleting Subjects</h3>
+            <ul class="steps">
+                <li>If a subject needs to be removed from your list (or if you added one by mistake), click the red <b>Trash (Delete)</b> button on the subject card.</li>
+                <li>If the subject was already saved to the database, a confirmation popup will appear to ensure you want to remove it.</li>
+            </ul>
+
+            <!-- NEW CALENDAR & ASSIGNMENTS SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-calendar" style="color: #ef4444; border-bottom-color: #fca5a5;">Academic Calendar</h1>
+            <p>The <b>Calendar</b> provides a visual overview of your institution's working days, holidays, and semester schedules.</p>
+
+            <img src="teacher-calendar-view.png" alt="Teacher Calendar View" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li><b>Navigation:</b> Use the left and right arrows at the top of the widget to jump between different months.</li>
+                <li><b>View Details:</b> Click on any highlighted (red or colored) date to view the specific reason for the holiday or event below the calendar.</li>
+                <li><i>Important Note:</i> This calendar operates strictly based on the global Calendar CSV uploaded by the Principal. It will not predict or display data for future academic years unless a new CSV is processed by the administration.</li>
+            </ul>
+
+            <h1 id="teacher-assignments" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Assignments</h1>
+            <p>The <b>Assignments</b> panel is your centralized hub for creating and tracking coursework issued to your students.</p>
+
+            <img src="teacher-assignment-panel.png" alt="Teacher Assignments Panel" class="doc-image">
+
+            <h3>Managing Posted Assignments</h3>
+            <ul class="steps">
+                <li>Every assignment you create is listed here as a distinct card.</li>
+                <li>The card displays the <b>Topic</b>, the specific <b>Subject & Semester</b> it was assigned to, your detailed <b>Description</b>, and the dates it was posted and due.</li>
+                <li><b>Status Tracking:</b> The system visually tracks urgency. As the deadline approaches, the due date text changes color. Once the deadline passes, the text turns red, and the entire card fades out and is marked as <b>(Closed)</b>.</li>
+            </ul>
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c;">
+                <b>Creating a New Assignment:</b><br>
+                To post new coursework, click the <b>Plus (+) Icon</b> in your top navigation bar. This opens the universal composition modal where you can select the target subject, enter the details, and push a notification instantly to all enrolled students.
+            </div>
+
+            <!-- NEW STUDENT LIST SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-student-list" style="color: #ef4444; border-bottom-color: #fca5a5;">Student Directory & Profiles</h1>
+            <p>The <b>Student List</b> provides a searchable directory of all students across the college. Teachers can use this tool to quickly pull up any student's comprehensive academic profile.</p>
+
+            <img src="teacher-student-list.png" alt="Teacher Student List" class="doc-image">
+
+            <h3>1. Searching for Students</h3>
+            <ul class="steps">
+                <li><b>Smart Search:</b> Use the top search bar to instantly find students by typing their Name, Roll Number, Department, or Year. The list filters dynamically as you type.</li>
+                <li><b>Total Count:</b> The top right corner displays the total number of students currently matched by your search or available in the database.</li>
+                <li><b>Section Label:</b> For a student belonging to a sectioned department, their card shows their assigned Section (e.g. "CS - Year 2 - Section A") right next to their department and year.</li>
+            </ul>
+
+            <h2 style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Student Academic Dashboard</h2>
+            <p>Click on any student card to open their dedicated profile dashboard, allowing you to monitor their attendance and grading progress.</p>
+
+            <img src="student-dashboard-teacher.png" alt="Student Dashboard Top" class="doc-image">
+
+            <h3>2. Attendance Overview</h3>
+            <ul class="steps">
+                <li><b>Projected Percentage (Wave):</b> The animated circular visualizer calculates the student's <i>Projected Percentage</i>—the attendance score they will achieve if they attend every single remaining class until the end of the semester.</li>
+                <li><b>Overall Stats:</b> The panel on the right provides a hard count of total days and periods the student has been officially marked present or absent, alongside their current exact percentage.</li>
+            </ul>
+
+            <img src="student-dashboard-bottom.png" alt="Student Dashboard Bottom" class="doc-image">
+
+            <h3>3. Deep-Dive Metrics</h3>
+            <ul class="steps">
+                <li><b>Subject-Wise Attendance:</b> The left box breaks down attendance individually for every enrolled subject. 
+                    <ul style="margin-top: 5px;">
+                        <li>Use the <b>Date Picker</b> to filter the list and see exactly which classes the student attended on a specific day, or click <b>All Time</b> for their cumulative averages.</li>
+                    </ul>
+                </li>
+            </ul>
+
+            
+
+            <ul class="steps">
+                <li><b>Time Capsule Ledger:</b> Clicking on any subject card in the attendance list opens a detailed ledger popup. This reveals the exact date, time, and period they were marked Present (P) or Absent (A), and which teacher submitted the record.</li>
+            </ul>
+            <img src="subject-attendance-ledger.png" alt="Subject Attendance Ledger" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li><b>Internal Marks:</b> The center box displays the student's uploaded test scores. Use the dropdown to toggle between different exam phases (e.g., 1st Internal vs. 2nd Internal) if data is available.</li>
+            </ul>
+            <img src="student-dashboard-bottom-internal-marks.png" alt="Student Internal Marks" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li><b>Enrolled Curriculum:</b> The right box lists the student's official syllabus, displaying every subject they are taking grouped by category tags (MJD, AECC, VAC, etc.).</li>
+            </ul>
+            <img src="subject-attendance-ledger-enrolled-curriculum.png" alt="Enrolled Curriculum" class="doc-image" style="max-width: 450px;">
+
+            <!-- NEW MEDICAL LEAVE SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-medical-leave" style="color: #ef4444; border-bottom-color: #fca5a5;">Medical Leave Management (HOD Exclusive)</h1>
+            <p>If you are the <b>HOD</b>, a red medical-notes icon <i class="fas fa-notes-medical"></i> appears next to every student in your own department within the <a href="#teacher-student-list" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Student Directory</a> list. Use this to officially record when a student is on medical leave, so their attendance is not unfairly penalized.</p>
+
+            <img src="medical-leave-icon-button.png" alt="Medical Leave Icon Button" class="doc-image" style="max-width: 500px;">
+
+            <h3>1. Recording a Leave Period</h3>
+            <div class="image-row">
+                <img src="medical-leave-date-picker.png" alt="Medical Leave Date Picker" class="doc-image" style="flex:1; margin: 0; max-width: 320px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Tap the medical-notes icon on a student's card to open the panel directly (you don't need to open their full profile first).</li>
+                        <li><b>Select FROM Date:</b> Pick the first day of the leave and click <b>Next</b>.</li>
+                        <li><b>Select TO Date:</b> Pick the last day of the leave and click <b>Save Leave</b>. For a single day, simply pick the same date for both steps.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="note">Once saved, the student is automatically marked <b>Present</b> and tagged <b>MEDICAL</b> (in blue) on every attendance register for that date range — for every subject, not just yours. See the <a href="#teacher-attendance-marking" style="color: #b45309; font-weight: bold;">Daily Attendance Marking</a> section for how this appears on the register.</div>
+
+            <h3>2. Viewing & Deleting History</h3>
+            <div class="image-row">
+                <img src="medical-leave-history-modal.png" alt="Medical Leave History Modal" class="doc-image" style="flex:1; margin: 0; max-width: 320px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Click the <b>History</b> button inside the Medical Leave panel to view every leave period ever recorded for that student, listed as From → To date ranges.</li>
+                        <li>Click the red trash icon next to any record to delete it. You'll be asked to confirm the exact date range before the record is permanently removed.</li>
+                        <li>Deleting a record immediately removes the MEDICAL lock from that student's attendance rows going forward.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- NEW STUDENT SUBJECT ALLOCATION SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-subject-assign" style="color: #ef4444; border-bottom-color: #fca5a5;">Student Subject Allocation (HOD)</h1>
+            <p>If you hold <b>HOD</b> privileges, the <b>Subject Allocation</b> tool lets you enrol your department's students into Electives, Labs, and other category-based subjects for a given semester (e.g. deciding which of your OE/SEC options each student takes).</p>
+
+            <img src="subject-allocation-panel.png" alt="Subject Allocation Panel" class="doc-image">
+
+            <h3>1. Selecting the Target Group</h3>
+            <ul class="steps">
+                <li><b>Semester:</b> Choose the active Odd or Even semester from the top dropdown.</li>
+                <li><b>Category:</b> Choose the subject category (e.g., OE, SEC, MCC). Only categories with subjects offered in the selected semester appear here.</li>
+                <li><b>Subject:</b> Once a category is chosen, pick the specific subject you want to assign students to.</li>
+            </ul>
+            <div class="note">On hybrid Engineering/Arts &amp; Science colleges, categories are automatically grouped under <b>⚙️ Engineering Types</b> and <b>🎨 Arts & Science Types</b> to make them easier to find.</div>
+
+            <h3>2. Assigning & Removing Students</h3>
+            <div class="image-row">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Students already enrolled in this category are grouped into accordion cards named after their assigned subject. Everyone else appears under <b>Unassigned</b>.</li>
+                        <li><b>To Assign:</b> Tap one or more students under Unassigned to select them (they highlight red), then click the <b>Assign</b> button at the bottom.</li>
+                        <li><b>To Remove:</b> Tap one or more students inside an existing subject group, then click the <b>Remove</b> button to un-enrol them from that subject.</li>
+                        <li>You cannot select Unassigned and already-assigned students at the same time — the action button will show <b>Conflict</b> and stay disabled until your selection is one or the other.</li>
+                        <li>Click <b>Confirm</b> on the popup to save your changes. The list refreshes instantly to reflect the new grouping.</li>
+                    </ul>
+                </div>
+                <div style="flex:1; display: flex; flex-direction: column; gap: 20px;">
+                    <img src="subject-allocation-confirm-modal.png" alt="Subject Allocation Confirm Modal" class="doc-image" style="margin: 0; max-width: 100%;">
+                    <img src="subject-allocation-confirm-confirm-modal.png" alt="Subject Allocation Confirm Modal" class="doc-image" style="margin: 0; max-width: 100%;">
+                </div>
+            </div>
+
+            <div class="image-row">
+                <img src="subject-allocation-final-modal.png" alt="Subject Allocation Updated List" class="doc-image" style="flex:1; margin: 0; max-width: 300px;">
+                <img src="subject-allocation-final--final-modal.png" alt="Subject Allocation Updated List Confirmed" class="doc-image" style="flex:1; margin: 0; max-width: 300px;">
+            </div>
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c;">
+                <b>Locking Rules:</b><br>
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    <li><b>Principal Override Lock:</b> If the Principal personally assigned a student to a subject, that student's card shows a padlock icon and cannot be changed from the Teacher Portal.</li>
+                    <li><b>24-Hour Edit Window:</b> Assignments you make yourself can only be edited or removed within <b>24 hours</b> of creating them. After that window closes, the card locks automatically to protect finalized records.</li>
+                </ul>
+            </div>
+
+            <!-- NEW MANAGE SECTIONS (HOD) SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-section-manage" style="color: #ef4444; border-bottom-color: #fca5a5;">Manage Sections (HOD)</h1>
+            <p>If you hold <b>HOD</b> privileges, the <b>Sections</b> panel (labelled "Sections" in the navigation menu) lets you split your department's year-groups into smaller Sections (e.g. Section A, Section B, Section C) — for example when a single year is too large to timetable, attend, and grade as one cohort. Once sections exist for a year, Attendance Marking, Timetable Assignment, and Data Export all become section-aware automatically for that department/year.</p>
+
+            <img src="section-management-panel.png" alt="Manage Sections Panel" class="doc-image">
+
+            <h3>1. Selecting the Target Group</h3>
+            <ul class="steps">
+                <li><b>Year:</b> Choose the target academic year (1st–4th Year) from the top dropdown. Every student in your department for that year loads below, grouped by their current section.</li>
+                <li>Students with no section yet appear under an <b>Unassigned Students</b> heading at the bottom of the list.</li>
+            </ul>
+
+            <h3>2. Assigning & Removing Students</h3>
+            <ul class="steps">
+                <li><b>To Assign:</b> Tap one or more students under Unassigned Students to select them, choose the target section from the dropdown (or choose <b>+ Create New Section</b> and type a name like "A", "B", or "C"), then click the red <b>Assign</b> button at the bottom.</li>
+                <li><b>To Remove:</b> Tap one or more students inside an existing Section group, then click the red <b>Remove</b> button to un-assign them back to Unassigned.</li>
+                <li>Just like Subject Allocation, you cannot select Unassigned and already-assigned students in the same action — the button shows <b>Conflict</b> and stays disabled until your selection is one or the other.</li>
+                <li>Confirm the popup to save. The list refreshes instantly to reflect the new section groupings.</li>
+            </ul>
+
+            <div class="note">Creating a section for a department/year is what switches on all the section-aware features described elsewhere in this guide (the Section dropdown in Attendance Marking and Timetable Assignment, Section badges, and Section-wise Data Export). Departments and years that don't have any sections created continue to work exactly as before.</div>
+
+            <!-- NEW PROMOTION HOLDS (HOD) SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-promotion-holds" style="color: #ef4444; border-bottom-color: #fca5a5;">Promotion Holds (HOD)</h1>
+            <p>If you hold <b>HOD</b> privileges, the <b>Promotion Holds</b> panel lets you flag students who should <i>not</i> be promoted to the next academic year — for example due to attendance shortage, arrear (failed) subjects, unpaid fees, or disciplinary issues — and clear those holds once the issue is resolved.</p>
+
+            <img src="promotion-holds-panel.png" alt="Promotion Holds Panel" class="doc-image">
+
+            <h3>1. Blocking a Student's Promotion</h3>
+            <ul class="steps">
+                <li><b>Year:</b> Choose the academic year to review. Students load into two groups: <b>Promotion Blocked</b> and <b>Eligible for Promotion</b>.</li>
+                <li><b>Reason:</b> Pick a reason from the dropdown — <b>Attendance Shortage</b>, <b>Arrear/Paper Failure</b>, <b>Fee Due</b>, <b>Disciplinary</b>, or <b>Other</b> (which reveals a free-text box for a custom reason).</li>
+                <li>Select one or more students under <b>Eligible for Promotion</b>, then click the red <b>Block Selected</b> button.</li>
+            </ul>
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c;">
+                <b>Arrear/Paper Failure is Single-Student Only:</b><br>
+                Because this reason requires recording exactly which subjects the student failed, you can only select <b>one student at a time</b> when this reason is chosen. Confirming opens a Subject Picker listing that student's enrolled subjects for their current semester — check every subject they need to clear, then confirm the block.
+            </div>
+
+            <h3>2. Clearing a Hold</h3>
+            <ul class="steps">
+                <li>Select one or more students under <b>Promotion Blocked</b>, then click the red <b>Clear Hold</b> button and confirm.</li>
+                <li><b>Arrear Subjects:</b> A student blocked for Arrear/Paper Failure shows an expandable arrow revealing their list of pending subjects. Click <b>Mark Passed</b> next to a subject once the student clears it — the subject is struck through with a green checkmark.</li>
+                <li>Once every arrear subject on a student's list is marked passed, a confirmation popup automatically offers to clear their promotion hold entirely.</li>
+                <li>A student who was previously held back (and later cleared) carries a small <b>"Previously Held Back"</b> badge on their card going forward, for context.</li>
+            </ul>
+
+            <h3>3. Viewing History</h3>
+            <ul class="steps">
+                <li>Click the <b>History</b> button at the top right of the panel to open a calendar-year log of every block, clear, and subject-cleared action for your department, newest first.</li>
+                <li>Use the year dropdown inside the History modal to look back at previous calendar years.</li>
+            </ul>
+
+            <!-- NEW BATCH VIEWER SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-batch-viewer" style="color: #ef4444; border-bottom-color: #fca5a5;">Subject Batch Viewer</h1>
+            <p>The <b>Batch Viewer</b> panel allows teachers to quickly check how their assigned subjects are divided into structural batches (e.g., for practical labs or smaller tutorial groups) across the college.</p>
+
+            <img src="batch-viwer-panel.png" alt="Batch Viewer Panel" class="doc-image">
+
+            <h3>Viewing Batches & Rosters</h3>
+            <ul class="steps">
+                <li><b>Select Semester & Subject:</b> Use the top dropdowns to select the target semester and one of the subjects from your official teaching list.</li>
+                <li><b>Check Batches:</b> If the HOD or Principal has split the subject into multiple batches, they will appear here as individual accordion cards.</li>
+                <li><b>Batch Details:</b> Each card displays the total student count for that specific batch, along with the officially assigned teacher and room designation.</li>
+                <li><b>View Students:</b> Click on any batch card to expand it and reveal the exact roster of students assigned to that group.</li>
+            </ul>
+
+            <!-- NEW EVENT ATTENDANCE SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-event-attendance" style="color: #ef4444; border-bottom-color: #fca5a5;">Event Attendance Requests</h1>
+            <p>The <b>Event Attendance</b> panel allows teachers (like NSS Program Officers, NCC Commanders, or Sports Coordinators) to request official attendance overrides for students participating in special duties during regular class hours. It supports two modes: a quick <b>Single Period</b> request for one class period, or a <b>Camp</b> request for multi-day events like NCC camps, treks, or tournaments.</p>
+
+            <img src="empty-event-attendance-panel.png" alt="Empty Event Attendance Panel" class="doc-image">
+
+            <h3>1. Creating a Single-Period Event Request</h3>
+            <ul class="steps">
+                <li><b>Select Date:</b> By default, the panel loads today's date. Click the date button at the top right to open the <b>Date Picker</b> if you need to jump back and request attendance for an event that occurred in the past.</li>
+                <li><b>Select Period:</b> Choose the specific period the event took place during.</li>
+                <li><b>Event Name:</b> Type a clear, descriptive name for the duty (e.g., "NSS Duty", "Inter-College Football").</li>
+                <li><b>Find Students:</b> Click the red <b><i class="fas fa-search"></i> Find Students</b> button to open the global search modal.</li>
+                <li><b>Quick Picks — Library / PT:</b> For single-period requests, two quick-tap buttons, <b>Library</b> and <b>PT</b>, instantly fill the Event Name field for these two common, low-risk duties. Requests named exactly "Library" or "PT" this way skip your college's Approval Mode entirely (the Save button changes to <b>Mark Attendance</b>) and finalize instantly, regardless of whether the college is set to Strict or Auto-Approve mode. The quick-pick buttons are hidden automatically when Camp mode is on, since they only apply to single-period requests.</li>
+            </ul>
+
+            <div class="note"><b>Event Attendance History:</b> Click the <b>History</b> button at the top right of the panel to browse every Single-Period and Camp request you've ever submitted. Pick a date in the history date picker to see that day's requests, then tap any entry to view its full student list, status, and approval details.</div>
+
+            <h2 style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Camp Mode (Multi-Day Events)</h2>
+            <p>For duties that span more than one day, flip on the <b>Camp</b> toggle at the top of the panel. This switches the panel from the single Period dropdown to a full date-and-time range, so the whole camp duration is covered in one request.</p>
+
+            <img src="camp-toggle-fields.png" alt="Camp Toggle and Time Fields" class="doc-image">
+
+            <h3>1. Setting the Camp Window</h3>
+            <ul class="steps">
+                <li>Enable the <b>Camp</b> toggle. The Period dropdown disappears and is replaced by <b>Start Date</b>, <b>Start Time</b>, <b>End Date</b>, and <b>End Time</b> fields.</li>
+                <li>Enter the exact window the camp runs for. The <b>End Date & Time</b> must be strictly after the Start Date & Time, or the system will block saving.</li>
+                <li>Enter the <b>Event Name</b>, then use <b>Find Students</b> to build the participant roster exactly as you would for a single-period request.</li>
+                
+            </ul>
+
+            <h3>2. Marking Multiple / New Camps</h3>
+            <div class="image-row">
+                <img src="camp-selector-dropdown.png" alt="Camp Selector Dropdown" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>As soon as Camp mode is on, a red <b>Camp Selector</b> dropdown appears at the top of the form, listing every camp you've already created that touches the currently selected calendar date.</li>
+                        <li>To start a brand-new camp (a different group or duty running on the same or overlapping days), choose <b>➕ Create New Camp</b> from this dropdown — you get a fresh, blank form without disturbing any camp you already saved.</li>
+                        <li>To review or check an existing camp, simply select it from the dropdown; its name, dates, times, and roster load back instantly.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="image-row">
+                <img src="find-students-modal.png" alt="Find Students Modal" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <div style="flex:1;">
+                    <h3>3. Finding & Locking Participants</h3>
+                    <ul class="steps">
+                        <li>Use the search bar to find students across the entire college by typing their <b>Name</b>, <b>Roll Number</b>, <b>Department</b>, or <b>Year</b>.</li>
+                        <li>Check the boxes next to the students who participated. You can search multiple times and keep selecting students; the system remembers your selections.</li>
+                        <li>Click the <b>Add Selected to Event</b> button to drop them into your staging cart.</li>
+                    </ul>
+                </div>
+            </div>
+
+            
+
+            <div class="highlight" style="border-left-color: #ef4444; background-color: #fef2f2; color: #b91c1c;">
+                <b>Overlap Locking:</b><br>
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    <li>If a student is already part of another teacher's event or camp whose date/time window overlaps with the one you're building, their search card shows a grey padlock icon and cannot be selected — the card also displays which event/camp and teacher currently holds them.</li>
+                    <li>If a student is already sitting in your own unsaved cart and gets claimed elsewhere before you save, their cart card turns red with a <b>Conflict</b> warning naming the teacher who claimed them. You must remove them from your cart before you can save.</li>
+                </ul>
+            </div>
+
+            <img src="camp-locked-student-search.png" alt="Locked Student in Camp Search" class="doc-image" style="max-width: 500px;">
+
+            
+
+            <h3>4. Reviewing & Submitting</h3>
+            <ul class="steps">
+                <li><b>Review Roster:</b> All selected students appear in your staging list (for Camps, this list is shared with the Camp Selector dropdown above). If you accidentally added someone, click the red <b>Trash (Dustbin)</b> icon next to their name to remove them.</li>
+                <li><b>Submit:</b> Click the large action button at the bottom of the screen to save the request.</li>
+            </ul>
+
+            <img src="camp-student-added.png" alt="Camp Student Added" class="doc-image" style="max-width: 500px;">
+
+            <img src="populated-event-list.png" alt="Populated Event List" class="doc-image" style="max-width: 600px;">
+
+            <div class="note"><b>Approval Mode:</b> The wording and behavior of the submit button depends on a college-wide setting your Principal controls — you don't choose this yourself.
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    <li><b>Strict Approve Mode</b> — the button reads <b>Send to Principal</b>. Your request is saved as <b>Pending</b> and only overwrites the students' attendance once the Principal opens their dashboard, verifies the duty, and clicks <b>Accept</b>.</li>
+                    <li><b>Auto-Approve Mode</b> — the button reads <b>Mark Event & Auto-Approve</b>. Submitting instantly finalizes the attendance override for all selected students with no Principal action required. The Principal can still see every auto-approved event on their side at any time.</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <b>Locking After Submission:</b><br>
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    <li><b>Camps</b> lock immediately the moment you save — the Event Name, dates, times, Find Students button, and Save button all disable instantly, and a <b>"Locked (Cannot be edited)"</b> notice appears.</li>
+                    <li><b>Single-Period requests</b> stay editable while <b>Pending</b>, but auto-lock 24 hours after submission even if the Principal hasn't reviewed it yet. Once a request reaches <b>Accepted</b> status, it locks permanently regardless of mode.</li>
+                </ul>
+            </div>
+
+            <!-- NEW COMMUNICATIONS SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-notifications" style="color: #ef4444; border-bottom-color: #fca5a5;">System Notifications</h1>
+            <p>Clicking the <b>Bell Icon</b> in the top navigation bar opens the System Inbox. This panel displays global updates, maintenance alerts, and official announcements directly from Adhyora or your administration.</p>
+
+            <img src="teacher-system-inbox.png" alt="Teacher System Inbox" class="doc-image">
+
+            <h1 id="teacher-quick-add" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Quick Add Assignment</h1>
+            <p>Clicking the <b>Plus (+) Icon</b> in the navigation bar opens a universal quick-create modal. This allows you to post an assignment instantly without leaving your current screen.</p>
+
+            <div class="image-row">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li><b>Target Audience:</b> Select the Target Year and Semester.</li>
+                        <li><b>Course Details:</b> Select the Subject from the dropdown.</li>
+                        <li><b>Content:</b> Enter the Topic Title and full Description/Instructions.</li>
+                        <li><b>Deadline:</b> Pick the Due Date from the calendar popup.</li>
+                        <li><b>Post:</b> Click the red <b>Post Assignment</b> button. The assignment will immediately be pushed to the students, and you can track its progress in the <a href="#teacher-assignments" style="color: #ef4444; font-weight: bold; text-decoration: underline;">Assignments panel</a>.</li>
+                    </ul>
+                </div>
+                <img src="new-assignment-modal.png" alt="New Assignment Modal" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+
+            <h1 id="teacher-messages" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Inbox & Broadcasts</h1>
+            <p>Clicking the <b>Chat Icon</b> in the navigation bar opens the Messages panel, your central communication hub for viewing sent and received messages.</p>
+
+            <img src="teacher-messages-inbox.png" alt="Teacher Messages Inbox" class="doc-image">
+
+            <h3>1. Viewing Messages</h3>
+            <ul class="steps">
+                <li>The inbox aggregates both incoming messages and your sent history. Each card displays the sender/recipient name, time, and message type.</li>
+                <li><b>Read Receipts (Blue Ticks):</b> For direct, personal messages, a double-tick icon will turn blue when the recipient has opened and read the message.</li>
+                <li><b>Broadcasts:</b> Mass announcement messages do not track individual read receipts. They are identified visually by a pushpin icon or lack of blue ticks.</li>
+            </ul>
+
+            <div class="image-row">
+                <img src="compose-message-modal.png" alt="Compose Message Modal" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <div style="flex:1;">
+                    <h3>2. Composing Messages</h3>
+                    <p>You can send targeted push notifications and messages directly from this panel.</p>
+                    <ul class="steps">
+                        <li>Click the red <b>Compose</b> button at the top right.</li>
+                        <li><b>Recipients:</b> Check the boxes to send to the <b>Principal</b>, <b>Teachers</b>, or <b>Students</b>. You can select multiple groups at once.</li>
+                        <li><b>Smart Filtering:</b> Use the dropdown menus to narrow your audience by specific <b>Departments</b> and <b>Years</b> to ensure the message only reaches the intended targets.</li>
+                        <li>Enter your Title and Message, then click <b>Send Message</b>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- NEW SETTINGS SECTION -->
+            <hr style="border: 1px dashed #fca5a5; margin: 60px 0;">
+
+            <h1 id="teacher-settings" style="color: #ef4444; border-bottom-color: #fca5a5;">Settings & Security</h1>
+            <p>Click the <b>Gear Icon</b> in the top navigation bar to open your configuration menu. This panel controls your app experience, security settings, and HOD data exports.</p>
+
+            <div class="image-row">
+                <img src="teacher-settings-menu.png" alt="Teacher Settings Menu" class="doc-image" style="max-width: 300px;">
+                <div style="flex:1;">
+                    <h3>Profile & Support</h3>
+                    <ul class="steps">
+                        <li><b>Profile:</b> Displays your Name, Email, Department, and HOD status (if applicable).</li>
+                        <li><b>Help & Legal:</b> Quick links to Contact Support, visit the Pixelaks Technologies website, and review the Privacy Policy or Terms & Conditions.</li>
+                    </ul>
+                    
+                    <h3>App Toggles</h3>
+                    <ul class="steps">
+                        <li><b>Push Notifications:</b> Enable or disable push notifications delivered directly to your device.</li>
+                        <li><b>UI Sounds:</b> Toggle the cinematic system sound effects on or off.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="image-row">
+                <div style="flex:1;">
+                    <h3>Themes & Appearance</h3>
+                    <ul class="steps">
+                        <li>Click <b>Themes</b> to open the Appearance popup.</li>
+                        <li>Toggle between <b>Light Mode</b> and <b>Dark Mode</b> to reduce eye strain.</li>
+                    </ul>
+                </div>
+                <img src="themes-popup-teacher.png" alt="Themes Popup" class="doc-image" style="flex:1; margin: 0; max-width: 450px;">
+            </div>
+
+            <h3>Security & Device Management</h3>
+            <div class="image-row">
+                <img src="security-settings.png" alt="Security Settings" class="doc-image" style="max-width: 300px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li><b>Active Sessions (Devices):</b> View all devices currently logged into your account. Click the red <b>Kick</b> button to instantly revoke access for unrecognized or old devices.</li>
+                        <li><b>Enable Biometrics (App Lock):</b> Toggle this on to link your device's native fingerprint scanner or Face ID to the app, allowing you to bypass typing the 4-digit PIN for sensitive actions.</li>
+                        <li><b>Reset Security PIN:</b> Click to change your 4-digit master PIN. You must re-authenticate with your account password before setting a new PIN.</li>
+                        <li><b>Password Resets:</b> Sends a secure password reset link directly to your registered email address.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <img src="active-session-modal-teacher.png" alt="Active Sessions Modal" class="doc-image" style="max-width: 450px;">
+
+            <h2 id="teacher-data-export" style="color: #ef4444; border-bottom-color: #fca5a5; margin-top: 50px;">Department Data Export (HOD Exclusive)</h2>
+            <p>If you have HOD privileges, a special <b>Export Data</b> button will appear at the bottom of your settings menu. This tool allows you to download comprehensive departmental records as clean, Excel-ready `.CSV` files.</p>
+
+            <div class="image-row">
+                <img src="export-data-popup.png" alt="Export Data Popup" class="doc-image" style="max-width: 350px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Click <b>Export Data</b> in the settings menu.</li>
+                        <li>Select the target <b>Semester</b> from the dropdown.</li>
+                        <li>Select the <b>Report Type</b> you need (Internal Marks, Attendance Stats, or Daily Logs).</li>
+                        <li><b>Section (Multi-Section Departments Only):</b> A Section dropdown appears if the corresponding year has been split into sections. Choose <b>All Sections (Combined)</b> for one file with everyone, <b>Section X Only</b> to export just that section, or <b>Each Section Separately</b> to download one file per section in a single click.</li>
+                        <li>Click <b>Download CSV</b>. The system will compile the data and save the file directly to your device.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Available Export Types</h3>
+            <div class="note">When exporting with <b>All Sections (Combined)</b> in a sectioned department, each file inserts a clear <b>&gt;&gt;&gt; SECTION A &lt;&lt;&lt;</b>-style divider row before that section's students, so the combined sheet stays organized. Section-specific exports also get the section name appended to the downloaded filename automatically.</div>
+            
+            <p><b>1. NEP Internal Marks</b><br>Generates a matrix of test scores, assignment grades, and auto-calculated attendance marks for every student in the department.</p>
+            <img src="internal-marks-csv-export.png" alt="Internal Marks CSV Export" class="doc-image">
+
+            <p><b>2. Attendance Statistics</b><br>Extracts the total periods conducted versus periods attended. It provides an overall percentage summary, followed by individual subject-by-subject percentage breakdowns.</p>
+            <div class="image-row">
+                <img src="overall-attendance-csv.png" alt="Overall Attendance CSV" class="doc-image">
+                <img src="subject-attendance-csv.png" alt="Subject Attendance CSV" class="doc-image" style="max-width: 480px;">
+            </div>
+
+            <p><b>3. Daily Logs</b><br>Generates a raw, period-by-period attendance log for every date in the semester, showing each student's P/A/M mark for every period alongside their overall Daily Status (Present/Absent).</p>
+            <img src="daily-logs-csv-export.png" alt="Internal Marks CSV Export" class="doc-image">
+
+        </div>
+        
+
+        <div style="background: #0f172a; border-radius: 12px; padding: 28px; margin-top: 60px; text-align: center; color: #94a3b8;">
+            <div style="color: #ef4444; font-weight: 700; font-size: 1rem; margin-bottom: 8px;">Pixelaks Technologies</div>
+            <div style="font-size: 0.9rem;">For support, contact us at <b style="color: white;">pixelaks.technologies@gmail.com</b></div>
+        </div>
+    </div>
+
+    <script>
+        window.toggleFolder = function(element) { element.parentElement.classList.toggle("active"); };
+        document.addEventListener("DOMContentLoaded", () => {
+            const navLinks = document.querySelectorAll(".nav-link");
+            const headings = Array.from(document.querySelectorAll("h1[id], h2[id]"));
+            navLinks.forEach(link => { link.addEventListener("click", function() { navLinks.forEach(n => n.classList.remove("active")); this.classList.add("active"); }); });
+            window.addEventListener("scroll", () => {
+                let currentId = "";
+                const scrollPosition = window.scrollY + 100;
+                for (let i = 0; i < headings.length; i++) { if (headings[i].offsetTop <= scrollPosition) { currentId = headings[i].getAttribute("id"); } }
+                if (currentId) { navLinks.forEach(link => { link.classList.remove("active"); if (link.getAttribute("href") === "#" + currentId) { link.classList.add("active"); let folder = link.closest(".nav-folder"); while (folder) { folder.classList.add("active"); folder = folder.parentElement.closest(".nav-folder"); } } }); }
+            });
+        });
+    </script>
+</body>
+</html>

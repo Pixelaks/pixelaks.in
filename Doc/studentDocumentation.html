@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Student Guide</title>
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --bg-sidebar: #0f172a;
+            --text-main: #1e293b;
+            --text-sidebar: #cbd5e1;
+            --accent: #3b82f6;
+            --accent-principal: #10b981;
+            --border-light: #e2e8f0;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; display: flex; background-color: var(--bg-main); color: var(--text-main); line-height: 1.6; }
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: var(--text-sidebar); height: 100vh; position: fixed; padding: 20px 0; overflow-y: auto; border-right: 1px solid #1e293b; }
+        .sidebar h2 { padding: 0 20px; color: #fff; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; }
+        .nav-folder { margin-bottom: 2px; }
+        .nav-header { padding: 8px 20px; cursor: pointer; font-weight: 500; font-size: 0.95rem; color: #cbd5e1; display: flex; justify-content: flex-start; align-items: center; transition: background 0.2s, color 0.2s; user-select: none; }
+        .nav-header:hover { background-color: rgba(255, 255, 255, 0.05); color: #fff; }
+        .nav-header.level-1[style] { border-left-color: transparent !important; }
+        .nav-header.level-1 { font-size: 1rem; font-weight: 600; color: #fff; background-color: transparent; border-left: none; padding-top: 10px; padding-bottom: 10px; }
+        .nav-header.level-2 { padding-left: 30px; font-size: 0.9rem; border-left: none; }
+        .sidebar > .nav-folder:nth-of-type(1) { --role-color: #000000; --role-bg: rgba(255, 255, 255, 0.1); }
+        .sidebar > .nav-folder:nth-of-type(2) { --role-color: #3b82f6; --role-bg: rgba(59, 130, 246, 0.15); }
+        .arrow { order: -1; display: inline-flex; justify-content: center; align-items: center; width: 14px; height: 14px; background-color: var(--role-color); margin-right: 12px; border-radius: 2px; color: transparent; position: relative; transition: opacity 0.2s; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .arrow::before { content: '+'; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: monospace; font-weight: bold; font-size: 14px; line-height: 1; }
+        .nav-folder.active > .nav-header > .arrow { opacity: 0.7; }
+        .nav-folder.active > .nav-header > .arrow::before { content: '-'; }
+        .nav-content { display: none; position: relative; }
+        .nav-content::before { content: ''; position: absolute; top: 0; bottom: 0; left: 26px; width: 1px; background-color: #1e293b; z-index: 1; }
+        .nav-folder.active > .nav-content { display: block; }
+        .nav-link { position: relative; z-index: 2; display: flex; align-items: center; padding: 6px 20px 6px 45px; color: #94a3b8; text-decoration: none; font-size: 0.85rem; transition: 0.2s; border-left: none; }
+        .nav-folder .nav-folder .nav-link { padding-left: 55px; }
+        .nav-link::before { content: ''; display: inline-block; width: 6px; height: 6px; background-color: #475569; border-radius: 50%; margin-right: 8px; flex-shrink: 0; transition: background-color 0.2s, transform 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff; background-color: var(--role-bg); }
+        .nav-link:hover::before, .nav-link.active::before { background-color: var(--role-color); transform: scale(1.2); border: 1px solid rgba(255,255,255,0.3); }
+        .content { margin-left: 280px; padding: 50px 60px; max-width: 900px; width: 100%; }
+        h1 { font-size: 2.2rem; margin-top: 0; padding-bottom: 15px; border-bottom: 2px solid var(--border-light); scroll-margin-top: 40px; }
+        h2 { font-size: 1.5rem; color: var(--accent); margin-top: 40px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; scroll-margin-top: 40px; }
+        h3 { font-size: 1.1rem; color: #334155; margin-top: 25px; }
+        p { font-size: 1rem; color: #475569; }
+        .doc-image { width: 100%; max-width: 600px; height: auto; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 20px 0; display: block; }
+        .image-row { display: flex; gap: 20px; margin: 20px 0; align-items: flex-start; }
+        .image-row .doc-image { flex: 1; margin: 0; object-fit: contain; }
+        .icon-image { width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin-top: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: block; }
+        ul.steps { padding-left: 20px; }
+        ul.steps li { margin-bottom: 10px; }
+        .highlight { background-color: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); margin: 20px 0; font-size: 0.95rem; }
+        .note { background-color: #fffbeb; color: #b45309; padding: 10px 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 10px 0; font-size: 0.9rem; }
+        .warning { background-color: #fef2f2; color: #b91c1c; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0; font-size: 0.95rem; }
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .nav-card-link { text-decoration: none; color: inherit; display: block; }
+        .nav-card { background: white; border: 1px solid var(--border-light); border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+        .nav-card-link:hover .nav-card { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15); border-color: var(--accent); }
+        .nav-card h4 { margin-top: 0; color: var(--text-main); font-size: 1.05rem; }
+        .jump-link { display: inline-block; margin-top: 15px; font-size: 0.85rem; font-weight: bold; color: var(--accent); }
+        @media (max-width: 768px) { .image-row { flex-direction: column; } .nav-grid { grid-template-columns: 1fr; } .content { margin-left: 0; padding: 20px; } .sidebar { display: none; } }
+        @media print {
+            body { background-color: #ffffff !important; color: #0f172a !important; display: block; }
+            @page { margin: 0.5in; }
+            .sidebar { display: block !important; position: relative; width: 100%; height: auto; overflow: visible; border-right: none; padding-bottom: 40px; page-break-after: always; background-color: transparent !important; }
+            .sidebar h2 { color: #0f172a !important; font-size: 2.8rem !important; text-align: center; border-bottom: 2px solid #1e293b !important; padding-bottom: 10px; margin-bottom: 40px; }
+            .sidebar h2::after { content: 'Powered by Pixelaks Technologies'; display: block; font-size: 1.2rem; font-weight: 500; color: #64748b !important; margin-top: 10px; }
+            .nav-header, .nav-header.level-1, .nav-link { color: #0f172a !important; background-color: transparent !important; }
+            .nav-header.level-1 { background-color: #f1f5f9 !important; border-left: 4px solid #0f172a !important; margin-top: 15px; }
+            .nav-folder .nav-link { color: #334155 !important; }
+            .nav-link::before { background-color: #94a3b8 !important; }
+            .nav-content { display: block !important; }
+            .arrow { display: none !important; }
+            .nav-folder { page-break-inside: auto !important; }
+            .content { margin-left: 0; padding: 0 0 50px 0; max-width: 100%; }
+            .doc-image, .nav-card, .image-row, .highlight, .note, .warning { page-break-inside: avoid; }
+            h1, h2 { page-break-after: avoid; }
+            h1 { page-break-before: always; padding-top: 20px; }
+            .auth-section h1 { page-break-before: avoid; }
+            body::after { content: "Adhyora Student Guide | Powered by Pixelaks Technologies"; position: fixed; bottom: 0; right: 0; font-size: 9pt; color: #64748b; font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>ADHYORA STUDENT GUIDE</h2>
+
+        <div class="nav-folder active">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">
+                Getting Started <span class="arrow">▼</span>
+            </div>
+            <div class="nav-content">
+                <a href="#authentication-portal" class="nav-link">Sign-In & Registration</a>
+            </div>
+        </div>
+
+        <div class="nav-folder">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">
+                Student Portal <span class="arrow">▼</span>
+            </div>
+            <div class="nav-content">
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Dashboard <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#dashboard-overview" class="nav-link">Dashboard Overview</a>
+                        <a href="#attendance-predictor" class="nav-link">Attendance Predictor</a>
+                        <a href="#subject-ledger" class="nav-link">Subject Ledger & Filters</a>
+                        <a href="#marks-curriculum" class="nav-link">Marks & Curriculum</a>
+                        <a href="#navigation-menu" class="nav-link">Navigation Menu</a>
+                    </div>
+                </div>
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Assignments <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#assignments-overview" class="nav-link">Viewing Tasks</a>
+                        <a href="#assignment-status" class="nav-link">Completion & Status</a>
+                    </div>
+                </div>
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Communications <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#notifications" class="nav-link">System Notifications</a>
+                        <a href="#inbox-messages" class="nav-link">Inbox Messages</a>
+                    </div>
+                </div>
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Academics & Records <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#daily-timetable" class="nav-link">Daily Timetable</a>
+                        <a href="#daily-attendance" class="nav-link">Daily Attendance</a>
+                        <a href="#college-calendar" class="nav-link">College Calendar</a>
+                    </div>
+                </div>
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Fee Portal <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#fee-portal" class="nav-link">Payments & Ledgers</a>
+                    </div>
+                </div>
+                <div class="nav-folder">
+                    <div class="nav-header level-2" onclick="toggleFolder(this)">Settings & Preferences <span class="arrow">▼</span></div>
+                    <div class="nav-content">
+                        <a href="#settings-overview" class="nav-link">Account & Toggles</a>
+                        <a href="#theme-customization" class="nav-link">Theme Customization</a>
+                        <a href="#device-management" class="nav-link">Device Management</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- Title Banner -->
+        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 16px; padding: 40px; margin-bottom: 50px; color: white;">
+            <div style="font-size:0.85rem; color:#93c5fd; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Pixelaks Technologies — Adhyora AMS</div>
+            <h1 style="color:white; border:none; margin:0 0 10px; font-size:2.4rem; padding:0;">Student Guide</h1>
+            <p style="color:#bfdbfe; margin:0; font-size:1rem;">Everything you need to know about using your Adhyora student portal.</p>
+        </div>
+
+        <!-- AUTH SECTION — Student only -->
+        <div class="auth-section">
+            <h1 id="authentication-portal" style="color: #1e293b; border-bottom-color: #1e293b;">Getting Started</h1>
+            <p>Before accessing your portal, you must register and sign in through the Adhyora central gateway.</p>
+
+            <h2 id="auth-gateway" style="color: #1e293b; border-bottom-color: #cbd5e1;">1. The Main Gateway</h2>
+            <p>Upon launching Adhyora, you are greeted by the college selection screen.</p>
+            <img src="select-college.png" alt="Select College and Role Screen" class="doc-image">
+            <ul class="steps">
+                <li><b>Select Your College:</b> Choose your institution from the dropdown menu.</li>
+                <li><b>Select Role:</b> Choose <b>Student</b> as your user type.</li>
+                <li>Click <b>Continue</b> to proceed to the registration or login screen.</li>
+            </ul>
+
+            <h2 id="auth-student" style="color: #1e293b; border-bottom-color: #cbd5e1;">2. Student Registration & Sign-In</h2>
+            <p>Students must link their accounts to the official college database using their Roll Number.</p>
+            <div class="image-row">
+                <img src="student-registration.png" alt="Student Registration" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+                <img src="student-signin.png" alt="Student Sign In" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+            <ul class="steps">
+                <li><b>Registration:</b> Enter your exact <b>Roll Number</b> as provided by your college. The system verifies this Roll Number against the master database.</li>
+                <li><b>Name Verification:</b> The name you enter must exactly match the name the college registered for your roll number. A single spelling difference will block registration.</li>
+                <li><b>Sign In:</b> Once registered, sign in using your Email and Password.</li>
+            </ul>
+
+            <div class="highlight" style="border-left-color: #1e293b; background-color: #f1f5f9; color: #0f172a; margin-top: 30px;">
+                <b>Important: Email Verification</b><br>
+                After creating your account, Adhyora sends a verification link to your email address. <b>You cannot sign in until you click this link.</b> If you didn't receive it, check your spam/junk folder — and if it's still not there, simply try signing in again with your account; since the link hasn't been verified yet, the system will automatically send you a new one.
+            </div>
+            <div class="note"><b>Forgot Password?</b> Click "Forgot Password?" to receive a secure reset link at your registered email address.</div>
+        </div>
+
+        <hr style="border: 2px solid var(--border-light); margin: 80px 0;">
+
+        <!-- STUDENT PORTAL — full content from original -->
+        <h1 id="student-portal" style="color: #3b82f6; border-bottom-color: #3b82f6;">Student Portal Guide</h1>
+        <p>Welcome to the Adhyora Student Dashboard. This interface is designed to give you real-time visibility into your academic progress, attendance records, and internal marks.</p>
+
+        <h2 id="dashboard-overview">1. Dashboard Overview</h2>
+        <p>Upon logging in, you will land on the main dashboard. At the very top, you will see your <b>Name</b> and <b>Roll Number</b>.</p>
+        <img src="dashboard-overview.png" alt="Student Dashboard Header" class="doc-image">
+        <ul class="steps">
+            <li><b>Switch Semesters:</b> Use the left and right arrows next to the semester title (e.g., "Semester 1") to view your records from previous or upcoming terms.</li>
+            <li><b>Overall Statistics:</b> The right side displays your raw numbers — <b>Total Classes Held</b>, <b>Attended</b>, and <b>Absent</b> days.</li>
+        </ul>
+
+        <h2 id="attendance-predictor">2. The Attendance Predictor</h2>
+        <p>The large, animated percentage ring in the center of your screen is your <b>Projected Percentage</b> — the attendance you will achieve if you attend every remaining class.</p>
+        <img src="attendance-water-ring.png" alt="Attendance Water Ring" class="doc-image">
+        <ul class="steps">
+            <li><b>Projected Percentage:</b> This number represents your attendance if you attend every remaining class until the end of the semester.</li>
+            <li><b>Current Percentage:</b> Your actual, real-time percentage as of today is displayed just below the ring.</li>
+        </ul>
+        <h3>Using the Leave Predictor Tool</h3>
+        <p>Want to know how a few days off will affect your attendance? Use the Predictor:</p>
+        <img src="attendance-predictor-popup.png" alt="Attendance Predictor Popup" class="doc-image">
+        <ul class="steps">
+            <li><b>Open the Tool:</b> Click directly on the animated water ring.</li>
+            <li><b>Enter Leave Days:</b> Type the number of days you plan to be absent.</li>
+            <li><b>Calculate:</b> Click "Calculate". The system checks the official college calendar and shows your new predicted percentage.</li>
+        </ul>
+        <div class="highlight"><b>Color Indicators:</b> <b>Green</b> (Excellent), <b>Yellow</b> (Good), <b>Orange</b> (Average), <b>Red</b> (Critical).</div>
+
+        <h2 id="subject-ledger">3. Subject Ledger & Date Filtering</h2>
+        <p>Scroll down to see a breakdown of your attendance for every individual subject.</p>
+        <img src="subject-attendance-list.png" alt="Subject Attendance List" class="doc-image">
+        <ul class="steps">
+            <li><b>Filter by Date:</b> Use the calendar icon (Date Picker) above the subjects to select a specific day.</li>
+            <li><b>Reset View:</b> Click "All Time" to return to your full semester view.</li>
+            <li><b>View Timeline (Ledger):</b> Click on any individual subject card to open its Attendance Ledger — showing the exact date, time, period number, and the teacher who marked you.</li>
+        </ul>
+        <img src="timeline-ledger-popup.png" alt="Timeline Ledger Popup" class="doc-image">
+
+        <h2 id="marks-curriculum">4. Internal Marks & Curriculum</h2>
+        <p>At the bottom of your dashboard, you can track your academic performance and enrolled syllabus.</p>
+        <img src="internal-marks-dropdown.png" alt="Internal Marks View" class="doc-image">
+        <ul class="steps">
+            <li><b>Check Exam Scores:</b> Use the dropdown to toggle between examinations (e.g., Internal 1, Internal 2). Progress bars visually show your score against the maximum.</li>
+            <li><b>View Enrolled Subjects:</b> Your official curriculum is displayed here. Core/Major subjects are highlighted with a green badge; Elective/Secondary subjects with a yellow badge.</li>
+        </ul>
+        <img src="curriculum-subjects.png" alt="Curriculum View" class="doc-image">
+
+        <h2 id="navigation-menu">5. The Navigation Menu</h2>
+        <p>Navigate to all other features of Adhyora using the main menu. The currently selected button is always highlighted.</p>
+        <div class="highlight"><b>On Mobile:</b> Swipe horizontally on the bottom bar to reveal hidden navigation buttons.</div>
+        <div class="image-row">
+            <img src="nav-bar-pc.png" alt="PC Navigation Menu" class="doc-image">
+            <img src="nav-bar-mobile.png" alt="Mobile Navigation Menu" class="doc-image">
+        </div>
+        <div class="note"><i>The exact order of buttons may change slightly depending on your institution's enabled features.</i></div>
+
+        <div class="nav-grid">
+            <a href="#settings-overview" class="nav-card-link"><div class="nav-card"><div><h4>1. Settings / Profile</h4><p>Access your personal details, theme preferences, and sign-out options.</p></div><img src="nav-settings.png" alt="Settings" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#dashboard-overview" class="nav-card-link"><div class="nav-card"><div><h4>2. Main Dashboard</h4><p>Returns you to the home screen.</p></div><img src="nav-dashboard.png" alt="Dashboard" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#assignments-overview" class="nav-card-link"><div class="nav-card"><div><h4>3. Assignments</h4><p>View upcoming tasks and deadlines.</p></div><img src="nav-assignments.png" alt="Assignments" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#notifications" class="nav-card-link"><div class="nav-card"><div><h4>4. Notifications</h4><p>Check system alerts and announcements.</p></div><img src="nav-notifications.png" alt="Notifications" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#inbox-messages" class="nav-card-link"><div class="nav-card"><div><h4>5. Inbox Messages</h4><p>Read direct messages from faculty or Principal.</p></div><img src="nav-messages.png" alt="Inbox" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#daily-timetable" class="nav-card-link"><div class="nav-card"><div><h4>6. Timetable</h4><p>View your live daily class schedule.</p></div><img src="nav-timetable.png" alt="Timetable" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#daily-attendance" class="nav-card-link"><div class="nav-card"><div><h4>7. Daily Attendance</h4><p>See which periods you were present or absent.</p></div><img src="nav-daily-attendance.png" alt="Daily Attendance" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#college-calendar" class="nav-card-link"><div class="nav-card"><div><h4>8. College Calendar</h4><p>View holidays and academic events.</p></div><img src="nav-calendar.png" alt="Calendar" class="icon-image"><span class="jump-link">Go to section →</span></div></a>
+            <a href="#fee-portal" class="nav-card-link" style="grid-column: 1 / -1;"><div class="nav-card"><div><h4>9. Fees Portal (Optional)</h4><p>If enabled by your institution, view your fee ledger and make secure online payments.</p></div><img src="nav-fees.png" alt="Fees" class="icon-image" style="max-width: 50%; margin: 15px auto 0 auto;"><span class="jump-link">Go to section →</span></div></a>
+        </div>
+
+        <h1 id="assignments-overview" style="margin-top: 80px; border-top: 4px solid var(--border-light); padding-top: 30px;">Assignments & Coursework</h1>
+        <p>The Assignments tab centralizes all homework, projects, and study materials posted by your faculty.</p>
+        <img src="assignments-list.png" alt="Assignments View" class="doc-image">
+        <ul class="steps">
+            <li><b>Assignment Details:</b> Each card shows the <b>Subject Name</b>, <b>Title</b>, <b>Description</b>, and <b>Teacher's Name</b>.</li>
+            <li><b>Push Reminders:</b> Adhyora automatically sends you a notification <b>3 days before</b> the deadline.</li>
+        </ul>
+        <h2 id="assignment-status">Completion & Deadline Status</h2>
+        <img src="assignment-status-cards.png" alt="Assignment Statuses" class="doc-image">
+        <ul class="steps">
+            <li><b>Active:</b> Orange due date — assignment is open.</li>
+            <li><b>Past Deadline (Closed):</b> Card turns red with a strikethrough and shows "Closed".</li>
+        </ul>
+        <h3>The "Mark Done" Button</h3>
+        <div class="note"><i>Note: Mark Done is a personal organization tool only. It does not submit files to the teacher.</i></div>
+        <ul class="steps">
+            <li>Click to mark an assignment as complete — it fades and shows a checkmark. Click <b>Undo</b> to revert.</li>
+        </ul>
+
+        <h1 id="notifications" style="margin-top: 80px; border-top: 4px solid var(--border-light); padding-top: 30px;">Communications</h1>
+        <h2>System Notifications</h2>
+        <p>The Notifications tab receives global updates and alerts from the Adhyora system or your college administration.</p>
+        <img src="system-notifications.png" alt="System Notifications" class="doc-image">
+        <h2 id="inbox-messages">Inbox Messages</h2>
+        <p>Your Inbox is for direct messages sent by your faculty or the Principal.</p>
+        <img src="inbox-messages.png" alt="Inbox Messages" class="doc-image">
+        <ul class="steps">
+            <li><span style="color: #10b981; font-weight: bold;">Green Border:</span> Message from the <b>Principal</b>.</li>
+            <li><span style="color: #ef4444; font-weight: bold;">Red Border:</span> Message from a <b>Teacher</b>.</li>
+        </ul>
+
+        <h1 id="daily-timetable" style="margin-top: 80px; border-top: 4px solid var(--border-light); padding-top: 30px;">Academics & Records</h1>
+        <h2>Daily Schedule (Timetable)</h2>
+        <img src="timetable-view.png" alt="Timetable View" class="doc-image">
+        <ul class="steps">
+            <li><b>Day Navigation:</b> Use the Mon-Fri buttons to toggle between days.</li>
+            <li><b>Period Details:</b> Each period shows Subject Category, Subject Name, Semester, and Room Number.</li>
+            <li><b>Free Periods:</b> Periods with no class are marked in muted grey.</li>
+        </ul>
+        <h2 id="period-tracking">Live Period Tracking</h2>
+        <p>The blue vertical progress bar on the left fills downward as the day progresses, showing the current period against your schedule.</p>
+        <h2 id="daily-attendance">Daily Attendance</h2>
+        <img src="daily-attendance.png" alt="Daily Attendance View" class="doc-image">
+        <ul class="steps">
+            <li><span style="color:#16a34a; font-weight:bold;">Green P:</span> Present. <span style="color:#ef4444; font-weight:bold;">Red A:</span> Absent. Grey: Not yet marked.</li>
+            <li>Use date controls to view attendance for any past day.</li>
+        </ul>
+        <h2 id="college-calendar">College Calendar</h2>
+        <img src="college-calendar.png" alt="College Calendar Popup" class="doc-image">
+        <ul class="steps">
+            <li>Use the left and right arrows to navigate between months.</li>
+            <li>Click any highlighted date to see the reason for the holiday or event.</li>
+        </ul>
+
+        <h1 id="fee-portal" style="margin-top: 80px; border-top: 4px solid var(--border-light); padding-top: 30px;">Fee Portal</h1>
+        <div class="note"><i>If your college has not enabled this feature, this screen will show that the portal is offline. Contact your administration office directly for fee payments.</i></div>
+        <h2>Institutional Summary</h2>
+        <img src="fee-summary.png" alt="Fee Institutional Summary" class="doc-image">
+        <ul class="steps">
+            <li><b>Total Due:</b> The overall amount requested by the institution.</li>
+            <li><b>Total Paid:</b> The amount successfully processed.</li>
+            <li><b>Remaining:</b> Your outstanding balance.</li>
+        </ul>
+        <h2>Semester Payments</h2>
+        <img src="fee-semester-details.png" alt="Semester Fee Details" class="doc-image">
+        <ul class="steps">
+            <li>Each semester block shows <b>Pending</b>, <b>Partial</b>, or <b>Paid</b> status.</li>
+            <li>Click <b>Pay</b> to securely open the Razorpay checkout gateway.</li>
+        </ul>
+        <div class="warning"><b>Processing Fees:</b> UPI payments are free. Credit/Debit card and Netbanking payments incur standard Razorpay gateway charges. Pixelaks Technologies and your college are not responsible for these third-party charges.</div>
+
+        <h1 id="settings-overview" style="margin-top: 80px; border-top: 4px solid var(--border-light); padding-top: 30px;">Settings & Preferences</h1>
+        <div class="image-row">
+            <img src="settings-menu.png" alt="Settings Menu" class="doc-image" style="max-width: 300px;">
+            <img src="profile-details.png" alt="Profile Details" class="doc-image" style="max-width: 300px;">
+        </div>
+        <h2>Account & App Toggles</h2>
+        <ul class="steps">
+            <li><b>Profile Information:</b> Your Name, Department, and Roll Number. Click "Profile Details" for more.</li>
+            <li><b>Notifications:</b> Enable or disable push notifications.</li>
+            <li><b>UI Sounds:</b> Toggle cinematic sound effects on or off.</li>
+            <li><b>Support & Legal:</b> Links to contact support, Privacy Policy, and Terms & Conditions.</li>
+        </ul>
+        <h2 id="theme-customization">Theme Customization</h2>
+        <img src="theme-picker.png" alt="Theme Customization" class="doc-image">
+        <ul class="steps">
+            <li><b>Dark/Light Mode:</b> Switch between bright daytime and sleek Dark Mode.</li>
+            <li><b>Accent Colors:</b> Choose from Blue, Yellow, Pink, Purple, or Orange to personalize the app.</li>
+        </ul>
+        <h2 id="device-management">Device Management</h2>
+        <img src="devices-manager.png" alt="Device Management" class="doc-image">
+        <ul class="steps">
+            <li>View all devices currently signed into your account with login timestamps.</li>
+            <li>Click <b>Kick</b> to immediately sign out any unrecognized device.</li>
+        </ul>
+
+        <div style="background: #0f172a; border-radius: 12px; padding: 28px; margin-top: 60px; text-align: center; color: #94a3b8;">
+            <div style="color: #3b82f6; font-weight: 700; font-size: 1rem; margin-bottom: 8px;">Pixelaks Technologies</div>
+            <div style="font-size: 0.9rem;">For support, contact us at <b style="color: white;">pixelaks.technologies@gmail.com</b></div>
+        </div>
+    </div>
+
+    <script>
+        window.toggleFolder = function(element) { element.parentElement.classList.toggle('active'); };
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const headings = Array.from(document.querySelectorAll('h1[id], h2[id]'));
+            navLinks.forEach(link => { link.addEventListener('click', function() { navLinks.forEach(n => n.classList.remove('active')); this.classList.add('active'); }); });
+            window.addEventListener('scroll', () => {
+                let currentId = '';
+                const scrollPosition = window.scrollY + 100;
+                for (let i = 0; i < headings.length; i++) { if (headings[i].offsetTop <= scrollPosition) { currentId = headings[i].getAttribute('id'); } }
+                if (currentId) { navLinks.forEach(link => { link.classList.remove('active'); if (link.getAttribute('href') === '#' + currentId) { link.classList.add('active'); let folder = link.closest('.nav-folder'); while (folder) { folder.classList.add('active'); folder = folder.parentElement.closest('.nav-folder'); } } }); }
+            });
+        });
+    </script>
+</body>
+</html>
