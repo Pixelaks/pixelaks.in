@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adhyora - Administrator Manual (CONFIDENTIAL)</title>
+    <style>
+        :root { --bg-main: #f8fafc; --bg-sidebar: #0f172a; --text-main: #1e293b; --text-sidebar: #cbd5e1; --accent: #10b981; --accent-principal: #10b981; --border-light: #e2e8f0; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; display: flex; background-color: var(--bg-main); color: var(--text-main); line-height: 1.6; }
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: var(--text-sidebar); height: 100vh; position: fixed; padding: 20px 0; overflow-y: auto; border-right: 1px solid #1e293b; }
+        .sidebar h2 { padding: 0 20px; color: #fff; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; border-bottom: none; padding-bottom: 0; }
+        .sidebar .conf-badge { display: block; margin: 0 20px 16px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; text-align: center; width: fit-content; }
+        .sidebar .divider { border: none; border-top: 1px solid #1e293b; margin: 0 0 12px; }
+        .nav-folder { margin-bottom: 2px; }
+        .nav-header { padding: 8px 20px; cursor: pointer; font-weight: 500; font-size: 0.95rem; color: #cbd5e1; display: flex; justify-content: flex-start; align-items: center; transition: background 0.2s, color 0.2s; user-select: none; }
+        .nav-header:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-header.level-1[style] { border-left-color: transparent !important; }
+        .nav-header.level-1 { font-size: 1rem; font-weight: 600; color: #fff; background-color: transparent; border-left: none; padding-top: 10px; padding-bottom: 10px; }
+        .nav-header.level-2 { padding-left: 30px; font-size: 0.9rem; border-left: none; }
+        .sidebar > .nav-folder:nth-of-type(1) { --role-color: #000000; --role-bg: rgba(255,255,255,0.1); }
+        .sidebar > .nav-folder:nth-of-type(2) { --role-color: #10b981; --role-bg: rgba(16,185,129,0.15); }
+        .sidebar > .nav-folder:nth-of-type(3) { --role-color: #d97706; --role-bg: rgba(217,119,6,0.15); }
+        .sidebar > .nav-folder:nth-of-type(4) { --role-color: #7c3aed; --role-bg: rgba(124,58,237,0.15); }
+        .arrow { order: -1; display: inline-flex; justify-content: center; align-items: center; width: 14px; height: 14px; background-color: var(--role-color); margin-right: 12px; border-radius: 2px; color: transparent; position: relative; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.2); }
+        .arrow::before { content: "+"; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-family: monospace; font-weight: bold; font-size: 14px; line-height: 1; }
+        .nav-folder.active > .nav-header > .arrow { opacity: 0.7; }
+        .nav-folder.active > .nav-header > .arrow::before { content: "-"; }
+        .nav-content { display: none; position: relative; }
+        .nav-content::before { content: ""; position: absolute; top: 0; bottom: 0; left: 26px; width: 1px; background-color: #1e293b; z-index: 1; }
+        .nav-folder.active > .nav-content { display: block; }
+        .nav-link { position: relative; z-index: 2; display: flex; align-items: center; padding: 6px 20px 6px 45px; color: #94a3b8; text-decoration: none; font-size: 0.85rem; transition: 0.2s; border-left: none; }
+        .nav-folder .nav-folder .nav-link { padding-left: 55px; }
+        .nav-link::before { content: ""; display: inline-block; width: 6px; height: 6px; background-color: #475569; border-radius: 50%; margin-right: 8px; flex-shrink: 0; transition: background-color 0.2s, transform 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff; background-color: var(--role-bg); }
+        .nav-link:hover::before, .nav-link.active::before { background-color: var(--role-color); transform: scale(1.2); border: 1px solid rgba(255,255,255,0.3); }
+        .content { margin-left: 280px; padding: 50px 60px; max-width: 900px; width: 100%; }
+        h1 { font-size: 2.2rem; margin-top: 0; padding-bottom: 15px; border-bottom: 2px solid var(--border-light); scroll-margin-top: 40px; }
+        h2 { font-size: 1.5rem; color: var(--accent); margin-top: 40px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; scroll-margin-top: 40px; }
+        h3 { font-size: 1.1rem; color: #334155; margin-top: 25px; }
+        p { font-size: 1rem; color: #475569; }
+        .principal-section h1 { color: var(--accent-principal); border-bottom-color: var(--accent-principal); }
+        .principal-section h2 { color: var(--accent-principal); border-bottom-color: #a7f3d0; }
+        .accountant-section h1 { color: #d97706; border-bottom-color: #d97706; }
+        .accountant-section h2 { color: #d97706; border-bottom-color: #fde68a; }
+        .staff-section h1 { color: #7c3aed; border-bottom-color: #7c3aed; }
+        .staff-section h2 { color: #7c3aed; border-bottom-color: #ddd6fe; }
+        .doc-image { width: 100%; max-width: 600px; height: auto; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 20px 0; display: block; }
+        .image-row { display: flex; gap: 20px; margin: 20px 0; align-items: flex-start; }
+        .image-row .doc-image { flex: 1; margin: 0; object-fit: contain; }
+        .icon-image { width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin-top: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: block; }
+        ul.steps { padding-left: 20px; }
+        ul.steps li { margin-bottom: 10px; }
+        .highlight { background-color: #ecfdf5; color: #065f46; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0; font-size: 0.95rem; }
+        .highlight-amber { background-color: #fffbeb; color: #92400e; padding: 15px; border-radius: 8px; border-left: 4px solid #d97706; margin: 20px 0; font-size: 0.95rem; }
+        .highlight-purple { background-color: #f5f3ff; color: #4c1d95; padding: 15px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 20px 0; font-size: 0.95rem; }
+        .note { background-color: #fffbeb; color: #b45309; padding: 10px 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 10px 0; font-size: 0.9rem; }
+        .warning { background-color: #fef2f2; color: #b91c1c; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0; font-size: 0.95rem; }
+        .warning-principal { background-color: #fffbeb; color: #b45309; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; font-size: 0.95rem; }
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .nav-card-link { text-decoration: none; color: inherit; display: block; }
+        .nav-card { background: white; border: 1px solid var(--border-light); border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+        .principal-section .nav-card-link:hover .nav-card { box-shadow: 0 8px 25px rgba(16,185,129,0.15) !important; border-color: var(--accent-principal) !important; }
+        .nav-card h4 { margin-top: 0; color: var(--text-main); font-size: 1.05rem; }
+        .jump-link { display: inline-block; margin-top: 15px; font-size: 0.85rem; font-weight: bold; color: var(--accent-principal); }
+        .conf-watermark { position: fixed; top: 50%; right: -80px; transform: translateY(-50%) rotate(90deg); font-size: 5rem; font-weight: 900; color: rgba(239,68,68,0.04); pointer-events: none; letter-spacing: 8px; z-index: 0; }
+        @media (max-width: 768px) { .image-row { flex-direction: column; } .nav-grid { grid-template-columns: 1fr; } .content { margin-left: 0; padding: 20px; } .sidebar { display: none; } }
+        @media print {
+            body { background-color: #ffffff !important; color: #0f172a !important; display: block; }
+            @page { margin: 0.5in; }
+            .sidebar { display: block !important; position: relative; width: 100%; height: auto; overflow: visible; border-right: none; padding-bottom: 40px; page-break-after: always; background-color: transparent !important; }
+            .sidebar h2 { color: #0f172a !important; font-size: 2.5rem !important; text-align: center; border-bottom: none; padding-bottom: 0; margin-bottom: 4px; }
+            .sidebar .conf-badge { margin: 0 auto 24px; font-size: 1rem; padding: 6px 20px; }
+            .sidebar h2::after { content: "Powered by Pixelaks Technologies"; display: block; font-size: 1.1rem; font-weight: 500; color: #64748b !important; margin-top: 8px; }
+            .nav-header, .nav-header.level-1, .nav-link { color: #0f172a !important; background-color: transparent !important; }
+            .nav-header.level-1 { background-color: #f1f5f9 !important; border-left: 4px solid #0f172a !important; margin-top: 15px; }
+            .nav-folder .nav-link { color: #334155 !important; }
+            .nav-link::before { background-color: #94a3b8 !important; }
+            .nav-content { display: block !important; }
+            .arrow { display: none !important; }
+            .content { margin-left: 0; padding: 0 0 50px 0; max-width: 100%; }
+            .doc-image, .nav-card, .image-row, .highlight, .highlight-amber, .highlight-purple, .note, .warning, .warning-principal { page-break-inside: avoid; }
+            h1, h2 { page-break-after: avoid; }
+            h1 { page-break-before: always; padding-top: 20px; }
+            .auth-section h1 { page-break-before: avoid; }
+            .conf-watermark { display: none; }
+            body::after { content: "CONFIDENTIAL — Adhyora Admin Manual — Pixelaks Technologies"; position: fixed; bottom: 0; right: 0; font-size: 9pt; color: #ef4444; font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+    <div class="conf-watermark">CONFIDENTIAL</div>
+
+    <div class="sidebar">
+        <h2>ADHYORA ADMIN MANUAL</h2>
+        <span class="conf-badge">⛔ CONFIDENTIAL</span>
+        <hr class="divider">
+
+        <div class="nav-folder active">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">Authentication <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <a href="#auth-principal" class="nav-link">Principal Login</a>
+                <a href="#auth-accountant" class="nav-link">Accountant Login</a>
+                <a href="#auth-staff" class="nav-link">Office Staff Login</a>
+            </div>
+        </div>
+
+        <div class="nav-folder">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">Principal Portal <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">First-Time Setup <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-college-type" class="nav-link">Institution Type Selection</a><a href="#principal-first-setup" class="nav-link">Initialization Workflow</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Data Section <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-data-section" class="nav-link">Data Section Overview</a><a href="#principal-timetable-setup" class="nav-link">Timetable Setup</a><a href="#principal-attendance-rules" class="nav-link">Attendance Rule Configuration</a><a href="#principal-fee-management" class="nav-link">Semester Fee Settings</a><a href="#principal-master-uploads" class="nav-link">Students Roster</a><a href="#principal-data-exports" class="nav-link">Export Data</a><a href="#principal-semester-management" class="nav-link">Promote Students</a><a href="#principal-event-mode" class="nav-link">Event Approval Mode</a><a href="#principal-role-limits" class="nav-link">Role Registration Limits</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Roomcodes <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-roomcodes" class="nav-link">Roomcode Manager</a><a href="#principal-dept-stream" class="nav-link">Department Stream (Hybrid)</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Faculty Management <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-teacher-list" class="nav-link">Teacher List & Approvals</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Student Management <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-student-list" class="nav-link">Student List & Profiles</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Class & Batch Management <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-batch-management" class="nav-link">Batch Transfers</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Timetable Operations <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-timetable-structure" class="nav-link">Structure & Categories</a><a href="#principal-timetable-assign" class="nav-link">Assign General Subjects</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Curriculum Management <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-subject-list" class="nav-link">Subject Master List</a><a href="#principal-student-subjects" class="nav-link">Student Subject Reassignment</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Extracurriculars & Events <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-event-requests" class="nav-link">Event Requests & Approvals</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Global Monitoring <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-attendance-records" class="nav-link">Live Attendance Tracker</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">System & Navigation <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-navigation" class="nav-link">Navigation Bar</a><a href="#principal-settings" class="nav-link">Settings & Preferences</a><a href="#principal-billing-security" class="nav-link">Billing & Security</a></div></div>
+                <div class="nav-folder"><div class="nav-header level-2" onclick="toggleFolder(this)">Communications & Tools <span class="arrow">▼</span></div><div class="nav-content"><a href="#principal-notifications" class="nav-link">System Notifications</a><a href="#principal-calendar" class="nav-link">Academic Calendar</a><a href="#principal-calendar-override" class="nav-link">Editing a Day (Overrides)</a><a href="#principal-messages" class="nav-link">Inbox & Broadcasts</a></div></div>
+            </div>
+        </div>
+
+        <div class="nav-folder">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">Accountant Portal <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <a href="#accountant-portal" class="nav-link">Overview</a>
+                <a href="#accountant-first-login" class="nav-link">First Login & PIN</a>
+                <a href="#accountant-dashboard" class="nav-link">Fee Dashboard</a>
+                <a href="#accountant-collect-offline" class="nav-link">Collect Cash / Cheque</a>
+                <a href="#accountant-online-payments" class="nav-link">Online Payment Tracking</a>
+                <a href="#accountant-receipts" class="nav-link">Receipts</a>
+                <a href="#accountant-defaulters" class="nav-link">Fee Defaulter Report</a>
+                <a href="#accountant-expenses" class="nav-link">Expense Tracking</a>
+                <a href="#accountant-settings" class="nav-link">Settings</a>
+            </div>
+        </div>
+
+        <div class="nav-folder">
+            <div class="nav-header level-1" onclick="toggleFolder(this)">Office Staff Portal <span class="arrow">▼</span></div>
+            <div class="nav-content">
+                <a href="#staff-portal" class="nav-link">Overview</a>
+                <a href="#staff-first-login" class="nav-link">Registration & Approval</a>
+                <a href="#staff-capabilities" class="nav-link">What Staff Can Do</a>
+                <a href="#staff-restrictions" class="nav-link">What Staff Cannot Do</a>
+                <a href="#staff-student-management" class="nav-link">Student Management</a>
+                <a href="#staff-teacher-management" class="nav-link">Teacher Management</a>
+                <a href="#staff-exports" class="nav-link">Data Exports</a>
+                <a href="#staff-settings" class="nav-link">Settings</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- CONFIDENTIAL BANNER -->
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 16px 24px; margin-bottom: 40px; display: flex; align-items: center; gap: 16px;">
+            <div style="font-size: 2rem; flex-shrink: 0;">⛔</div>
+            <div>
+                <div style="font-weight: 700; color: #b91c1c; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase;">Confidential — For Administrative Personnel Only</div>
+                <div style="font-size: 0.9rem; color: #7f1d1d; margin-top: 4px;">This document contains operational and security details of the Adhyora platform. It must not be shared with students, teaching faculty, or any external party.</div>
+            </div>
+        </div>
+
+        <!-- Title Banner -->
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1A3A5C 100%); border-radius: 16px; padding: 40px; margin-bottom: 50px; color: white;">
+            <div style="font-size:0.85rem; color:#10b981; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Pixelaks Technologies — Adhyora AMS</div>
+            <h1 style="color:white; border:none; margin:0 0 10px; font-size:2.4rem; padding:0;">Administrator Manual</h1>
+            <p style="color:#94a3b8; margin:0; font-size:1rem;">Complete operational guide for Principal, Accountant, and Office Staff portals.</p>
+        </div>
+
+        <!-- LIVING DOCUMENT NOTICE -->
+        <div class="highlight" style="display: flex; align-items: flex-start; gap: 16px; border-left-color: #10b981;">
+            <div style="font-size: 1.4rem; flex-shrink: 0; line-height: 1;">ℹ️</div>
+            <div>
+                <div style="font-weight: 700; color: #065f46; margin-bottom: 4px;">This is a Living Document</div>
+                <div>Adhyora is continuously improved and updated over time, so the screenshots and exact button placements shown here may occasionally differ slightly from the live app as features are refined. If a screen looks a little different from what's pictured, the underlying steps and logic described are still accurate.
+                <br><br>
+                Whenever features are added, changed, or removed, this manual is updated to match. You can always find the latest version through the app or on our website. For larger changes that significantly affect how the college operates day-to-day, Pixelaks Technologies will additionally send an updated PDF copy of this manual directly to the college administration.</div>
+            </div>
+        </div>
+
+        <!-- AUTH SECTION — Admin users only -->
+        <div class="auth-section">
+            <h1 id="authentication-portal" style="color: #1e293b; border-bottom-color: #1e293b;">Authentication — Administrative Users</h1>
+            <p>All administrative users access Adhyora through the central gateway by selecting their respective role. Only Principal, Accountant, and Office Staff roles are covered in this document.</p>
+            <img src="select-college.png" alt="Main Gateway" class="doc-image">
+
+            <h2 id="auth-principal" style="color: #1e293b; border-bottom-color: #cbd5e1;">1. Principal Access</h2>
+            <div class="image-row">
+                <img src="principal-registration.png" alt="Principal Registration" class="doc-image" style="flex:1; margin:0; max-width:350px;">
+                <img src="principal-signin.png" alt="Principal Sign In" class="doc-image" style="flex:1; margin:0; max-width:350px;">
+            </div>
+            <ul class="steps">
+                <li><b>Registration:</b> Only one Principal account can be registered per college. Click "Create One", enter Name, Email, and Password. The system locks out further Principal registrations after this.</li>
+                <li><b>Sign In:</b> Enter registered Email and Password, then authenticate with Security PIN or biometrics.</li>
+            </ul>
+
+            <h2 id="auth-accountant" style="color: #1e293b; border-bottom-color: #cbd5e1;">2. Accountant Access</h2>
+            <ul class="steps">
+                <li>Select <b>Accountant</b> on the main gateway. Register with Name, Email, and Password.</li>
+                <li>Account is placed in <b>Pending</b> status until the Principal approves it from the Teacher/Staff List.</li>
+                <li>On first login after approval, set up a mandatory 4-digit Security PIN before accessing any fee data.</li>
+            </ul>
+
+            <h2 id="auth-staff" style="color: #1e293b; border-bottom-color: #cbd5e1;">3. Office Staff Access</h2>
+            <ul class="steps">
+                <li>Select <b>Office Staff</b> on the main gateway. Register with Name, Email, and Password.</li>
+                <li>Account is placed in <b>Pending</b> status until the Principal approves it.</li>
+                <li>On first login after approval, set up a mandatory 4-digit Security PIN.</li>
+                <li>Multiple Office Staff accounts can be active simultaneously — there is no single-account restriction.</li>
+            </ul>
+
+            <div class="highlight" style="border-left-color: #1e293b; background-color: #f1f5f9; color: #0f172a;">
+                <b>Email Verification:</b> All users must click the verification link sent to their email before signing in for the first time. If it doesn't arrive, check your spam/junk folder — if it's still missing, just try signing in again and a new verification link will be sent automatically.
+            </div>
+        </div>
+
+        <hr style="border: 2px solid var(--border-light); margin: 80px 0;">
+
+        <div class="principal-section">
+            <h1 id="principal-portal">Principal Portal Guide</h1>
+            <p>Welcome to the Adhyora Principal Dashboard. As the master administrator, this interface provides you with complete control over the institution's academic structure, user access, and global settings.</p>
+
+            <h2 id="principal-college-type" style="color: var(--accent-principal); border-bottom-color: #a7f3d0; margin-top: 40px;">Institution Type Selection</h2>
+            <p>The very first time you log in as Principal, before anything else loads, Adhyora asks you to declare your institution's academic structure. This single choice permanently shapes how the rest of the dashboard behaves.</p>
+
+            <img src="college-type-setup-modal.png" alt="Institution Type Selection Modal" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li><b>Arts & Science (NEP / CBCS):</b> Select this if your college follows the standard NEP/CBCS credit structure (BA, BSc, BCom, etc.). The dashboard remains in its standard single-stream layout.</li>
+                <li><b>Engineering (AICTE) / Hybrid Campus:</b> Select this if your institution runs an AICTE engineering program, or if it is a <b>hybrid campus</b> that runs both Engineering and Arts & Science departments side by side.</li>
+            </ul>
+
+            <div class="warning-principal">
+                <b>This choice cannot be changed later from the app.</b> Once selected, the system locks in your <code>collegeType</code> permanently. Choosing incorrectly will require contacting Pixelaks Technologies support for a manual database correction.
+            </div>
+
+            <div class="note">
+                <i>What "Engineering / Hybrid" unlocks:</i> If you choose this option, three additional controls appear elsewhere in the dashboard: (1) an <b>Engineering / Arts & Science stream selector</b> on each department in the <a href="#principal-dept-stream" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Roomcode Manager</a>, (2) a separate <b>Engineering period-count / bell-schedule configuration</b> alongside the standard Arts & Science one in <a href="#principal-timetable-setup" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Timetable Setup</a>, and (3) an Eng/Arts mode toggle when building the <a href="#principal-timetable-structure" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Master Timetable Structure</a>, since engineering departments typically run a different number of daily periods than Arts & Science departments.
+            </div>
+
+            <h2 id="principal-first-setup" style="color: var(--accent-principal); border-bottom-color: #a7f3d0; margin-top: 40px;">First-Time Login & College Setup Flow</h2>
+            <p>Once your institution type is set, you must complete the remaining initialization sequence to bring the college online.</p>
+
+            <h3>1. Security PIN & Biometrics</h3>
+            <p>As the master administrator, you possess absolute authority. A secure lock screen must be established.</p>
+            <div class="image-row">
+                <img src="create-security-pin-principal.png" alt="Create Security PIN" class="doc-image" style="flex:1; margin:0; max-width: 300px;">
+                <img src="confirm-security-pin-principal.png" alt="Confirm Security PIN" class="doc-image" style="flex:1; margin:0; max-width: 300px;">
+                <img src="enable-biometrics-principal.png" alt="Enable Biometrics" class="doc-image" style="flex:1; margin:0; max-width: 300px;">
+            </div>
+            <ul class="steps">
+                <li><b>Create PIN:</b> Enter a secure 4-digit PIN, then re-enter it to confirm. You will use this PIN to authenticate destructive actions (like deleting users) and to unlock the app on future visits.</li>
+                <li><b>Enable Biometrics:</b> Link your device's fingerprint or Face ID for faster logins. You can click "Skip for now" and configure this later in <a href="#principal-settings" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Settings</a>.</li>
+            </ul>
+
+            <h3>2. The Initialization Workflow</h3>
+            <p>Once security is established, you must follow this exact sequence to configure the college:</p>
+            <ul class="steps">
+                <li><b>Step 1 - Data Ingestion:</b> Navigate immediately to the <a href="#principal-data-section" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Data Section</a>. Set up the daily bell timings, upload the Master CSV files for Students, Subjects, and the Academic Calendar, and configure your <a href="#principal-attendance-rules" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Attendance Rule Configuration</a> (the attendance-to-marks tiers). If utilizing the Fee Portal, configure your Razorpay keys and fee structures here.</li>
+                <li><b>Step 2 - Timetable Framework:</b> Go to the <a href="#principal-timetable-structure" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Master Timetable Management</a> panel. Define the structural categories for every period of the week.</li>
+                <li><b>Step 3 - Faculty Onboarding:</b> Open the <a href="#principal-roomcodes" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Roomcode Manager</a>. Distribute the generated department codes to your respective Heads of Department (HODs) so they can invite their teachers.</li>
+                <li><b>Step 4 - Teacher Verification:</b> As teachers sign up, go to the <a href="#principal-teacher-list" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Teacher List</a> to approve their accounts and grant HOD status to the department heads.</li>
+                <li><b>Step 5 - Final Class Assignments:</b> Instruct all approved teachers to declare their subjects. Once complete, return to <a href="#principal-timetable-assign" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Assign General Subjects</a> to map faculty to the shared courses (VAC, AECC, etc.).</li>
+            </ul>
+
+            <hr style="border: 1px dashed #a7f3d0; margin: 60px 0;">
+
+            <h2 id="principal-data-section">Data Section Overview</h2>
+            <p>The foundation of your college's Adhyora system is managed in the <b>Data Section</b>. This is where you will configure your college's timings and upload the core database of students, subjects, and academic holidays.</p>
+
+            <img src="data-section-button.png" alt="Data Section Button" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>To access this area, click the <b>Data Section</b> icon on your main dashboard.</li>
+                <li><i>Note: Because this section controls sensitive global data, many actions here will require your 4-digit Security PIN to execute.</i></li>
+            </ul>
+
+            <div class="note">
+                <i>Note:</i> The cards below are documented in the same left-to-right, top-to-bottom order they appear in the actual Data Management grid, so this section reads exactly like scrolling through the panel itself.
+            </div>
+
+            <h2 id="principal-timetable-setup">Timetable Configuration</h2>
+            <p>Before assigning classes, you must define the physical bell schedule for your institution.</p>
+
+            <div class="image-row">
+                <img src="data-section-panel.png" alt="Data Section Panel" class="doc-image">
+                <img src="timetable-setup-popup.png" alt="Timetable Setup Popup" class="doc-image">
+            </div>
+
+            <ul class="steps">
+                <li>Click <b>Timetable Setup</b> to open the configuration panel.</li>
+                <li><b>Period Count:</b> Enter the total number of periods in a standard working day.</li>
+                <li><b>Start Time & Duration:</b> Enter the time the first bell rings and how many minutes each period lasts.</li>
+                <li><b>Lunch Break:</b> Define after which period the lunch break occurs, and its duration in minutes.</li>
+                <li>Click <b>Save Configuration</b>. The system will automatically generate the empty daily timeline for all students and teachers based on this math.</li>
+            </ul>
+
+            <h2 id="principal-attendance-rules">Attendance Rule Configuration</h2>
+            <p>Also inside the Data Section, the <b>Attendance Rule Configuration</b> card lets you define how a student's overall attendance percentage converts into internal (CIA) attendance marks. These tiers are used automatically anywhere the app calculates a student's attendance-based internal mark.</p>
+
+            <img src="attendance-rule-panel.png" alt="Attendance Rule Configuration Panel" class="doc-image" style="max-width: 450px;">
+
+            <img src="attendance-rule-config-panel.png" alt="Attendance Rule Configuration Panel" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li>The panel shows three tiers. For each of the first two tiers, enter a <b>Minimum Attendance %</b> and the <b>Marks</b> a student earns if their attendance meets or exceeds that threshold.</li>
+                <li><b>Tier 1</b> is checked first (e.g., 85% and above → 5 marks), followed by <b>Tier 2</b> (e.g., 75% and above → 4 marks).</li>
+                <li><b>Tier 3</b> is the catch-all fallback — it only needs a <b>Marks</b> value, and is automatically applied to any student who falls below both Tier 1 and Tier 2 thresholds (e.g., 3 marks).</li>
+                <li>Click <b>Save Rules</b>, then confirm with your <b>Security PIN</b> to push the new tiers live.</li>
+            </ul>
+
+            <div class="note">
+                <i>Note:</i> Changing these rules only affects how future attendance percentages are converted into marks — it does not retroactively recalculate marks already generated for students.
+            </div>
+
+            <h2 id="principal-fee-management">Semester Fee Settings <span style="font-size:0.65em; color:#d97706; font-weight:600; vertical-align:middle;">(Pro/Ultimate Tiers)</span></h2>
+            <div class="warning-principal">
+                <b>Feature Lock Notice:</b> The Semester Fee and Payment Gateway configurations are exclusively available to institutions operating on the <b>Adhyora Pro</b> or <b>Ultimate</b> plans. These cards will be locked and inactive if the institution is on the Base plan.
+            </div>
+            <p>Configure the exact fee requirements for different departments and semesters.</p>
+
+            <div class="image-row">
+                <img src="fee-settings-box.png" alt="Fee Settings Box" class="doc-image" style="max-width: 300px;">
+                <img src="fee-setup-popup.png" alt="Fee Management Configuration" class="doc-image" style="max-width: 450px;">
+            </div>
+
+            <ul class="steps">
+                <li>Click <b>Open Fee Setup</b> to launch the Institutional Fee Management Center.</li>
+                <li>Select the specific <b>Department</b>, <b>Target Year</b>, and <b>Target Semester</b> you are configuring.</li>
+                <li>Enter the <b>Fee Amount (₹)</b>.</li>
+                <li>Set a <b>Payment Due Date</b> deadline. The system automatically defaults to 30 days after the start of the semester (based on calendar data), but this can be adjusted.</li>
+                <li>Click <b>Publish Fee Structure</b>. This immediately pushes the fee ledger to the selected students' portals.</li>
+            </ul>
+
+            <h2>Payment Gateway <span style="font-size:0.65em; color:#d97706; font-weight:600; vertical-align:middle;">(Pro/Ultimate Tiers)</span></h2>
+            <p>To collect tuition fees directly from students, the college must link its institutional Razorpay account to Adhyora.</p>
+
+            <div class="image-row">
+                <img src="payment-gateway-box.png" alt="Payment Gateway Link" class="doc-image" style="max-width: 300px;">
+                <img src="razorpay-setup-popup.png" alt="Razorpay API Key Setup" class="doc-image" style="max-width: 350px;">
+            </div>
+
+            <ul class="steps">
+                <li>Click <b>Link Razorpay</b> to open the API Key configuration window.</li>
+                <li>Enter the <b>Key ID (Public)</b> and the highly sensitive <b>Key Secret</b> obtained from your college's Razorpay Dashboard.</li>
+                <li>Click <b>Secure & Save</b>. The keys are encrypted and stored safely on the cloud database.</li>
+            </ul>
+
+            <h2 id="principal-master-uploads">Students Roster</h2>
+            <p>This card registers your student body. When a new academic year begins, you simply upload the new first-year students' CSV using this exact same format.</p>
+            
+            <img src="students-csv-box.png" alt="Students CSV Format" class="doc-image">
+            <img src="students-csv-format.png" alt="Students CSV Format" class="doc-image">
+
+            <ul class="steps">
+                <li><b>Required Headers:</b> <code>Sl No</code>, <code>Roll No</code>, <code>Name</code>, <code>Department</code>, <code>Year</code>, and <code>Course Type</code>.</li>
+                <li>Click <b>Select File</b> and choose your Students CSV.</li>
+                <li>The system will parse the file and ask for your <b>Security PIN</b> to verify the action. Enter your PIN to finalize the upload to the secure server.</li>
+            </ul>
+
+            <h2>Subject Master</h2>
+            <p>This card defines the master curriculum. It maps out which subjects belong to which departments and semesters.</p>
+
+            <img src="subjects-csv-box.png" alt="Subjects CSV Format" class="doc-image">
+            <img src="subjects-csv-format.png" alt="Subjects CSV Format" class="doc-image">
+
+            <ul class="steps">
+                <li><b>Required Headers:</b> <code>Code</code>, <code>Name</code>, <code>Type</code> (e.g., AECC, MJD, CORE), <code>OfferingDept</code>, and <code>Semester</code>.</li>
+                <li><b>Multiple Semesters:</b> If a subject is taught across multiple semesters, do <b>not</b> list them in the same cell. Instead, place each semester number into its own adjacent column to the right (e.g., Column E: 1, Column F: 2). The system will automatically detect all additional semester columns.</li>
+                <li><b>General Subjects:</b> If a subject is open to the entire college and not bound to a specific department, list the Offering Department as <code>General</code>.</li>
+                <li>Select the file, verify the system's count, and enter your Security PIN to upload.</li>
+            </ul>
+
+            <h2>Academic Calendar (CSV Upload)</h2>
+            <p>This card synchronizes the Attendance Predictor and the global Timetable with your institution's specific holidays and semester bounds.</p>
+
+            <img src="calendar-csv-box.png" alt="Subjects CSV Format" class="doc-image">
+            <img src="calendar-csv-format.png" alt="Calendar CSV Format" class="doc-image">
+
+            <ul class="steps">
+                <li><b>Required Headers:</b> <code>Date</code> (YYYY-MM-DD), <code>Day</code>, <code>Event</code>, and <code>Working</code>.</li>
+                <li><b>Semester Bounds:</b> You must include rows that explicitly state "START OF ODD", "END OF ODD", "START OF EVEN", and "END OF EVEN" in the event column so the system knows when semesters transition.</li>
+                <li>Once uploaded, the system validates the calendar format. Enter your Security PIN to lock the calendar into the database.</li>
+                <li><i>Note:</i> This upload only seeds the base calendar. Day-by-day edits afterward (declaring a sudden holiday, making a weekend a working day, etc.) are done from the <a href="#principal-calendar-override" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Academic Calendar widget</a>, not by re-uploading this file.</li>
+            </ul>
+
+            <h2 id="principal-data-exports">Export Data</h2>
+            <p>Administrators can extract the entire academic database into clean, formatted Excel-ready CSV files for offline analysis and institutional record-keeping.</p>
+
+            <div class="image-row">
+                <img src="export-data-box.png" alt="Export Data Box" class="doc-image" style="max-width: 350px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Click <b>Open Exporter</b> in the Data Section.</li>
+                        <li>Select the specific Department and Academic Year you wish to pull records for.</li>
+                        <li>Choose one of the three export types below to generate the file.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Available Export Types</h3>
+            
+            <p><b>1. Internal Marks (NEP Formatted)</b><br>Generates a comprehensive matrix of test scores, assignment grades, and attendance marks for every student in the selected department.</p>
+            <img src="export-marks.png" alt="Marks Export Preview" class="doc-image">
+
+            <p><b>2. Attendance Statistics (Overall & Subject-Wise)</b><br>Extracts the total periods conducted versus periods attended, calculating both the strict overall percentage and the individual subject percentages.</p>
+            <img src="export-stats.png" alt="Attendance Stats Export Preview" class="doc-image">
+
+            <p><b>3. Daily Attendance Logs (P1 to P6)</b><br>The most detailed export available. Provides a granular, day-by-day, period-by-period (P1 through P6) log of exactly when a student was marked Present (P) or Absent (A).</p>
+            <img src="export-logs.png" alt="Daily Logs Export Preview" class="doc-image">
+
+            <h2 id="principal-semester-management">Promote Students (End of Year)</h2>
+            <p>At the conclusion of the academic year, the Principal must initiate the global promotion sequence.</p>
+
+            <img src="promote-students-box.png" alt="Promote Students Box" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>Click <b>Promote Semester</b>.</li>
+                <li>The system will automatically shift all students up by one academic year (e.g., Year 1 becomes Year 2).</li>
+                <li>Students in their final year (e.g., Year 3 or 4) are safely graduated and moved to the Alumni database.</li>
+                <li><i>Note: After the promotion sequence is complete, the institution will have zero 1st Year students. You must use the <b>Students Roster</b> card above to ingest the newly enrolled batch of 1st years.</i></li>
+            </ul>
+
+            <h3>Active Semester Type (Odd/Even)</h3>
+            <p>Adhyora automatically detects whether the institution is currently in an Odd or Even semester by cross-referencing today's date with the bounds uploaded in your Academic Calendar CSV. If the automatic date calculation is incorrect, or the college transitions to a new semester ahead of schedule, you can manually override it.</p>
+
+            <img src="active-semester-box.png" alt="Active Semester Status" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>Click the <b>Flip to Odd/Even</b> button next to the Active Semester status.</li>
+                <li>The system will instantly invalidate the local caches of all student and teacher devices, forcing their apps to reload and display the newly selected semester data.</li>
+            </ul>
+
+            <h2 id="principal-event-mode">Event Approval Mode</h2>
+            <img src="active-event-box.png" alt="Active Semester Status" class="doc-image" style="max-width: 400px;">
+            <p>This card controls whether teacher-submitted event attendance requests need your manual sign-off, or are granted automatically. By default, every request requires manual review (<b>Strict</b> mode), as described in <a href="#principal-event-requests" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Event Requests & Approvals</a>. If your institution runs frequent, low-risk events, you can switch to <b>Auto-Approve</b> instead.</p>
+
+            <ul class="steps">
+                <li>The card displays the <b>Current</b> mode at a glance.</li>
+                <li>Click <b>Change Mode</b> and confirm the change in the popup that appears, which clearly states which mode you are switching to.</li>
+                <li><b>Strict Principal Approval:</b> Every event request stays Pending until you manually review and approve it from the Event Requests panel.</li>
+                <li><b>Auto-Approve:</b> Event attendance requests are granted automatically the moment a teacher submits them, without waiting for Principal review.</li>
+            </ul>
+
+            <div class="warning-principal">
+                Switching to Auto-Approve means teachers can grant attendance for any declared event without your oversight. Only enable this if you trust your faculty to submit legitimate event requests.
+            </div>
+
+            <h2 id="principal-role-limits">Role Registration Limits</h2>
+            <p>This card controls the maximum number of Office Staff and Accountant accounts your institution can have approved at once.</p>
+
+            <img src="role-limits-panel.png" alt="Role Registration Limits Panel" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li><b>Max Staff:</b> Enter the maximum number of Office Staff accounts allowed to be approved at once.</li>
+                <li><b>Max Accountants:</b> Enter the maximum number of Accountant accounts allowed to be approved at once.</li>
+                <li>Click <b>Save Limits</b> to update the caps securely.</li>
+            </ul>
+
+            <div class="note">
+                <i>Note:</i> This limit governs how many pending Office Staff / Accountant registrations you are able to approve from the <a href="#staff-first-login" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Teacher/Staff List</a>. It does not automatically remove or deactivate any existing accounts that were approved before the limit was lowered.
+            </div>
+
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+            <h1 id="principal-roomcodes">Roomcode Manager (Teacher Access)</h1>
+            <p>Adhyora uses a secure, department-based Roomcode system to onboard faculty. The system automatically identifies your college's departments and course durations based on the Students CSV you uploaded.</p>
+
+            <img src="roomcode-panel.png" alt="Roomcodes Manager Panel" class="doc-image">
+
+            <h3>Understanding & Sharing Roomcodes</h3>
+            <p>Each department is assigned a unique 6-digit Roomcode. Teachers must enter this code when signing up to automatically join their respective department.</p>
+            <ul class="steps">
+                <li><b>Distribution:</b> The Principal shares the specific Roomcode with the Head of Department (HOD). The HOD then distributes it to the other teachers in their department.</li>
+                <li><b>Share Code:</b> Click the <b>Share</b> icon (network node) next to any department to instantly copy or send the code.</li>
+            </ul>
+
+            <h3>Managing Departments</h3>
+            <ul class="steps">
+                <li><b>Add Missing Departments:</b> If a department wasn't auto-detected, click the green <b>+ Add Dept</b> button at the top right to manually declare its name and duration.</li>
+                <li><b>Edit Duration:</b> If the course length (e.g., 3 Yrs) is incorrect, click the <b>Edit (Pen)</b> icon to modify it.</li>
+                <li><b>Delete Department:</b> If a department is no longer supported by the college or was created by mistake, click the red <b>Trash</b> icon to permanently delete it.</li>
+            </ul>
+
+            <h3>Security & Regeneration</h3>
+            <div class="warning-principal">
+                <b>Security Lockout Warning:</b> Regenerating a Roomcode acts as a hard security reset.
+            </div>
+            <ul class="steps">
+                <li><b>Regenerate Single Dept:</b> Click the <b>Refresh</b> icon next to a department to generate a brand new code. <i>Note: This will instantly log out all existing teachers in that department. They must use the new code to log back in.</i></li>
+                <li><b>Regen All:</b> Click the red <b>Regen All</b> button at the top to reset every single department code simultaneously, forcing a global teacher logout across the entire college.</li>
+            </ul>
+
+            <h2 id="principal-dept-stream">Department Stream (Engineering / Hybrid Colleges Only)</h2>
+            <p>This control only appears if you selected <b>Engineering (AICTE) / Hybrid Campus</b> during <a href="#principal-college-type" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Institution Type Selection</a>. Since a hybrid campus runs Engineering and Arts & Science departments on different bell schedules, each department must be tagged with its correct stream.</p>
+
+            <img src="dept-stream-dropdown.png" alt="Department Stream Dropdown" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>Every department card in the Roomcode Manager shows a small <b>stream dropdown</b> — <b>⚙️ Engineering Stream</b> or <b>🎨 Arts & Science Stream</b>.</li>
+                <li>The system makes a first-guess automatically (departments with names containing "BCom", "BA", or "BSc" default to Arts & Science; everything else defaults to Engineering), but you should always verify this is correct for every department.</li>
+                <li>Change the dropdown to the correct stream if needed. This selection determines which bell schedule (period count and timings) that department's timetable will follow.</li>
+            </ul>
+
+            <!-- NEW TEACHER LIST SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+            
+            <h1 id="principal-teacher-list">Teacher List & Management</h1>
+            <p>The <b>Teacher List</b> acts as the central hub for managing faculty access and reviewing their academic contributions. When teachers use a Roomcode to sign up, their access request appears here for the Principal to review.</p>
+
+            <img src="Teacher-list.png" alt="Teacher List Main Panel" class="doc-image">
+
+            <h3>1. Faculty Approvals & HOD Assignment</h3>
+            <ul class="steps">
+                <li><b>Review Requests:</b> You will see the teacher's Name, Email Address, and the Department they are attempting to join.</li>
+                <li><b>Approve or Decline:</b> Use the dropdown menu to change their status from <b>Pending</b> to <b>Approved</b> (granting app access) or <b>Declined</b>.</li>
+                <li><b>Assign HOD:</b> If the teacher is the Head of the Department, check the <b>HOD box</b> next to their name to grant them elevated department privileges.</li>
+            </ul>
+
+            <h3>2. Direct Messaging</h3>
+            <p>You can send official, targeted messages directly to individual teachers from this list.</p>
+            
+            <img src="direct-message-popup.png" alt="Direct Message Popup" class="doc-image" style="max-width: 500px;">
+
+            <ul class="steps">
+                <li>Click the <b>Chat Icon</b> on a teacher's card to open the message popup.</li>
+                <li>Enter a <b>Message Title</b> and your <b>Description</b>.</li>
+                <li>Click <b>Send Broadcast</b>. The teacher will receive this message directly in their personal app Inbox.</li>
+            </ul>
+
+            <h2 id="teacher-performance-dashboard">Teacher Performance Dashboard</h2>
+            <p>Clicking directly on any approved Teacher's Name Card will open their detailed, individual performance dashboard.</p>
+
+            <img src="teacher-dashboard.png" alt="Teacher Dashboard Top Section" class="doc-image">
+
+            <h3>Workload & Timetable Analysis</h3>
+            <ul class="steps">
+                <li><b>Total Hours Taught:</b> A quick glance at the top right shows the aggregate number of hours this teacher has conducted classes over the selected timeframe.</li>
+                <li><b>Data Filters:</b> Use the Date Picker to see exactly how many hours were taught on a specific day, or click <b>All Time</b> to view the entire logged history.</li>
+                <li><b>Subject Breakdown:</b> The left panel itemizes exactly how many hours the teacher has spent teaching each of their assigned subjects.</li>
+                <li><b>Timetable Assigned:</b> The right panel displays the teacher's weekly schedule. It shows exactly which period they are teaching and displays the <b>Semester Number</b> for that specific class block.</li>
+            </ul>
+
+            <h3>Attendance Timeline Logs</h3>
+            <p>Scroll down the dashboard to view the complete audit trail of this teacher's class records.</p>
+
+            <img src="teacher-attendance-timeline.png" alt="Teacher Attendance Timeline" class="doc-image">
+
+            <ul class="steps">
+                <li>This chronological timeline records every single period the teacher has submitted attendance for.</li>
+                <li>It displays the Subject Name, the exact Time and Date the attendance was submitted, the Period Number, and the present-to-total ratio for that specific class.</li>
+            </ul>
+
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+            
+            <h1 id="principal-student-list">Student List & Profiles</h1>
+            <p>The <b>Student List</b> provides a complete directory of all students enrolled in your institution. From here, you can manage their app access, update their details, and dive deep into their individual academic performance.</p>
+
+            <img src="student-list-panel.png" alt="Student List Main Panel" class="doc-image">
+
+            <h3>1. Managing Student Access & Details</h3>
+            <p>Click the <b>Shield Icon</b> next to any student to open the Admin Edit panel.</p>
+            
+            <div class="image-row">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li><b>Correct Names:</b> If a student's name has a typo, you can manually correct it here and save it to the database.</li>
+                        <li><b>Revoke Access:</b> Change the status from <b>Approved</b> to <b>Declined</b> to instantly log the student out of the app and block their access.</li>
+                        <li><b>Delete Student:</b> If a student leaves the college (e.g., Transfer Certificate applied), click the red <b>Delete Student</b> button to permanently remove them from the system.</li>
+                        <li><i>Note: All sensitive actions here require your Security PIN to execute.</i></li>
+                    </ul>
+                </div>
+                <img src="student-admin-edit.png" alt="Student Admin Edit" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+
+            <h3>2. Direct Messaging</h3>
+            <ul class="steps">
+                <li>Click the <b>Chat Icon</b> on a student's card to send a direct, private message to that specific student. This will appear securely in their app's Inbox.</li>
+            </ul>
+
+            <h2 id="student-performance-dashboard">Student Performance Dashboard</h2>
+            <p>Clicking directly on a Student's Name Card opens their comprehensive academic profile.</p>
+
+            <img src="student-dashboard.png" alt="Student Dashboard Top Section" class="doc-image">
+
+            <h3>Attendance Overview</h3>
+            <ul class="steps">
+                <li><b>Projected Percentage:</b> The large circular wave visualizes their projected attendance if they attend all remaining classes.</li>
+                <li><b>Raw Statistics:</b> The cards on the right display the mathematical breakdown of classes held, periods present, and periods absent.</li>
+            </ul>
+
+            <img src="studentdashboard-sub.png" alt="Student Dashboard Sub-sections" class="doc-image">
+
+            <h3>Academics & Curriculum</h3>
+            <ul class="steps">
+                <li><b>Subject-Wise Attendance:</b> Scroll down to see exactly how the student is performing in each specific subject. You can view <b>All Time</b> data or use the date picker to check if they attended all their assigned classes on a specific date.</li>
+                <li><b>Subject Timeline:</b> Click directly on any subject row to open its detailed attendance timeline — a chronological, period-by-period log of every class held for that subject and whether the student was marked Present or Absent on each date.</li>
+                <li><b>Internal Marks:</b> Use the dropdown menu to toggle between different examinations (e.g., 1st Internal, 2nd Internal) to view their uploaded scores.</li>
+                <li><b>Enrolled Subjects:</b> A compiled list of every subject the student is officially enrolled in for the current semester.</li>
+            </ul>
+
+            <h3>Financial Ledger (Pro/Ultimate Tiers)</h3>
+            <p>If your institution utilizes Adhyora's Fee Management system for semester collections, the bottom of the student's profile will display their complete financial ledger.</p>
+
+            <img src="student-fee-ledger.png" alt="Student Fee Ledger" class="doc-image">
+
+            <ul class="steps">
+                <li><b>Ledger Summary:</b> View the student's total target dues, total amount paid, and outstanding balance across all semesters based on the structures you published.</li>
+                <li><b>Online Transactions:</b> If a student pays through the app, the transaction ID, method (Online), and official receipt are automatically logged here.</li>
+                <li><b>Offline Collection:</b> If a student pays their fees directly at the office in cash or cheque, click the <b>Collect Offline</b> button. Enter your Security PIN to securely log the payment into the cloud database and generate an official digital receipt.</li>
+            </ul>
+
+            <!-- NEW BATCH MANAGEMENT SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-batch-management">Batch Management & Transfers</h1>
+            <p>The <b>Batch Management</b> panel allows you to view and reorganize students who have been split into multiple batches for a specific subject (e.g., practical labs or divided core classes).</p>
+
+            <img src="batch-management-panel.png" alt="Batch Management Filters" class="doc-image">
+
+            <h3>1. Viewing Subject Batches</h3>
+            <ul class="steps">
+                <li><b>Filter Data:</b> Use the top dropdown menus to select the specific <b>Semester</b>, subject <b>Category</b>, and the exact <b>Subject Name</b>.</li>
+                <li>If the subject has been divided into multiple batches in the Timetable, the system will instantly load the respective batch cards.</li>
+            </ul>
+
+            <img src="expand-batch-roster.png" alt="Expanded Batch Roster" class="doc-image">
+
+            <h3>2. Inspecting Batch Rosters</h3>
+            <ul class="steps">
+                <li><b>Expand Cards:</b> Click on any Batch Card (e.g., Batch 1, Batch 2) to expand it and reveal the full student roster.</li>
+                <li><b>Batch Details:</b> The right side of the card header displays the assigned <b>Teacher's Name</b> and the <b>Room Number</b>.</li>
+                <li><b>Student Information:</b> Each row displays the student's Name, Roll Number, and Department.</li>
+            </ul>
+
+            <img src="move-students-modal.png" alt="Move Students Modal" class="doc-image" style="max-width: 500px;">
+
+            <h3>3. Moving Students Between Batches</h3>
+            <p>If a student needs to be transferred to a different batch to balance class sizes or resolve scheduling conflicts, you can execute a secure database transfer.</p>
+            <ul class="steps">
+                <li><b>Select Students:</b> Click the checkbox (or anywhere on the student's card) to select one or multiple students from a batch.</li>
+                <li><b>Initiate Transfer:</b> Once students are selected, the green <b>Move Selected</b> button at the top right will activate. Click it.</li>
+                <li><b>Select Destination:</b> A popup modal will appear listing all available alternative batches for this subject. The student's current batch will be disabled (greyed out).</li>
+                <li><b>Execute:</b> Click the desired destination batch to securely transfer the students. The system will automatically update the students' and teachers' devices to reflect the new roster.</li>
+            </ul>
+
+            <!-- NEW TIMETABLE SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-timetable-structure">Master Timetable Management</h1>
+            <p>The <b>Timetable</b> panel allows the Principal to define the foundational academic structure for the entire college, dictating which types of classes occur during each period.</p>
+
+            <img src="timetable-structure-principal.png" alt="Empty Timetable Structure" class="doc-image">
+
+            <h2>1. Defining the Structure & Categories</h2>
+            <p>Drawing from the NEP guidelines and the Master Subjects CSV you uploaded, you must set the daily framework for every semester.</p>
+            <ul class="steps">
+                <li><b>Select Semester & Day:</b> Use the top dropdown to select the target Semester, and use the <b>Mon - Fri</b> buttons to switch between days.</li>
+                <li><b>Assign Categories:</b> For each available period, use the dropdown to select the class category (e.g., <code>AECC</code>, <code>MJD 4</code>, <code>TUTORIAL</code>).</li>
+                <li><b>Save Structure:</b> Once the day is configured, click the green <b>Save Structure</b> button.</li>
+            </ul>
+
+            <img src="timetable-structure-principal-save.png" alt="Saved Timetable Structure" class="doc-image">
+
+            <div class="note">
+                <i>Note on Department Autonomy:</i> This global structure acts as a guide. Department HODs can overwrite period categories for their own specific major/core subjects. <b>However</b>, shared general classes (like VAC, SEC, and AECC) strictly follow this principal-defined structure.
+            </div>
+
+            <h2 id="principal-timetable-assign">2. Assigning General Subjects</h2>
+            <p>General subjects (e.g., "Health Wellness and Yoga") are not managed by a specific department. Therefore, the Principal must manually assign teachers to these classes.</p>
+
+            <ul class="steps">
+                <li>After saving a structure, the <b>Assign Classes</b> button will appear at the bottom. Click it to enter the Assignment Panel.</li>
+                <li>Select the Semester and Day. The system will automatically filter and display <i>only</i> the periods that contain General/Shared categories.</li>
+                <li>Select the exact <b>Subject</b>, pick the <b>Teacher</b> from the dropdown, and enter the physical <b>Room</b> location.</li>
+            </ul>
+
+            <div class="highlight">
+                <b>Teacher Visibility Rules:</b> A teacher will only appear in the dropdown list for a specific subject if they have successfully signed into the app and added that exact subject to their teaching profile.
+            </div>
+
+            <img src="assign-timetable-principal.png" alt="Assign General Classes Panel" class="doc-image">
+
+            <h3>3. Splitting Classes into Batches (Multi-Teacher)</h3>
+            <p>If a shared subject has too many students or requires multiple teachers operating in the same period, you must split the class into distinct batches.</p>
+
+            <img src="split-confirmation-principal.png" alt="Split by Department Modal" class="doc-image" style="max-width: 400px;">
+            <img src="split-configure-principal.png" alt="Split by Department Modal" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>Click the green <b>Split</b> button on any assigned period.</li>
+                <li>A modal will appear analyzing the students enrolled in this subject across different departments.</li>
+                <li>Select the <b>Total Batches</b> required (e.g., 2 Batches).</li>
+                <li>Map each participating Department to a specific batch (e.g., BSc Computer Science goes to Batch 1).</li>
+                <li>Click <b>Confirm Split</b>. The period card will duplicate into multiple batch cards, allowing you to assign a different Teacher and Room to each batch.</li>
+            </ul>
+
+            <p>Once all teachers and batches are configured, click the green <b>Save Timetable</b> button at the top right of the screen to lock in the assignments and push the schedule live to the students and faculty.</p>
+
+            <!-- NEW SUBJECT LIST SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-subject-list">Subject Master List</h1>
+            <p>The <b>Subject Master</b> panel serves as the complete repository of all courses offered at your institution. This list is initially populated by your Master CSV upload but can be manually managed here.</p>
+
+            <img src="subject-master-list.png" alt="Subject Master List Panel" class="doc-image">
+
+            <h3>1. Searching & Filtering</h3>
+            <ul class="steps">
+                <li>Use the top search bar to instantly find any subject by typing its <b>Subject Name</b>, <b>Subject Code</b>, or <b>Category/Type</b> (e.g., AECC, CORE, VAC).</li>
+            </ul>
+
+            <div class="image-row">
+                <div style="flex:1;">
+                    <h3>2. Editing a Subject</h3>
+                    <ul class="steps">
+                        <li>If there is a typo or structural change required for a course, click the <b>Edit (Pen)</b> icon on its respective card.</li>
+                        <li>Modify the Subject Code, Name, Category, Offering Department, or applicable Semesters.</li>
+                        <li>Click <b>Save Changes</b>. You will be prompted to enter your <b>Security PIN</b> to authenticate this modification.</li>
+                    </ul>
+                </div>
+                <img src="edit-subject-popup.png" alt="Edit Subject Popup" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+
+            <div class="image-row">
+                <img src="delete-subject-popup.png" alt="Delete Subject Popup" class="doc-image" style="flex:1; margin: 0; max-width: 450px;">
+                <div style="flex:1;">
+                    <h3>3. Deleting a Subject</h3>
+                    <ul class="steps">
+                        <li>If a course is permanently removed from the college curriculum, click the red <b>Trash</b> icon.</li>
+                        <li>A warning popup will ask you to confirm the deletion of the specific subject and code.</li>
+                        <li>Click <b>Yes</b> and provide your <b>Security PIN</b> to execute the secure deletion from the database.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- NEW STUDENT SUBJECTS SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-student-subjects">Student Subject Reassignment</h1>
+            <p>The <b>Student Subjects</b> panel provides a granular view of exactly which students are enrolled in specific subjects. It is primarily used to reassign students between elective or language courses (like AECC, SEC, VAC) if they wish to change their curriculum track.</p>
+
+            <img src="student-subject-panel.png" alt="Student Subjects Panel" class="doc-image">
+
+            <h3>1. Viewing Enrolled Students</h3>
+            <ul class="steps">
+                <li>Navigate to the <b>Students Subjects</b> tab on the main sidebar.</li>
+                <li>Use the dropdown menus to progressively filter by <b>Semester</b>, subject <b>Category</b> (e.g., AECC), and the specific <b>Subject Name</b>.</li>
+                <li>The system will dynamically load a list of all students officially enrolled in that course across all departments.</li>
+            </ul>
+
+            <h3>2. Reassigning Subjects</h3>
+            <p>If a student requests a transfer to a different subject within the same category (e.g., switching from Functional English to Arabic), you can process that move here.</p>
+            
+            <img src="reassign-subject.png" alt="Reassign Subject Modal" class="doc-image" style="max-width: 450px;">
+
+            <ul class="steps">
+                <li><b>Select Students:</b> Check the box next to one or multiple students you wish to transfer.</li>
+                <li><b>Initiate Move:</b> Click the green <b>Move Selected</b> button at the top right.</li>
+                <li><b>Select Destination:</b> A popup will appear. Use the dropdown to select the new subject. <i>Note: The system intelligently restricts the destination options to subjects within the exact same category to prevent invalid curriculum assignments.</i></li>
+                <li><b>Confirm:</b> Click <b>Confirm Reassignment</b>. You will be prompted to enter your <b>Security PIN</b> to authenticate and finalize the database transfer.</li>
+            </ul>
+
+            <!-- NEW EVENT REQUESTS SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-event-requests">Event Requests & Approvals</h1>
+            <p>The <b>Events</b> panel allows the Principal to review and approve special extracurricular activities or duties (e.g., NSS, NCC, Sports) requested by teachers. Approving an event automatically grants attendance to all participating students for that specific period.</p>
+
+            <img src="event-request-panel.png" alt="Event Requests Panel" class="doc-image">
+
+            <h3>1. Reviewing Event Requests</h3>
+            <ul class="steps">
+                <li>When a teacher submits an event attendance request from their portal, it appears here with a <b>Pending</b> status.</li>
+                <li>The event card displays the <b>Event Name</b>, the <b>Requesting Teacher</b>, the <b>Date</b>, and the specific <b>Period</b>.</li>
+            </ul>
+
+            <img src="pending-event-request.png" alt="Pending Event Request Expanded" class="doc-image">
+
+            <h3>2. Inspecting Participants & Approving</h3>
+            <ul class="steps">
+                <li><b>View Students:</b> Click on any Pending event card to expand it. This reveals the complete roster of students participating in the event, including their Roll Numbers and Departments.</li>
+                <li><b>Grant Attendance:</b> If the request is valid, click the green <b>Approve Event & Save Attendance</b> button.</li>
+                <li>The system will securely process the transaction, instantly marking all listed students as "Present" for that specific period, overriding any standard class absence.</li>
+            </ul>
+
+            <img src="accepted-event-request.png" alt="Accepted Event Request" class="doc-image">
+
+            <p>Once approved, the card's status updates to <b>Accepted</b>. You can still expand the card at any time to review the list of students who were granted attendance.</p>
+
+            <div class="note">
+                <i>Tip:</i> Whether new event requests need your manual approval at all, or are Auto-Approved the instant a teacher submits them, is controlled by the <a href="#principal-event-mode" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Event Approval Mode</a> card in the Data Section — not from this panel.
+            </div>
+
+            <!-- NEW ATTENDANCE RECORDS SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-attendance-records">Live Attendance Tracker</h1>
+            <p>The <b>Attendance Records</b> panel acts as a "God-Mode" tracker for the Principal. It provides a real-time, bird's-eye view of every teacher, their assigned periods, and whether they have submitted their attendance logs for the day.</p>
+
+            <img src="attendance-tracker-panel.png" alt="Attendance Tracker Panel" class="doc-image">
+
+            <h3>1. Viewing & Filtering the Grid</h3>
+            <ul class="steps">
+                <li><b>Day Navigation:</b> Use the top day buttons (Mon, Tue, Wed, etc.) to view the timetable allocations and attendance statuses for different days of the current week.</li>
+                <li><b>Smart Search:</b> Use the search bar to instantly filter the massive grid. You can type a <b>Teacher's Name</b>, a <b>Department</b>, or even a specific <b>Subject Code/Name</b> to isolate specific records.</li>
+                <li><b>Subject Tooltips:</b> Hover your mouse over any abbreviated subject code in the grid to view the full name of the subject.</li>
+            </ul>
+
+            <h3>2. The Color-Coded Status System</h3>
+            <p>The system intelligently monitors the current physical time against the college's bell schedule (which you defined in the Data Section) and color-codes each period block accordingly:</p>
+            
+            <ul class="steps">
+                <li><span style="color: #333; font-weight: bold;">Black (Default):</span> The class is either currently ongoing or has not yet happened. The deadline to submit attendance has not passed.</li>
+                <li><span style="color: #16a34a; font-weight: bold;">Green (Verified):</span> The officially assigned teacher successfully marked and submitted the attendance for this period.</li>
+                <li><span style="color: #eab308; font-weight: bold;">Yellow (Substitute):</span> Attendance was marked, but by a <b>substitute teacher</b> (someone other than the faculty member assigned in the timetable).</li>
+                <li><span style="color: #ef4444; font-weight: bold;">Red (Defaulter):</span> The physical time for the period has ended, but the assigned teacher failed to submit the attendance data to the server.</li>
+            </ul>
+
+            <!-- NEW SYSTEM & NAVIGATION SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-navigation">Navigation Bar</h1>
+            <p>The Global Navigation Bar provides instant access to core system tools from anywhere in the app. On a PC or laptop, this bar is locked to the <b>top right corner</b> of the screen. On mobile devices (Android/iOS), it is anchored to the <b>bottom</b> of the screen for easy thumb access.</p>
+
+            <img src="navigation-bar.png" alt="Main Navigation Bar" class="doc-image" style="max-width: 300px;">
+
+            <style>
+                /* Force green hover states for the Principal section cards */
+                .principal-section .nav-card-link:hover .nav-card {
+                    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15) !important;
+                    border-color: var(--accent-principal) !important;
+                }
+            </style>
+            <div class="nav-grid">
+                <a href="#principal-portal" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>1. Main Dashboard</h4>
+                            <p>Returns you to the primary welcome screen.</p>
+                        </div>
+                        <img src="main-dashboard.png" alt="Dashboard Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: var(--accent-principal);">Go to section →</span>
+                    </div>
+                </a>
+                
+                <a href="#principal-settings" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>2. Settings</h4>
+                            <p>Opens the configuration and profile menu.</p>
+                        </div>
+                        <img src="settings.png" alt="Settings Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: var(--accent-principal);">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#principal-notifications" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>3. Notifications</h4>
+                            <p>Displays global system alerts and updates. A red dot indicates unread alerts.</p>
+                        </div>
+                        <img src="notifications.png" alt="Notifications Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: var(--accent-principal);">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#principal-calendar" class="nav-card-link">
+                    <div class="nav-card">
+                        <div>
+                            <h4>4. Calendar</h4>
+                            <p>Opens the interactive Academic Calendar to view holidays, events, and working days.</p>
+                        </div>
+                        <img src="calendar.png" alt="Calendar Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: var(--accent-principal);">Go to section →</span>
+                    </div>
+                </a>
+
+                <a href="#principal-messages" class="nav-card-link" style="grid-column: 1 / -1;">
+                    <div class="nav-card">
+                        <div>
+                            <h4>5. Messages</h4>
+                            <p>Opens your Inbox to read private chats and direct communications. A red dot indicates unread messages.</p>
+                        </div>
+                        <img src="messages.png" alt="Messages Button" class="icon-image" style="max-width: 150px; margin: 15px auto 0 auto; display: block; border: none; box-shadow: none;">
+                        <span class="jump-link" style="color: var(--accent-principal);">Go to section →</span>
+                    </div>
+                </a>
+            </div>
+
+            <h1 id="principal-settings" style="margin-top: 50px;">Settings & Preferences</h1>
+            <p>Click the <b>Gear Icon</b> in the navigation bar to open your Settings panel. This menu controls your app experience, aesthetic preferences, and security configurations.</p>
+
+            <div class="image-row">
+                <img src="settings-main.png" alt="Settings Menu Part 1" class="doc-image" style="max-width: 300px;">
+                <div style="flex:1;">
+                    <h3>Profile & Support</h3>
+                    <ul class="steps">
+                        <li><b>Profile:</b> Displays the Principal's Name and registered Email address.</li>
+                        <li><b>Help & Legal:</b> Quick links to Contact Support, visit the Pixelaks Technologies website, and review the Privacy Policy or Terms & Conditions.</li>
+                    </ul>
+                    
+                    <h3>App Toggles</h3>
+                    <ul class="steps">
+                        <li><b>Push Notifications:</b> Enable or disable push notifications delivered directly to your device.</li>
+                        <li><b>UI Sounds:</b> Toggle the cinematic sound effects (e.g., button clicks, success chimes) on or off.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="image-row">
+                <div style="flex:1;">
+                    <h3>Themes & Appearance</h3>
+                    <p>Adhyora supports dynamic visual themes to reduce eye strain.</p>
+                    <ul class="steps">
+                        <li>Click <b>Themes</b> to open the Appearance popup.</li>
+                        <li>Toggle between a bright <b>Light Mode</b> or a sleek, low-glare <b>Dark Mode</b>.</li>
+                        <li><i>Note: The theme applies instantly and is saved across your browser sessions.</i></li>
+                    </ul>
+                </div>
+                <img src="themes-principal.png" alt="Themes Popup" class="doc-image" style="flex:1; margin: 0; max-width: 450px;">
+            </div>
+
+            <h1 id="principal-billing-security" style="margin-top: 50px;">Billing & Security</h1>
+            <p>Scroll further down the settings menu to access administrative controls for your institution's subscription and account security.</p>
+            <img src="settings-2.png" alt="Settings Menu Part 2" class="doc-image" style="max-width: 300px;">
+
+            <h3>1. Billing & Subscriptions</h3>
+            <div class="image-row">
+                <img src="settings-billing.png" alt="Billing Panel" class="doc-image" style="max-width: 350px;">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Click to view your current Adhyora plan tier (e.g., Trial, Base, Pro, Ultimate).</li>
+                        <li>Check your exact <b>Valid Until</b> date.</li>
+                        <li>Review your total lifetime spend and detailed transaction history (invoices).</li>
+                        <li>Upgrade or renew your plan directly from this screen.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>2. Device Management (Active Sessions)</h3>
+            <div class="image-row">
+                <div style="flex:1;">
+                    <ul class="steps">
+                        <li>Security is a top priority. Click <b>Devices</b> to view a list of every phone, tablet, or PC currently logged into your Principal account.</li>
+                        <li>Your current device is highlighted in green.</li>
+                        <li>If you recognize an old or public device, click the red <b>Kick</b> button to immediately revoke its access and sign it out securely.</li>
+                    </ul>
+                </div>
+                <img src="active-sessions.png" alt="Active Sessions Popup" class="doc-image" style="flex:1; margin: 0; max-width: 350px;">
+            </div>
+
+            <h3>3. Biometrics & PIN Management</h3>
+            <ul class="steps">
+                <li><b>Enable Biometrics:</b> Toggle this switch to link your device's native fingerprint scanner or Face ID to the app. This allows you to bypass typing the 4-digit PIN for sensitive actions in the future.</li>
+                <li><b>Reset Security PIN:</b> Click to change your 4-digit master PIN. You must re-authenticate with your account password before setting a new PIN.</li>
+                <li><b>Password Resets:</b> If you need to change your master login password, clicking this option will dispatch a secure reset link directly to your registered email address.</li>
+            </ul>
+
+            <div class="note">
+                <i>Tip:</i> The maximum number of Office Staff and Accountant accounts your institution can approve is controlled by the <a href="#principal-role-limits" style="color: var(--accent-principal); font-weight: bold; text-decoration: none;">Role Registration Limits</a> card in the Data Section — not from this Billing & Security menu.
+            </div>
+
+            <!-- NEW COMMUNICATIONS & TOOLS SECTION -->
+            <hr style="border: 1px solid var(--border-light); margin: 60px 0;">
+
+            <h1 id="principal-notifications">System Notifications</h1>
+            <p>The <b>System Inbox</b> is where you receive global updates, maintenance alerts, and official system announcements directly from Adhyora.</p>
+            
+            <img src="system-notifications-principal.png" alt="System Notifications" class="doc-image">
+
+            <h1 id="principal-calendar" style="margin-top: 50px;">Academic Calendar</h1>
+            <p>The <b>Calendar</b> provides a visual overview of your institution's working days, holidays, and semester schedules.</p>
+            
+            <img src="college-calendar-principal.png" alt="College Calendar" class="doc-image" style="max-width: 450px;">
+            
+            <ul class="steps">
+                <li><b>Navigation:</b> Use the left and right arrows at the top of the widget to jump between different months.</li>
+                <li><b>View Details:</b> Click on any highlighted (red or colored) date to view the specific reason for the holiday or event below the calendar.</li>
+                <li><i>Important Note:</i> This calendar is initially populated from the <b>Calendar CSV</b> you uploaded in the Data Section, but the Principal can override individual days at any time (see below) without needing to re-upload the entire file.</li>
+            </ul>
+
+            <h2 id="principal-calendar-override" style="margin-top: 40px;">Editing a Day (Working Day / Holiday Override)</h2>
+            <p>Only the Principal can directly edit the calendar. If a date needs to change — for example, a sudden holiday declaration, or a Saturday that has been declared a working day to make up for lost classes — you can override it directly from this widget instead of re-uploading the Calendar CSV.</p>
+
+            <img src="calendar-day-override-popup.png" alt="Day Override Popup" class="doc-image" style="max-width: 400px;">
+
+            <ul class="steps">
+                <li>Click directly on the date you want to change. A <b>Day Override</b> popup opens showing the selected date.</li>
+                <li><b>Day Type:</b> Choose either <b>Working Day</b> or <b>Holiday</b> from the dropdown.</li>
+                <li><b>Timetable to Follow (weekends only):</b> If you're converting a Saturday or Sunday into a working day, an extra dropdown appears asking which weekday's timetable it should follow (e.g., mark a working Saturday to run "Monday's" schedule). This step is skipped automatically for regular weekdays.</li>
+                <li>Click <b>Save</b>. The change is written instantly to the college's working-day/non-working-day records for that academic year, and the calendar view refreshes immediately to reflect it.</li>
+            </ul>
+
+            <div class="note">
+                <i>Note:</i> Marking a date as a Working Day removes any existing holiday tag on it (and vice versa) — a single date can only ever be one or the other. These overrides also directly affect attendance percentage calculations and the Live Attendance Tracker, since the timetable engine uses this same working-day data to decide whether a period should be conducted that day.
+            </div>
+
+            <h1 id="principal-messages" style="margin-top: 50px;">Inbox & Broadcasts</h1>
+            <p>The <b>Messages</b> panel is your centralized communication hub for sending announcements to the college and reviewing private chats.</p>
+            
+            <img src="messages-inbox-principal.png" alt="Messages Inbox" class="doc-image">
+            
+            <h3>1. Reading Messages & Delivery Status</h3>
+            <ul class="steps">
+                <li>The inbox aggregates both incoming messages and your sent history. Each card displays the sender/recipient name, time, and message type.</li>
+                <li><b>Read Receipts (Blue Ticks):</b> For direct, personal messages, a double-tick icon will turn blue when the recipient has opened and read the message.</li>
+                <li><b>Broadcasts:</b> Mass announcement messages do not track individual read receipts. They are identified visually by a pushpin icon.</li>
+            </ul>
+
+            <h3>2. Composing Targeted Announcements</h3>
+            <p>You can send push notifications directly to specific groups within your college.</p>
+            <ul class="steps">
+                <li>Click the green <b>Compose</b> button at the top right of the Messages panel.</li>
+                <li><b>Target Audience:</b> Check the respective boxes to send your message to <b>Teachers</b>, <b>Students</b>, or both simultaneously.</li>
+                <li><b>Smart Filtering:</b> Use the dropdown menus to narrow your audience. You can broadcast to the entire college, or target a specific <b>Department</b> and <b>Year</b>.</li>
+                <li>Enter your message title and description, then hit send to instantly push the alert to their devices.</li>
+            </ul>
+
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- TEACHER PORTAL SECTION                                  -->
+        <!-- ======================================================= -->
+        
+        
+
+        <hr style="border: 2px solid var(--border-light); margin: 80px 0;">
+
+        <!-- ============================================================ -->
+        <!-- ACCOUNTANT PORTAL -->
+        <!-- ============================================================ -->
+        <div class="accountant-section">
+            <h1 id="accountant-portal" style="color: #d97706; border-bottom-color: #d97706;">Accountant Portal Guide</h1>
+            <p>The Accountant Portal is a dedicated financial management workspace available exclusively on the <b>Pro and Ultimate plans</b>. The Accountant handles all fee collection, payment tracking, receipt generation, and institutional expense recording.</p>
+            <div class="highlight-amber"><b>Plan Requirement:</b> The Accountant Portal is only active when the institution is on the Pro or Ultimate subscription plan. If on the Base plan, the Accountant role is not available and related buttons will appear locked.</div>
+
+            <h2 id="accountant-first-login" style="color: #d97706; border-bottom-color: #fde68a;">First Login & Security Setup</h2>
+            <ul class="steps">
+                <li><b>Security PIN:</b> Set a 4-digit PIN on first login after Principal approval. This PIN is required before viewing fee data, processing collections, and generating receipts. Do not share it with anyone.</li>
+                <li><b>Biometrics (Optional):</b> Link your device fingerprint or Face ID for faster authentication. Configurable later in Settings.</li>
+            </ul>
+
+            <h2 id="accountant-dashboard" style="color: #d97706; border-bottom-color: #fde68a;">Fee Dashboard</h2>
+            <p>The main dashboard gives a real-time overview of the entire institution's fee collection status.</p>
+            <ul class="steps">
+                <li><b>Collection Summary:</b> Total fees due across the institution, total collected, and outstanding balance at a glance.</li>
+                <li><b>Department Filter:</b> Narrow the view to a specific department's fee status.</li>
+                <li><b>Year Filter:</b> Filter by student year to see collection status for each academic year separately.</li>
+                <li><b>Semester Filter:</b> View collection status for the current or past semesters.</li>
+            </ul>
+
+            <h2 id="accountant-collect-offline" style="color: #d97706; border-bottom-color: #fde68a;">Collect Cash / Cheque Payment</h2>
+            <p>When a student pays fees at the office counter in cash or by cheque, record it here to generate a receipt and update the student's ledger instantly.</p>
+            <ul class="steps">
+                <li>Search for the student by name or roll number.</li>
+                <li>Open their fee ledger and click <b>Collect Offline</b> on the relevant semester row.</li>
+                <li>Enter: <b>Amount Received</b>, <b>Payment Mode</b> (Cash or Cheque), <b>Cheque Number</b> (if applicable), and <b>Date of Collection</b>.</li>
+                <li>Enter your <b>Security PIN</b> to confirm. The system instantly updates the ledger and generates a receipt.</li>
+            </ul>
+            <div class="highlight-amber"><b>Important:</b> Once recorded, a payment creates a permanent audit trail entry. Accountants cannot delete payment records. Incorrect entries must be flagged to the Principal immediately.</div>
+
+            <h2 id="accountant-online-payments" style="color: #d97706; border-bottom-color: #fde68a;">Online Payment Tracking</h2>
+            <p>When a student pays through the Adhyora Fee Portal using Razorpay, the transaction is automatically recorded. No action from the Accountant is required, but all transactions are viewable.</p>
+            <ul class="steps">
+                <li>Online payments appear in the student ledger with Razorpay Transaction ID, payment method, date, and amount.</li>
+                <li>Use the <b>Transaction Audit Trail</b> for a chronological log of all online payments across the institution.</li>
+                <li>Filter by date range or department to locate specific transactions.</li>
+                <li>For payment disputes, locate the transaction using the Transaction ID and verify its status.</li>
+            </ul>
+
+            <h2 id="accountant-receipts" style="color: #d97706; border-bottom-color: #fde68a;">Receipts</h2>
+            <p>Official receipts are automatically generated for every payment — online or offline.</p>
+            <ul class="steps">
+                <li>Open any student's fee ledger and click the <b>Receipt</b> icon next to a paid semester entry.</li>
+                <li>The system generates a printable high-contrast receipt for a standard 80mm thermal printer.</li>
+                <li>Click <b>Print Receipt</b> to send to a thermal printer, or <b>Download</b> to save as an image file.</li>
+                <li>Receipts include: student name, roll number, department, semester, amount paid, payment mode, date, and unique transaction reference.</li>
+            </ul>
+
+            <h2 id="accountant-defaulters" style="color: #d97706; border-bottom-color: #fde68a;">Fee Defaulter Report</h2>
+            <p>Identify students with outstanding dues past the payment deadline.</p>
+            <ul class="steps">
+                <li>Navigate to the <b>Defaulter Report</b> section from your dashboard.</li>
+                <li>The system automatically lists all students whose payment deadline has passed and who have not fully paid.</li>
+                <li>Filter by Department, Year, or Semester.</li>
+                <li>Each entry shows: student name, roll number, amount due, original deadline, and days overdue.</li>
+                <li>Export the defaulter list as a CSV file for offline use or reporting to management.</li>
+            </ul>
+
+            <h2 id="accountant-expenses" style="color: #d97706; border-bottom-color: #fde68a;">Expense Tracking</h2>
+            <p>Record institutional expenses against the institution's accounts for complete financial visibility.</p>
+            <ul class="steps">
+                <li>Navigate to the <b>Expenses</b> section and click <b>Add New Expense</b>.</li>
+                <li>Enter: <b>Expense Category</b> (Maintenance, Supplies, Events, Infrastructure), <b>Description</b>, <b>Amount</b> in ₹, <b>Date</b>, and <b>Reference Number</b> (bill or voucher number).</li>
+                <li>Enter your <b>Security PIN</b> to confirm the entry.</li>
+            </ul>
+            <div class="note"><b>Note:</b> Expense entries cannot be deleted by the Accountant once saved. Contact the Principal if a correction is needed.</div>
+
+            <h2 id="accountant-settings" style="color: #d97706; border-bottom-color: #fde68a;">Settings</h2>
+            <ul class="steps">
+                <li><b>Profile:</b> View registered Name, Email, and institution.</li>
+                <li><b>Push Notifications:</b> Enable or disable payment alerts and due date reminders.</li>
+                <li><b>Biometrics:</b> Enable or disable fingerprint / Face ID.</li>
+                <li><b>Reset Security PIN:</b> Re-authenticate with account password to change PIN.</li>
+                <li><b>Active Sessions:</b> View and Kick unrecognized devices from your account.</li>
+            </ul>
+        </div>
+
+        <hr style="border: 2px solid var(--border-light); margin: 80px 0;">
+
+        <!-- ============================================================ -->
+        <!-- OFFICE STAFF PORTAL -->
+        <!-- ============================================================ -->
+        <div class="staff-section">
+            <h1 id="staff-portal" style="color: #7c3aed; border-bottom-color: #7c3aed;">Office Staff Portal Guide</h1>
+            <p>The Office Staff Portal is a full-featured administrative dashboard for trusted non-teaching personnel. Staff have broad operational access — they can manage students, teachers, room codes, timetables, subjects, events, and data uploads — but are blocked from sensitive financial configuration, semester-level system changes, and teacher registration approvals.</p>
+            <div class="highlight-purple"><b>Who is Office Staff?</b> Office administrative assistants or clerks who handle day-to-day academic data operations on behalf of the Principal. The Principal controls how many Staff accounts are permitted at once via the Role Registration Limits card in the Data Section.</div>
+
+            <h2 id="staff-first-login" style="color: #7c3aed; border-bottom-color: #ddd6fe;">Registration & Principal Approval</h2>
+            <ul class="steps">
+                <li>Select <b>Office Staff</b> on the main gateway and register with Name, Email, and Password.</li>
+                <li><b>Registration is only possible if the Principal has set the Max Staff limit above zero</b> in the Role Registration Limits card. If the limit is 0, the registration will be rejected immediately at the gateway.</li>
+                <li>Once registered, the account is placed in <b>Pending</b> status. The staff member cannot log in until the Principal explicitly approves the account from the Teacher/Staff List.</li>
+                <li>On first login after approval, a mandatory <b>4-digit Security PIN</b> must be set before accessing any data.</li>
+                <li>Biometrics can be optionally enabled for faster PIN bypass.</li>
+            </ul>
+
+            <h2 id="staff-capabilities" style="color: #7c3aed; border-bottom-color: #ddd6fe;">What Office Staff Can Do</h2>
+            <ul class="steps">
+                <li><b>Room Code Manager:</b> View all department room codes. Add new departments, regenerate individual or all department codes, delete departments, and combine departments — all PIN-protected.</li>
+                <li><b>Teacher List:</b> View all registered teachers with department, status, and email. Assign or remove HOD designation (PIN required). Send direct private messages to any teacher.</li>
+                <li><b>Student List:</b> Search and view all student profiles including attendance, marks, and enrolled subjects. Approve or Decline student account registrations, correct name errors, and delete student records — all PIN-protected.</li>
+                <li><b>Batch Management:</b> View all batch rosters. Move students between batches (PIN required). Run batch repair if data inconsistencies are detected (PIN required).</li>
+                <li><b>Timetable:</b> View the live timetable. Build and save the Master Timetable Structure (PIN required). Assign subjects to teachers in the timetable (PIN required).</li>
+                <li><b>Data Section:</b> Upload master CSV files — Students, Subjects, and Academic Calendar (PIN required). Generate and download all data exports (attendance statistics, internal marks, daily period-by-period logs) at any time.</li>
+                <li><b>Subject Master List:</b> View all subjects. Edit subject details and delete subjects (both PIN-protected).</li>
+                <li><b>Students Subjects:</b> View student subject enrollments. Move students between elective or language subjects (PIN required).</li>
+                <li><b>Events:</b> View all teacher-submitted event attendance requests. Approve pending events to save attendance for the listed students.</li>
+                <li><b>Attendance Records:</b> View the Live Attendance Tracker — a read-only daily grid of all teacher attendance activity.</li>
+                <li><b>Announcements:</b> Send broadcast messages to teachers and/or students, filtered by department and year. Send personal direct messages to individual teachers or students.</li>
+                <li><b>Notification Inbox:</b> View all system and broadcast notifications received.</li>
+            </ul>
+
+            <h2 id="staff-restrictions" style="color: #7c3aed; border-bottom-color: #ddd6fe;">What Office Staff Cannot Do</h2>
+            <div class="warning">The following functions are restricted to the Principal only and are either hidden from the Staff portal or blocked at the server level:</div>
+            <ul class="steps">
+                <li><b>Approve or Decline teacher registrations</b> — Staff can view the Teacher List and send messages, but the status approval dropdown is not available. Only the Principal can approve or decline teacher accounts.</li>
+                <li><b>Configure the bell schedule</b> — The period count, start time, and timing configuration in Timetable Setup is blocked at the server level for Staff, even though the rest of the Timetable panel is accessible.</li>
+                <li><b>Flip the active semester</b> — Only the Principal can switch between Odd and Even semesters.</li>
+                <li><b>Promote students</b> — End-of-year student promotion to the next semester is Principal-only.</li>
+                <li><b>Change Event Approval Mode</b> — Switching between Strict and Auto-Approve event modes is Principal-only.</li>
+                <li><b>Configure Razorpay API keys or publish fee structures</b> — All payment gateway setup and fee publishing is Principal-only.</li>
+                <li><b>Process or void fee payments</b> — All fee collection and expense management is Accountant-only.</li>
+                <li><b>View or manage Billing and Subscription</b> — The subscription and plan information is not visible in the Staff portal.</li>
+                <li><b>Change Role Registration Limits</b> — Only the Principal can control how many Staff or Accountant accounts are permitted.</li>
+                <li><b>Change the institution's Security PIN</b> — Only the Principal can update the college-level admin PIN.</li>
+            </ul>
+
+            <h2 id="staff-student-management" style="color: #7c3aed; border-bottom-color: #ddd6fe;">Student Management</h2>
+            <p>The Staff student management interface is identical to the Principal's Student List.</p>
+            <ul class="steps">
+                <li>Search for any student by name or roll number.</li>
+                <li>Click the <b>Shield Icon</b> to open the admin panel — correct names, approve or decline account access, or delete a record. All write actions require the Security PIN.</li>
+                <li>Click a student's name card to open their full academic profile — attendance percentage, subject-wise breakdown, and enrolled subjects.</li>
+                <li>Click the <b>Chat Icon</b> on any student card to send a direct private message.</li>
+            </ul>
+
+            <h2 id="staff-teacher-management" style="color: #7c3aed; border-bottom-color: #ddd6fe;">Teacher Management</h2>
+            <ul class="steps">
+                <li>View all registered teachers with their department, email, HOD status, and registration status.</li>
+                <li>Click the <b>HOD checkbox</b> on any teacher card to assign or remove Head of Department designation — requires Security PIN.</li>
+                <li>Click any teacher's name card to open their performance dashboard — total hours taught, subject breakdown, and attendance timeline.</li>
+                <li>Click the <b>Chat Icon</b> on any teacher card to send a direct private message.</li>
+                <li><i>Note:</i> The Approve / Decline status dropdown visible to the Principal is not shown to Staff. Teacher registration approvals are handled exclusively by the Principal.</li>
+            </ul>
+
+            <h2 id="staff-exports" style="color: #7c3aed; border-bottom-color: #ddd6fe;">Data Exports</h2>
+            <ul class="steps">
+                <li>Open the <b>Data Section</b> from the sidebar and click <b>Open Exporter</b>.</li>
+                <li>Select Department and Academic Year.</li>
+                <li>Download <b>Internal Marks</b>, <b>Attendance Statistics</b>, or <b>Daily Attendance Logs</b> (period-by-period) as CSV files.</li>
+                <li>Exports can be generated at any time independently — no Principal action required.</li>
+            </ul>
+
+            <h2 id="staff-settings" style="color: #7c3aed; border-bottom-color: #ddd6fe;">Settings</h2>
+            <ul class="steps">
+                <li><b>Profile:</b> View Name, Email, and institution name.</li>
+                <li><b>Push Notifications:</b> Enable or disable push alerts on this device.</li>
+                <li><b>UI Sounds:</b> Toggle interface sound effects on or off.</li>
+                <li><b>Themes:</b> Switch between Light and Dark Mode.</li>
+                <li><b>Biometrics:</b> Enable or disable fingerprint or Face ID for PIN bypass.</li>
+                <li><b>Reset Security PIN:</b> Re-authenticate with your account password to set a new PIN.</li>
+                <li><b>Active Sessions:</b> View all browsers and devices currently logged into your Staff account. Use the <b>Kick</b> button to remotely log out any unrecognised session.</li>
+            </ul>
+        </div>
+
+        <div style="background: #0f172a; border-radius: 12px; padding: 28px; margin-top: 60px; text-align: center; color: #94a3b8;">
+            <div style="color: #ef4444; font-weight: 700; font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;">⛔ CONFIDENTIAL</div>
+            <div style="color: #10b981; font-weight: 700; font-size: 1rem; margin-bottom: 8px;">Pixelaks Technologies</div>
+            <div style="font-size: 0.9rem;">For support, contact us at <b style="color: white;">pixelaks.technologies@gmail.com</b></div>
+            <div style="font-size: 0.8rem; margin-top: 8px; color: #64748b;">This document is for Principal, Accountant, and Office Staff use only. Do not distribute.</div>
+        </div>
+    </div>
+
+    <script>
+        window.toggleFolder = function(element) { element.parentElement.classList.toggle("active"); };
+        document.addEventListener("DOMContentLoaded", () => {
+            const navLinks = document.querySelectorAll(".nav-link");
+            const headings = Array.from(document.querySelectorAll("h1[id], h2[id]"));
+            navLinks.forEach(link => { link.addEventListener("click", function() { navLinks.forEach(n => n.classList.remove("active")); this.classList.add("active"); }); });
+            window.addEventListener("scroll", () => {
+                let currentId = "";
+                const scrollPosition = window.scrollY + 100;
+                for (let i = 0; i < headings.length; i++) { if (headings[i].offsetTop <= scrollPosition) { currentId = headings[i].getAttribute("id"); } }
+                if (currentId) { navLinks.forEach(link => { link.classList.remove("active"); if (link.getAttribute("href") === "#" + currentId) { link.classList.add("active"); let folder = link.closest(".nav-folder"); while (folder) { folder.classList.add("active"); folder = folder.parentElement.closest(".nav-folder"); } } }); }
+            });
+        });
+    </script>
+</body>
+</html>
