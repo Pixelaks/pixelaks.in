@@ -431,38 +431,91 @@
         </div>
     </section>
 
-    <!-- TEMPORARY ADSENSE BLOG SECTION: Delete this entirely once approved! -->
-    <section id="insights" style="padding: 80px 10%; background: #0a0a0a; border-top: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 2;">
-        <h2 class="section-title">Latest Developer Articles</h2>
-        <p style="text-align: center; color: #aaa; margin-bottom: 50px; font-size: 1.1rem;">Technical insights, tutorials, and updates from the Pixelaks engineering team.</p>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto;">
+    <!-- DECK OF DECEPTION FEATURE (Side-by-Side Layout) -->
+    <section id="featured-game" data-aos="fade-up" style="padding: 80px 10%; background: #0a0a0a; position: relative; z-index: 2; border-top: 1px solid rgba(255,255,255,0.05);">
+        <div style="max-width: 1100px; margin: 0 auto; background: linear-gradient(145deg, rgba(26, 26, 26, 0.95), rgba(15, 15, 15, 0.95)); padding: 50px; border-radius: 20px; border: 1px solid rgba(201, 162, 39, 0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(201,162,39,0.05);">
             
-            <!-- Article 1 -->
-            <div style="background: rgba(26,26,26,0.9); padding: 35px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
-                <span style="color: #3498db; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Game Development</span>
-                <h3 style="color: #fff; margin: 15px 0 10px; font-size: 1.3rem;">Optimizing Unity WebGL for Casual Mobile Games</h3>
-                <p style="color: #aaa; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; flex-grow: 1;">When building browser games like 'Into The Fantasy', managing WebGL memory allocation is critical. In this technical breakdown, we explore how to compress textures and manage audio contexts to ensure buttery-smooth 60fps gameplay on mobile browsers without native app wrappers...</p>
-                <a href="article-unity-webgl.html" style="color: #3498db; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Read Full Article &rarr;</a>
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <span style="color: #c9a227; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Upcoming Release</span>
+                <h2 style="color: #fff; margin: 10px 0; font-size: clamp(2rem, 5vw, 3rem); font-family: 'Cinzel Decorative', serif;">Deck of Deception</h2>
+                <div style="width: 80px; height: 3px; background: linear-gradient(90deg, transparent, #c9a227, transparent); margin: 0 auto;"></div>
             </div>
 
-            <!-- Article 2 -->
-            <div style="background: rgba(26,26,26,0.9); padding: 35px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
-                <span style="color: #2ecc71; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Cloud Architecture</span>
-                <h3 style="color: #fff; margin: 15px 0 10px; font-size: 1.3rem;">Scaling Backend Infrastructure for EdTech SaaS</h3>
-                <p style="color: #aaa; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; flex-grow: 1;">The Adhyora college management app requires 100% uptime during critical exam and admission seasons. Here is how our engineering team utilizes distributed cloud functions and NoSQL databases to handle massive concurrent traffic spikes securely and efficiently...</p>
-                <a href="article-edtech-scaling.html" style="color: #2ecc71; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Read Full Article &rarr;</a>
+            <!-- Side-by-Side Flex Container -->
+            <div style="display: flex; flex-wrap: wrap; gap: 50px; align-items: center;">
+                
+                <!-- Left Column: Auto-Playing Image Carousel -->
+                <!-- Sleek Auto-Playing Image Carousel -->
+                <div style="flex: 1 1 350px; position: relative; width: 100%; max-width: 450px; aspect-ratio: 4/5; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid rgba(201, 162, 39, 0.4); box-shadow: 0 15px 35px rgba(0,0,0,0.9);">
+                    <div id="dod-slide-1" class="dod-slide active" style="position: absolute; inset: 0; background-image: url('dod-poster-1.png'); background-size: cover; background-position: center; transition: opacity 1s ease-in-out; opacity: 1;"></div>
+                    <div id="dod-slide-2" class="dod-slide" style="position: absolute; inset: 0; background-image: url('dod-poster-2.png'); background-size: cover; background-position: center; transition: opacity 1s ease-in-out; opacity: 0;"></div>
+                    <div id="dod-slide-3" class="dod-slide" style="position: absolute; inset: 0; background-image: url('dod-poster-3.png'); background-size: cover; background-position: center; transition: opacity 1s ease-in-out; opacity: 0;"></div>
+                    <div id="dod-slide-4" class="dod-slide" style="position: absolute; inset: 0; background-image: url('dod-poster-4.png'); background-size: cover; background-position: center; transition: opacity 1s ease-in-out; opacity: 0;"></div>
+                    <div id="dod-slide-5" class="dod-slide" style="position: absolute; inset: 0; background-image: url('dod-poster-5.png'); background-size: cover; background-position: center; transition: opacity 1s ease-in-out; opacity: 0;"></div>
+                </div>
+
+                <!-- Right Column: Text Content -->
+                <div style="flex: 1 1 450px; color: #bbb; line-height: 1.8; font-size: 1.05rem; display: flex; flex-direction: column; gap: 20px;">
+                    <p style="text-align: justify; margin: 0;">
+                        How well do you really know your friends? When the chips are down and the economy tightens, loyalty is the first thing to vanish. Pixelaks Technologies invites you to step into <strong>Deck of Deception</strong>. This is not just a multiplayer card game. It is a psychological battlefield where trust is a liability and deception is your greatest weapon. You start the match with equal resources, but as the turns progress, the truth becomes twisted.
+                    </p>
+                    <p style="text-align: justify; margin: 0;">
+                        Action cards allow you to manipulate the table to your advantage. You can steal from your closest allies or completely drain their hard earned wealth into the bank. Will you play fair and build your fortune, or will you backstab your way to the top? The core loop demands tactical foresight. Hoard your cards and you will face heavy score penalties, but play too aggressively and you may find yourself totally bankrupt. 
+                    </p>
+                    <p style="text-align: justify; margin: 0;">
+                        The ultimate test of friendship comes when a player loses all their coins. The game suddenly pauses, triggering an intense psychological showdown. The remaining players secretly agree on a hidden number and present a claim to the bankrupt player. They will look you in the virtual eye and lie to your face. Do you believe them? If you guess wrong, you are instantly eliminated from the table. Built with cutting edge web technology and featuring built in proximity voice chat, you can hear every lie as it happens. Step into the Syndicate, wager your Pixel Coins, and remember one simple rule. Trust no card.
+                    </p>
+                </div>
+
+            </div> <!-- End Flex Container -->
+
+            <!-- AdSense Safe Container -->
+            <div style="width: 100%; min-height: 100px; background: rgba(0,0,0,0.5); border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(201, 162, 39, 0.2); margin: 40px 0; overflow: hidden;">
+                <!-- Replace 'YOUR_AD_SLOT_ID' with a Manual Display Ad unit ID from your AdSense Dashboard -->
+                <ins class="adsbygoogle"
+                     style="display:block; width: 100%; height: 90px;"
+                     data-ad-client="ca-pub-1063038117434491"
+                     data-ad-slot="YOUR_AD_SLOT_ID"
+                     data-ad-format="horizontal"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
             </div>
 
-            <!-- Article 3 -->
-            <div style="background: rgba(26,26,26,0.9); padding: 35px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
-                <span style="color: #9b59b6; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">UI/UX Design</span>
-                <h3 style="color: #fff; margin: 15px 0 10px; font-size: 1.3rem;">Designing Intuitive Interfaces for Institutions</h3>
-                <p style="color: #aaa; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; flex-grow: 1;">User experience dictates the success of administrative software. By tracking user journeys in the Adhyora app, we redesigned the faculty dashboard to reduce click-depth by 40%. Here are our core principles for designing accessible dashboards...</p>
-                <a href="article-ui-ux.html" style="color: #9b59b6; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Read Full Article &rarr;</a>
+            <!-- Call to Action Button -->
+            <div style="text-align: center;">
+                <a href="games" style="display: inline-block; background: linear-gradient(180deg, #e8c454 0%, #c9a227 100%); color: #111; text-decoration: none; padding: 15px 40px; border-radius: 4px; font-weight: bold; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(201, 162, 39, 0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(201, 162, 39, 0.4)';">
+                    Know More About Our Games
+                </a>
             </div>
 
         </div>
+
+        <!-- Carousel Script -->
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                let currentDodSlide = 1;
+                const totalDodSlides = 5;
+                
+                setInterval(() => {
+                    // Hide current slide
+                    const currentEl = document.getElementById('dod-slide-' + currentDodSlide);
+                    if(currentEl) currentEl.style.opacity = '0';
+                    
+                    // Move to next slide
+                    currentDodSlide++;
+                    if (currentDodSlide > totalDodSlides) {
+                        currentDodSlide = 1;
+                    }
+                    
+                    // Show next slide
+                    const nextEl = document.getElementById('dod-slide-' + currentDodSlide);
+                    if(nextEl) nextEl.style.opacity = '1';
+                }, 3500); // Changes image every 3.5 seconds
+            });
+        </script>
     </section>
 
     <footer>
