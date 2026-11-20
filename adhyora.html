@@ -81,7 +81,7 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Yatra+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Yatra+One&family=Share+Tech+Mono&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* --- GLOBAL FIT FIXES --- */
@@ -425,7 +425,205 @@
             margin-top: 5px;
         }
          
-    </style>
+    /* ===== ADHYORA DEVICE SHOWCASE (BASE) ===== */
+.adv-section { max-width: 1200px; margin: 0 auto 100px; text-align: center; }
+.adv-row-phones { display: flex; justify-content: center; gap: 50px; flex-wrap: wrap; margin-top: 40px; }
+.adv-col { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+/* ===== ADHYORA SHOWCASE: STUDENT PHONE (themeable) ===== */
+@property --sd-main  { syntax: '<color>'; inherits: true; initial-value: #3b82f6; }
+@property --sd-light { syntax: '<color>'; inherits: true; initial-value: #e0f2fe; }
+@property --sd-nav   { syntax: '<color>'; inherits: true; initial-value: #bfdbfe; }
+.adv-col:nth-child(3) .adv-screen > .adv-statusbar { display: none; }
+.adv-app.sdv { --sd-main: #3b82f6; --sd-light: #e0f2fe; --sd-nav: #bfdbfe; transition: --sd-main .9s ease, --sd-light .9s ease, --sd-nav .9s ease; }
+.sdv *, .sdv *::before, .sdv *::after { box-sizing: border-box; }
+.sdv .sd-body { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: #fff; }
+.sdv .sd-head { text-align: center; padding: 6px 0 10px; flex-shrink: 0; }
+.sdv .sd-logo { display: inline-block; font-family: 'Yatra One', cursive; font-size: 32px; letter-spacing: 3px; line-height: 1.2; background: linear-gradient(110deg, var(--sd-main) 40%, rgba(255,255,255,.3) 50%, var(--sd-main) 60%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sdShimmer 4s linear infinite; }
+@keyframes sdShimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+.sdv .sd-profile { background: var(--sd-light); margin: 0 15px 12px; border: 1.5px solid var(--sd-main); border-radius: 15px; padding: 15px; flex-shrink: 0; }
+.sdv .sd-pname { font-size: 16px; font-weight: 600; color: #000; }
+.sdv .sd-proll { font-size: 12px; color: #666; margin: 2px 0 6px; }
+.sdv .sd-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; color: #fff; background: #4caf50; }
+.sdv .sd-semnav { background: var(--sd-main); color: #ededed; padding: 12px 20px; display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+.sdv .sd-panel { flex: 1; min-height: 0; margin: 15px 15px 0; border: 2px solid var(--sd-main); border-bottom: none; border-radius: 20px 20px 0 0; position: relative; overflow: hidden; background-color: var(--sd-light); background-image: linear-gradient(color-mix(in srgb, var(--sd-main) 20%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--sd-main) 20%, transparent) 1px, transparent 1px); background-size: 25px 25px; background-position: center top; }
+.sdv .sd-view { position: absolute; inset: 0; overflow: hidden; padding: 18px 16px 150px; display: none; }
+.sdv .sd-view.on { display: block; }
+.sdv .sd-promo { background: #f0fdf4; border: 1px solid #86efac; border-radius: 14px; padding: 14px 16px; margin-bottom: 15px; display: flex; gap: 10px; align-items: flex-start; }
+.sdv .sd-promo i { color: #16a34a; font-size: 18px; margin-top: 2px; }
+.sdv .sd-pt { font-weight: 700; color: #15803d; font-size: 14px; }
+.sdv .sd-ps { font-size: 13px; color: #166534; margin-top: 2px; }
+.sdv .sd-pm { font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 700; }
+.sdv .sd-water { position: relative; width: 100%; height: 230px; background: #f8fafc; border-radius: 40px; overflow: hidden; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 4px 15px rgba(0,0,0,.05); margin-bottom: 22px; }
+.sdv .sd-wfill { position: absolute; left: 0; width: 100%; height: 250%; top: 100%; background: #4caf50; transition: top 2s cubic-bezier(.4,0,.2,1); z-index: 1; }
+.sdv .sd-wfill::before, .sdv .sd-wfill::after { content: ""; position: absolute; width: 1200px; height: 1200px; top: 0; left: 50%; margin-left: -600px; margin-top: -1150px; border-radius: 40%; background: #f8fafc; animation: sdWave 7s linear infinite; }
+.sdv .sd-wfill::after { border-radius: 45%; background: rgba(248,250,252,.6); animation-duration: 11s; }
+@keyframes sdWave { 100% { transform: rotate(360deg); } }
+.sdv .sd-wc { position: relative; z-index: 2; text-align: center; background: rgba(255,255,255,.25); padding: 20px 40px; border-radius: 20px; backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,.08); }
+.sdv .sd-proj { font-size: 13px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+.sdv .sd-pct { font-size: 32px; font-weight: 900; color: #0f172a; line-height: 1.2; }
+.sdv .sd-stats { border: 1px solid #94a3b8; border-radius: 8px; overflow: hidden; margin-bottom: 22px; }
+.sdv .sd-stats > div { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #94a3b8; text-align: center; color: #0f172a; }
+.sdv .sd-stats > div:first-child { font-weight: 600; }
+.sdv .sd-stats > div:last-child { border-bottom: none; }
+.sdv .sd-stats > .alt { background: #f8f9fa; }
+.sdv .sd-stats > .sd-cur { position: relative; overflow: hidden; padding: 0; }
+.sdv .sd-curw { position: absolute; left: 0; bottom: 0; width: 100%; height: 0; background: #4caf50; opacity: .9; transition: height 1.8s cubic-bezier(.4,0,.2,1); }
+.sdv .sd-curt { position: relative; z-index: 2; padding: 8px 12px; }
+.sdv .sd-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,.03); overflow: hidden; margin-bottom: 22px; }
+.sdv .sd-chead { padding: 15px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sdv .sd-chead.solid { background: var(--sd-main); border-bottom-color: var(--sd-main); }
+.sdv .sd-ctitle { color: var(--sd-main); font-size: 14px; font-weight: 700; letter-spacing: .5px; }
+.sdv .sd-chead.solid .sd-ctitle { color: #fff; }
+.sdv .sd-all { font-size: 12px; padding: 6px 12px; border-radius: 8px; background: var(--sd-main); color: #fff; font-weight: 700; }
+.sdv .sd-cbody { padding: 15px; }
+.sdv .sd-sub { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: #fff; }
+.sdv .sd-sub:last-child { margin-bottom: 0; }
+.sdv .sd-subname { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+.sdv .sd-subrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.sdv .sd-subic { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #64748b; }
+.sdv .sd-subic b { color: #334155; }
+.sdv .sd-subic small { font-size: 10px; font-weight: 600; opacity: .7; letter-spacing: .5px; margin-left: 2px; }
+.sdv .sd-ico { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.sdv .sd-subpct { font-size: 18px; font-weight: 900; line-height: 1; }
+.sdv .sd-bar { width: 100%; height: 6px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; }
+.sdv .sd-bar span { display: block; height: 100%; width: 0; border-radius: 4px; transition: width 1.3s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
+.sdv .sd-bar span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); animation: sdBarShine 2s infinite; }
+@keyframes sdBarShine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.sdv .sd-mh { background: var(--sd-main); border-radius: 5px; padding: 5px; margin-bottom: 5px; }
+.sdv .sd-dd { display: flex; justify-content: space-between; padding: 4px 6px; font-size: 14px; font-weight: 700; color: #ededed; }
+.sdv .sd-list { border: 1px solid #ddd; border-radius: 10px; padding: 15px; background: #fff; margin-bottom: 22px; }
+.sdv .sd-mrow { margin-bottom: 15px; }
+.sdv .sd-mrow:last-child { margin-bottom: 0; }
+.sdv .sd-mtop { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #0f172a; }
+.sdv .sd-mtop em { font-style: normal; font-size: 10px; font-weight: 800; margin-left: 3px; }
+.sdv .sd-mmeta { display: flex; gap: 10px; margin-bottom: 8px; font-size: 10px; color: #64748b; font-weight: 700; }
+.sdv .sd-cr { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+.sdv .sd-cr:last-child { border-bottom: none; }
+.sdv .sd-crc { font-size: 10px; font-weight: 800; color: var(--sd-main); background: var(--sd-light); border: 1px solid var(--sd-main); border-radius: 8px; padding: 4px 7px; }
+.sdv .sd-crn { flex: 1; font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.3; }
+.sdv .sd-crn span { font-size: 11px; font-weight: 600; color: #64748b; }
+.sdv .sd-crt { font-size: 10px; font-weight: 700; color: #64748b; }
+.sdv .sd-days { display: flex; gap: 5px; background: #f1f5f9; padding: 5px; border-radius: 15px; margin-bottom: 20px; }
+.sdv .sd-day { flex: 1; text-align: center; padding: 8px 0; border-radius: 10px; font-weight: 600; font-size: 13px; color: #64748b; }
+.sdv .sd-day.on { background: var(--sd-main); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.sdv .sd-ttc { display: flex; gap: 15px; position: relative; }
+.sdv .sd-tl { position: relative; width: 30px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 35px 0; }
+.sdv .sd-trk { position: absolute; left: 14px; top: 35px; bottom: 35px; width: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+.sdv .sd-prog { width: 100%; height: 0; background: var(--sd-main); transition: height .9s cubic-bezier(.4,0,.2,1); }
+.sdv .sd-nodes { display: flex; flex-direction: column; justify-content: space-between; height: 100%; z-index: 2; position: relative; }
+.sdv .sd-node { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 3px solid #e2e8f0; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: 700; color: #64748b; transition: .4s; }
+.sdv .sd-node.active { border-color: #4caf50; color: #4caf50; background: #e8f5e9; }
+.sdv .sd-node.done { border-color: var(--sd-main); color: #fff; background: var(--sd-main); }
+.sdv .sd-cards { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 15px; }
+.sdv .sd-ttcard { height: 112px; background-color: var(--sd-light); background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px); background-size: 15px 15px; border: 2px solid var(--sd-main); border-radius: 15px; padding: 15px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,.05); }
+.sdv .sd-ttcard.free { background-color: transparent; border: 1.5px dashed var(--sd-main); background-image: none; opacity: .8; }
+.sdv .sd-row { display: flex; justify-content: space-between; gap: 10px; }
+.sdv .sd-pill { height: 34px; background: #fff; border-radius: 20px; padding: 0 6px; font-size: 11px; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; line-height: 1.2; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,.15); min-width: 0; }
+.sdv .sd-cat { color: var(--sd-main); flex: 1; }
+.sdv .sd-subp { color: #0f172a; flex: 2; }
+.sdv .sd-teach { color: #64748b; flex: 1; }
+.sdv .sd-room { color: #64748b; flex: 1.5; }
+.sdv .sd-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 110px; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #fff 40%, #fff 100%); z-index: 10; pointer-events: none; }
+.sdv .sd-nav { position: absolute; left: 7%; width: 86%; bottom: 22px; z-index: 12; display: flex; gap: 12px; padding: 10px 15px; border-radius: 35px; background-color: var(--sd-nav); background-image: radial-gradient(var(--sd-main) 1.5px, transparent 1.5px); background-size: 12px 12px; box-shadow: 0 4px 15px rgba(0,0,0,.15); }
+.sdv .sd-ic { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; opacity: .85; box-shadow: 0 2px 6px rgba(0,0,0,.08); transition: .25s; }
+.sdv .sd-ic.on { opacity: 1; transform: scale(1.1); border: 2px solid var(--sd-main); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.sdv .sd-thtitle { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 18px; }
+.sdv .sd-thtitle i { color: var(--sd-main); margin-right: 6px; }
+.sdv .sd-swrow { display: flex; justify-content: center; gap: 10px; }
+.sdv .sd-sw { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; transition: .3s; }
+.sdv .sd-sw.on { border-color: #0f172a; transform: scale(1.15); }
+.adv-cap { font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; letter-spacing: 3px; text-transform: uppercase; color: var(--primary-green); }
+.adv-phone { position: relative; width: 270px; height: 560px; background: #0b0b0b; border-radius: 46px; padding: 10px; border: 2px solid #2a2a2a; box-shadow: 0 0 0 2px #111, 0 30px 70px rgba(0,0,0,.7), 0 0 50px rgba(46,204,113,.12); }
+.adv-island { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 84px; height: 24px; background: #000; border-radius: 20px; z-index: 30; }
+.adv-screen { position: relative; width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: #fff; font-family: 'Poppins', 'Segoe UI', sans-serif; color: #1e293b; text-align: left; }
+.adv-statusbar { position: absolute; top: 0; left: 0; right: 0; height: 40px; padding: 12px 22px 0; display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; background: #fff; z-index: 20; }
+.adv-view { position: absolute; top: 40px; bottom: 44px; left: 0; right: 0; display: none; flex-direction: column; background: #f8fafc; }
+.adv-view.on { display: flex; }
+.adv-bottomnav { position: absolute; bottom: 0; left: 0; right: 0; height: 44px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; align-items: center; color: #94a3b8; font-size: 14px; z-index: 20; }
+.adv-logo { text-align: center; font-weight: 800; letter-spacing: 3px; color: #dc2626; font-size: 20px; padding: 14px 0 4px; }
+.adv-welcome { text-align: center; font-size: 10px; color: #64748b; margin-bottom: 10px; }
+.adv-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 0 10px 10px; overflow: hidden; }
+.adv-mbtn { background: #fff; border: 1px solid #e2e8f0; border-radius: 11px; padding: 11px 9px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700; color: #1e293b; }
+.adv-head { padding: 12px 12px 8px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.adv-head h4 { color: #dc2626; font-weight: 800; font-size: 17px; margin: 0; }
+.adv-pill { font-size: 9px; font-weight: 700; border: 1px solid #e2e8f0; border-radius: 7px; padding: 4px 7px; background: #f8fafc; }
+.adv-pill i { color: #dc2626; margin-right: 3px; }
+.adv-filters { display: flex; gap: 5px; padding: 8px 12px; }
+.adv-sel { flex: 1; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adv-sel.wide { flex: 2; }
+.adv-stat { padding: 6px 12px; font-size: 9px; font-weight: 700; color: #64748b; }
+.adv-list { flex: 1; overflow: hidden; padding: 10px 12px; }
+.adv-row { display: flex; justify-content: space-between; align-items: center; }
+.adv-name span { color: #94a3b8; }
+.adv-tog { position: relative; flex-shrink: 0; }
+.adv-tog::after { content: ''; position: absolute; }
+.adv-savebar { padding: 10px 12px; }
+.adv-save { width: 100%; background: #dc2626; color: #fff; text-align: center; font-weight: 700; box-shadow: 0 4px 10px rgba(220,38,38,.2); transition: opacity .3s; }
+.adv-modal { position: absolute; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; z-index: 25; }
+.adv-modal.on { display: flex; }
+.adv-modal-card { background: #fff; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+.adv-bar { background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.adv-fill { height: 100%; width: 0; background: #dc2626; transition: width .5s; }
+.adv-modal-card h5 { margin: 0; color: #1e293b; line-height: 1.5; }
+.adv-tap { position: absolute; width: 28px; height: 28px; border-radius: 50%; background: rgba(220,38,38,.35); border: 2px solid #dc2626; z-index: 40; pointer-events: none; opacity: 0; }
+.adv-tap.go { animation: advTap .6s ease-out; }
+@keyframes advTap { 0% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.6); } }
+/* ===== ADHYORA SHOWCASE: EXACT TEACHER APP (scaled 390px -> phone) ===== */
+.adv-app { position: absolute; top: 0; left: 0; width: 390px; height: 842px; transform: scale(.641); transform-origin: top left; background: #fff; font-family: 'Poppins', sans-serif; }
+.adv-app .adv-statusbar { height: 56px; padding: 20px 34px 0; font-size: 16px; background: #fff; }
+.adv-app .adv-view { top: 56px; bottom: 76px; background: #fff; }
+.adv-app .adv-bottomnav { height: 76px; padding: 0 30px; justify-content: space-between; background: #fff; border-top: none; box-shadow: 0 -4px 15px rgba(0,0,0,.05); font-size: 20px; color: #1e293b; }
+.adv-app .adv-bottomnav .home { color: #dc2626; }
+.adv-app .adv-logo { font-family: 'Yatra One', cursive; font-weight: 400; font-size: 32px; letter-spacing: 2px; margin: 20px 0; padding: 0; color: #dc2626; }
+.adv-app .adv-welcome { display: none; }
+.adv-app .adv-menu { gap: 15px; padding: 4px 24px 10px; }
+.adv-app .adv-mbtn { flex-direction: column; justify-content: center; gap: 8px; padding: 20px 10px; text-align: center; background-color: rgba(254,242,242,.9); border: 1px solid rgba(239,68,68,.2); border-radius: 12px; background-image: linear-gradient(rgba(220,38,38,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(220,38,38,.08) 1px, transparent 1px); background-size: 15px 15px; box-shadow: 0 2px 5px rgba(0,0,0,.02); font-size: 12px; font-weight: 600; color: #991b1b; }
+.adv-app .adv-mbtn i { font-size: 20px; color: #991b1b; opacity: 1; }
+.adv-app #tAtt { top: 70px; bottom: 90px; left: 15px; right: 15px; border: 2px solid rgba(239,68,68,.2); border-radius: 20px; overflow: hidden; background-color: #fef2f2; background-image: linear-gradient(rgba(220,38,38,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(220,38,38,.08) 1px, transparent 1px); background-size: 30px 30px; }
+.adv-app .adv-head { padding: 20px 25px 15px; gap: 8px; background: rgba(254,242,242,.9); border-bottom: 1px solid rgba(239,68,68,.2); }
+.adv-app .adv-head h4 { font-size: 22px; font-weight: 700; }
+.adv-app .adv-pill { flex-shrink: 0; font-size: 12px; padding: 4px 10px; min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239,68,68,.2); border-radius: 8px; background: #fff; }
+.adv-app .adv-filters { padding: 15px 25px; gap: 10px; background: rgba(0,0,0,.02); }
+.adv-app .adv-sel { position: relative; min-width: 0; padding: 8px 22px 8px 8px; font-size: 11px; border: 1px solid rgba(239,68,68,.2); border-radius: 8px; background: #fff; }
+.adv-app .adv-sel::after { content: "\f078"; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #64748b; }
+.adv-app .adv-stat { padding: 8px 25px; font-size: 12px; background: #f8fafc; border-top: 1px solid rgba(239,68,68,.2); border-bottom: 1px solid rgba(239,68,68,.2); }
+.adv-app .adv-list { padding: 20px 25px; }
+.adv-app .adv-row { background: #fff; border: 1px solid rgba(239,68,68,.2); border-radius: 12px; margin-bottom: 10px; padding: 10px 15px; }
+.adv-app .adv-name { font-size: 14px; line-height: 1.4; }
+.adv-app .adv-name span { font-size: 11px; color: #94a3b8; }
+.adv-app .adv-tog { width: 60px; height: 30px; border-radius: 10px; background: #fee2e2; box-shadow: inset 0 2px 4px rgba(220,38,38,.1); display: flex; align-items: center; transition: background .3s ease; }
+.adv-app .adv-tog::before { content: 'A'; position: absolute; right: 12px; font-size: 13px; font-weight: 800; color: #ef4444; transition: all .3s ease; }
+.adv-app .adv-tog::after { top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 7px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.15); transition: transform .4s cubic-bezier(.175,.885,.32,1.275); }
+.adv-app .adv-tog.on { background: #10b981; box-shadow: inset 0 2px 4px rgba(16,185,129,.2); }
+.adv-app .adv-tog.on::before { content: 'P'; left: 12px; right: auto; color: #ecfdf5; }
+.adv-app .adv-tog.on::after { transform: translateX(30px); }
+.adv-app .adv-savebar { padding: 15px 25px; background: rgba(254,242,242,.9); border-top: 1px solid rgba(239,68,68,.2); }
+.adv-app .adv-save { padding: 15px; font-size: 16px; border-radius: 12px; }
+.adv-app .adv-modal-card { width: 90%; max-width: 300px; padding: 30px; border-radius: 20px; }
+.adv-app .adv-bar { height: 8px; margin-bottom: 15px; }
+.adv-app .adv-modal-card h5 { font-size: 16px; font-weight: 700; }
+/* ===== ADHYORA SHOWCASE: PRINCIPAL PHONE (green theme) ===== */
+.adv-col:nth-child(2) .adv-screen > .adv-statusbar { display: none; }
+.adv-app.padv .adv-logo { font-size: 56px; color: #22c55e; margin: 10px 0 15px; line-height: 1.2; }
+.adv-app.padv #pMenu { padding-top: 20px; }
+.adv-app.padv .adv-menu { padding: 4px 20px 10px; }
+.adv-app.padv .adv-mbtn { flex-direction: row-reverse; justify-content: center; gap: 10px; padding: 25px 10px; text-align: center; background-color: rgba(220,252,231,.6); border: 1px solid rgba(74,222,128,.3); background-image: linear-gradient(rgba(74,222,128,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,.15) 1px, transparent 1px); background-size: 15px 15px; box-shadow: none; font-size: 14px; font-weight: 600; color: #166534; }
+.adv-app.padv .adv-mbtn i { font-size: 16px; color: #166534; opacity: .8; }
+.adv-app.padv .adv-bottomnav { padding: 15px; justify-content: center; }
+.adv-app.padv .pdn-pill { width: 90%; display: flex; justify-content: space-between; align-items: center; background: rgba(220,252,231,.6); border: 1px solid rgba(74,222,128,.3); border-radius: 25px; padding: 8px 15px; box-shadow: 0 4px 12px rgba(0,0,0,.05); color: #166534; }
+.adv-app.padv .pdn-pill i { font-size: 18px; }
+.adv-app.padv .pdn-pill .home { color: #4ade80; transform: scale(1.1); }
+.pdn-b { position: relative; display: inline-block; }
+.pdn-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1px solid #fff; }
+.adv-app.padv #pData { top: 70px; bottom: 90px; left: 15px; right: 15px; padding: 25px 25px 0; border: 2px solid rgba(74,222,128,.3); border-radius: 20px; overflow: hidden; background-color: #f2fcf5; background-image: linear-gradient(rgba(74,222,128,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,.15) 1px, transparent 1px); background-size: 30px 30px; }
+.adv-app.padv .pd-head { font-family: 'Yatra One', cursive; font-weight: 400; font-size: 26px; letter-spacing: 1px; color: #166534; margin: 0 0 25px; flex-shrink: 0; }
+.adv-app.padv .pd-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 20px; padding-bottom: 20px; }
+.adv-app.padv .pd-card { flex-shrink: 0; border: 2px solid #e2e8f0; border-radius: 20px; background: #fff; padding: 25px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,.03); }
+.adv-app.padv .pd-ic { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; }
+.adv-app.padv .pd-card h4 { font-size: 18px; font-weight: 700; margin: 0 0 8px; color: #1e293b; }
+.adv-app.padv .pd-card p { font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 5px; }
+.adv-app.padv .pd-btn { margin-top: 15px; width: 100%; padding: 12px; border-radius: 10px; color: #fff; font-weight: 700; font-size: 14px; text-align: center; }
+</style>
 </head>
 <body>
 
@@ -568,6 +766,153 @@
                 <p style="color: #aaa; line-height: 1.7; font-size: 0.95rem;">
                     Every university calculates differently. Adhyora supports <strong style="color: #fff;">Multiple Calculation Modes</strong>—whether it's session-based, hour-based, or subject-specific percentage thresholds. We adapt to your rules, not the other way around.
                 </p>
+            </div>
+        </div>
+
+        <div class="adv-section" id="advShowcase">
+            <div class="role-tag" data-aos="zoom-in">See It In Action</div>
+            <div class="adv-row-phones">
+
+                <div class="adv-col">
+                    <div class="adv-phone">
+                        <div class="adv-island"></div>
+                        <div class="adv-screen" id="tScreen"><div class="adv-app">
+                            <div class="adv-statusbar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+
+                            <div class="adv-view on" id="tMenu">
+                                <div class="adv-logo">ADHYORA</div>
+                                <div class="adv-welcome">Welcome, Teacher</div>
+                                <div class="adv-menu">
+                                    <div class="adv-mbtn" id="tBtnAtt"><span>Attendance</span><i class="fas fa-clipboard-check"></i></div>
+                                    <div class="adv-mbtn"><span>TimeTable</span><i class="fas fa-calendar-alt"></i></div>
+                                    <div class="adv-mbtn"><span>InternalMarks</span><i class="fas fa-award"></i></div>
+                                    <div class="adv-mbtn"><span>Subjects</span><i class="fas fa-book-open"></i></div>
+                                    <div class="adv-mbtn"><span>Calendar</span><i class="fas fa-calendar-day"></i></div>
+                                    <div class="adv-mbtn"><span>Assignments</span><i class="fas fa-clipboard-list"></i></div>
+                                    <div class="adv-mbtn"><span>Student List</span><i class="fas fa-user-friends"></i></div>
+                                    <div class="adv-mbtn"><span>Subject Assign</span><i class="fas fa-book-medical"></i></div>
+                                    <div class="adv-mbtn"><span>Sections</span><i class="fas fa-users-cog"></i></div>
+                                    <div class="adv-mbtn"><span>Batch</span><i class="fas fa-id-badge"></i></div>
+                                    <div class="adv-mbtn"><span>Event Attendance</span><i class="fas fa-chalkboard-teacher"></i></div>
+                                    <div class="adv-mbtn"><span>Promotion Holds</span><i class="fas fa-user-lock"></i></div>
+                                </div>
+                            </div>
+
+                            <div class="adv-view" id="tAtt">
+                                <div class="adv-head">
+                                    <h4>Attendance</h4>
+                                    <div style="display:flex; gap:5px;">
+                                        <div class="adv-pill"><i class="fas fa-history"></i>Records</div>
+                                        <div class="adv-pill" style="text-align:center; line-height:1.1; font-size:10px;">Friday<br>20/11/2026</div>
+                                    </div>
+                                </div>
+                                <div class="adv-filters">
+                                    <div class="adv-sel">Sem 5</div>
+                                    <div class="adv-sel">Period 1</div>
+                                    <div class="adv-sel wide">Data Structures</div>
+                                </div>
+                                <div class="adv-stat" id="tStatus"></div>
+                                <div class="adv-list" id="tList"></div>
+                                <div class="adv-savebar"><div class="adv-save" id="tSave">Save Attendance</div></div>
+                            </div>
+
+                            <div class="adv-bottomnav"><i class="fas fa-th-large home" id="tHome"></i><i class="fas fa-chart-pie"></i><i class="fas fa-cog"></i><i class="fas fa-bell"></i><i class="fas fa-plus"></i><i class="fas fa-comment-dots"></i></div>
+
+                            <div class="adv-modal" id="tModal"><div class="adv-modal-card"><div class="adv-bar"><div class="adv-fill" id="tFill"></div></div><h5 id="tModalText">Saving Attendance...</h5></div></div>
+                            </div><div class="adv-tap" id="tTap"></div>
+                        </div>
+                    </div>
+                    <div class="adv-cap">Teacher</div>
+                </div>
+
+                <div class="adv-col">
+                    <div class="adv-phone">
+                        <div class="adv-island"></div>
+                        <div class="adv-screen">
+                            <div class="adv-statusbar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+                            <div class="adv-app padv">
+                                <div class="adv-statusbar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+
+                                <div class="adv-view on" id="pMenu">
+                                    <div class="adv-logo">ADHYORA</div>
+                                    <div class="adv-menu">
+                                        <div class="adv-mbtn"><span>Roomcode</span><i class="fas fa-qrcode"></i></div>
+                                        <div class="adv-mbtn"><span>Teacher List</span><i class="fas fa-chalkboard-teacher"></i></div>
+                                        <div class="adv-mbtn"><span>Students List</span><i class="fas fa-clipboard-list"></i></div>
+                                        <div class="adv-mbtn"><span>Removed Students</span><i class="fas fa-user-slash"></i></div>
+                                        <div class="adv-mbtn"><span>Batch</span><i class="fas fa-id-badge"></i></div>
+                                        <div class="adv-mbtn"><span>TimeTable</span><i class="fas fa-calendar-week"></i></div>
+                                        <div class="adv-mbtn" id="pBtnData"><span>Data Section</span><i class="fas fa-chart-bar"></i></div>
+                                        <div class="adv-mbtn"><span>Subject List</span><i class="fas fa-book-open"></i></div>
+                                        <div class="adv-mbtn"><span>Students Subjects</span><i class="fas fa-book-reader"></i></div>
+                                        <div class="adv-mbtn"><span>Events</span><i class="fas fa-calendar-plus"></i></div>
+                                        <div class="adv-mbtn"><span>Attendance Records</span><i class="fas fa-user-check"></i></div>
+                                        <div class="adv-mbtn"><span>Admin Requests</span><i class="fas fa-user-shield"></i></div>
+                                    </div>
+                                </div>
+
+                                <div class="adv-view" id="pData">
+                                    <h3 class="pd-head"><i class="fas fa-server"></i> Data Management</h3>
+                                    <div class="pd-list" id="pList"></div>
+                                </div>
+
+                                <div class="adv-bottomnav"><div class="pdn-pill"><i class="fas fa-th-large home" id="pHome"></i><i class="fas fa-cog"></i><span class="pdn-b"><i class="fas fa-bell"></i><b class="pdn-dot"></b></span><i class="fas fa-calendar-alt"></i><span class="pdn-b"><i class="fas fa-comment-dots"></i><b class="pdn-dot"></b></span></div></div>
+                            </div><div class="adv-tap" id="pTap"></div>
+                        </div>
+                    </div>
+                    <div class="adv-cap">Principal</div>
+                </div>
+
+                <div class="adv-col">
+                    <div class="adv-phone">
+                        <div class="adv-island"></div>
+                        <div class="adv-screen">
+                            <div class="adv-statusbar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+                            <div class="adv-app sdv" id="sdApp">
+                                <div class="adv-statusbar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+                                <div class="sd-body">
+                                    <div class="sd-head"><div class="sd-logo">ADHYORA</div></div>
+                                    <div class="sd-profile"><div class="sd-pname">Aarav Nair</div><div class="sd-proll">Roll No: CS101</div><div class="sd-badge" id="sdBadge">Excellent</div></div>
+                                    <div class="sd-semnav"><span>&lt;</span><span>Semester 5</span><span>&gt;</span></div>
+                                    <div class="sd-panel">
+
+                                        <div class="sd-view on" id="sdHome">
+                                            <div class="sd-promo"><i class="fas fa-circle-check"></i><div><div class="sd-pt">Promotion Status: Clear</div><div class="sd-ps">No active hold on your promotion.</div><div class="sd-pm">Tap to view details &amp; history &rsaquo;</div></div></div>
+                                            <div class="sd-water"><div class="sd-wfill" id="sdWater"></div><div class="sd-wc"><div class="sd-proj">Projected</div><div class="sd-pct" id="sdPct">--%</div></div></div>
+                                            <div class="sd-stats" id="sdStats">
+                                                <div>Overall Attendance</div>
+                                                <div>Attended: 41</div>
+                                                <div>Absent: 8</div>
+                                                <div>Total: 49</div>
+                                                <div class="sd-cur"><div class="sd-curw" id="sdCurW"></div><div class="sd-curt">Current: 84.25%</div></div>
+                                                <div class="alt">Periods Present: 246</div>
+                                                <div class="alt">Periods Absent: 46</div>
+                                                <div class="alt">Total Periods: 292</div>
+                                            </div>
+                                            <div class="sd-card" id="sdSubCard"><div class="sd-chead"><span class="sd-ctitle">SUBJECT ATTENDANCE</span><span class="sd-all">All Time</span></div><div class="sd-cbody" id="sdSubs"></div></div>
+                                            <div id="sdMarksCard"><div class="sd-mh"><div class="sd-dd"><span>Internal Exam 1</span><span>&#9662;</span></div></div><div class="sd-list" id="sdMarks"></div></div>
+                                            <div class="sd-card" id="sdCurCard"><div class="sd-chead solid"><span class="sd-ctitle"><i class="fas fa-book-open"></i> MY CURRICULUM</span></div><div class="sd-cbody" id="sdCurr"></div></div>
+                                        </div>
+
+                                        <div class="sd-view" id="sdTT">
+                                            <div class="sd-days"><div class="sd-day">Mon</div><div class="sd-day">Tue</div><div class="sd-day">Wed</div><div class="sd-day">Thu</div><div class="sd-day on">Fri</div></div>
+                                            <div class="sd-ttc">
+                                                <div class="sd-tl"><div class="sd-trk" id="sdTrack"><div class="sd-prog" id="sdProg"></div></div><div class="sd-nodes" id="sdNodes"></div></div>
+                                                <div class="sd-cards" id="sdCards"></div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="sd-fade"></div>
+                                <div class="sd-nav"><div class="sd-ic" id="sdNavSet">&#9881;&#65039;</div><div class="sd-ic on" id="sdNavHome">&#128202;</div><div class="sd-ic">&#128203;</div><div class="sd-ic">&#128276;</div><div class="sd-ic">&#128172;</div><div class="sd-ic" id="sdNavTT">&#128218;</div><div class="sd-ic">&#128221;</div></div>
+                                
+                            </div><div class="adv-tap" id="sdTap"></div>
+                        </div>
+                    </div>
+                    <div class="adv-cap">Student</div>
+                </div>
+
             </div>
         </div>
 
@@ -1106,6 +1451,378 @@
         setTimeout(startCounterAnimation, 1200);
         
     </script>
+<script>
+(function () {
+    const root = document.getElementById('advShowcase');
+    if (!root) return;
+    const $ = id => document.getElementById(id);
+    const scr = $('tScreen'), menu = $('tMenu'), att = $('tAtt'), list = $('tList'),
+          modal = $('tModal'), tap = $('tTap'), fill = $('tFill'), mtxt = $('tModalText'),
+          stat = $('tStatus'), save = $('tSave'), btnAtt = $('tBtnAtt'), home = $('tHome');
+
+    const students = [
+        ['Aarav Nair', 'CS101', 'BSc Computer Science'],
+        ['Meera Krishnan', 'CS102', 'BSc Computer Science'],
+        ['Rohan Menon', 'CS103', 'BSc Computer Science'],
+        ['Anjali Das', 'CS104', 'BSc Computer Science'],
+        ['Fahad Rahman', 'CS105', 'BSc Computer Science'],
+        ['Devika Pillai', 'CS106', 'BSc Computer Science'],
+        ['Arjun Varma', 'CS107', 'BSc Computer Science'],
+        ['Nithya Suresh', 'CS108', 'BSc Computer Science'],
+        ['Sanjay Kumar', 'CS109', 'BSc Computer Science'],
+        ['Hana Fathima', 'CS110', 'BSc Computer Science']
+    ];
+    list.innerHTML = students.map((s, i) =>
+        `<div class="adv-row" id="tr${i}"><div class="adv-name"><b>${s[0]}</b> (${s[1]})<br><span>${s[2]}</span></div><div class="adv-tog on" id="tt${i}"></div></div>`
+    ).join('');
+
+    let run = 0;
+    const wait = (ms, r) => new Promise((res, rej) => setTimeout(() => r === run ? res() : rej('stop'), ms));
+
+    function scrollList(to, ms, r) {
+        return new Promise((res, rej) => {
+            const target = to === 'max' ? list.scrollHeight - list.clientHeight : to;
+            const from = list.scrollTop, t0 = performance.now();
+            (function step(now) {
+                if (r !== run) return rej('stop');
+                const p = Math.min((now - t0) / ms, 1);
+                const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                list.scrollTop = from + (target - from) * e;
+                p < 1 ? requestAnimationFrame(step) : res();
+            })(t0);
+        });
+    }
+
+    function tapEl(el) {
+        const a = scr.getBoundingClientRect(), b = el.getBoundingClientRect();
+        tap.style.left = (b.left - a.left + b.width / 2 - 14) + 'px';
+        tap.style.top = (b.top - a.top + b.height / 2 - 14) + 'px';
+        tap.classList.remove('go'); void tap.offsetWidth; tap.classList.add('go');
+    }
+
+    function setStatus(marked) {
+        stat.innerHTML = '<i class="fas fa-users" style="margin-right:4px;color:#64748b;"></i>' + students.length + ' Students' +
+            (marked ? '<span style="margin-left:8px;color:#dc2626;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Attendance Marked</span>'
+                    : '<span style="margin-left:8px;color:#10b981;">Ready to Mark</span>');
+    }
+
+    function reset() {
+        menu.classList.add('on'); att.classList.remove('on');
+        modal.classList.remove('on'); fill.style.width = '0';
+        students.forEach((s, i) => { $('tt' + i).classList.add('on'); $('tr' + i).classList.remove('locked'); });
+        save.style.opacity = '1'; setStatus(false); list.scrollTop = 0;
+    }
+
+    async function toggleOff(i, r) {
+        tapEl($('tr' + i)); await wait(250, r);
+        $('tt' + i).classList.remove('on'); await wait(700, r);
+    }
+
+    async function cycle(r) {
+        reset();
+        await wait(1500, r);
+        tapEl(btnAtt); await wait(500, r);
+        menu.classList.remove('on'); att.classList.add('on');
+        await wait(1200, r);
+
+        await scrollList(110, 1400, r); await wait(300, r);
+        await toggleOff(3, r);
+        await scrollList('max', 1400, r); await wait(300, r);
+        await toggleOff(8, r);
+        await wait(400, r);
+
+        tapEl(save); await wait(500, r);
+        modal.classList.add('on'); mtxt.innerHTML = 'Saving Attendance...';
+        await wait(100, r); fill.style.width = '40%'; await wait(800, r);
+        mtxt.innerHTML = 'Sending to Server...'; fill.style.width = '80%'; await wait(900, r);
+        fill.style.width = '100%';
+        mtxt.innerHTML = 'Attendance Sent!<br><span style="font-size:14px;color:#10b981;">(P: 8, A: 2)</span>';
+        await wait(1400, r);
+        modal.classList.remove('on');
+
+        setStatus(true);
+
+
+        await scrollList(0, 900, r);
+        await wait(1800, r);
+
+        tapEl(home); await wait(500, r);
+        att.classList.remove('on'); menu.classList.add('on');
+        await wait(3000, r);
+    }
+
+    async function play(r) {
+        try { while (r === run) await cycle(r); } catch (e) { /* stopped */ }
+    }
+
+    new IntersectionObserver(entries => {
+        entries.forEach(en => {
+            run++;
+            if (en.isIntersecting) play(run);
+        });
+    }, { threshold: 0.35 }).observe(root);
+})();
+</script>
+<script>
+(function () {
+    const col = document.querySelectorAll('#advShowcase .adv-col')[1];
+    if (!col) return;
+    const $ = id => document.getElementById(id);
+    const scr = col.querySelector('.adv-screen'), menu = $('pMenu'), data = $('pData'),
+          list = $('pList'), tap = $('pTap'), btnData = $('pBtnData'), home = $('pHome');
+
+    const cards = [
+        ['#8b5cf6', '#f5f3ff', '#8b5cf6', '#ede9fe', 'fa-clock', '#5b21b6', 'Timetable Config', 'Set the default daily period counts, start times, and lunch breaks.', 'Setup Timetable', '#8b5cf6', 'rgb(139 92 246 / 40%)'],
+        ['#f59e0b', '#fffbeb', '#d97706', '#fde68a', 'fa-sync-alt', '#b45309', 'Active Semester Type', 'Current: <b style="color:#4ade80;font-size:15px;">Odd Semester</b><br><span style="font-size:11px;line-height:1.4;">Force toggle the semester type if the calendar date calculation is incorrect.</span>', 'Flip Semester', '#f59e0b', 'rgba(245,158,11,.4)'],
+        ['#b91010', '#ecfdf5', '#740808', '#f3a7a7', 'fa-percentage', '#530202', 'Attendance Rules', 'Configure internal mark tiers based on student attendance percentages.', 'Configure', '#b91010', 'rgba(185,16,16,.4)'],
+        ['#fca5a5', '#fff5f5', '#ef4444', '#fee2e2', 'fa-credit-card', '#991b1b', 'Semester Fee Settings', 'Configure the dynamic core tuition fee structure rules for active academic years.', 'Open Fee Setup', '#ef4444', 'rgb(239 68 68 / 79%)'],
+        ['#3b82f6', '#eff6ff', '#2563eb', '#dbeafe', 'fa-key', '#1d4ed8', 'Payment Gateway', 'Securely link the college\'s Razorpay account to collect tuition fees.', 'Link Razorpay', '#3b82f6', 'rgb(59 130 246 / 40%)'],
+        ['#6ee7b7', '#f0fdf4', '#10b981', '#d1fae5', 'fa-user-graduate', '#047857', 'Students Roster', 'Upload a CSV containing Roll Numbers, Names, and Departments.', 'Select File', '#10b981', 'rgb(16 185 129 / 79%)'],
+        ['#e2e8f0', '#ffffff', '#3b82f6', '#eff6ff', 'fa-book', '#1e293b', 'Subject Master', 'Upload a CSV mapping Subject Codes to Departments and Semesters.', 'Select File', '#3b82f6', 'rgb(59 130 246 / 79%)'],
+        ['#e2e8f0', '#ffffff', '#f59e0b', '#fffbeb', 'fa-calendar-alt', '#1e293b', 'Academic Calendar', 'Upload a CSV detailing Working Days, Holidays, and Semester limits.', 'Select File', '#f59e0b', 'rgb(245 158 11 / 79%)'],
+        ['#e2e8f0', '#ffffff', '#8b5cf6', '#e0e7ff', 'fa-file-download', '#1e293b', 'Export Data', 'Download Marks, Attendance Stats, and Daily Logs as CSV files.', 'Open Exporter', '#8b5cf6', 'rgb(139 92 246 / 79%)'],
+        ['#fca5a5', '#fff5f5', '#ef4444', '#fee2e2', 'fa-level-up-alt', '#991b1b', 'Promote Students', 'Advance all students to the next semester or graduate them.', 'Promote Semester', '#ef4444', 'rgb(239 68 68 / 79%)']
+    ];
+    list.innerHTML = cards.map(c =>
+        `<div class="pd-card" style="border-color:${c[0]};background:${c[1]};">` +
+        `<div class="pd-ic" style="color:${c[2]};background:${c[3]};"><i class="fas ${c[4]}"></i></div>` +
+        `<h4 style="color:${c[5]};">${c[6]}</h4><p>${c[7]}</p>` +
+        `<div class="pd-btn" style="background:${c[9]};box-shadow:0 4px 10px ${c[10]};">${c[8]}</div></div>`
+    ).join('');
+
+    let run = 0;
+    const wait = (ms, r) => new Promise((res, rej) => setTimeout(() => r === run ? res() : rej('stop'), ms));
+
+    function scrollList(to, ms, r) {
+        return new Promise((res, rej) => {
+            const target = to === 'max' ? list.scrollHeight - list.clientHeight : to;
+            const from = list.scrollTop, t0 = performance.now();
+            (function step(now) {
+                if (r !== run) return rej('stop');
+                const p = Math.min((now - t0) / ms, 1);
+                const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                list.scrollTop = from + (target - from) * e;
+                p < 1 ? requestAnimationFrame(step) : res();
+            })(t0);
+        });
+    }
+
+    function tapEl(el) {
+        const a = scr.getBoundingClientRect(), b = el.getBoundingClientRect();
+        tap.style.left = (b.left - a.left + b.width / 2 - 14) + 'px';
+        tap.style.top = (b.top - a.top + b.height / 2 - 14) + 'px';
+        tap.classList.remove('go'); void tap.offsetWidth; tap.classList.add('go');
+    }
+
+    async function cycle(r) {
+        menu.classList.add('on'); data.classList.remove('on'); list.scrollTop = 0;
+        await wait(1800, r);
+        tapEl(btnData); await wait(500, r);
+        menu.classList.remove('on'); data.classList.add('on');
+        await wait(1400, r);
+        await scrollList(750, 2000, r); await wait(500, r);
+        await scrollList(1650, 2200, r); await wait(500, r);
+        await scrollList('max', 2200, r); await wait(1400, r);
+        tapEl(home); await wait(500, r);
+        data.classList.remove('on'); menu.classList.add('on');
+        await wait(3200, r);
+    }
+
+    async function play(r) { try { while (r === run) await cycle(r); } catch (e) { /* stopped */ } }
+
+    new IntersectionObserver(entries => {
+        entries.forEach(en => { run++; if (en.isIntersecting) play(run); });
+    }, { threshold: 0.35 }).observe(col);
+})();
+</script>
+<script>
+(function () {
+    const col = document.querySelectorAll('#advShowcase .adv-col')[2];
+    if (!col) return;
+    const $ = id => document.getElementById(id);
+    const scr = col.querySelector('.adv-screen'), app = $('sdApp'), tap = $('sdTap'),
+          home = $('sdHome'), tt = $('sdTT'),
+          water = $('sdWater'), pctEl = $('sdPct'), curW = $('sdCurW'),
+          navHome = $('sdNavHome'), navTT = $('sdNavTT'), navSet = $('sdNavSet'),
+          prog = $('sdProg'), track = $('sdTrack');
+
+    /* ---------- DEMO DATA ---------- */
+    const barColor = r => r < .6 ? '#ef4444' : r < .75 ? '#f59e0b' : '#10b981';
+    const subjects = [['Data Structures', 52, 56], ['Database Management', 47, 54], ['Operating Systems', 44, 52],
+                      ['Computer Networks', 40, 50], ['Software Engineering', 33, 48], ['Python Lab', 30, 32]];
+    const marks = [['Data Structures', 31, 9, 6], ['Database Management', 27, 8, 6], ['Operating Systems', 25, 8, 5],
+                   ['Computer Networks', 21, 7, 5], ['Software Engineering', 18, 7, 4], ['Python Lab', 32, 9, 6]];
+    const curriculum = [['CS501', 'Data Structures', 'Dr. Nair', 'MJD'], ['CS502', 'Database Management', 'Prof. Das', 'MID'],
+                        ['CS503', 'Operating Systems', 'Dr. Kumar', 'AECC'], ['CS504', 'Computer Networks', 'Dr. Menon', 'MLD']];
+    const periods = [['MJD', 'Data Structures', 'Dr. Nair', 'Room 204'], ['MID', 'Database Mgmt', 'Prof. Das', 'Room 204'], null,
+                     ['-', 'Lunch', '-', '-'], ['AECC', 'Operating Systems', 'Dr. Kumar', 'Room 204'], ['MLD', 'Computer Networks', 'Dr. Menon', 'Room 207']];
+
+    $('sdSubs').innerHTML = subjects.map(([n, p, t]) => {
+        const r = p / t, c = barColor(r);
+        return `<div class="sd-sub"><div class="sd-subname">${n}</div><div class="sd-subrow"><div class="sd-subic"><span class="sd-ico" style="background:${c}15;border:1px solid ${c}30;color:${c};"><i class="fas fa-book"></i></span><span><b>${p}</b> / ${t} <small>CLASSES</small></span></div><div class="sd-subpct" style="color:${c};">${Math.round(r * 100)}%</div></div><div class="sd-bar"><span data-w="${r * 100}" style="background:${c};"></span></div></div>`;
+    }).join('');
+
+    $('sdMarks').innerHTML = marks.map(([n, te, as, at]) => {
+        const ob = te + as + at, r = ob / 50, c = barColor(r);
+        return `<div class="sd-mrow"><div class="sd-mtop"><span>${n}</span><span>${ob}/50 <em style="color:${c};">(${Math.round(r * 100)}%)</em></span></div><div class="sd-mmeta"><span>\u{1F4DD} Test: ${te}</span><span>\u{1F4CB} Assign: ${as}</span><span>\u270B Att: ${at}</span></div><div class="sd-bar"><span data-w="${r * 100}" style="background:${c};"></span></div></div>`;
+    }).join('');
+
+    $('sdCurr').innerHTML = curriculum.map(([code, n, t, cat]) =>
+        `<div class="sd-cr"><div class="sd-crc">${code}</div><div class="sd-crn">${n}<br><span>${t}</span></div><div class="sd-crt">${cat}</div></div>`).join('');
+
+    $('sdCards').innerHTML = periods.map(p => p
+        ? `<div class="sd-ttcard"><div class="sd-row"><div class="sd-pill sd-cat">${p[0]}</div><div class="sd-pill sd-subp">${p[1]}</div></div><div class="sd-row"><div class="sd-pill sd-teach">${p[2]}</div><div class="sd-pill sd-room">${p[3]}</div></div></div>`
+        : `<div class="sd-ttcard free"><div class="sd-row"><div class="sd-pill sd-cat" style="color:#94a3b8;">-</div><div class="sd-pill sd-subp" style="color:#64748b;">Free Period</div></div><div class="sd-row"><div class="sd-pill sd-teach" style="color:#94a3b8;">-</div><div class="sd-pill sd-room" style="color:#94a3b8;">-</div></div></div>`).join('');
+    $('sdNodes').innerHTML = periods.map((p, i) => `<div class="sd-node">${i + 1}</div>`).join('');
+    const nodes = [...col.querySelectorAll('.sd-node')];
+
+    /* ---------- THEMES (same palettes as the real student app) ---------- */
+    const palettes = {
+        blue:   { m: '#3b82f6', l: '#e0f2fe', n: '#bfdbfe' },
+        pink:   { m: '#ec4899', l: '#fce7f3', n: '#fbcfe8' },
+        purple: { m: '#8b5cf6', l: '#ede9fe', n: '#ddd6fe' },
+        orange: { m: '#f97316', l: '#ffedd5', n: '#fed7aa' },
+        yellow: { m: '#eab308', l: '#fef9c3', n: '#fde047' }
+    };
+    const order = ['blue', 'pink', 'purple', 'orange', 'yellow'];
+    let curTheme = 'blue';
+    function setTheme(name) {
+        const p = palettes[name]; curTheme = name;
+        app.style.setProperty('--sd-main', p.m);
+        app.style.setProperty('--sd-light', p.l);
+        app.style.setProperty('--sd-nav', p.n);
+
+    }
+
+    function waveTheme(name) {
+        try { return waveThemeRaw(name).catch(e => { console.error('[student demo]', e); setTheme(name); }); }
+        catch (e) { console.error('[student demo]', e); setTheme(name); return Promise.resolve(); }
+    }
+    function waveThemeRaw(name) {
+        const p = palettes[name];
+        const wipe = app.cloneNode(true);
+        wipe.classList.add('sd-wipe');
+        wipe.removeAttribute('id'); wipe.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+        wipe.style.transition = 'none'; wipe.style.zIndex = '35'; wipe.style.pointerEvents = 'none';
+        wipe.style.setProperty('--sd-main', p.m); wipe.style.setProperty('--sd-light', p.l); wipe.style.setProperty('--sd-nav', p.n);
+        scr.insertBefore(wipe, tap);
+        const a = app.querySelectorAll('.sd-view'), b = wipe.querySelectorAll('.sd-view');
+        a.forEach((v, i) => b[i].scrollTop = v.scrollTop);
+        const anim = wipe.animate([
+            { clipPath: 'polygon(0 0, 0 0, 0 100%, 0% 100%)' },
+            { clipPath: 'polygon(0 0, 65% 0, 45% 100%, 0 100%)', offset: .5 },
+            { clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }
+        ], { duration: 650, easing: 'cubic-bezier(0.25, 1, 0.5, 1)', fill: 'forwards' });
+        return anim.finished.catch(() => {}).then(() => {
+            app.style.transition = 'none'; setTheme(name); void app.offsetWidth; app.style.transition = '';
+            wipe.remove();
+        });
+    }
+
+    /* ---------- HELPERS ---------- */
+    let run = 0;
+    const wait = (ms, r) => new Promise((res, rej) => setTimeout(() => r === run ? res() : rej('stop'), ms));
+    const scale = () => (app.getBoundingClientRect().width / 390) || 1;
+
+    function scrollTo(view, to, ms, r) {
+        return new Promise((res, rej) => {
+            const max = Math.max(0, view.scrollHeight - view.clientHeight);
+            const target = Math.max(0, Math.min(to, max));
+            const from = view.scrollTop, t0 = performance.now();
+            (function step(now) {
+                if (r !== run) return rej('stop');
+                const p = Math.min((now - t0) / ms, 1);
+                const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                view.scrollTop = from + (target - from) * e;
+                p < 1 ? requestAnimationFrame(step) : res();
+            })(t0);
+        });
+    }
+    function scrollToEl(view, el, pad, ms, r) {
+        const delta = (el.getBoundingClientRect().top - view.getBoundingClientRect().top) / scale();
+        return scrollTo(view, view.scrollTop + delta - pad, ms, r);
+    }
+    function tapEl(el) {
+        const a = scr.getBoundingClientRect(), b = el.getBoundingClientRect();
+        tap.style.left = (b.left - a.left + b.width / 2 - 14) + 'px';
+        tap.style.top = (b.top - a.top + b.height / 2 - 14) + 'px';
+        tap.classList.remove('go'); void tap.offsetWidth; tap.classList.add('go');
+    }
+    function setNav(el) { col.querySelectorAll('.sd-ic').forEach(i => i.classList.toggle('on', i === el)); }
+    function fillBars(box) { box.querySelectorAll('[data-w]').forEach(b => b.style.width = b.dataset.w + '%'); }
+
+    function startWater(r) {
+        water.style.top = (100 - 86.4) + '%';
+        curW.style.height = 'calc(84.25% - 12px)';
+        const t0 = performance.now(), dur = 2000;
+        (function f(now) {
+            if (r !== run) return;
+            const p = Math.min((now - t0) / dur, 1);
+            pctEl.textContent = (86.4 * (1 - Math.pow(1 - p, 3))).toFixed(1) + '%';
+            if (p < 1) requestAnimationFrame(f);
+        })(t0);
+    }
+
+    function reset() {
+        home.classList.add('on'); tt.classList.remove('on'); scr.querySelectorAll('.sd-wipe').forEach(w => w.remove());
+        home.scrollTop = 0; tt.scrollTop = 0;
+        water.style.transition = 'none'; curW.style.transition = 'none'; water.style.top = '100%'; pctEl.textContent = '--%'; curW.style.height = '0'; void water.offsetWidth; water.style.transition = ''; curW.style.transition = '';
+        home.querySelectorAll('[data-w]').forEach(b => b.style.width = '0');
+        prog.style.height = '0'; nodes.forEach(n => n.classList.remove('active', 'done'));
+        setNav(navHome);
+    }
+
+    /* ---------- ONE FULL CYCLE ---------- */
+    async function cycle(r) {
+        reset();
+        await wait(1000, r);
+
+        // 1) Home: attendance percentage fills up
+        startWater(r);
+        await wait(3200, r);
+
+        // 2) Scroll down: stats, subject attendance, internal marks, curriculum
+        await scrollToEl(home, $('sdStats'), 12, 1400, r); await wait(1200, r);
+        await scrollToEl(home, $('sdSubCard'), 12, 1500, r); fillBars($('sdSubCard')); await wait(2000, r);
+        await scrollToEl(home, $('sdMarksCard'), 12, 1500, r); fillBars($('sdMarksCard')); await wait(2600, r);
+        await scrollToEl(home, $('sdCurCard'), 12, 1400, r); await wait(1400, r);
+
+        // 3) Timetable: bar moves down as each period finishes
+        tapEl(navTT); await wait(500, r);
+        home.classList.remove('on'); tt.classList.add('on'); setNav(navTT); tt.scrollTop = 0;
+        await wait(1100, r);
+        for (let k = 0; k < nodes.length; k++) {
+            const move = k >= 2 ? scrollToEl(tt, nodes[k], 170, 800, r) : Promise.resolve();
+            prog.style.height = (nodes[k].offsetTop + nodes[k].offsetHeight / 2) + 'px';
+            nodes[k].classList.add('active');
+            await Promise.all([move, wait(1200, r)]);
+            nodes[k].classList.remove('active'); nodes[k].classList.add('done');
+        }
+        prog.style.height = track.clientHeight + 'px';
+        await wait(1200, r);
+
+        // 4) Theme colour change (3 colours per cycle, continues from the last one)
+        await wait(300, r);
+        tapEl($('sdNavHome')); await wait(500, r); tt.classList.remove('on'); home.classList.add('on'); home.scrollTop = 0; setNav(navHome); await wait(1200, r);
+        for (let j = 0; j < 3; j++) {
+            const name = order[(order.indexOf(curTheme) + 1) % order.length];
+            await waveTheme(name);
+            await wait(1300, r);
+        }
+        await wait(1000, r);
+
+        // 5) Back to home
+        await wait(300, r);
+        tt.classList.remove('on'); home.classList.add('on'); setNav(navHome);
+        await wait(2500, r);
+    }
+
+    async function play(r) { try { while (r === run) await cycle(r); } catch (e) { /* stopped */ } }
+
+    new IntersectionObserver(entries => {
+        entries.forEach(en => { run++; if (en.isIntersecting) play(run); });
+    }, { threshold: 0.35 }).observe(col);
+})();
+</script>
 </body>
 </html>
-
