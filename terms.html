@@ -1,41 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Anagh K Satheesh",
-  "url": "https://www.pixelaks.in",
-  "sameAs": [
-    "https://www.linkedin.com/in/anagh-k-satheesh-3914b0253",
-    "https://www.instagram.com/pixelaksofficial",
-    "https://github.com/anaghksatheesh"
-  ],
-  "jobTitle": "Entrepreneur & Founder",
-  "worksFor": {
-    "@type": "Organization",
-    "name": "Pixelaks Technologies"
-  },
-  "description": "Anagh K Satheesh is an entrepreneur and the founder of Pixelaks Technologies. He is the developer of the advanced college management app 'Adhyora' and casual games like 'Into The Fantasy', 'Ready to Math', and 'Typo Topple'.",
-  "knowsAbout": ["Game Development", "App Development", "SaaS", "Unity", "C#"]
-}
-</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions - Pixelaks Technologies</title>
     
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="shortcut icon" href="favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-    <link rel="manifest" href="site.webmanifest" />
-
-    
-    <link rel="canonical" href="https://pixelaks.in/terms" />
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms and Conditions | Pixelaks Technologies</title>
-
-    <meta name="description" content="Terms & Conditions for Pixelaks Products">
     
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -158,13 +130,37 @@
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #fff; }
         .mail-form input, .mail-form textarea { width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; }
         .mail-form button { width: 100%; padding: 15px; background: var(--theme-color); border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; color: white; }
+    
+        /* ===== PAPER LOOK: torn paper scene, grain, torn boxes ===== */
+:root { --dark-bg: #05070d; }
+#tsparticles { display: none !important; }
+#tornScene { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+#tornScene svg { position: absolute; left: 0; top: 0; display: block; overflow: visible;
+    translate: 0 calc(var(--pp, 0) * var(--spd, -60) * 1px);
+    filter: drop-shadow(0 -8px 20px rgba(0,0,0,.85)); }
+#tornScene .rim { fill: rgba(150,190,235,var(--ra, .5)); }
+#tornScene .sheet { fill: var(--sf, #0f1729); }
+#tornScene svg.ctr { filter: none; }
+#tornScene .ctr path { fill: none; stroke: rgba(142,197,255,.08); stroke-width: 1; }
+body::after { content: ''; position: fixed; inset: 0; z-index: 1500; pointer-events: none; opacity: .28;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.62'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+ 
+body .pb.pb { position: relative; isolation: isolate; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body .pb.pb::before, body .pb.pb::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: auto; height: auto; z-index: -1; pointer-events: none; }
+body .pb.pb::before { background: var(--pb-rim, rgba(150,190,235,.5)); clip-path: var(--pb-rim-path, none); }
+body .pb.pb::after { background: var(--pb-sheet, #0e1526); clip-path: var(--pb-sheet-path, none); }
+.card-games { --pb-rim: rgba(155,89,182,.6); --pb-sheet: #150d20; }
+.card-adhyora { --pb-rim: rgba(46,204,113,.55); --pb-sheet: #0c1a15; }
+.policy-card { padding: 44px 40px; }
+.policy-card:hover { box-shadow: none; }
+    
     </style>
 </head>
 <body>
     <div id="tsparticles"></div>
 
     <nav>
-        <div class="nav-brand"><img src="PixelaksLogoTransparent.png" alt="Pixelaks"></div>
+        <div class="nav-brand"><img src="logo.png" alt="Pixelaks"></div>
         <ul>
             <li><a href="/">Home</a></li>
             <li><a href="/#about">About</a></li> 
@@ -191,19 +187,17 @@
         <p class="sub-text">Please select the relevant agreement for the service you are using.</p>
 
         <div class="policy-grid">
-
-            <a href="terms-games" class="policy-card card-games">
-                <i class="fas fa-scroll"></i>
-                <h3>Pixelaks Games</h3>
-                <p>End User License Agreement (EULA), Fair Play Policy, and Usage Rights.</p>
-            </a>
-            
-            <a href="terms-adhyora" class="policy-card card-adhyora">
+            <a href="terms-adhyora.html" class="policy-card card-adhyora">
                 <i class="fas fa-file-contract"></i>
                 <h3>Adhyora SaaS</h3>
                 <p>Institutional Agreements, Service Level Agreement (SLA), and Liability Disclaimer.</p>
             </a>
-            
+
+            <a href="terms-games.html" class="policy-card card-games">
+                <i class="fas fa-scroll"></i>
+                <h3>Pixelaks Games</h3>
+                <p>End User License Agreement (EULA), Fair Play Policy, and Usage Rights.</p>
+            </a>
         </div>
     </div>
 
@@ -223,8 +217,8 @@
                 <a href="/">Home</a>
                 <a href="/#about">About Us</a>
                 <a href="/#divisions">Products</a>
-                <a href="privacy">Privacy Policy</a>
-                <a href="terms">Terms & Conditions</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="terms.html">Terms & Conditions</a>
             </div>
         </div>
         <p style="text-align:center; color:#555; margin-top:60px;">&copy; 2026 Pixelaks Technologies. All Rights Reserved.</p>
@@ -276,10 +270,144 @@
             AOS.init({ duration: 1100, once: false, mirror: true });
         };
     </script>
+
+    <script>
+
+        (function () {
+    var NS = 'http://www.w3.org/2000/svg';
+    function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function vnoise(r) {
+        var a = [], i; for (i = 0; i < 512; i++) a.push(r() * 2 - 1);
+        return function (x) { var i = Math.floor(x), f = x - i, u = (1 - Math.cos(f * Math.PI)) / 2; return a[i & 511] * (1 - u) + a[(i + 1) & 511] * u; };
+    }
+    function spline(pts, step) {
+        var out = [], i, k;
+        for (i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+            var n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+            for (k = 0; k < n; k++) {
+                var t = k / n, t2 = t * t, t3 = t2 * t, q = [];
+                for (var c = 0; c < 2; c++) q.push(0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+                out.push(q);
+            }
+        }
+        out.push(pts[pts.length - 1]);
+        return out;
+    }
+ 
+    /* ---------- 1. FIXED TORN-PAPER SCENE ---------- */
+    var scene = document.createElement('div');
+    scene.id = 'tornScene';
+    document.body.insertBefore(scene, document.body.firstChild);
+ 
+    function edge(anchors, side, seed, W, vh) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), n3 = vnoise(r);
+        var pts = spline(anchors.map(function (p) { return [p[0] * W, p[1] * vh]; }), 4);
+        var s = 0, base = [], rim = [];
+        for (var i = 0; i < pts.length; i++) {
+            var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+            var tx = b[0] - a[0], ty = b[1] - a[1], l = Math.hypot(tx, ty) || 1;
+            var nx = ty / l * side, ny = -tx / l * side;
+            if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+            var low = n1(s * 0.010) * 14 + n2(s * 0.06) * 5;
+            var o1 = low + (r() - .5) * 3.2;
+            var o2 = low + 4 + (n3(s * 0.035) + 1) * 3 + Math.max(0, n2(s * 0.2)) * 2.5 + (r() - .5) * 4.5;
+            base.push([pts[i][0] + nx * o1, pts[i][1] + ny * o1]);
+            rim.push([pts[i][0] + nx * o2, pts[i][1] + ny * o2]);
+        }
+        return { base: base, rim: rim };
+    }
+    function mk(W, H) {
+        var s = document.createElementNS(NS, 'svg');
+        s.setAttribute('width', W); s.setAttribute('height', H); s.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        s.setAttribute('aria-hidden', 'true');
+        return s;
+    }
+    function sheet(def, W, vh) {
+        var e = edge(def.a, def.side, def.seed, W, vh);
+        var close = def.c.map(function (p) { return 'L' + (p[0] * W).toFixed(1) + ' ' + (p[1] * vh).toFixed(1); }).join('');
+        function path(pts) { return 'M' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + close + 'Z'; }
+        var svg = mk(W, vh + 220);
+        svg.style.cssText = '--sf:' + def.f + ';--ra:' + def.ra + ';--spd:' + def.spd;
+        svg.innerHTML = '<path class="rim" d="' + path(e.rim) + '"/><path class="sheet" d="' + path(e.base) + '"/>';
+        return svg;
+    }
+    function contours(W, vh) {
+        var r = rng(7), svg = mk(W, vh), out = '';
+        svg.setAttribute('class', 'ctr');
+        svg.style.cssText = '--spd:-30';
+        [[.2, .32, 14], [.84, .7, 13], [.56, .08, 9]].forEach(function (c) {
+            var p0 = r() * 6.28, p1 = r() * 6.28, p2 = r() * 6.28;
+            for (var i = 1; i <= c[2]; i++) {
+                var d = '', base = i * 40;
+                for (var a = 0; a <= 6.4; a += 0.1) {
+                    var rad = base * (1 + .16 * Math.sin(a * 2 + p0 + i * .35) + .09 * Math.sin(a * 3 + p1 - i * .28) + .05 * Math.sin(a * 5 + p2 + i * .5));
+                    d += (a ? 'L' : 'M') + (c[0] * W + Math.cos(a) * rad * 1.15).toFixed(1) + ' ' + (c[1] * vh + Math.sin(a) * rad * .85).toFixed(1);
+                }
+                out += '<path d="' + d + 'Z"/>';
+            }
+        });
+        svg.innerHTML = out;
+        return svg;
+    }
+    var BOT = [[1.1, 1.7], [-.1, 1.7]];
+    var L = [
+        { a: [[.74, -.04], [.82, .05], [.86, .16], [.93, .24], [1.04, .32]], side: -1, seed: 11, c: [[1.1, .38], [1.1, -.1], [.72, -.1]], f: '#111b32', ra: .32, spd: -40 },
+        { a: [[-.04, .20], [.02, .12], [.07, .06], [.12, -.04]], side: -1, seed: 23, c: [[-.1, -.1]], f: '#0d1527', ra: .26, spd: -30 },
+        { a: [[-.05, .86], [.10, .80], [.26, .81], [.42, .89], [.58, .94], [.76, .92], [.90, .85], [1.05, .80]], side: 1, seed: 31, c: BOT, f: '#101a30', ra: .32, spd: -50 },
+        { a: [[-.05, .93], [.16, .88], [.36, .91], [.56, .97], [.78, .98], [1.05, .91]], side: 1, seed: 47, c: BOT, f: '#0c1426', ra: .26, spd: -80 },
+        { a: [[-.05, .99], [.22, .95], [.48, 1.0], [.76, 1.0], [1.05, .96]], side: 1, seed: 59, c: BOT, f: '#080e1c', ra: .22, spd: -110 }
+    ];
+    function build() {
+        var W = window.innerWidth, vh = window.innerHeight;
+        scene.innerHTML = '';
+        L.forEach(function (d) { scene.appendChild(sheet(d, W, vh)); });
+        scene.appendChild(contours(W, vh));
+    }
+    var lastW = window.innerWidth, t, ticking = false;
+    window.addEventListener('resize', function () {
+        clearTimeout(t);
+        t = setTimeout(function () { if (window.innerWidth !== lastW) { lastW = window.innerWidth; build(); } }, 200);
+    });
+    function pp() {
+        ticking = false;
+        var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        scene.style.setProperty('--pp', Math.min(1, window.scrollY / max).toFixed(4));
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(pp); } }, { passive: true });
+    build(); pp();
+ 
+    /* ---------- 2. TORN PAPER BOXES ---------- */
+    var els = document.querySelectorAll('.policy-card');
+    var OUT = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    function poly(seed, c, amp, rough, jseed) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), jr = rng(jseed), pts = [];
+        for (var i = 0; i < 4; i++) {
+            var A = c[i], B = c[(i + 1) % 4], len = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(2, Math.ceil(len / 3));
+            for (var k = 0; k < n; k++) {
+                var tt = k / n, w = n1(tt * len * 0.025 + i * 40) * amp + n2(tt * len * 0.09 + i * 90) * amp * .25 + (jr() - .5) * rough;
+                pts.push([A[0] + (B[0] - A[0]) * tt + OUT[i][0] * w, A[1] + (B[1] - A[1]) * tt + OUT[i][1] * w]);
+            }
+        }
+        return 'polygon(' + pts.map(function (p) { return p[0].toFixed(1) + 'px ' + p[1].toFixed(1) + 'px'; }).join(',') + ')';
+    }
+    function buildBox(el, id) {
+        var W = el.offsetWidth, H = el.offsetHeight;
+        if (W < 20 || H < 20) return;
+        var r = rng(id * 7 + 3), cj = Math.min(7, .02 * Math.min(W, H) + 2), g = 4, s = 9;
+        function jit() { return (r() - .5) * 2 * cj; }
+        var rim = [[g + jit(), g + jit()], [W - g + jit(), g + jit()], [W - g + jit(), H - g + jit()], [g + jit(), H - g + jit()]];
+        var sh = [[rim[0][0] + s - g, rim[0][1] + s - g], [rim[1][0] - s + g, rim[1][1] + s - g], [rim[2][0] - s + g, rim[2][1] - s + g], [rim[3][0] + s - g, rim[3][1] - s + g]];
+        el.style.setProperty('--pb-rim-path', poly(id * 11 + 5, rim, 3.2, 4.5, id * 5 + 1));
+        el.style.setProperty('--pb-sheet-path', poly(id * 11 + 5, sh, 3.2, 1.2, id * 5 + 2));
+    }
+    [].forEach.call(els, function (el, i) {
+        el.classList.add('pb');
+        if ('ResizeObserver' in window) new ResizeObserver(function () { buildBox(el, i + 1); }).observe(el);
+        else { buildBox(el, i + 1); window.addEventListener('resize', function () { buildBox(el, i + 1); }); }
+    });
+})();
+
+    </script>
 </body>
 </html>
-
-
-
-
-
