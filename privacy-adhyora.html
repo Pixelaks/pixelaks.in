@@ -112,6 +112,26 @@
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #fff; }
         .mail-form input, .mail-form textarea { width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; }
         .mail-form button { width: 100%; padding: 15px; background: var(--theme-color); border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; color: white; }
+    
+    /* ===== PAPER LOOK: torn paper scene, grain, torn boxes ===== */
+:root { --dark-bg: #0a0a0a; }
+#tsparticles { display: none !important; }
+#tornScene { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+#tornScene svg { position: absolute; left: 0; top: 0; display: block; overflow: visible;
+    translate: 0 calc(var(--pp, 0) * var(--spd, -60) * 1px);
+    filter: drop-shadow(0 -8px 20px rgba(0,0,0,.85)); }
+#tornScene .rim { fill: rgba(222,216,202,var(--ra, .5)); }
+#tornScene .sheet { fill: var(--sf, #18181a); }
+#tornScene svg.ctr { filter: none; }
+#tornScene .ctr path { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1; }
+body::after { content: ''; position: fixed; inset: 0; z-index: 1500; pointer-events: none; opacity: .28;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.62'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+ 
+body .pb.pb { position: relative; isolation: isolate; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body .pb.pb::before, body .pb.pb::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: auto; height: auto; z-index: -1; pointer-events: none; }
+body .pb.pb::before { background: var(--pb-rim, rgba(214,208,194,.5)); clip-path: var(--pb-rim-path, none); }
+body .pb.pb::after { background: var(--pb-sheet, #161618); clip-path: var(--pb-sheet-path, none); }
+
     </style>
 </head>
 <body>
@@ -141,11 +161,11 @@
     <div class="legal-container">
         <h1>Privacy Policy for Adhyora</h1>
         <p><strong>Effective Date:</strong> January 1, 2026<br>
-        <strong>Last Updated:</strong> July 17, 2026</p>
+        <strong>Last Updated:</strong> June 1, 2026</p>
 
         <h2>1. Introduction</h2>
         <p>This Privacy Policy explains how <strong>Pixelaks Technologies</strong> collects, uses, stores, and protects information within the <strong>Adhyora</strong> Academic Management System. Adhyora is a cloud-based platform for Higher Education Institutions that enables attendance management, internal assessment tracking, student fee collection, in-app communication, timetable management, and related academic administration workflows.</p>
-        <p>By accessing or using Adhyora, the Institution and its authorized users (Principals, Admins, Teachers, and Students) agree to the data practices described in this Policy. This Policy is designed to comply with the <strong>Digital Personal Data Protection Act, 2023 (DPDPA)</strong> of India and applicable data protection laws, and operates alongside the Master Software Subscription Agreement (MSSA) and Data Processing Agreement (DPA) executed with each Institution. In the event of any conflict between this Policy and the DPA on a data-protection matter, the DPA shall prevail.</p>
+        <p>By accessing or using Adhyora, the Institution and its authorized users (Principals, Admins, Teachers, and Students) agree to the data practices described in this Policy. This Policy is designed to comply with the <strong>Digital Personal Data Protection Act, 2023 (DPDPA)</strong> of India and applicable data protection laws.</p>
 
         <h2>2. Relationship Disclosure</h2>
         <p>For the purposes of this Privacy Policy:</p>
@@ -163,7 +183,6 @@
             <li>Login activity, administrative action logs, and session records.</li>
             <li>Device identifiers including FCM tokens for mobile push notifications and web push tokens for browser notifications.</li>
             <li>Active session identifiers used to manage and secure simultaneous logins across multiple devices.</li>
-            <li>A numerical Security PIN, set by the user, for application-level access control. Biometric authentication (fingerprint or Face ID), where used, is processed entirely on the user's own device by the device operating system — no biometric data is ever transmitted to or stored by Adhyora.</li>
         </ul>
 
         <p><strong>3.2 Teacher / Faculty Data</strong></p>
@@ -173,7 +192,6 @@
             <li>Substitute teaching assignments and scheduling records.</li>
             <li>Device identifiers (FCM tokens, web push tokens) and active session records across devices.</li>
             <li>In-app messages sent or received within the platform, including message content, sender identity, and timestamps.</li>
-            <li>A numerical Security PIN for application-level access control, and on-device-only biometric authentication where used (see Section 3.1).</li>
         </ul>
 
         <p><strong>3.3 Student Data</strong></p>
@@ -181,7 +199,7 @@
             <li>Name, institutional roll number, student ID, department, year, and batch.</li>
             <li>Attendance records including subject-wise attendance percentages, event attendance, and daily period-level logs.</li>
             <li>Internal assessment marks, Continuous Evaluation (CE) scores, test marks, assignment marks, and academic performance reports.</li>
-            <li>Medical leave records, limited to the leave category and the specific dates marked by authorized faculty or institutional staff. Adhyora does not collect or store medical reasons, diagnoses, or supporting medical documentation. This data is nonetheless treated as sensitive personal information.</li>
+            <li>Medical leave applications, including leave start dates, end dates, and details submitted by the student or institutional staff. This data is treated as sensitive personal information.</li>
             <li>Fee payment records including payment history, transaction IDs (Razorpay Order ID and Payment ID), payment amounts, due dates, fee type, and subscription-linked receipts.</li>
             <li>Device identifiers (FCM tokens, web push tokens) used for academic and institutional notification delivery.</li>
             <li>Active session identifiers used to manage login sessions across devices.</li>
@@ -208,8 +226,8 @@
         <ul>
             <li><strong>Attendance Management:</strong> Processing and storing attendance entries made by teachers, computing subject-wise and institution-wide attendance percentages, and maintaining daily period logs per student.</li>
             <li><strong>Internal Assessment:</strong> Recording Continuous Evaluation (CE) marks and generating student academic performance summaries and reports.</li>
-            <li><strong>Medical Leave Processing:</strong> Storing and displaying medical leave dates and categories to allow administrative review and attendance record adjustments where applicable.</li>
-            <li><strong>Fee Collection:</strong> Facilitating student fee payments through the Institution's own Razorpay payment gateway integration, storing transaction records, generating payment receipts, and maintaining payment history for institutional reference.</li>
+            <li><strong>Medical Leave Processing:</strong> Storing and displaying medical leave applications to allow administrative review and attendance record adjustments where applicable.</li>
+            <li><strong>Fee Collection:</strong> Processing student fee payments through the integrated Razorpay payment gateway, storing transaction records, generating payment receipts, and maintaining payment history for institutional reference.</li>
             <li><strong>In-App Communication:</strong> Enabling Principals and Admins to send broadcast announcements and private messages to teachers and students, and retaining message records for delivery confirmation and historical reference.</li>
             <li><strong>Push Notifications:</strong> Using FCM tokens and web push tokens to deliver academic updates, attendance alerts, fee reminders, and institutional announcements to users' registered devices.</li>
             <li><strong>Timetable and Scheduling:</strong> Managing timetable allocations, subject-teacher assignments, batch configurations, and substitute teacher scheduling.</li>
@@ -223,12 +241,12 @@
         <p>Pixelaks Technologies does <strong>not</strong> sell, rent, or share institutional or personal data with any third-party advertisers, analytics providers, or external organizations for commercial purposes. Data is shared only in the following strictly limited circumstances:</p>
         <ul>
             <li><strong>Google Firebase (Cloud Infrastructure):</strong> Adhyora uses Google Firebase for secure cloud database storage (Firestore), user authentication, and push notification delivery (Firebase Cloud Messaging / FCM). Firebase processes data under Google's strict confidentiality and security standards and is compliant with international data protection frameworks. For further details, please see the <a href="https://firebase.google.com/support/privacy" target="_blank">Firebase Privacy and Security documentation</a>.</li>
-            <li><strong>Razorpay (Payment Processing):</strong> For Institutions on plans that support online student fee collection, the Institution independently registers its own Razorpay merchant account and supplies its own API keys for integration with Adhyora. Fee payments are routed directly into the Institution's Razorpay merchant account — <strong>Pixelaks Technologies does not at any point receive, hold, or control this fee revenue.</strong> Adhyora stores transaction references such as Razorpay Order IDs, Payment IDs, and verification signatures for record-keeping within the platform. Pixelaks Technologies does not store raw card numbers, UPI credentials, or bank account details. Because the Razorpay account belongs to the Institution, the Institution's and its students' use of Razorpay is governed by Razorpay's own Terms of Service and Privacy Policy, and Pixelaks Technologies is not liable for disputes, failures, or chargebacks arising from Razorpay's services. For details, please see the <a href="https://razorpay.com/privacy/" target="_blank">Razorpay Privacy Policy</a>.</li>
+            <li><strong>Razorpay (Payment Processing):</strong> For Institutions that have enabled the online student fee collection feature, payments are processed through <strong>Razorpay Payment Solutions Private Limited</strong>, a PCI-DSS compliant payment gateway. Transaction data including Razorpay Order IDs, Payment IDs, and verification signatures are transmitted to and stored by Razorpay in accordance with their own privacy policy. Pixelaks Technologies does not store raw card numbers, UPI credentials, or bank account details. Institutions and students using the fee collection feature are subject to Razorpay's Terms of Service and Privacy Policy. For details, please see the <a href="https://razorpay.com/privacy/" target="_blank">Razorpay Privacy Policy</a>.</li>
             <li><strong>Legal Compliance:</strong> Data may be disclosed if required by applicable Indian law, valid court orders, lawful government directives, or regulatory requirements.</li>
         </ul>
 
         <h2>6. Medical and Sensitive Data</h2>
-        <p>Adhyora stores medical leave records — limited to leave category and dates — submitted by students or entered by institutional staff. No medical reason, diagnosis, or supporting documentation is collected or stored through the platform. This information is nonetheless treated as sensitive personal data and is subject to the following protections:</p>
+        <p>Adhyora stores medical leave records submitted by students or entered by institutional staff. This information is treated as sensitive personal data and is subject to the following protections:</p>
         <ul>
             <li>Medical leave records are accessible only to authorized Admins and Principals within the platform, and to the concerned student.</li>
             <li>This data is never shared with any third party except as legally required.</li>
@@ -242,16 +260,16 @@
             <li><strong>Data Isolation:</strong> Each Institution's data is logically partitioned at the database level using strict Firebase Security Rules, preventing any cross-institutional access.</li>
             <li><strong>Role-Based Access:</strong> Permission rules ensure Principals, Teachers, and Students can only access data relevant to their assigned role and department.</li>
             <li><strong>Session Management:</strong> Active login sessions are tracked per device. Users and Admins can invalidate sessions, and the system supports secure remote session termination.</li>
-            <li><strong>Payment Security:</strong> Fee payments are routed directly to the Institution's own Razorpay merchant account and processed end-to-end by Razorpay. Pixelaks Technologies does not handle or store raw payment credentials at any point.</li>
+            <li><strong>Payment Security:</strong> Fee payment processing is handled end-to-end by Razorpay. Pixelaks Technologies does not handle or store raw payment credentials at any point.</li>
             <li><strong>Monitoring:</strong> Continuous monitoring is maintained to detect unauthorized activity and ensure system integrity.</li>
-            <li><strong>Breach Notification:</strong> In the event of a confirmed security incident affecting institutional data, Pixelaks Technologies will notify the affected Institution without undue delay and, in any event, within seventy-two (72) hours of confirming the breach internally, so that appropriate administrative and legal measures can be taken promptly.</li>
+            <li><strong>Breach Notification:</strong> In the event of a confirmed security incident that affects institutional data, Pixelaks Technologies will notify the affected Institution without undue delay so that appropriate administrative and legal measures can be taken promptly.</li>
         </ul>
 
         <h2>8. Data Retention and Deletion</h2>
         <p>Data is retained for as long as the Institution maintains an active subscription with Pixelaks Technologies.</p>
         <ul>
-            <li>Upon a written request from the authorized Principal or Admin, Pixelaks Technologies will work with the Institution to export and, where confirmed appropriate, delete institutional data, subject to the timelines set out in the Institution's Data Processing Agreement.</li>
-            <li><strong>If a subscription payment is missed:</strong> an 8-day grace period keeps the Service fully active, followed by a possible paywall suspension (with 3 days' advance notice) during which Institution data is retained intact for up to 30 days. If the account remains unpaid beyond that point, Pixelaks Technologies may proceed to terminate the subscription after a further 14-day notice period. Only after termination does the 60-day data export ("Transition Period") begin — the Institution may request a full export of its data at any point during that window. Data is permanently deleted from active systems only after the Transition Period ends, and reasonable attempts will be made to notify the Institution beforehand. Backup copies are deleted on a rolling basis within 90 days of deletion from active storage.</li>
+            <li>Upon a written request from the authorized Principal or Admin, Pixelaks Technologies will permanently delete all institutional data from our systems within <strong>30 days</strong> of receiving the verified request.</li>
+            <li>If the subscription remains inactive for more than <strong>30 days</strong> without renewal, the Institution's data may be permanently deleted. Reasonable attempts will be made to notify the Institution before deletion occurs.</li>
             <li>Payment transaction records may be retained for a minimum period as required under applicable Indian financial and tax regulations, even after an account deletion request is processed.</li>
         </ul>
 
@@ -268,7 +286,7 @@
         <h2>10. Limitation of Liability and Service Disclaimer</h2>
         <p><strong>Service Continuity:</strong> The Adhyora software is provided on an "AS IS" and "AS AVAILABLE" basis. While strong industry-standard security, backup, and redundancy measures are maintained via Google Firebase, Pixelaks Technologies does not warrant that the software will be 100% uninterrupted, timely, secure, or entirely free of temporary technical issues.</p>
         <p><strong>Exclusion of Consequential Damages:</strong> To the maximum extent permitted by applicable law, Pixelaks Technologies shall not be liable for any indirect, incidental, special, consequential, or exemplary damages — including but not limited to loss of institutional data, academic downtime, failed or disputed fee transactions processed through third-party gateways, or loss of goodwill — arising from the use of or inability to use the platform.</p>
-        <p><strong>Maximum Liability Cap:</strong> To the maximum extent permitted by applicable law, the total collective liability of Pixelaks Technologies for any legal claims, losses, or causes of action shall be strictly limited to the total amount actually paid by the Institution to Pixelaks Technologies for the software subscription during the twelve (12) months immediately preceding the event giving rise to liability. This cap does not apply to liability that cannot be lawfully excluded or limited, including liability for death or personal injury caused by gross negligence.</p>
+        <p><strong>Maximum Liability Cap:</strong> In any event, the total collective liability of Pixelaks Technologies for any legal claims, losses, or causes of action shall be strictly limited to the total amount actually paid by the Institution to Pixelaks Technologies for the software subscription during the twelve (12) months immediately preceding the event giving rise to liability.</p>
 
         <h2>11. Children's Privacy and Consent</h2>
         <p>Adhyora is designed strictly for Higher Education Institutions and is not targeted at children under the age of 18 as a primary user base. However, the platform may incidentally store academic records of students who are minors, as permitted under Indian higher education age norms.</p>
@@ -357,6 +375,145 @@
         function closeMail() { document.getElementById("contactModal").style.display = "none"; }
         window.onclick = function(event) { if (event.target == document.getElementById("contactModal")) { closeMail(); } }
         window.onload = function() { setTimeout(function() { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 300); };
+    </script>
+
+    <script>
+
+        (function () {
+    var NS = 'http://www.w3.org/2000/svg';
+    function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function vnoise(r) {
+        var a = [], i; for (i = 0; i < 512; i++) a.push(r() * 2 - 1);
+        return function (x) { var i = Math.floor(x), f = x - i, u = (1 - Math.cos(f * Math.PI)) / 2; return a[i & 511] * (1 - u) + a[(i + 1) & 511] * u; };
+    }
+    function spline(pts, step) {
+        var out = [], i, k;
+        for (i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+            var n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+            for (k = 0; k < n; k++) {
+                var t = k / n, t2 = t * t, t3 = t2 * t, q = [];
+                for (var c = 0; c < 2; c++) q.push(0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+                out.push(q);
+            }
+        }
+        out.push(pts[pts.length - 1]);
+        return out;
+    }
+ 
+    /* ---------- 1. FIXED TORN-PAPER SCENE ---------- */
+    var scene = document.createElement('div');
+    scene.id = 'tornScene';
+    document.body.insertBefore(scene, document.body.firstChild);
+ 
+    function edge(anchors, side, seed, W, vh) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), n3 = vnoise(r);
+        var pts = spline(anchors.map(function (p) { return [p[0] * W, p[1] * vh]; }), 4);
+        var s = 0, base = [], rim = [];
+        for (var i = 0; i < pts.length; i++) {
+            var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+            var tx = b[0] - a[0], ty = b[1] - a[1], l = Math.hypot(tx, ty) || 1;
+            var nx = ty / l * side, ny = -tx / l * side;
+            if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+            var low = n1(s * 0.010) * 14 + n2(s * 0.06) * 5;
+            var o1 = low + (r() - .5) * 3.2;
+            var o2 = low + 4 + (n3(s * 0.035) + 1) * 3 + Math.max(0, n2(s * 0.2)) * 2.5 + (r() - .5) * 4.5;
+            base.push([pts[i][0] + nx * o1, pts[i][1] + ny * o1]);
+            rim.push([pts[i][0] + nx * o2, pts[i][1] + ny * o2]);
+        }
+        return { base: base, rim: rim };
+    }
+    function mk(W, H) {
+        var s = document.createElementNS(NS, 'svg');
+        s.setAttribute('width', W); s.setAttribute('height', H); s.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        s.setAttribute('aria-hidden', 'true');
+        return s;
+    }
+    function sheet(def, W, vh) {
+        var e = edge(def.a, def.side, def.seed, W, vh);
+        var close = def.c.map(function (p) { return 'L' + (p[0] * W).toFixed(1) + ' ' + (p[1] * vh).toFixed(1); }).join('');
+        function path(pts) { return 'M' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + close + 'Z'; }
+        var svg = mk(W, vh + 220);
+        svg.style.cssText = '--sf:' + def.f + ';--ra:' + def.ra + ';--spd:' + def.spd;
+        svg.innerHTML = '<path class="rim" d="' + path(e.rim) + '"/><path class="sheet" d="' + path(e.base) + '"/>';
+        return svg;
+    }
+    function contours(W, vh) {
+        var r = rng(7), svg = mk(W, vh), out = '';
+        svg.setAttribute('class', 'ctr');
+        svg.style.cssText = '--spd:-30';
+        [[.2, .32, 14], [.84, .7, 13], [.56, .08, 9]].forEach(function (c) {
+            var p0 = r() * 6.28, p1 = r() * 6.28, p2 = r() * 6.28;
+            for (var i = 1; i <= c[2]; i++) {
+                var d = '', base = i * 40;
+                for (var a = 0; a <= 6.4; a += 0.1) {
+                    var rad = base * (1 + .16 * Math.sin(a * 2 + p0 + i * .35) + .09 * Math.sin(a * 3 + p1 - i * .28) + .05 * Math.sin(a * 5 + p2 + i * .5));
+                    d += (a ? 'L' : 'M') + (c[0] * W + Math.cos(a) * rad * 1.15).toFixed(1) + ' ' + (c[1] * vh + Math.sin(a) * rad * .85).toFixed(1);
+                }
+                out += '<path d="' + d + 'Z"/>';
+            }
+        });
+        svg.innerHTML = out;
+        return svg;
+    }
+    var BOT = [[1.1, 1.7], [-.1, 1.7]];
+    var L = [
+        { a: [[.74, -.04], [.82, .05], [.86, .16], [.93, .24], [1.04, .32]], side: -1, seed: 11, c: [[1.1, .38], [1.1, -.1], [.72, -.1]], f: '#17171a', ra: .32, spd: -40 },
+        { a: [[-.04, .20], [.02, .12], [.07, .06], [.12, -.04]], side: -1, seed: 23, c: [[-.1, -.1]], f: '#121214', ra: .26, spd: -30 },
+        { a: [[-.05, .86], [.10, .80], [.26, .81], [.42, .89], [.58, .94], [.76, .92], [.90, .85], [1.05, .80]], side: 1, seed: 31, c: BOT, f: '#161618', ra: .32, spd: -50 },
+        { a: [[-.05, .93], [.16, .88], [.36, .91], [.56, .97], [.78, .98], [1.05, .91]], side: 1, seed: 47, c: BOT, f: '#121214', ra: .26, spd: -80 },
+        { a: [[-.05, .99], [.22, .95], [.48, 1.0], [.76, 1.0], [1.05, .96]], side: 1, seed: 59, c: BOT, f: '#0d0d0f', ra: .22, spd: -110 }
+    ];
+    function build() {
+        var W = window.innerWidth, vh = window.innerHeight;
+        scene.innerHTML = '';
+        L.forEach(function (d) { scene.appendChild(sheet(d, W, vh)); });
+        scene.appendChild(contours(W, vh));
+    }
+    var lastW = window.innerWidth, t, ticking = false;
+    window.addEventListener('resize', function () {
+        clearTimeout(t);
+        t = setTimeout(function () { if (window.innerWidth !== lastW) { lastW = window.innerWidth; build(); } }, 200);
+    });
+    function pp() {
+        ticking = false;
+        var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        scene.style.setProperty('--pp', Math.min(1, window.scrollY / max).toFixed(4));
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(pp); } }, { passive: true });
+    build(); pp();
+ 
+    /* ---------- 2. TORN PAPER BOXES ---------- */
+    var els = document.querySelectorAll('.legal-container');
+    var OUT = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    function poly(seed, c, amp, rough, jseed) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), jr = rng(jseed), pts = [];
+        for (var i = 0; i < 4; i++) {
+            var A = c[i], B = c[(i + 1) % 4], len = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(2, Math.ceil(len / 3));
+            for (var k = 0; k < n; k++) {
+                var tt = k / n, w = n1(tt * len * 0.025 + i * 40) * amp + n2(tt * len * 0.09 + i * 90) * amp * .25 + (jr() - .5) * rough;
+                pts.push([A[0] + (B[0] - A[0]) * tt + OUT[i][0] * w, A[1] + (B[1] - A[1]) * tt + OUT[i][1] * w]);
+            }
+        }
+        return 'polygon(' + pts.map(function (p) { return p[0].toFixed(1) + 'px ' + p[1].toFixed(1) + 'px'; }).join(',') + ')';
+    }
+    function buildBox(el, id) {
+        var W = el.offsetWidth, H = el.offsetHeight;
+        if (W < 20 || H < 20) return;
+        var r = rng(id * 7 + 3), cj = Math.min(7, .02 * Math.min(W, H) + 2), g = 4, s = 9;
+        function jit() { return (r() - .5) * 2 * cj; }
+        var rim = [[g + jit(), g + jit()], [W - g + jit(), g + jit()], [W - g + jit(), H - g + jit()], [g + jit(), H - g + jit()]];
+        var sh = [[rim[0][0] + s - g, rim[0][1] + s - g], [rim[1][0] - s + g, rim[1][1] + s - g], [rim[2][0] - s + g, rim[2][1] - s + g], [rim[3][0] + s - g, rim[3][1] - s + g]];
+        el.style.setProperty('--pb-rim-path', poly(id * 11 + 5, rim, 3.2, 4.5, id * 5 + 1));
+        el.style.setProperty('--pb-sheet-path', poly(id * 11 + 5, sh, 3.2, 1.2, id * 5 + 2));
+    }
+    [].forEach.call(els, function (el, i) {
+        el.classList.add('pb');
+        if ('ResizeObserver' in window) new ResizeObserver(function () { buildBox(el, i + 1); }).observe(el);
+        else { buildBox(el, i + 1); window.addEventListener('resize', function () { buildBox(el, i + 1); }); }
+    });
+})();
+
     </script>
 </body>
 </html>
