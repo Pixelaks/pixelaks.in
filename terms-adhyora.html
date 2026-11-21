@@ -17,41 +17,29 @@
     "@type": "Organization",
     "name": "Pixelaks Technologies"
   },
-  "description": "Anagh K Satheesh is an entrepreneur and the founder of Pixelaks Technologies. He is the developer of the advanced college management app 'Adhyora' and casual games like 'Into The Fantasy', 'Ready to Math', and 'Typo Topple'.",
+  "description": "Anagh K Satheesh is an entrepreneur and the founder of Pixelaks Technologies.",
   "knowsAbout": ["Game Development", "App Development", "SaaS", "Unity", "C#"]
 }
 </script>
-    
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="shortcut icon" href="favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="manifest" href="site.webmanifest" />
-
-    
     <link rel="canonical" href="https://pixelaks.in/terms-adhyora" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms and Conditions Adhyora | Pixelaks Technologies</title>
-
-    <meta name="description" content="Read the Terms and Conditions of Adhyora Pixelaks Technologies outlining usage rules, responsibilities, etc.">
-    
-    <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
+    <meta name="description" content="Read the Terms and Conditions of Adhyora by Pixelaks Technologies outlining usage rules, responsibilities, payments, and legal provisions.">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <style>
-        /* --- GLOBAL RESET --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
-            /* ADHYORA GREEN THEME */
-            --theme-color: #2ecc71; 
+            --theme-color: #2ecc71;
             --dark-bg: #0a0a0a;
             --glass-bg: rgba(20, 20, 20, 0.7);
             --text-light: #ffffff;
         }
-
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -62,13 +50,10 @@
             width: 100%;
             -webkit-tap-highlight-color: transparent;
         }
-
         #tsparticles { position: fixed; width: 100%; height: 100%; z-index: 1; }
-
-        /* --- HEADER --- */
         nav {
-            position: fixed; top: 0; left: 0; width: 100%; height: 80px; 
-            display: flex; justify-content: space-between; align-items: center; padding: 0 5%; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 80px;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 5%;
             background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 1000; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -76,18 +61,15 @@
         nav ul { display: flex; list-style: none; gap: 30px; align-items: center; }
         nav a { color: white; text-decoration: none; font-weight: 500; font-size: 1rem; transition: 0.3s; white-space: nowrap; }
         nav a:hover { color: var(--theme-color); }
-
         @media (max-width: 600px) {
             nav { height: 60px; padding: 0 3%; }
             nav img { height: 35px; }
             nav ul { gap: 12px; }
             nav a { font-size: 0.85rem; }
         }
-
-        /* --- GLASS CONTENT --- */
         .legal-container {
             max-width: 900px; width: 92%; margin: 150px auto 100px; padding: 50px;
-            background: rgba(10, 10, 10, 0.2); 
+            background: rgba(10, 10, 10, 0.2);
             border-radius: 30px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -95,7 +77,6 @@
             position: relative; z-index: 2;
             overflow-wrap: break-word; word-wrap: break-word;
         }
-
         .legal-container p, .legal-container li { font-style: normal; color: rgba(255, 255, 255, 0.85); margin-bottom: 15px; font-size: 1rem; text-align: justify; }
         h1 { color: var(--theme-color); font-size: 2.5rem; margin-bottom: 30px; border-bottom: 2px solid var(--theme-color); display: inline-block; }
         h2 { color: var(--theme-color); margin-top: 40px; margin-bottom: 15px; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; }
@@ -104,14 +85,11 @@
         strong { color: #fff; font-weight: bold; }
         .legal-container ul { margin-left: 20px; margin-bottom: 20px; }
         .legal-container li { margin-bottom: 10px; }
-
         @media (max-width: 600px) {
             .legal-container { margin-top: 100px; padding: 25px 20px; border-radius: 20px; }
             h1 { font-size: 1.8rem; margin-bottom: 20px; }
             h2 { font-size: 1.3rem; margin-top: 30px; }
         }
-
-        /* --- FOOTER --- */
         footer {
             background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(15px);
             padding: 80px 10% 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -127,33 +105,48 @@
         #footer-email:hover { color: var(--theme-color); text-shadow: 0 0 15px var(--theme-color); }
         .social-icons a { color: white; font-size: 1.8rem; margin-right: 25px; transition: 0.3s; display: inline-block; }
         .social-icons a:hover { color: var(--theme-color); transform: scale(1.2); }
-        
         @media (max-width: 850px) {
             .footer-grid { flex-direction: column; gap: 40px; }
             footer { padding: 60px 5% 40px; }
         }
-
-        /* --- MODAL --- */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 2000; backdrop-filter: blur(15px); justify-content: center; align-items: center; }
         .modal-content { background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(20px); padding: 30px; border-radius: 25px; width: 90%; max-width: 500px; border: 1px solid var(--theme-color); position: relative; box-shadow: 0 0 30px rgba(0,0,0, 0.5); }
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #fff; }
         .mail-form input, .mail-form textarea { width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; }
         .mail-form button { width: 100%; padding: 15px; background: var(--theme-color); border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; color: white; }
+    
+        /* ===== PAPER LOOK: torn paper scene, grain, torn boxes ===== */
+:root { --dark-bg: #0a0a0a; }
+#tsparticles { display: none !important; }
+#tornScene { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+#tornScene svg { position: absolute; left: 0; top: 0; display: block; overflow: visible;
+    translate: 0 calc(var(--pp, 0) * var(--spd, -60) * 1px);
+    filter: drop-shadow(0 -8px 20px rgba(0,0,0,.85)); }
+#tornScene .rim { fill: rgba(222,216,202,var(--ra, .5)); }
+#tornScene .sheet { fill: var(--sf, #18181a); }
+#tornScene svg.ctr { filter: none; }
+#tornScene .ctr path { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 1; }
+body::after { content: ''; position: fixed; inset: 0; z-index: 1500; pointer-events: none; opacity: .28;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.62'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+ 
+body .pb.pb { position: relative; isolation: isolate; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body .pb.pb::before, body .pb.pb::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: auto; height: auto; z-index: -1; pointer-events: none; }
+body .pb.pb::before { background: var(--pb-rim, rgba(214,208,194,.5)); clip-path: var(--pb-rim-path, none); }
+body .pb.pb::after { background: var(--pb-sheet, #161618); clip-path: var(--pb-sheet-path, none); }
+    
     </style>
 </head>
 <body>
     <div id="tsparticles"></div>
-
     <nav>
         <div class="nav-brand"><img src="PixelaksLogoTransparent.png" alt="Pixelaks"></div>
         <ul>
             <li><a href="/">Home</a></li>
             <li><a href="/#about">About</a></li>
             <li><a href="/#divisions">Products</a></li>
-            <li><a href="javascript:void(0)" onclick="openMail()">Contact</a></li> 
+            <li><a href="javascript:void(0)" onclick="openMail()">Contact</a></li>
         </ul>
     </nav>
-
     <div id="contactModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeMail()">&times;</span>
@@ -168,117 +161,183 @@
     </div>
 
     <div class="legal-container">
-    <h1>Adhyora Terms of Service</h1>
-    <p><strong>Effective Date:</strong> January 1, 2026</p>
+        <h1>Adhyora Terms of Service</h1>
+        <p><strong>Effective Date:</strong> January 1, 2026<br>
+        <strong>Last Updated:</strong> June 1, 2026</p>
 
-    <p>Welcome to <strong>Adhyora</strong>, a cloud-based academic management platform provided by Pixelaks Technologies. By accessing or using Adhyora, the Institution agrees to the following Terms of Service, which govern the use of our application, infrastructure, and associated services. These Terms operate alongside the Master Software Subscription Agreement (MSSA) executed by the Institution; in the event of any conflict, the executed MSSA shall prevail.</p>
+        <p>Welcome to <strong>Adhyora</strong>, a cloud-based academic management platform provided by <strong>Pixelaks Technologies</strong>. By accessing or using Adhyora, the Institution and its authorized users agree to the following Terms of Service, which govern the use of our application, backend infrastructure, and all associated services. Please read these Terms carefully before using the platform.</p>
 
-    <h2>1. Definitions</h2>
-<ul>
-    <li><strong>"Institution"</strong> refers to the college or educational organization using Adhyora.</li>
-    <li><strong>"Users"</strong> refers to Principals, Admins, Teachers, and Students who access the platform.</li>
-    <li><strong>"Service"</strong> refers to the Adhyora application, backend services, and related features.</li>
-    <li><strong>"Data"</strong> refers to academic and operational information entered into the system.</li>
-    <li><strong>"Subscription"</strong> refers to the paid plan that enables continued access to Adhyora.</li>
-</ul>
+        <h2>1. Definitions</h2>
+        <ul>
+            <li><strong>"Pixelaks Technologies"</strong> or <strong>"we"</strong> refers to the software development entity that owns, operates, and maintains the Adhyora platform.</li>
+            <li><strong>"Institution"</strong> refers to the college or educational organization that has subscribed to and uses Adhyora.</li>
+            <li><strong>"Users"</strong> refers to all individuals — Principals, Admins, Teachers, and Students — who are granted access to the platform by the Institution.</li>
+            <li><strong>"Service"</strong> refers to the Adhyora application, backend infrastructure, APIs, web platform, and all related features and functionalities.</li>
+            <li><strong>"Data"</strong> refers to all academic, personal, financial, and operational information entered into or generated by the system.</li>
+            <li><strong>"Subscription"</strong> refers to the paid plan that enables an Institution's continued access to the Adhyora Service.</li>
+            <li><strong>"Razorpay"</strong> refers to Razorpay Payment Solutions Private Limited, the third-party payment gateway integrated into Adhyora for student fee processing.</li>
+        </ul>
 
-<h2>2. Service Description</h2>
-<p>Adhyora is an academic management platform designed to streamline and digitalize college administration. The Service includes a range of features such as attendance management, internal assessment management, academic reporting, communication tools, and other administrative workflows that may be added or improved over time.</p>
+        <h2>2. Service Description</h2>
+        <p>Adhyora is a comprehensive academic management platform built to streamline and digitalize college administration. The Service currently includes the following features, which may be updated, expanded, or modified over time:</p>
+        <ul>
+            <li>Attendance management including subject-wise attendance, event attendance, and period-level daily logs.</li>
+            <li>Internal assessment and Continuous Evaluation (CE) marks management.</li>
+            <li>Student academic performance reporting and analysis.</li>
+            <li>Medical leave application recording and management.</li>
+            <li>Online student fee collection powered by Razorpay, including payment receipts and transaction history.</li>
+            <li>In-app communication including broadcast announcements and private messaging between Principals, Teachers, and Students.</li>
+            <li>Push notifications via Firebase Cloud Messaging for academic and administrative updates.</li>
+            <li>Timetable management, subject-teacher allocation, and substitute teacher scheduling.</li>
+            <li>Role-based access control for Principals, Admins, Teachers, and Students.</li>
+            <li>Multi-device session management and secure login across devices.</li>
+        </ul>
 
-<h2>3. Onboarding & Support</h2>
-<ul>
-    <li><strong>Initial Setup:</strong> Pixelaks Technologies will configure your Institution in our secure database and assist with uploading initial student lists and academic calendar data.</li>
-    <li><strong>Ongoing Management:</strong> After setup, the Institution manages its own data. Pixelaks Technologies continues to provide technical support related to system functionality, login, data uploads, and app performance.</li>
-</ul>
+        <h2>3. Onboarding and Support</h2>
+        <ul>
+            <li><strong>Initial Setup:</strong> Pixelaks Technologies will configure the Institution's profile in our secure database and assist with initial data setup including student lists, department configurations, academic calendar, and subject allocations.</li>
+            <li><strong>Ongoing Management:</strong> After initial setup, the Institution is responsible for managing and maintaining its own data within the platform. Pixelaks Technologies continues to provide technical support for system functionality, login issues, data uploads, and platform performance.</li>
+            <li><strong>Support Channel:</strong> Technical support is available via email at pixelaks.technologies@gmail.com. Response times may vary based on the nature and complexity of the issue.</li>
+        </ul>
 
-<h2>4. User Accounts & Access Control</h2>
-<ul>
-    <li>The Institution is responsible for ensuring that only authorized staff access administrative features.</li>
-    <li>The Principal/Admin must manage login credentials, room codes, and permissions securely.</li>
-    <li>Users may not attempt to bypass or manipulate authentication, room-code access, or system-level security rules.</li>
-    <li>Any misuse of accounts is the Institution's responsibility.</li>
-</ul>
+        <h2>4. User Accounts and Access Control</h2>
+        <ul>
+            <li>The Institution is responsible for ensuring that only authorized staff and enrolled students are granted access to their respective roles within the platform.</li>
+            <li>The Principal or Admin must manage login credentials, room codes, and role-based permissions securely and responsibly.</li>
+            <li>Users may not attempt to bypass, manipulate, or circumvent authentication mechanisms, room-code access systems, or any security rules within the platform.</li>
+            <li>The Institution is responsible for the actions of all users operating under its registered account.</li>
+            <li>Users are responsible for logging out of shared or public devices after each session. Pixelaks Technologies is not liable for unauthorized access resulting from a user's failure to manage their own session security.</li>
+            <li>In the event of suspected unauthorized access or credential compromise, the Institution must notify Pixelaks Technologies immediately.</li>
+        </ul>
 
-<h2>5. Acceptable Use Policy</h2>
-<ul>
-    <li>Attempting to access data belonging to another Institution is strictly prohibited.</li>
-    <li>Users may not reverse engineer, copy, or replicate any part of the Service.</li>
-    <li>Uploading harmful files, scripts, or performing actions that may affect system stability is prohibited.</li>
-    <li>Users may not interfere with system performance or attempt unauthorized access.</li>
-    <li>Adhyora must not be used for any unlawful or non-educational purposes.</li>
-</ul>
+        <h2>5. Acceptable Use Policy</h2>
+        <ul>
+            <li>Attempting to access, view, or modify data belonging to another Institution is strictly prohibited.</li>
+            <li>Users may not reverse engineer, decompile, copy, replicate, or create derivative works based on any part of the Adhyora Service or its source code.</li>
+            <li>Uploading malicious files, scripts, or executables, or performing actions that may destabilize or compromise the system's integrity or security, is strictly prohibited.</li>
+            <li>Users may not interfere with the platform's performance or attempt unauthorized access to backend systems, databases, or APIs.</li>
+            <li>The Service must only be used for lawful educational and academic administrative purposes within the Institution.</li>
+            <li>The in-app messaging and broadcast features must not be used to send spam, harassing, unlawful, or inappropriate content to users.</li>
+            <li>The fee collection feature must only be used for genuine institutional fee transactions. Using the payment gateway for unauthorized or fraudulent transactions is strictly prohibited and may result in immediate account termination and legal action.</li>
+        </ul>
 
-<h2>6. Subscription & Payments</h2>
-<ul>
-    <li><strong>Subscription Model:</strong> Adhyora operates on a recurring subscription basis.</li>
-    <li><strong>Grace Period:</strong> If a subscription payment is not received by the due date, an <strong>8-day grace period</strong> keeps all modules fully operational.</li>
-    <li><strong>Paywall Suspension:</strong> If payment remains outstanding after the grace period, Pixelaks Technologies may activate a paywall restricting access to all dashboard modules, after giving at least 3 days' advance written notice. Access is restored within 1 working day of confirmed payment.</li>
-    <li><strong>Data During Suspension:</strong> Institution data is not deleted during a paywall suspension and is retained intact for up to <strong>30 days</strong> from the date the paywall is activated.</li>
-    <li><strong>Termination for Non-Payment:</strong> If the account remains unpaid and suspended for more than 30 days, Pixelaks Technologies may move to terminate the subscription after a further <strong>14-day</strong> written notice period, during which outstanding dues can still be settled to prevent termination.</li>
-    <li><strong>Data Retention After Termination:</strong> Once a subscription is terminated (for non-payment or otherwise), the Institution has a <strong>60-day Transition Period</strong> to request and receive a full export of its data. Institutional data is permanently deleted from active systems only after this window closes, and reasonable attempts will be made to notify the Institution beforehand. Backup copies are cleared on a rolling basis within 90 days of deletion from active storage.</li>
-    <li><strong>Refunds:</strong> Subscription payments are non-refundable once activated, except where this Agreement is terminated by the Institution due to a material breach by Pixelaks Technologies, in which case a pro-rata refund of the unused subscription period applies. No refund is payable where the Institution terminates for convenience or where termination results from the Institution's own breach or non-payment.</li>
-</ul>
+        <h2>6. Subscription and Payments</h2>
+        <ul>
+            <li><strong>Subscription Model:</strong> Access to Adhyora operates on a recurring subscription basis. The applicable subscription fees, billing cycle, and plan details will be as agreed between the Institution and Pixelaks Technologies at the time of onboarding.</li>
+            <li><strong>Grace Period:</strong> If a renewal payment fails or is delayed, an <strong>8-day grace period</strong> will keep the Service active to allow for payment completion.</li>
+            <li><strong>Service Suspension:</strong> Upon expiry of the grace period without payment, access to the Service will be suspended until the outstanding payment is completed and confirmed.</li>
+            <li><strong>Data Retention on Non-Payment:</strong> If a subscription remains inactive for more than <strong>30 days</strong> beyond the grace period, Pixelaks Technologies reserves the right to permanently remove the Institution's data from our systems. Reasonable attempts will be made to notify the Institution before such deletion occurs.</li>
+            <li><strong>Refund Policy:</strong> All subscription payments are non-refundable once the Service has been activated and access has been granted, unless a refund is expressly required by applicable Indian consumer protection law.</li>
+            <li><strong>Pricing Changes:</strong> Pixelaks Technologies reserves the right to revise subscription pricing. Institutions will be notified of any pricing changes with reasonable advance notice before the next billing cycle.</li>
+        </ul>
 
-<h2>7. Data Security & Privacy</h2>
-<ul>
-    <li>All data is securely stored on industry-standard cloud infrastructure.</li>
-    <li>Strong security rules ensure strict isolation between institutions.</li>
-    <li>The Institution retains full ownership of its data; Pixelaks Technologies is only the processor and custodian.</li>
-    <li>Data is never shared or sold to third parties.</li>
-    <li>While redundancy and backups are maintained, absolute protection against data loss cannot be guaranteed.</li>
-</ul>
+        <h2>7. Online Fee Collection Feature</h2>
+        <ul>
+            <li><strong>Optional Feature:</strong> The online student fee collection module is an optional feature that Institutions may choose to enable. Not all Institutions are required to use this feature.</li>
+            <li><strong>Third-Party Payment Processing:</strong> All fee payments collected through Adhyora are processed by <strong>Razorpay Payment Solutions Private Limited</strong>, a licensed Payment Aggregator. By enabling and using this feature, the Institution and its students agree to be bound by Razorpay's Terms of Service and Privacy Policy in addition to these Terms.</li>
+            <li><strong>No Storage of Payment Credentials:</strong> Pixelaks Technologies does not store, process, or have access to raw card numbers, UPI credentials, net banking passwords, or any sensitive payment authentication data. All such data is handled exclusively by Razorpay.</li>
+            <li><strong>Transaction Records:</strong> Razorpay Order IDs, Payment IDs, and payment verification signatures are stored within the Adhyora platform solely for the purpose of generating receipts and maintaining payment history for the Institution and students.</li>
+            <li><strong>Payment Disputes:</strong> Any disputes regarding a specific payment transaction must be addressed directly with Razorpay through their dispute resolution process. Pixelaks Technologies does not have the authority to initiate refunds, charge-backs, or payment reversals on behalf of Razorpay.</li>
+            <li><strong>Institutional Responsibility:</strong> The Institution is solely responsible for configuring correct fee amounts, due dates, and applicable descriptions. Pixelaks Technologies is not liable for any incorrect fee charges, missed collections, or financial discrepancies arising from erroneous configuration by the Institution.</li>
+            <li><strong>Payment Gateway Availability:</strong> The availability of the online fee collection feature is dependent on Razorpay's service uptime. Pixelaks Technologies is not liable for any payment failures or delays caused by Razorpay's infrastructure.</li>
+        </ul>
 
-<h2>8. Institutional Responsibilities</h2>
-<ul>
-    <li>Ensure that authorized staff verify the accuracy of academic data before uploading or updating it in the system.</li>
-    <li>Maintain secure control over admin credentials and room-code access.</li>
-    <li>Ensure compliance with applicable educational regulations.</li>
-</ul>
+        <h2>8. In-App Communication</h2>
+        <ul>
+            <li>Adhyora provides a built-in messaging system that allows Principals and Admins to send broadcast notices and private messages to Teachers and Students within the platform.</li>
+            <li>Message content, including titles, body text, sender identity, sender role, and timestamps, is stored in the Institution's database partition on our secure cloud infrastructure.</li>
+            <li>The Institution is solely responsible for the content of all messages sent through the platform. Pixelaks Technologies acts only as a technical conduit and is not responsible for the content of institutional communications.</li>
+            <li>The messaging feature must not be used to send any content that is unlawful, harassing, abusive, discriminatory, or otherwise inappropriate. Misuse of this feature is grounds for service suspension.</li>
+            <li>Message history is retained as part of the Institution's data for as long as the subscription remains active, in accordance with the Data Retention policy.</li>
+        </ul>
 
-<h2>9. Intellectual Property Rights</h2>
-<p>All content, source code, design elements, features, and materials provided as part of the Adhyora platform are the intellectual property of Pixelaks Technologies. The Institution is granted a limited, non-transferable license to use the Service. The Institution may not copy, modify, replicate, distribute, or create derivative works based on the Adhyora platform.</p>
+        <h2>9. Medical Data Responsibility</h2>
+        <ul>
+            <li>Adhyora provides functionality for recording and managing student medical leave applications. This information constitutes sensitive personal data under applicable Indian law.</li>
+            <li>The Institution, as the Data Fiduciary, is solely responsible for obtaining any required student or parental/guardian consent before recording health-related information in the system.</li>
+            <li>Pixelaks Technologies processes medical leave data strictly as directed by the Institution and does not use this data for any independent purpose.</li>
+            <li>The Institution must ensure that medical data entered into the system is accurate and is handled in accordance with applicable data protection regulations.</li>
+            <li>Pixelaks Technologies shall not be liable for any legal claims, disputes, or regulatory actions arising from the Institution's collection, use, or management of student medical data within the platform.</li>
+        </ul>
 
-<h2>10. Termination</h2>
-<ul>
-    <li>The Institution may discontinue usage at any time by requesting account termination for convenience; this does not entitle the Institution to a refund of any portion of the Subscription Fee already paid.</li>
-    <li>Upon termination or subscription expiry, the Institution may request data export during the 60-day Transition Period described in Section 6, before deletion.</li>
-    <li>Pixelaks Technologies may terminate access for violation of these Terms or misuse of the platform.</li>
-</ul>
+        <h2>10. Data Security and Privacy</h2>
+        <ul>
+            <li>All institutional data is securely stored on Google Firebase's industry-standard cloud infrastructure with encryption in transit and at rest.</li>
+            <li>Strict database security rules ensure complete isolation between institutions, preventing any cross-institutional data access.</li>
+            <li>The Institution retains full ownership of its data. Pixelaks Technologies is solely the data processor and technical custodian of this data on behalf of the Institution.</li>
+            <li>Data is never sold, rented, or shared with third parties for commercial purposes.</li>
+            <li>While comprehensive redundancy and backup measures are maintained, absolute protection against data loss, corruption, or service interruption due to third-party infrastructure failures cannot be guaranteed.</li>
+            <li>For full details on data handling, please refer to our <a href="privacy-adhyora">Privacy Policy</a>.</li>
+        </ul>
 
-<h2>11. Limitation of Liability</h2>
-<p>Adhyora assists with academic management but does not replace institutional verification. Pixelaks Technologies is not responsible for academic decisions such as exam eligibility, attendance-based decisions, or errors resulting from incorrect data entered by staff. Service availability depends on internet connectivity and third-party infrastructure uptime.</p>
-<p><strong>Maximum Liability Cap:</strong> To the maximum extent permitted by law, the total collective liability of Pixelaks Technologies for any claims, losses, or damages arising out of the Service shall be strictly limited to the total amount actually paid by the Institution for the Subscription during the twelve (12) months immediately preceding the event giving rise to the liability. This cap does not apply to liability that cannot be lawfully excluded or limited, including liability for death or personal injury caused by gross negligence.</p>
-<p><strong>No Indirect Damages:</strong> In no event shall Pixelaks Technologies be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, academic downtime, or data corruption.</p>
+        <h2>11. Institutional Responsibilities</h2>
+        <ul>
+            <li>The Institution must ensure that authorized staff verify the accuracy of all academic and financial data before uploading, entering, or publishing it within the system.</li>
+            <li>The Institution must maintain secure control over all admin credentials, teacher room codes, and access permissions.</li>
+            <li>The Institution is responsible for ensuring its use of Adhyora complies with all applicable educational regulations, institutional policies, and data protection laws in India.</li>
+            <li>The Institution must promptly notify Pixelaks Technologies of any suspected security breach, unauthorized access, or data compromise involving the platform.</li>
+            <li>The Institution is responsible for training its staff on the proper and secure use of the platform's features.</li>
+        </ul>
 
-<h2>12. Modification of Terms</h2>
-<p>Pixelaks Technologies may update these Terms periodically. Institutions will be notified of significant changes. Continued use of Adhyora after updates constitutes acceptance of the revised Terms.</p>
+        <h2>12. Intellectual Property Rights</h2>
+        <p>All content, source code, design elements, user interface, features, trademarks, and materials provided as part of the Adhyora platform are the exclusive intellectual property of Pixelaks Technologies and are protected under applicable Indian intellectual property laws.</p>
+        <p>The Institution is granted a limited, non-exclusive, non-transferable, and revocable license to access and use the Service solely for its internal academic administration purposes during the active subscription period. The Institution may not copy, modify, adapt, translate, reverse engineer, decompile, replicate, distribute, sublicense, or create derivative works based on any part of the Adhyora platform without the prior written consent of Pixelaks Technologies.</p>
 
-<h2>13. Governing Law & Jurisdiction</h2>
-<p>These Terms shall be governed by and construed in accordance with the laws of India. Any legal disputes or proceedings arising out of these Terms or the use of the Service shall be subject to the exclusive jurisdiction of the courts in Thalassery, Kannur, Kerala.</p>
+        <h2>13. Termination</h2>
+        <ul>
+            <li>The Institution may discontinue use of Adhyora at any time by submitting a written termination request to Pixelaks Technologies.</li>
+            <li>Upon termination or subscription expiry, the Institution may request a data export before permanent deletion is carried out.</li>
+            <li>Pixelaks Technologies reserves the right to suspend or terminate an Institution's access immediately and without prior notice in cases of a material violation of these Terms, misuse of the platform, fraudulent activity, or conduct that may harm other users or the integrity of the system.</li>
+            <li>Upon termination for any reason, all licenses granted under these Terms immediately cease and the Institution must discontinue all use of the Service.</li>
+        </ul>
 
-<h2>14. Warranty Disclaimer & Data Loss</h2>
-<p>The Adhyora Service is provided on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis. Pixelaks Technologies explicitly disclaims all warranties, whether express or implied, including warranties of merchantability or fitness for a particular purpose. We do not guarantee that the Service will be 100% uninterrupted, error-free, or completely secure.</p>
-<p>Pixelaks Technologies takes all reasonable measures to protect data through secure infrastructure, backups, and monitoring. However, no digital service can guarantee absolute protection against data loss, corruption, or system failure. Pixelaks Technologies is not liable for data loss caused by technical failures, outages, server errors, third-party service issues, or events beyond reasonable control.</p>
-<p>The Institution is encouraged to maintain its own offline copies of critical academic information whenever necessary.</p>
+        <h2>14. Limitation of Liability</h2>
+        <p>Adhyora is a tool designed to assist with academic management and administration. It does not replace institutional judgment, manual verification, or academic decision-making processes. Pixelaks Technologies is not responsible for academic or administrative decisions — including but not limited to exam eligibility determinations, attendance-based academic actions, or financial decisions — made using data within the platform, regardless of whether that data was entered correctly or incorrectly by Institution staff.</p>
+        <p>Service availability is dependent on internet connectivity, device compatibility, and the uptime of third-party infrastructure providers including Google Firebase and Razorpay, over which Pixelaks Technologies has no direct control.</p>
+        <p><strong>No Indirect Damages:</strong> In no event shall Pixelaks Technologies be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of institutional profits, academic or operational downtime, data corruption, failed payment transactions, or reputational harm arising from the use of or inability to use the Service.</p>
+        <p><strong>Maximum Liability Cap:</strong> To the maximum extent permitted by applicable law, the total collective liability of Pixelaks Technologies for any claims, losses, or damages arising out of or related to the Service shall be strictly limited to the total amount actually paid by the Institution to Pixelaks Technologies for the Subscription during the twelve (12) months immediately preceding the event giving rise to the claim.</p>
 
-<h2>15. Indemnification</h2>
-<p>The Institution agrees to indemnify, defend, and hold harmless Pixelaks Technologies from and against any third-party claims, lawsuits, damages, or expenses (including legal fees) arising from the Institution's use of the Service, the Institution's violation of these Terms, or any disputes between the Institution and its students, parents, or staff members regarding academic data.</p>
+        <h2>15. Warranty Disclaimer and Data Loss</h2>
+        <p>The Adhyora Service is provided on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis. Pixelaks Technologies expressly disclaims all warranties, whether express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee that the Service will be 100% uninterrupted, error-free, entirely secure, or always available.</p>
+        <p>Pixelaks Technologies takes all commercially reasonable measures to protect data through secure infrastructure, automated backups, and continuous monitoring. However, no digital service can guarantee absolute protection against data loss, corruption, or service failure. Pixelaks Technologies is not liable for any data loss caused by technical failures, cloud infrastructure outages, server errors, third-party service disruptions (including Firebase or Razorpay), or events beyond our reasonable control.</p>
+        <p>The Institution is strongly encouraged to maintain its own offline copies of critical academic and financial records whenever deemed necessary as a precautionary measure.</p>
 
-<h2>16. Force Majeure</h2>
-<p>Pixelaks Technologies shall not be liable for any delay or failure to perform its obligations under these Terms if such delay or failure is caused by events beyond our reasonable control, including but not limited to internet backbone outages, cloud hosting failures (e.g., Google Firebase outages), natural disasters, strikes, or government actions. If a Force Majeure event continues for more than sixty (60) consecutive days, either party may terminate this Agreement, and the Institution shall be entitled to a refund of unused subscription fees.</p>
+        <h2>16. Indemnification</h2>
+        <p>The Institution agrees to indemnify, defend, and hold harmless Pixelaks Technologies and its founders, employees, and associates from and against any third-party claims, lawsuits, demands, liabilities, damages, losses, and expenses (including reasonable legal fees) arising from or related to:</p>
+        <ul>
+            <li>The Institution's use or misuse of the Service or any of its features.</li>
+            <li>The Institution's violation of any provision of these Terms.</li>
+            <li>The Institution's breach of any applicable law, regulation, or third-party rights.</li>
+            <li>Any disputes between the Institution and its students, parents, guardians, or staff members arising from academic data, fee transactions, or communications conducted through the platform.</li>
+            <li>Any unauthorized use of Adhyora by a person to whom the Institution granted access.</li>
+        </ul>
 
-<h2>17. Discontinuation of Service</h2>
-<p>Pixelaks Technologies reserves the right to modify, suspend, or discontinue the Adhyora Service at any time, with reasonable prior notice to the Institution. In the event of permanent discontinuation, Institutions will be provided an opportunity to export their data before shutdown. Pixelaks Technologies shall not be liable for any losses arising from the discontinuation of the Service.</p>
+        <h2>17. Force Majeure</h2>
+        <p>Pixelaks Technologies shall not be held liable for any delay or failure to perform its obligations under these Terms where such delay or failure arises from circumstances beyond our reasonable control. Such circumstances include, but are not limited to, internet backbone outages, cloud hosting failures (including Google Firebase outages), Razorpay service disruptions, power failures, natural disasters, epidemics or pandemics, governmental actions, regulatory orders, or civil unrest.</p>
 
-<h2>18. Payment Gateway Integration</h2>
-<p>For Institutions on plans that support online student fee collection, the Institution independently registers its own Razorpay merchant account and supplies its own API keys for integration with the Service. Fee payments collected through Adhyora are routed directly into the Institution's own Razorpay merchant account — Pixelaks Technologies does not at any point receive, hold, or control this fee revenue, and is not liable for disputes, failures, delays, processing charges, or chargebacks arising from Razorpay's services. The Institution's use of Razorpay is governed by Razorpay's own terms of service and applicable Reserve Bank of India regulations.</p>
+        <h2>18. Modification of Terms</h2>
+        <p>Pixelaks Technologies reserves the right to update or revise these Terms of Service periodically to reflect changes in the platform's features, applicable law, or business practices. Institutions will be notified of significant changes through the platform interface or via their registered contact details. Continued access to or use of Adhyora after any such update constitutes the Institution's acceptance of the revised Terms.</p>
 
-<h2>19. Contact Us</h2>
-<p><strong>Pixelaks Technologies</strong><br>
-Email: pixelaks.technologies@gmail.com<br>
-Address: Thalassery, Kannur, Kerala, India</p>
-</div>
+        <h2>19. Severability</h2>
+        <p>If any provision of these Terms is found by a court of competent jurisdiction to be invalid, unlawful, or unenforceable, that provision shall be modified to the minimum extent necessary to make it enforceable, or severed from these Terms if modification is not possible. The remaining provisions of these Terms shall continue in full force and effect.</p>
 
+        <h2>20. Entire Agreement</h2>
+        <p>These Terms of Service, together with the Adhyora Privacy Policy and any other written agreements executed between the Institution and Pixelaks Technologies (including but not limited to the Master Software Subscription Agreement and Data Processing Agreement where applicable), constitute the entire agreement between the parties with respect to the subject matter herein and supersede all prior negotiations, representations, or understandings of any kind.</p>
+
+        <h2>21. Governing Law and Jurisdiction</h2>
+        <p>These Terms shall be governed by and construed in accordance with the laws of India, including but not limited to the Information Technology Act, 2000, the Digital Personal Data Protection Act, 2023, and applicable consumer protection regulations. Any legal disputes, claims, or proceedings arising out of these Terms or the use of the Service shall be subject to the exclusive jurisdiction of the courts in Thalassery, Kannur, Kerala, India.</p>
+
+        <h2>22. Discontinuation of Service</h2>
+        <p>Pixelaks Technologies reserves the right to modify, suspend, or permanently discontinue the Adhyora Service at any time. In the event of planned permanent discontinuation, Institutions will be provided with reasonable prior notice and a fair opportunity to export all their data before shutdown. Pixelaks Technologies shall not be liable for any losses, costs, or inconvenience arising from the discontinuation of the Service following the issuance of such notice.</p>
+
+        <h2>23. Contact Us</h2>
+        <p>For any questions, concerns, or legal notices regarding these Terms, please contact us at:</p>
+        <p>
+            <strong>Pixelaks Technologies</strong><br>
+            Email: pixelaks.technologies@gmail.com<br>
+            Address: Thalassery, Kannur, Kerala, India
+        </p>
+    </div>
 
     <footer>
         <div class="footer-grid">
@@ -297,7 +356,7 @@ Address: Thalassery, Kannur, Kerala, India</p>
                 <a href="/#about">About Us</a>
                 <a href="/#divisions">Products</a>
                 <a href="privacy">Privacy Policy</a>
-                <a href="terms">Terms & Conditions</a>
+                <a href="terms">Terms &amp; Conditions</a>
             </div>
         </div>
         <p style="text-align:center; color:#555; margin-top:60px;">&copy; 2026 Pixelaks Technologies. All Rights Reserved.</p>
@@ -305,11 +364,10 @@ Address: Thalassery, Kannur, Kerala, India</p>
 
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
     <script>
-        // --- GREEN PARTICLES FOR ADHYORA ---
         tsParticles.load("tsparticles", {
             particles: {
                 number: { value: 100, density: { enable: true, area: 800 } },
-                color: { value: "#2ecc71" }, // GREEN
+                color: { value: "#2ecc71" },
                 links: { enable: true, distance: 150, color: "#2ecc71", opacity: 0.4, width: 1 },
                 move: { enable: true, speed: 1.5, outModes: { default: "out" } },
                 opacity: { value: 0.5 },
@@ -322,7 +380,6 @@ Address: Thalassery, Kannur, Kerala, India</p>
             background: { color: "#050505" }
         });
 
-        // --- MAILER SCRIPT ---
         const scriptURL = 'https://script.google.com/macros/s/AKfycbzQ056QMv8SFcPpZssWUrVf8sl5Dz-suh3ZJ6K7JbiC9m5EXzzR_HnbYxyssVxathSDtA/exec';
         const form = document.getElementById('contactForm');
         const btn = document.getElementById('submitBtn');
@@ -338,12 +395,150 @@ Address: Thalassery, Kannur, Kerala, India</p>
                 .catch(error => { btn.innerText = "Error! Try again."; btn.disabled = false; btn.style.background = "#e74c3c"; });
         });
 
-        // --- UTILS ---
         function openMail() { document.getElementById("contactModal").style.display = "flex"; }
         function closeMail() { document.getElementById("contactModal").style.display = "none"; }
         window.onclick = function(event) { if (event.target == document.getElementById("contactModal")) { closeMail(); } }
         window.onload = function() { setTimeout(function() { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 300); };
     </script>
-</body>
 
+    <script>
+
+        (function () {
+    var NS = 'http://www.w3.org/2000/svg';
+    function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function vnoise(r) {
+        var a = [], i; for (i = 0; i < 512; i++) a.push(r() * 2 - 1);
+        return function (x) { var i = Math.floor(x), f = x - i, u = (1 - Math.cos(f * Math.PI)) / 2; return a[i & 511] * (1 - u) + a[(i + 1) & 511] * u; };
+    }
+    function spline(pts, step) {
+        var out = [], i, k;
+        for (i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+            var n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+            for (k = 0; k < n; k++) {
+                var t = k / n, t2 = t * t, t3 = t2 * t, q = [];
+                for (var c = 0; c < 2; c++) q.push(0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+                out.push(q);
+            }
+        }
+        out.push(pts[pts.length - 1]);
+        return out;
+    }
+ 
+    /* ---------- 1. FIXED TORN-PAPER SCENE ---------- */
+    var scene = document.createElement('div');
+    scene.id = 'tornScene';
+    document.body.insertBefore(scene, document.body.firstChild);
+ 
+    function edge(anchors, side, seed, W, vh) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), n3 = vnoise(r);
+        var pts = spline(anchors.map(function (p) { return [p[0] * W, p[1] * vh]; }), 4);
+        var s = 0, base = [], rim = [];
+        for (var i = 0; i < pts.length; i++) {
+            var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+            var tx = b[0] - a[0], ty = b[1] - a[1], l = Math.hypot(tx, ty) || 1;
+            var nx = ty / l * side, ny = -tx / l * side;
+            if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+            var low = n1(s * 0.010) * 14 + n2(s * 0.06) * 5;
+            var o1 = low + (r() - .5) * 3.2;
+            var o2 = low + 4 + (n3(s * 0.035) + 1) * 3 + Math.max(0, n2(s * 0.2)) * 2.5 + (r() - .5) * 4.5;
+            base.push([pts[i][0] + nx * o1, pts[i][1] + ny * o1]);
+            rim.push([pts[i][0] + nx * o2, pts[i][1] + ny * o2]);
+        }
+        return { base: base, rim: rim };
+    }
+    function mk(W, H) {
+        var s = document.createElementNS(NS, 'svg');
+        s.setAttribute('width', W); s.setAttribute('height', H); s.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        s.setAttribute('aria-hidden', 'true');
+        return s;
+    }
+    function sheet(def, W, vh) {
+        var e = edge(def.a, def.side, def.seed, W, vh);
+        var close = def.c.map(function (p) { return 'L' + (p[0] * W).toFixed(1) + ' ' + (p[1] * vh).toFixed(1); }).join('');
+        function path(pts) { return 'M' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + close + 'Z'; }
+        var svg = mk(W, vh + 220);
+        svg.style.cssText = '--sf:' + def.f + ';--ra:' + def.ra + ';--spd:' + def.spd;
+        svg.innerHTML = '<path class="rim" d="' + path(e.rim) + '"/><path class="sheet" d="' + path(e.base) + '"/>';
+        return svg;
+    }
+    function contours(W, vh) {
+        var r = rng(7), svg = mk(W, vh), out = '';
+        svg.setAttribute('class', 'ctr');
+        svg.style.cssText = '--spd:-30';
+        [[.2, .32, 14], [.84, .7, 13], [.56, .08, 9]].forEach(function (c) {
+            var p0 = r() * 6.28, p1 = r() * 6.28, p2 = r() * 6.28;
+            for (var i = 1; i <= c[2]; i++) {
+                var d = '', base = i * 40;
+                for (var a = 0; a <= 6.4; a += 0.1) {
+                    var rad = base * (1 + .16 * Math.sin(a * 2 + p0 + i * .35) + .09 * Math.sin(a * 3 + p1 - i * .28) + .05 * Math.sin(a * 5 + p2 + i * .5));
+                    d += (a ? 'L' : 'M') + (c[0] * W + Math.cos(a) * rad * 1.15).toFixed(1) + ' ' + (c[1] * vh + Math.sin(a) * rad * .85).toFixed(1);
+                }
+                out += '<path d="' + d + 'Z"/>';
+            }
+        });
+        svg.innerHTML = out;
+        return svg;
+    }
+    var BOT = [[1.1, 1.7], [-.1, 1.7]];
+    var L = [
+        { a: [[.74, -.04], [.82, .05], [.86, .16], [.93, .24], [1.04, .32]], side: -1, seed: 11, c: [[1.1, .38], [1.1, -.1], [.72, -.1]], f: '#17171a', ra: .32, spd: -40 },
+        { a: [[-.04, .20], [.02, .12], [.07, .06], [.12, -.04]], side: -1, seed: 23, c: [[-.1, -.1]], f: '#121214', ra: .26, spd: -30 },
+        { a: [[-.05, .86], [.10, .80], [.26, .81], [.42, .89], [.58, .94], [.76, .92], [.90, .85], [1.05, .80]], side: 1, seed: 31, c: BOT, f: '#161618', ra: .32, spd: -50 },
+        { a: [[-.05, .93], [.16, .88], [.36, .91], [.56, .97], [.78, .98], [1.05, .91]], side: 1, seed: 47, c: BOT, f: '#121214', ra: .26, spd: -80 },
+        { a: [[-.05, .99], [.22, .95], [.48, 1.0], [.76, 1.0], [1.05, .96]], side: 1, seed: 59, c: BOT, f: '#0d0d0f', ra: .22, spd: -110 }
+    ];
+    function build() {
+        var W = window.innerWidth, vh = window.innerHeight;
+        scene.innerHTML = '';
+        L.forEach(function (d) { scene.appendChild(sheet(d, W, vh)); });
+        scene.appendChild(contours(W, vh));
+    }
+    var lastW = window.innerWidth, t, ticking = false;
+    window.addEventListener('resize', function () {
+        clearTimeout(t);
+        t = setTimeout(function () { if (window.innerWidth !== lastW) { lastW = window.innerWidth; build(); } }, 200);
+    });
+    function pp() {
+        ticking = false;
+        var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        scene.style.setProperty('--pp', Math.min(1, window.scrollY / max).toFixed(4));
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(pp); } }, { passive: true });
+    build(); pp();
+ 
+    /* ---------- 2. TORN PAPER BOXES ---------- */
+    var els = document.querySelectorAll('.legal-container');
+    var OUT = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    function poly(seed, c, amp, rough, jseed) {
+        var r = rng(seed), n1 = vnoise(r), n2 = vnoise(r), jr = rng(jseed), pts = [];
+        for (var i = 0; i < 4; i++) {
+            var A = c[i], B = c[(i + 1) % 4], len = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(2, Math.ceil(len / 3));
+            for (var k = 0; k < n; k++) {
+                var tt = k / n, w = n1(tt * len * 0.025 + i * 40) * amp + n2(tt * len * 0.09 + i * 90) * amp * .25 + (jr() - .5) * rough;
+                pts.push([A[0] + (B[0] - A[0]) * tt + OUT[i][0] * w, A[1] + (B[1] - A[1]) * tt + OUT[i][1] * w]);
+            }
+        }
+        return 'polygon(' + pts.map(function (p) { return p[0].toFixed(1) + 'px ' + p[1].toFixed(1) + 'px'; }).join(',') + ')';
+    }
+    function buildBox(el, id) {
+        var W = el.offsetWidth, H = el.offsetHeight;
+        if (W < 20 || H < 20) return;
+        var r = rng(id * 7 + 3), cj = Math.min(7, .02 * Math.min(W, H) + 2), g = 4, s = 9;
+        function jit() { return (r() - .5) * 2 * cj; }
+        var rim = [[g + jit(), g + jit()], [W - g + jit(), g + jit()], [W - g + jit(), H - g + jit()], [g + jit(), H - g + jit()]];
+        var sh = [[rim[0][0] + s - g, rim[0][1] + s - g], [rim[1][0] - s + g, rim[1][1] + s - g], [rim[2][0] - s + g, rim[2][1] - s + g], [rim[3][0] + s - g, rim[3][1] - s + g]];
+        el.style.setProperty('--pb-rim-path', poly(id * 11 + 5, rim, 3.2, 4.5, id * 5 + 1));
+        el.style.setProperty('--pb-sheet-path', poly(id * 11 + 5, sh, 3.2, 1.2, id * 5 + 2));
+    }
+    [].forEach.call(els, function (el, i) {
+        el.classList.add('pb');
+        if ('ResizeObserver' in window) new ResizeObserver(function () { buildBox(el, i + 1); }).observe(el);
+        else { buildBox(el, i + 1); window.addEventListener('resize', function () { buildBox(el, i + 1); }); }
+    });
+})();
+
+
+    </script>
+</body>
 </html>
