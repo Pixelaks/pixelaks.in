@@ -602,6 +602,60 @@
 .adv-app .adv-modal-card { width: 90%; max-width: 300px; padding: 30px; border-radius: 20px; }
 .adv-app .adv-bar { height: 8px; margin-bottom: 15px; }
 .adv-app .adv-modal-card h5 { font-size: 16px; font-weight: 700; }
+/* ===== THREE PORTALS: INTERACTIVE IMAGE ===== */
+@property --tp-ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@property --sx { syntax: '<percentage>'; initial-value: 37%; inherits: true; }
+@property --sy { syntax: '<percentage>'; initial-value: 25%; inherits: true; }
+@keyframes tpSpin { to { --tp-ang: 360deg; } }
+@keyframes tpGlow { to { transform: scale(1.08) rotate(3deg); opacity: .8; } }
+@keyframes tpPulse { 0% { box-shadow: 0 0 0 0 var(--cA); } 70% { box-shadow: 0 0 0 18px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+.tp-section { max-width: 1100px; margin: 0 auto 110px; padding: 0 10px; text-align: center; }
+.tp-eyebrow { font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--primary-green); font-size: .95rem; margin-bottom: 10px; }
+.tp-title { font-family: 'Rajdhani', sans-serif; font-size: clamp(1.8rem, 5.5vw, 3rem); color: #fff; margin: 0 0 12px; line-height: 1.15; }
+.tp-title .g { color: #2ecc71; } .tp-title .r { color: #ff4d4d; } .tp-title .b { color: #3b82f6; }
+.tp-sub { color: #aaa; font-size: 1rem; margin: 0 auto 40px; max-width: 620px; line-height: 1.7; }
+
+.tp-stage { position: relative; perspective: 1400px; padding: 20px 0 10px; }
+.tp-glow { position: absolute; inset: 8% 6%; z-index: 0; filter: blur(60px); opacity: .55; pointer-events: none;
+    background: radial-gradient(circle at 20% 30%, rgba(46,204,113,.9), transparent 55%),
+                radial-gradient(circle at 55% 50%, rgba(255,77,77,.8), transparent 55%),
+                radial-gradient(circle at 85% 80%, rgba(59,130,246,.9), transparent 55%);
+    animation: tpGlow 8s ease-in-out infinite alternate; }
+
+.tp-card { position: relative; z-index: 1; border-radius: 26px; padding: 3px; transform-style: preserve-3d;
+    background: conic-gradient(from var(--tp-ang), #2ecc71, #ff4d4d, #3b82f6, #2ecc71);
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--sc, 1));
+    transition: transform .25s ease-out; will-change: transform;
+    box-shadow: 0 40px 80px rgba(0,0,0,.6); animation: tpSpin 8s linear infinite; }
+.tp-frame { position: relative; border-radius: 24px; overflow: hidden; background: #e9e0d2; line-height: 0; }
+.tp-frame img { width: 100%; height: auto; display: block; }
+
+.tp-spot { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse 36% 46% at var(--sx) var(--sy), transparent 0%, transparent 55%, rgba(5,10,8,.65) 100%);
+    transition: opacity .5s, --sx .7s ease, --sy .7s ease; }
+.tp-stage.on .tp-spot { opacity: 1; }
+.tp-glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: soft-light; transition: opacity .3s;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgba(255,255,255,.55), transparent 45%); }
+
+.tp-hot { position: absolute; z-index: 3; transform: translate(-50%, -50%); border: 0; background: none; cursor: pointer; padding: 0; }
+.tp-dot { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--c); border: 3px solid #fff; animation: tpPulse 2s infinite; }
+.tp-tag { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%) translateY(6px); white-space: nowrap;
+    background: rgba(10,10,10,.92); color: #fff; border: 1px solid var(--c); border-radius: 20px; padding: 5px 14px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px; font-size: .9rem; opacity: 0; transition: .3s; pointer-events: none; }
+.tp-hot.active .tp-tag, .tp-hot:hover .tp-tag { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.tp-legend { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 34px 0 14px; }
+.tp-pill { appearance: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 40px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); color: #ddd;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px; font-size: 1rem; transition: .3s; }
+.tp-pill i { color: var(--c); }
+.tp-pill.active { border-color: var(--c); background: rgba(255,255,255,.08); color: #fff; box-shadow: 0 0 22px var(--cA); transform: translateY(-3px); }
+.tp-caption { min-height: 3.4em; color: #bbb; font-style: italic; max-width: 640px; margin: 0 auto; line-height: 1.7; font-size: .98rem; transition: opacity .3s; }
+
+@media (max-width: 600px) { .tp-dot { width: 14px; height: 14px; } .tp-tag { font-size: .75rem; padding: 3px 10px; } .tp-pill { padding: 8px 14px; font-size: .9rem; } }
+@media (prefers-reduced-motion: reduce) { .tp-card, .tp-glow, .tp-dot { animation: none; } }
+
 /* ===== ADHYORA SHOWCASE: PRINCIPAL PHONE (green theme) ===== */
 .adv-col:nth-child(2) .adv-screen > .adv-statusbar { display: none; }
 .adv-app.padv .adv-logo { font-size: 56px; color: #22c55e; margin: 10px 0 15px; line-height: 1.2; }
@@ -623,6 +677,26 @@
 .adv-app.padv .pd-card h4 { font-size: 18px; font-weight: 700; margin: 0 0 8px; color: #1e293b; }
 .adv-app.padv .pd-card p { font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 5px; }
 .adv-app.padv .pd-btn { margin-top: 15px; width: 100%; padding: 12px; border-radius: 10px; color: #fff; font-weight: 700; font-size: 14px; text-align: center; }
+/* ===== FEATURE DECK (one compact box per role) ===== */
+.deck { position: relative; overflow: hidden; background: var(--card-bg); border-radius: 22px; border-left: 5px solid var(--primary-green); border-top: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); padding: 30px; margin-bottom: 20px; text-align: left; }
+.deck::before { content: ''; position: absolute; top: 0; left: -60%; width: 50%; height: 100%; background: linear-gradient(100deg, transparent, rgba(46,204,113,0.07), transparent); animation: deckScan 7s ease-in-out infinite; pointer-events: none; }
+@keyframes deckScan { 0% { left: -60%; } 60%, 100% { left: 130%; } }
+.deck-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.deck-badge { width: 54px; height: 54px; flex-shrink: 0; border-radius: 16px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.4); display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 24px; }
+.deck-head h3 { margin: 0; color: var(--primary-green); font-size: 1.5rem; }
+.deck-head p { margin: 4px 0 0; color: #aaa; font-size: 0.92rem; }
+.deck-count { margin-left: auto; font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 0.95rem; color: var(--primary-green); border: 1px solid rgba(46,204,113,0.4); border-radius: 20px; padding: 4px 14px; white-space: nowrap; }
+.deck-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.deck-chip { display: flex; gap: 12px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 16px; transition: 0.3s; animation: deckGlow 12s infinite; animation-delay: calc(var(--i) * 1s); }
+.deck-chip:hover { transform: translateY(-4px); border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.08); }
+.deck-chip i { width: 22px; margin-top: 3px; text-align: center; font-size: 18px; color: var(--primary-green); }
+.deck-chip b { display: block; margin-bottom: 3px; color: #fff; font-size: 0.95rem; }
+.deck-chip span { color: #aaa; font-size: 0.82rem; line-height: 1.45; }
+@keyframes deckGlow { 0%, 9%, 100% { border-color: rgba(255,255,255,0.07); box-shadow: none; } 3% { border-color: rgba(46,204,113,0.7); box-shadow: 0 0 18px rgba(46,204,113,0.25); } }
+@media (max-width: 600px) { .deck { padding: 20px; } .deck-count { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .deck::before, .deck-chip { animation: none; } }
+.deck-count { display: none; }
+.deck-chip em { font-style: normal; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.68rem; letter-spacing: 1px; color: #f59e0b; border: 1px solid rgba(245,158,11,0.5); border-radius: 8px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -768,6 +842,136 @@
                 </p>
             </div>
         </div>
+
+        <div class="tp-section" id="threePortals">
+            <div class="tp-eyebrow" data-aos="fade-up">One Platform</div>
+            <h2 class="tp-title" data-aos="fade-up">Three Portals. <span class="g">Principal</span>, <span class="r">Teacher</span> &amp; <span class="b">Student</span>.</h2>
+            <p class="tp-sub" data-aos="fade-up">Every role gets a workspace built for what they actually do. Hover or tap a portal to explore it.</p>
+
+            <div class="tp-stage" id="tpStage">
+                <div class="tp-glow"></div>
+                <div class="tp-card" id="tpCard">
+                    <div class="tp-frame">
+                        <picture>
+                            <source srcset="AdhyoraWeb3.png" type="image/webp">
+                            <img src="AdhyoraWeb3.png" width="1536" height="1024" loading="lazy" alt="Adhyora Principal, Teacher and Student portals shown on three devices">
+                        </picture>
+                        <div class="tp-spot" id="tpSpot"></div>
+                        <div class="tp-glare" id="tpGlare"></div>
+                    </div>
+                    <button type="button" class="tp-hot" data-tp="0" style="left:47%; top:22%; --c:#2ecc71; --cA:rgba(46,204,113,.6);" aria-label="Principal and Staff portal"><span class="tp-dot"></span><span class="tp-tag">Principal &amp; Staff</span></button>
+                    <button type="button" class="tp-hot" data-tp="1" style="left:68%; top:45%; --c:#ff4d4d; --cA:rgba(255,77,77,.6);" aria-label="Teacher portal"><span class="tp-dot"></span><span class="tp-tag">Teacher</span></button>
+                    <button type="button" class="tp-hot" data-tp="2" style="left:82%; top:66%; --c:#3b82f6; --cA:rgba(59,130,246,.6);" aria-label="Student portal"><span class="tp-dot"></span><span class="tp-tag">Student</span></button>
+                </div>
+            </div>
+
+            <div class="tp-legend">
+                <button type="button" class="tp-pill" data-tp="0" style="--c:#2ecc71; --cA:rgba(46,204,113,.45);"><i class="fas fa-landmark"></i> Principal &amp; Staff</button>
+                <button type="button" class="tp-pill" data-tp="1" style="--c:#ff4d4d; --cA:rgba(255,77,77,.45);"><i class="fas fa-chalkboard-teacher"></i> Teacher</button>
+                <button type="button" class="tp-pill" data-tp="2" style="--c:#3b82f6; --cA:rgba(59,130,246,.45);"><i class="fas fa-user-graduate"></i> Student</button>
+            </div>
+            <p class="tp-caption" id="tpCaption"></p>
+        </div>
+
+        <script>
+        (function () {
+            var sec = document.getElementById('threePortals');
+            if (!sec) return;
+            var stage = document.getElementById('tpStage'),
+                card = document.getElementById('tpCard'),
+                spot = document.getElementById('tpSpot'),
+                glare = document.getElementById('tpGlare'),
+                cap = document.getElementById('tpCaption'),
+                items = sec.querySelectorAll('[data-tp]');
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+            // spotlight centre (x, y in % of the image) + caption for each portal
+            var roles = [
+                { x: 37, y: 25, t: 'Principal & Staff: roomcodes, teachers, students, batches, timetable, data and events, all in one control panel.' },
+                { x: 54, y: 47, t: 'Teacher: attendance, internal marks, subjects, assignments and event attendance, ready for every class.' },
+                { x: 66, y: 77, t: 'Student: semester-wise attendance, projected percentage and marks, always one tap away.' }
+            ];
+
+            var cur = -1, timer = null, capTimer = null;
+
+            function show(i) {
+                if (i === cur) return;
+                cur = i;
+                stage.classList.add('on');
+                spot.style.setProperty('--sx', roles[i].x + '%');
+                spot.style.setProperty('--sy', roles[i].y + '%');
+                for (var k = 0; k < items.length; k++) {
+                    items[k].classList.toggle('active', +items[k].getAttribute('data-tp') === i);
+                }
+                cap.style.opacity = 0;
+                clearTimeout(capTimer);
+                capTimer = setTimeout(function () { cap.textContent = roles[i].t; cap.style.opacity = 1; }, 180);
+            }
+
+            function auto(delay) {
+                clearTimeout(timer);
+                if (reduce) return;
+                timer = setTimeout(function loop() {
+                    show((cur + 1) % roles.length);
+                    timer = setTimeout(loop, 4200);
+                }, delay || 0);
+            }
+
+            for (var n = 0; n < items.length; n++) {
+                (function (el) {
+                    var i = +el.getAttribute('data-tp');
+                    el.addEventListener('mouseenter', function () { clearTimeout(timer); show(i); });
+                    el.addEventListener('focus', function () { clearTimeout(timer); show(i); });
+                    el.addEventListener('click', function () { clearTimeout(timer); show(i); auto(9000); });
+                    el.addEventListener('mouseleave', function () { auto(5000); });
+                })(items[n]);
+            }
+
+            // start the guided tour only once the section is on screen
+            if ('IntersectionObserver' in window) {
+                new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (e.isIntersecting) { if (cur === -1) show(0); auto(4200); }
+                        else { clearTimeout(timer); }
+                    });
+                }, { threshold: 0.35 }).observe(stage);
+            } else { show(0); }
+
+            if (reduce) return;
+
+            // 3D tilt = scroll reveal (flattens as you scroll in) + mouse tilt
+            var mRx = 0, mRy = 0, ticking = false;
+            function apply() {
+                ticking = false;
+                var r = stage.getBoundingClientRect(), vh = window.innerHeight || 800;
+                var p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.85)));
+                card.style.setProperty('--rx', ((1 - p) * 24 + mRx).toFixed(2) + 'deg');
+                card.style.setProperty('--ry', mRy.toFixed(2) + 'deg');
+                card.style.setProperty('--sc', (0.88 + 0.12 * p).toFixed(3));
+            }
+            function req() { if (!ticking) { ticking = true; requestAnimationFrame(apply); } }
+            window.addEventListener('scroll', req, { passive: true });
+            window.addEventListener('resize', req);
+            req();
+
+            if (fine) {
+                stage.addEventListener('pointermove', function (e) {
+                    var b = stage.getBoundingClientRect();
+                    var nx = (e.clientX - b.left) / b.width - 0.5;
+                    var ny = (e.clientY - b.top) / b.height - 0.5;
+                    mRy = nx * 10; mRx = -ny * 8;
+                    glare.style.setProperty('--gx', (nx + 0.5) * 100 + '%');
+                    glare.style.setProperty('--gy', (ny + 0.5) * 100 + '%');
+                    glare.style.opacity = 1;
+                    req();
+                });
+                stage.addEventListener('pointerleave', function () {
+                    mRx = 0; mRy = 0; glare.style.opacity = 0; req();
+                });
+            }
+        })();
+        </script>
 
         <div class="adv-section" id="advShowcase">
             <div class="role-tag" data-aos="zoom-in">See It In Action</div>
@@ -917,6 +1121,51 @@
         </div>
 
         <div class="role-tag" data-aos="zoom-in">Principal Control Panel</div>
+
+        <div class="deck" data-aos="fade-up">
+            <div class="deck-head">
+                <div class="deck-badge"><i class="fas fa-landmark"></i></div>
+                <div>
+                    <h3>The Principal's Command Deck</h3>
+                    <p>One login. The entire institution, in your pocket.</p>
+                </div>
+                <div class="deck-count">12 MODULES</div>
+            </div>
+            <div class="deck-grid">
+                <div class="deck-chip" style="--i:0"><i class="fas fa-key"></i><div><b>Room Codes &amp; Departments</b><span>Join codes per department. Add departments with a course duration, regenerate or combine.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-chalkboard-teacher"></i><div><b>Teacher Hub</b><span>Hours taught, subjects, timetable and a dated attendance timeline per teacher.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-user-graduate"></i><div><b>Student 360&deg;</b><span>Attendance, internal marks, subjects and the full fee ledger for any student.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-user-edit"></i><div><b>Student Admin</b><span>Edit details and account status. Remove a student with a recorded reason (TC issued or other).</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-layer-group"></i><div><b>Batches</b><span>Move students between batches, or split a batch by department.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-calendar-week"></i><div><b>Timetable Builder</b><span>Set period count, start time and lunch break, then assign classes day by day.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-book-open"></i><div><b>Subjects &amp; Enrollment</b><span>Edit the subject master, and assign or reassign subjects for selected students.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-calendar-alt"></i><div><b>Academic Calendar</b><span>Publish the calendar and override any day as a working or non-working day.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-percentage"></i><div><b>Rules &amp; Promotion</b><span>Attendance-mark tiers, odd/even semester control and one-click promotion with graduation.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-file-csv"></i><div><b>Bulk Data &amp; Export</b><span>Upload rosters, subjects and calendars by CSV. Export NEP marks, attendance stats and daily logs.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-credit-card"></i><div><b>Fees &amp; Razorpay</b><span>Fee rules, encrypted Razorpay keys and a payment ledger for every student.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-user-check"></i><div><b>Live Attendance Tracker</b><span>A teacher-by-day grid of who marked what, as it happens.</span></div></div>
+                <div class="deck-chip" style="--i:12"><i class="fas fa-bullhorn"></i><div><b>Announcements &amp; Events</b><span>Message teachers or students by department, and approve event requests (auto or strict).</span></div></div>
+                <div class="deck-chip" style="--i:13"><i class="fas fa-user-shield"></i><div><b>Admin Approvals</b><span>Approve staff and accountant accounts before they get access.</span></div></div>
+                <div class="deck-chip" style="--i:14"><i class="fas fa-receipt"></i><div><b>Subscription &amp; Billing</b><span>Pick or renew a plan and track licence validity, with secure online payment.</span></div></div>
+                <div class="deck-chip" style="--i:15"><i class="fas fa-fingerprint"></i><div><b>Security &amp; Control</b><span>Admin PIN on critical actions, biometric lock, device sessions and themes.</span></div></div>
+                <!--
+                <div class="deck-chip" style="--i:0"><i class="fas fa-key"></i><div><b>Room Codes</b><span>Secure joining codes for every department. Regenerate or combine them in a tap.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-chalkboard-teacher"></i><div><b>Teacher Hub</b><span>Hours taught, subjects, timetable and a full attendance timeline for each teacher.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-user-graduate"></i><div><b>Student 360&deg;</b><span>Attendance, internal marks, subjects and fee ledger. Archive or restore students.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-layer-group"></i><div><b>Batches</b><span>Split classes into batches and move students between them.</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-calendar-week"></i><div><b>Timetable Builder</b><span>Set periods and breaks, assign classes, publish the structure.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-book-open"></i><div><b>Subjects &amp; Calendar</b><span>Subject master, student-subject mapping and the official academic calendar.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-database"></i><div><b>Data &amp; Promotion</b><span>Bulk CSV uploads, attendance rules, semester controls, one-click promotion and data export.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-credit-card"></i><div><b>Fees &amp; Razorpay</b><span>Configure fee structures, collect online and export every student ledger.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-user-check"></i><div><b>Live Attendance Tracker</b><span>See which teacher marked which period, day by day, as it happens.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-bullhorn"></i><div><b>Events &amp; Broadcasts</b><span>Approve event requests, message everyone and watch the system inbox.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-user-shield"></i><div><b>Admin Approvals</b><span>Approve or revoke staff and accountant access whenever you choose.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-fingerprint"></i><div><b>Locked Down</b><span>PIN-confirmed critical actions, biometric app lock and device sessions.</span></div></div>
+                -->
+            </div>
+        </div>
+
+        <!--
         
         <div class="feature-row">
             <div class="feature-content" data-aos="fade-right">
@@ -965,7 +1214,73 @@
             </div>
         </div>
 
+        -->
+
+        <div class="deck" data-aos="fade-up" style="padding: 20px 24px;">
+            <div class="deck-grid">
+                <div class="deck-chip" style="--i:0">
+                    <i class="fas fa-user-tie"></i>
+                    <div>
+                        <b>Staff Portal</b>
+                        <span>Staff can do nearly everything a principal can, with a few limits. Admin-level actions, like approving teachers, stay with the Principal only.</span>
+                    </div>
+                </div>
+                <div class="deck-chip" style="--i:1">
+                    <i class="fas fa-calculator"></i>
+                    <div>
+                        <b>Accountant Portal</b>
+                        <span>A dedicated login to collect fees, view student fee ledgers, track college expenses and manage every finance-related function.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="role-tag" data-aos="zoom-in">Educator Portal</div>
+
+        <div class="deck" data-aos="fade-up">
+            <div class="deck-head">
+                <div class="deck-badge"><i class="fas fa-chalkboard-teacher"></i></div>
+                <div>
+                    <h3>The Educator's Toolkit</h3>
+                    <p>Everything a teacher touches in a day. One app, zero paperwork.</p>
+                </div>
+                <div class="deck-count">12 MODULES</div>
+            </div>
+            <div class="deck-grid">
+                <div class="deck-chip" style="--i:0"><i class="fas fa-clipboard-check"></i><div><b>Smart Attendance</b><span>Toggle present or absent, save, review history and jump to any past date. Medical-leave students are locked.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-people-arrows"></i><div><b>Substitute &amp; Batch Classes</b><span>Cover a colleague's period or open a batch class and mark it from your own app.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-chart-line"></i><div><b>My Dashboard</b><span>Hours taught, subjects handled and a dated attendance timeline you can filter.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-calendar-alt"></i><div><b>Timetable</b><span>Your weekly schedule. Department heads assign classes day by day.</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-award"></i><div><b>Internal Marks</b><span>Add exams and enter test and assignment marks. Attendance marks are added from your college's rules.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-book-open"></i><div><b>My Subjects</b><span>Choose or remove the subjects you teach each semester.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-clipboard-list"></i><div><b>Assignments</b><span>Publish by year, semester and subject with due dates. Students are alerted instantly.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-user-friends"></i><div><b>Student Records</b><span>Search students, open their dashboard and see subject-wise attendance ledgers.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-bus"></i><div><b>Event Attendance</b><span>PT, library or multi-day camps: add students, set times, review history, send to the principal.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-user-lock"></i><div><b>Promotion Holds <em>HOD</em></b><span>Block promotion for shortage, arrears (pick the failed subjects), fees or discipline, with history.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-sitemap"></i><div><b>Subject &amp; Section Assign <em>HOD</em></b><span>Assign subjects and sections to unassigned students in bulk.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-layer-group"></i><div><b>Batch Viewer <em>HOD</em></b><span>View batches by subject and split them by department.</span></div></div>
+                <div class="deck-chip" style="--i:12"><i class="fas fa-file-export"></i><div><b>Data Export <em>HOD</em></b><span>Download NEP internal marks, attendance percentages or daily logs by semester and section.</span></div></div>
+                <div class="deck-chip" style="--i:13"><i class="fas fa-calendar-day"></i><div><b>Academic Calendar</b><span>Working days, holidays and upcoming events at a glance.</span></div></div>
+                <div class="deck-chip" style="--i:14"><i class="fas fa-comment-dots"></i><div><b>Messages &amp; Alerts</b><span>Message the principal or other teachers, chat privately and get push notifications.</span></div></div>
+                <div class="deck-chip" style="--i:15"><i class="fas fa-shield-alt"></i><div><b>Security &amp; Devices</b><span>Security PIN with password re-verification, active sessions, biometric lock and themes.</span></div></div>
+                <!--
+                <div class="deck-chip" style="--i:0"><i class="fas fa-clipboard-check"></i><div><b>Smart Attendance</b><span>Mark present or absent with a toggle, save once, and review the history. Students on medical leave are locked automatically.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-people-arrows"></i><div><b>Substitute Classes</b><span>Cover a colleague's period and mark that class right from your own app.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-chart-line"></i><div><b>My Dashboard</b><span>Total hours taught, subjects handled and a dated attendance timeline of your classes.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-calendar-alt"></i><div><b>Timetable</b><span>Your weekly schedule at a glance. Department heads assign classes day by day.</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-award"></i><div><b>Internal Marks</b><span>Enter internal marks per subject and let continuous evaluation be calculated for you.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-book-open"></i><div><b>My Subjects</b><span>Choose the subjects you teach each semester and save your selections.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-clipboard-list"></i><div><b>Assignments</b><span>Publish tasks with topics and due dates. Students are notified instantly.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-user-friends"></i><div><b>Student Records</b><span>Search any student for attendance percentages, marks and enrolled subjects.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-bus"></i><div><b>Event Attendance</b><span>Log PT, library and multi-day camps with times, then send them to the principal.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-user-lock"></i><div><b>Promotion Holds</b><span>Flag students for attendance shortage, arrears, fee dues or discipline before promotion.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-user-tie"></i><div><b>HOD Toolkit</b><span>Assign subjects, manage sections and batches, and export year-wise academic data.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-comment-dots"></i><div><b>Calendar &amp; Alerts</b><span>Academic calendar, private chats, broadcasts and instant push notifications.</span></div></div>
+                -->
+            </div>
+        </div>
+
+        <!--
 
         <div class="feature-row">
             <div class="feature-content" data-aos="fade-right">
@@ -1027,7 +1342,54 @@
             </div>
         </div>
 
+        -->
+
         <div class="role-tag" data-aos="zoom-in">Student Dashboard</div>
+
+        <div class="deck" data-aos="fade-up">
+            <div class="deck-head">
+                <div class="deck-badge"><i class="fas fa-user-graduate"></i></div>
+                <div>
+                    <h3>The Student's Pocket Campus</h3>
+                    <p>Attendance, marks, fees and classes. Always one tap away.</p>
+                </div>
+                <div class="deck-count">12 MODULES</div>
+            </div>
+            <div class="deck-grid">
+                <div class="deck-chip" style="--i:0"><i class="fas fa-tint"></i><div><b>Attendance Meter</b><span>A live water-fill gauge with attended, absent and total counts and a projected percentage.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-calculator"></i><div><b>Leave Predictor</b><span>Tap the gauge, enter the days you plan to take off and see how far your percentage will drop.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-chart-bar"></i><div><b>Subject-wise Attendance</b><span>Present and total per subject, for all time or one date. Tap a subject for every record.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-calendar-check"></i><div><b>Daily Attendance</b><span>Pick any day, tap a period to see subject, teacher, time and status. Medical leave is flagged.</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-flag-checkered"></i><div><b>Promotion Status</b><span>See if your promotion is clear or on hold, with the full hold history.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-award"></i><div><b>Internal Marks</b><span>Exam-wise test, assignment and attendance marks added up out of the maximum.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-book-reader"></i><div><b>Curriculum &amp; Catalog</b><span>Your enrolled subjects and the full subject catalog for your semester and department.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-calendar-week"></i><div><b>Timetable</b><span>Monday to Friday timeline with subject, teacher and room for every period.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-clipboard-list"></i><div><b>Assignments</b><span>Topics, descriptions and due dates the moment a teacher publishes them.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-calendar-alt"></i><div><b>Academic Calendar</b><span>Working days, holidays, events and semester dates on one calendar.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-comments"></i><div><b>Teachers &amp; Messages</b><span>Browse your teachers, message them or the principal, and read college broadcasts.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-bell"></i><div><b>Notifications</b><span>Push alerts plus an in-app list, so nothing slips past you.</span></div></div>
+                <div class="deck-chip" style="--i:12"><i class="fas fa-credit-card"></i><div><b>Fees Portal</b><span>Pay online with Razorpay and keep your digital receipts.</span></div></div>
+                <div class="deck-chip" style="--i:13"><i class="fas fa-id-card"></i><div><b>My Profile</b><span>Your profile details, one tap from the dashboard.</span></div></div>
+                <div class="deck-chip" style="--i:14"><i class="fas fa-palette"></i><div><b>Make It Yours</b><span>Five accent colours, light and dark mode, and UI sounds.</span></div></div>
+                <div class="deck-chip" style="--i:15"><i class="fas fa-mobile-alt"></i><div><b>Devices</b><span>See every device currently logged in to your account.</span></div></div>
+                <!--
+                <div class="deck-chip" style="--i:0"><i class="fas fa-tint"></i><div><b>Attendance Meter</b><span>A live water-fill gauge with attended, absent and total counts, plus a projected percentage.</span></div></div>
+                <div class="deck-chip" style="--i:1"><i class="fas fa-chart-bar"></i><div><b>Subject-wise Attendance</b><span>Present and total classes for every subject, for all time or any date you pick.</span></div></div>
+                <div class="deck-chip" style="--i:2"><i class="fas fa-calendar-check"></i><div><b>Daily Attendance</b><span>Day-by-day period status with the teacher who marked it. Medical leave is shown separately.</span></div></div>
+                <div class="deck-chip" style="--i:3"><i class="fas fa-flag-checkered"></i><div><b>Promotion Status</b><span>See at a glance if your promotion is clear or held, with the full hold history.</span></div></div>
+                <div class="deck-chip" style="--i:4"><i class="fas fa-award"></i><div><b>Internal Marks</b><span>Exam-wise internal marks and continuous evaluation, all in one place.</span></div></div>
+                <div class="deck-chip" style="--i:5"><i class="fas fa-book-reader"></i><div><b>Curriculum &amp; Catalog</b><span>Your enrolled subjects, plus the full subject catalog for your semester and department.</span></div></div>
+                <div class="deck-chip" style="--i:6"><i class="fas fa-calendar-week"></i><div><b>Timetable</b><span>Monday to Friday timeline with the subject, teacher and room for every period.</span></div></div>
+                <div class="deck-chip" style="--i:7"><i class="fas fa-clipboard-list"></i><div><b>Assignments</b><span>Topics, descriptions and due dates, delivered the moment a teacher publishes.</span></div></div>
+                <div class="deck-chip" style="--i:8"><i class="fas fa-calendar-alt"></i><div><b>Academic Calendar</b><span>Working days, holidays, events and semester dates on one calendar.</span></div></div>
+                <div class="deck-chip" style="--i:9"><i class="fas fa-comments"></i><div><b>Teachers &amp; Chat</b><span>Browse your teachers, message them directly and read college broadcasts in your inbox.</span></div></div>
+                <div class="deck-chip" style="--i:10"><i class="fas fa-credit-card"></i><div><b>Fees Portal</b><span>Pay tuition online with Razorpay and keep your digital receipts safe.</span></div></div>
+                <div class="deck-chip" style="--i:11"><i class="fas fa-palette"></i><div><b>Make It Yours</b><span>Five accent colours, dark mode, UI sounds, push alerts and device sessions.</span></div></div>
+                -->
+            </div>
+        </div>
+
+        <!--
 
         <div class="feature-row">
             <div class="feature-content" data-aos="fade-right">
@@ -1068,6 +1430,8 @@
                 </div>
             </div>
         </div>
+
+        -->
 
         <div class="security-wrapper" style="background: linear-gradient(to right, rgba(46, 204, 113, 0.05), transparent); border-top: 1px solid rgba(46, 204, 113, 0.2); border-bottom: 1px solid rgba(46, 204, 113, 0.2); padding: 80px 0; margin-bottom: 100px;">
             <div class="container" style="padding-top: 0; padding-bottom: 0;">
